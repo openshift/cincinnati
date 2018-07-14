@@ -20,9 +20,8 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
-use daggy::petgraph::visit::IntoNodeReferences;
-use daggy::petgraph::visit::NodeRef;
-use daggy::Dag;
+use daggy::petgraph::visit::{IntoNodeReferences, NodeRef};
+use daggy::{Dag, Walker};
 use failure::Error;
 use semver::Version;
 use serde::ser::{Serialize, SerializeStruct, Serializer};
@@ -63,6 +62,21 @@ pub struct ConcreteRelease {
 
 pub struct ReleaseId(daggy::petgraph::graph::NodeIndex);
 
+pub struct NextReleases<'a> {
+    children: daggy::Children<Release, Empty, daggy::petgraph::graph::DefaultIx>,
+    dag: &'a Dag<Release, Empty>,
+}
+
+impl<'a> Iterator for NextReleases<'a> {
+    type Item = &'a Release;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.children
+            .walk_next(self.dag)
+            .map(|(_, i)| self.dag.node_weight(i).unwrap())
+    }
+}
+
 struct Empty {}
 
 impl Graph {
@@ -97,6 +111,13 @@ impl Graph {
             .node_references()
             .find(|nr| nr.weight().version() == version)
             .map(|nr| ReleaseId(nr.id()))
+    }
+
+    pub fn next_releases(&self, source: &ReleaseId) -> NextReleases {
+        NextReleases {
+            children: self.dag.children(source.0),
+            dag: &self.dag,
+        }
     }
 }
 
