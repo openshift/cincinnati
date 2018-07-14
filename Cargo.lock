@@ -609,7 +609,7 @@ name = "graph-builder"
 version = "0.1.0"
 dependencies = [
  "actix-web 0.6.15 (registry+https://github.com/rust-lang/crates.io-index)",
- "daggy 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cincinnati 0.1.0",
  "env_logger 0.5.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",

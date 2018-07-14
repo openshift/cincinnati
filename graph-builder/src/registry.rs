@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use cincinnati;
 use failure::{Error, ResultExt};
 use flate2::read::GzDecoder;
 use release;
@@ -24,6 +25,16 @@ use tar::Archive;
 pub struct Release {
     pub source: String,
     pub metadata: release::Metadata,
+}
+
+impl Into<cincinnati::Release> for Release {
+    fn into(self) -> cincinnati::Release {
+        cincinnati::Release::Concrete(cincinnati::ConcreteRelease {
+            version: self.metadata.version,
+            payload: self.source,
+            metadata: self.metadata.metadata,
+        })
+    }
 }
 
 /// Fetches a vector of all release metadata from the given repository, hosted on the given
