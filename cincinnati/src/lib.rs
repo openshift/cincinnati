@@ -24,19 +24,21 @@ use daggy::petgraph::visit::{IntoNodeReferences, NodeRef};
 use daggy::{Dag, Walker};
 use failure::Error;
 use semver::Version;
+use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::collections::HashMap;
+use std::fmt;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Graph {
     dag: Dag<Release, Empty>,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Release {
-    Abstract(AbstractRelease),
     Concrete(ConcreteRelease),
+    Abstract(AbstractRelease),
 }
 
 impl Release {
@@ -48,19 +50,19 @@ impl Release {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize)]
-pub struct AbstractRelease {
-    pub version: Version,
-}
-
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ConcreteRelease {
     pub version: Version,
     pub payload: String,
     pub metadata: HashMap<String, String>,
 }
 
-pub struct ReleaseId(daggy::petgraph::graph::NodeIndex);
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AbstractRelease {
+    pub version: Version,
+}
+
+pub struct ReleaseId(daggy::NodeIndex);
 
 pub struct NextReleases<'a> {
     children: daggy::Children<Release, Empty, daggy::petgraph::graph::DefaultIx>,
@@ -77,7 +79,8 @@ impl<'a> Iterator for NextReleases<'a> {
     }
 }
 
-struct Empty {}
+#[derive(Debug)]
+struct Empty;
 
 impl Graph {
     pub fn add_release<R>(&mut self, release: R) -> Result<ReleaseId, Error>
@@ -118,6 +121,71 @@ impl Graph {
             children: self.dag.children(source.0),
             dag: &self.dag,
         }
+    }
+}
+
+impl<'a> Deserialize<'a> for Graph {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'a>,
+    {
+        #[derive(Deserialize)]
+        #[serde(field_identifier, rename_all = "lowercase")]
+        enum Field {
+            Edges,
+            Nodes,
+        }
+
+        struct GraphVisitor;
+
+        impl<'de> Visitor<'de> for GraphVisitor {
+            type Value = Graph;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct Graph")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Graph, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut edges: Option<Vec<(daggy::NodeIndex, daggy::NodeIndex)>> = None;
+                let mut nodes: Option<Vec<Release>> = None;
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Edges => {
+                            if edges.is_some() {
+                                return Err(de::Error::duplicate_field("edges"));
+                            }
+                            edges = Some(map.next_value()?);
+                        }
+                        Field::Nodes => {
+                            if nodes.is_some() {
+                                return Err(de::Error::duplicate_field("nodes"));
+                            }
+                            nodes = Some(map.next_value()?);
+                        }
+                    }
+                }
+                let edges = edges.ok_or_else(|| de::Error::missing_field("edges"))?;
+                let nodes = nodes.ok_or_else(|| de::Error::missing_field("nodes"))?;
+                let mut graph = Graph {
+                    dag: Dag::with_capacity(nodes.len(), edges.len()),
+                };
+                nodes.into_iter().for_each(|n| {
+                    graph.dag.add_node(n);
+                });
+                graph
+                    .dag
+                    .add_edges(edges.into_iter().map(|(s, t)| (s, t, Empty {})))
+                    .map_err(|_| {
+                        de::Error::invalid_value(serde::de::Unexpected::StructVariant, &self)
+                    })?;
+                Ok(graph)
+            }
+        }
+
+        deserializer.deserialize_struct("Graph", &["nodes", "edges"], GraphVisitor)
     }
 }
 
@@ -183,5 +251,14 @@ mod tests {
         graph.dag.add_edge(v1, v3, Empty {}).unwrap();
 
         assert_eq!(serde_json::to_string(&graph).unwrap(), r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#);
+    }
+
+    #[test]
+    fn deserialize_graph() {
+        let json = r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#;
+        assert_eq!(
+            serde_json::to_string(&serde_json::from_str::<Graph>(json).unwrap()).unwrap(),
+            json
+        );
     }
 }
