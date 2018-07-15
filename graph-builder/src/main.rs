@@ -13,7 +13,7 @@
 // limitations under the License.
 
 extern crate actix_web;
-extern crate daggy;
+extern crate cincinnati;
 extern crate env_logger;
 extern crate itertools;
 #[macro_use]
@@ -62,13 +62,14 @@ fn main() -> Result<(), Error> {
 
     {
         let state = state.clone();
-        thread::spawn(move || graph::run(opts, state));
+        thread::spawn(move || graph::run(&opts, &state));
     }
 
-    Ok(server::new(move || {
+    server::new(move || {
         App::with_state(state.clone())
             .middleware(Logger::default())
             .route("/graph", Method::GET, graph::index)
     }).bind(addr)?
-        .run())
+        .run();
+    Ok(())
 }

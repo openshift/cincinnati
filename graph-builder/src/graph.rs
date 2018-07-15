@@ -13,13 +13,11 @@
 // limitations under the License.
 
 use actix_web::{HttpRequest, HttpResponse};
+use cincinnati::{AbstractRelease, Graph, Release};
 use config;
-use daggy::{Dag, NodeIndex};
 use failure::{Error, ResultExt};
 use registry;
-use semver::Version;
 use serde_json;
-use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::thread;
 
@@ -46,7 +44,7 @@ impl State {
     }
 }
 
-pub fn run(opts: config::Options, state: State) -> ! {
+pub fn run(opts: &config::Options, state: &State) -> ! {
     loop {
         debug!("Updating graph...");
         match create_graph(&opts) {
@@ -60,78 +58,37 @@ pub fn run(opts: config::Options, state: State) -> ! {
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct Release {
-    version: Version,
-    payload: String,
-    metadata: HashMap<String, String>,
-}
+fn create_graph(opts: &config::Options) -> Result<Graph, Error> {
+    let mut graph = Graph::default();
 
-#[derive(Debug, Serialize)]
-pub struct Empty {}
+    registry::fetch_releases(&opts.registry, &opts.repository)
+        .context("failed to fetch all release metadata")?
+        .into_iter()
+        .try_for_each(|release| {
+            let previous = release.metadata.previous.clone();
+            let next = release.metadata.next.clone();
+            let current = graph.add_release(release)?;
 
-fn create_graph(opts: &config::Options) -> Result<Dag<Release, Empty>, Error> {
-    fn create_node(
-        p: &str,
-        v: Version,
-        m: HashMap<String, String>,
-        d: &mut Dag<Release, Empty>,
-        r: &mut HashMap<Version, NodeIndex>,
-    ) -> Result<NodeIndex, Error> {
-        // XXX Check if it exists
-        //ensure!(
-        //    dag.node_weight(*index).unwrap().defined == false,
-        //    "Release {} defined multiple times", m.version
-        //);
-        Ok(*r.entry(v.clone()).or_insert_with(|| {
-            d.add_node(Release {
-                version: v,
-                payload: p.to_string(),
-                metadata: m,
+            previous.iter().try_for_each(|version| {
+                let previous = match graph.find_by_version(version) {
+                    Some(id) => id,
+                    None => graph.add_release(Release::Abstract(AbstractRelease {
+                        version: version.clone(),
+                    }))?,
+                };
+                graph.add_transition(&previous, &current)
+            })?;
+
+            next.iter().try_for_each(|version| {
+                let next = match graph.find_by_version(version) {
+                    Some(id) => id,
+                    None => graph.add_release(Release::Abstract(AbstractRelease {
+                        version: version.clone(),
+                    }))?,
+                };
+                graph.add_transition(&current, &next)
             })
-        }))
-    }
+        })?;
 
-    fn get_node(
-        p: &str,
-        v: Version,
-        d: &mut Dag<Release, Empty>,
-        r: &mut HashMap<Version, NodeIndex>,
-    ) -> NodeIndex {
-        *r.entry(v.clone()).or_insert_with(|| {
-            d.add_node(Release {
-                version: v,
-                payload: p.to_string(),
-                metadata: HashMap::new(),
-            })
-        })
-    };
-
-    let releases = registry::fetch_releases(&opts.registry, &opts.repository)
-        .context("failed to fetch all release metadata")?;
-
-    let mut dag = Dag::<Release, Empty>::new();
-    let mut nodes = HashMap::<Version, NodeIndex>::new();
-
-    for r in releases {
-        let node = create_node(
-            &r.source,
-            r.metadata.version,
-            r.metadata.metadata,
-            &mut dag,
-            &mut nodes,
-        )?;
-
-        for p in r.metadata.previous {
-            let previous = get_node(&r.source, p, &mut dag, &mut nodes);
-            dag.add_edge(previous, node, Empty {})?;
-        }
-
-        for n in r.metadata.next {
-            let next = get_node(&r.source, n, &mut dag, &mut nodes);
-            dag.add_edge(node, next, Empty {})?;
-        }
-    }
-
-    Ok(dag)
+    Ok(graph)
 }
