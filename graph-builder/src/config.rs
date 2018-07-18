@@ -19,28 +19,28 @@ use std::time::Duration;
 
 #[derive(Debug, StructOpt)]
 pub struct Options {
-    #[structopt(short = "v", parse(from_occurrences))]
     /// Verbosity level
+    #[structopt(short = "v", parse(from_occurrences))]
     pub verbosity: u64,
 
-    #[structopt(long = "registry", default_value = "http://localhost:5000")]
     /// URL for the container image registry
+    #[structopt(long = "registry", default_value = "http://localhost:5000")]
     pub registry: String,
 
-    #[structopt(long = "repository", default_value = "openshift")]
     /// Name of the container image repository
+    #[structopt(long = "repository", default_value = "openshift")]
     pub repository: String,
 
-    #[structopt(long = "period", default_value = "30", parse(try_from_str = "parse_duration"))]
     /// Duration of the pause (in seconds) between scans of the registry
+    #[structopt(long = "period", default_value = "30", parse(try_from_str = "parse_duration"))]
     pub period: Duration,
 
-    #[structopt(long = "address", default_value = "127.0.0.1")]
     /// Address on which the server will listen
+    #[structopt(long = "address", default_value = "127.0.0.1")]
     pub address: IpAddr,
 
-    #[structopt(long = "port", default_value = "8080")]
     /// Port to which the server will bind
+    #[structopt(long = "port", default_value = "8080")]
     pub port: u16,
 }
 
