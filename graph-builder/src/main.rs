@@ -45,7 +45,7 @@ use structopt::StructOpt;
 fn main() -> Result<(), Error> {
     let opts = config::Options::from_args();
 
-    env_logger::Builder::new()
+    env_logger::Builder::from_default_env()
         .filter(
             Some(module_path!()),
             match opts.verbosity {
