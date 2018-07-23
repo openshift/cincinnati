@@ -29,6 +29,8 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::collections::HashMap;
 use std::fmt;
 
+pub const CONTENT_TYPE_GRAPH_V1: &str = "application/vnd.redhat.cincinnati.graph+json; version=1.0";
+
 #[derive(Debug, Default)]
 pub struct Graph {
     dag: Dag<Release, Empty>,
