@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use actix_web::{HttpRequest, HttpResponse};
-use cincinnati::{AbstractRelease, Graph, Release};
+use actix_web::http::header::{self, HeaderValue};
+use actix_web::{HttpMessage, HttpRequest, HttpResponse};
+use cincinnati::{AbstractRelease, CONTENT_TYPE_GRAPH_V1, Graph, Release};
 use config;
 use failure::{Error, ResultExt};
 use registry;
@@ -22,13 +23,18 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 
 pub fn index(req: HttpRequest<State>) -> HttpResponse {
-    HttpResponse::Ok().content_type("application/json").body(
-        req.state()
-            .json
-            .read()
-            .expect("json lock has been poisoned")
-            .clone(),
-    )
+    match req.headers().get(header::ACCEPT) {
+        Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE_GRAPH_V1) => {
+            HttpResponse::Ok().content_type(CONTENT_TYPE_GRAPH_V1).body(
+                req.state()
+                    .json
+                    .read()
+                    .expect("json lock has been poisoned")
+                    .clone(),
+            )
+        }
+        _ => HttpResponse::NotAcceptable().finish(),
+    }
 }
 
 #[derive(Clone)]
