@@ -3,4 +3,5 @@
 members = [
 	"cincinnati",
 	"graph-builder",
+	"policy-engine",
 ]
