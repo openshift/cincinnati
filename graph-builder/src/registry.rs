@@ -43,7 +43,14 @@ pub fn fetch_releases(registry: &str, repo: &str) -> Result<Vec<Release>, Error>
     let mut metadata = Vec::new();
     for tag in fetch_tags(registry, repo)? {
         metadata.push(Release {
-            source: format!("{}/{}:{}", registry, repo, tag),
+            source: format!(
+                "{}/{}:{}",
+                registry
+                    .trim_left_matches("https://")
+                    .trim_left_matches("http://"),
+                repo,
+                tag
+            ),
             metadata: fetch_metadata(registry, repo, &tag)?,
         })
     }
