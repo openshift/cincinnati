@@ -15,6 +15,8 @@
 extern crate daggy;
 #[macro_use]
 extern crate failure;
+#[macro_use]
+extern crate log;
 extern crate semver;
 extern crate serde;
 #[macro_use]
@@ -77,7 +79,11 @@ impl<'a> Iterator for NextReleases<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         self.children
             .walk_next(self.dag)
-            .map(|(_, i)| self.dag.node_weight(i).unwrap())
+            .map(|(_, i)| self.dag.node_weight(i))
+            .unwrap_or_else(|| {
+                warn!("iterator shortened due to missing node weight");
+                None
+            })
     }
 }
 
@@ -92,10 +98,13 @@ impl Graph {
         let release = release.into();
         match self.find_by_version(&release.version()) {
             Some(id) => {
-                let mut node = self.dag.node_weight_mut(id.0).unwrap();
+                let mut node = match self.dag.node_weight_mut(id.0) {
+                    Some(n) => n,
+                    None => bail!("failed to retrieve node weight"),
+                };
                 if let Release::Concrete(_) = node {
                     bail!(
-                        "Concrete release with the same version ({}) already exists",
+                        "concrete release with the same version ({}) already exists",
                         release.version()
                     );
                 }
