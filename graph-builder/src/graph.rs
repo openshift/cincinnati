@@ -58,7 +58,7 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
                 Ok(json) => *state.json.write().expect("json lock has been poisoned") = json,
                 Err(err) => error!("Failed to serialize graph: {}", err),
             },
-            Err(err) => err.causes().for_each(|cause| error!("{}", cause)),
+            Err(err) => err.iter_chain().for_each(|cause| error!("{}", cause)),
         }
         thread::sleep(opts.period);
     }
