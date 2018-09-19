@@ -14,7 +14,7 @@
 
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
-use cincinnati::{CONTENT_TYPE_GRAPH_V1, Graph};
+use cincinnati::{CONTENT_TYPE, Graph};
 use failure::Error;
 use futures::{future, Future, Stream};
 use hyper::{Body, Client, Request, Uri};
@@ -22,14 +22,11 @@ use serde_json;
 
 pub fn index(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = Error>> {
     match req.headers().get(header::ACCEPT) {
-        Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE_GRAPH_V1) => Box::new(
+        Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE) => Box::new(
             Client::new()
                 .request(
                     Request::get(&req.state().upstream)
-                        .header(
-                            header::ACCEPT,
-                            HeaderValue::from_static(CONTENT_TYPE_GRAPH_V1),
-                        )
+                        .header(header::ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
                         .body(Body::empty())
                         .expect("unable to form request"),
                 )
@@ -48,7 +45,7 @@ pub fn index(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error =
                 .and_then(|body| {
                     let graph: Graph = serde_json::from_slice(&body)?;
                     Ok(HttpResponse::Ok()
-                        .content_type(CONTENT_TYPE_GRAPH_V1)
+                        .content_type(CONTENT_TYPE)
                         .body(serde_json::to_string(&graph)?))
                 }),
         ),

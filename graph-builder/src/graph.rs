@@ -14,7 +14,7 @@
 
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
-use cincinnati::{AbstractRelease, CONTENT_TYPE_GRAPH_V1, Graph, Release};
+use cincinnati::{AbstractRelease, CONTENT_TYPE, Graph, Release};
 use config;
 use failure::{Error, ResultExt};
 use registry;
@@ -24,8 +24,8 @@ use std::thread;
 
 pub fn index(req: HttpRequest<State>) -> HttpResponse {
     match req.headers().get(header::ACCEPT) {
-        Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE_GRAPH_V1) => {
-            HttpResponse::Ok().content_type(CONTENT_TYPE_GRAPH_V1).body(
+        Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE) => {
+            HttpResponse::Ok().content_type(CONTENT_TYPE).body(
                 req.state()
                     .json
                     .read()

@@ -68,7 +68,7 @@ fn main() -> Result<(), Error> {
     server::new(move || {
         App::with_state(state.clone())
             .middleware(Logger::default())
-            .route("/graph", Method::GET, graph::index)
+            .route("/v1/graph", Method::GET, graph::index)
     }).bind(addr)?
         .run();
     Ok(())
