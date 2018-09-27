@@ -22,7 +22,7 @@ pub struct Options {
     pub verbosity: u64,
 
     /// URL for the upstream graph builder or policy engine
-    #[structopt(long = "upstream", default_value = "http://localhost:8080/graph")]
+    #[structopt(long = "upstream", default_value = "http://localhost:8080/v1/graph")]
     pub upstream: Uri,
 
     /// Address on which the server will listen
