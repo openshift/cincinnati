@@ -39,6 +39,7 @@ An example of this metadata document can be seen here:
 
 ```json
 {
+	"kind": "cincinnati-metadata-v0",
 	"schema": 1,
 	"version": "1.1.0",
 	"previous": ["1.0.0"],
@@ -59,6 +60,7 @@ In order to allow the transition mentioned above, a new version, `1.1.1`, needs 
 
 ```json
 {
+	"kind": "cincinnati-metadata-v0",
 	"schema": 1,
 	"version": "1.1.1",
 	"previous": ["1.0.0"],
