@@ -14,6 +14,7 @@
 
 extern crate actix_web;
 extern crate cincinnati;
+extern crate dkregistry;
 extern crate env_logger;
 extern crate itertools;
 #[macro_use]
