@@ -14,7 +14,7 @@
 
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
-use cincinnati::{AbstractRelease, CONTENT_TYPE, Graph, Release};
+use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
 use config;
 use failure::{Error, ResultExt};
 use registry;
@@ -67,7 +67,7 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
 fn create_graph(opts: &config::Options) -> Result<Graph, Error> {
     let mut graph = Graph::default();
 
-    registry::fetch_releases(&opts.registry, &opts.repository)
+    registry::fetch_releases(&opts.registry, &opts.repository, &opts.credentials_path)
         .context("failed to fetch all release metadata")?
         .into_iter()
         .try_for_each(|release| {
