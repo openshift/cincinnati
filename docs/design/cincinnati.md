@@ -1,7 +1,8 @@
 # Cincinnati #
 
-Cincinnati is the successor to the Omaha update protocol. It describes a particular method for representing transitions between releases of a project and allowing a client to perform automatic updates between these releases.
+Cincinnati is the successor to the [Omaha update protocol][google-omaha]. It describes a particular method for representing transitions between releases of a project and allowing a client to perform automatic updates between these releases.
 
+[google-omaha]: https://github.com/google/omaha/blob/v1.3.33.7/doc/ServerProtocolV3.md
 
 ## Goals ##
 
@@ -19,7 +20,7 @@ Release payloads within Cincinnati contain a small JSON-formatted metadata docum
 
 |   Key    | Optional | Description                                                                             |
 |:--------:|:--------:|:----------------------------------------------------------------------------------------|
-|   kind   | required | the document type - Must be cincinnati-metadata-v0.                                     |
+|   kind   | required | the document type - Must be `cincinnati-metadata-v0`                                    |
 | version  | required | the version of the release in the current payload                                       |
 | previous | optional | the list of valid previous versions <sup>[1](#1)</sup>                                  |
 |   next   | optional | the list of valid next versions <sup>[2](#2)</sup>                                      |
@@ -39,7 +40,7 @@ An example of this metadata document can be seen here:
 
 ```json
 {
-	"schema": 1,
+	"kind": "cincinnati-metadata-v0",
 	"version": "1.1.0",
 	"previous": ["1.0.0"],
 	"metadata": {
@@ -48,7 +49,7 @@ An example of this metadata document can be seen here:
 }
 ```
 
-A simple example of this directed acyclic graph can be seen in Figure 1. In this example, four versions were released (`1.0.0`, `1.1.0`, `1.2.0`, and `1.3.0`). After releasing `1.1.0`, it’s discovered that there is a critical bug and this version is subsequently removed from the graph. Because of this, it will not be possible for clients who are currently running `1.0.0` to update to `1.2.0`.
+A simple example of this directed acyclic graph can be seen in Figure 1. In this example, four versions were released (`1.0.0`, `1.1.0`, `1.2.0`, and `1.3.0`). After releasing `1.1.0`, it is discovered that there is a critical bug and this version is subsequently removed from the graph. Because of this, it will not be possible for clients who are currently running `1.0.0` to update to `1.2.0`.
 
 <figure align="center">
   <img src="figures/cincinnati-1.svg" alt="Figure 1: A visualized DAG with three groups and a broken release" />
@@ -59,7 +60,7 @@ In order to allow the transition mentioned above, a new version, `1.1.1`, needs 
 
 ```json
 {
-	"schema": 1,
+	"kind": "cincinnati-metadata-v0",
 	"version": "1.1.1",
 	"previous": ["1.0.0"],
 	"next": ["1.2.0"]
@@ -93,21 +94,21 @@ The storage component is responsible for actually storing and hosting the releas
 
 The Graph Builder iterates over the release payloads hosted by the storage component and builds a DAG of the releases. It is responsible for verifying that the graph described by the releases is acyclic and connected.
 
-In order to avoid the Graph Builder from having to serve the full payloads, Cincinnati implementations may choose to instead serve a modified payload which directs the client to download the full release payload directly from the storage component. It’s important to note that in these implementations, the Graph Builder should not generate these modified payloads directly. Doing so would directly couple the Graph Builder to the client, which would make it difficult to change the format of the modified payload in future versions while still supporting arbitrarily old clients.
+In order to avoid the Graph Builder from having to serve the full payloads, Cincinnati implementations may choose to instead serve a modified payload which directs the client to download the full release payload directly from the storage component. It is important to note that in these implementations, the Graph Builder should not generate these modified payloads directly. Doing so would directly couple the Graph Builder to the client, which would make it difficult to change the format of the modified payload in future versions while still supporting arbitrarily old clients.
 
 There is no defined interface between the Graph Builder and storage since the Graph Builder will be specific to the storage. There is, however, a [defined interface](#graph-api) between the Graph Builder and the Policy Engine. This is to allow alternate implementations of the Policy Engine including the lack of an implementation altogether.
 
 
 #### Removing Nodes ####
 
-The process of removing nodes from the graph isn’t defined by Cincinnati. Instead, it is up to the implementation to decide. For example, when using a Docker v2 Registry, a deleted node could be represented with a special label on the image.
+The process of removing nodes from the graph is not defined by Cincinnati. Instead, it is up to the implementation to decide. For example, when using a Docker v2 Registry, a deleted node could be represented with a special label on the image.
 
 
 ### Policy Engine ###
 
-Policy Engines are in charge of altering a client’s view of the graph by applying a set of filters which are defined within the particular Policy Engine instance. Both the input to and the output from Policy Engines is a graph, allowing multiple Policy Engines to be chained together. The first Policy Engine in a chain will fetch its graph from the Graph Builder and the last Policy Engine in a chain will serve the modified graph to the client.
+Policy Engines are in charge of altering a client's view of the graph by applying a set of filters which are defined within the particular Policy Engine instance. Both the input to and the output from Policy Engines is a graph, allowing multiple Policy Engines to be chained together. The first Policy Engine in a chain will fetch its graph from the Graph Builder and the last Policy Engine in a chain will serve the modified graph to the client.
 
-Clients periodically query a Policy Engine for any updates they should perform. The Policy Engine uses the DAG from its upstream source (e.g. a Graph Builder or another Policy Engine), information about the client which made the request, and its internal policy to determine the next applicable updates for that particular client. It is up to the client to ultimately decide which of the updates it’s going to apply.
+Clients periodically query a Policy Engine for any updates they should perform. The Policy Engine uses the DAG from its upstream source (e.g. a Graph Builder or another Policy Engine), information about the client which made the request, and its internal policy to determine the next applicable updates for that particular client. It is up to the client to ultimately decide which of the updates it is going to apply.
 
 
 ### Client ###
@@ -128,10 +129,19 @@ HTTP GET requests are used to fetch the DAG from the Graph API endpoint. Request
 Accept: application/json
 ```
 
+Clients may provide additional parameters as URL query parameters in the request. The contract for those parameters is defined by the client and Policy Engine implementation.
 
 ### Response ###
 
-The response to the `/v1/graph` endpoint is a JSON representation of the release graph. Each of the releases are represented in an entry in the top-level "nodes" array. Each of these entries includes the release version and any metadata. The transitions between releases are represented as an array in the top-level "edges" array. Each of these arrays has three entries: the index of the starting node, the index of the ending node, and an empty object. This empty object is reserved for future use.
+The response to the `/v1/graph` endpoint is a JSON representation of the release graph. Each of the releases are represented in an entry in the top-level `nodes` array. Each of these entries includes the release version label, a payload identifier and any metadata according to the following schema:
+
+|   Key    | Optional | Description                                                                             |
+|:--------:|:--------:|:----------------------------------------------------------------------------------------|
+| version  | required | the version of the release, as a unique (across "nodes" array) non-empty JSON string    |
+| payload  | required | payload identifier, as a JSON string                                                    |
+| metadata | required | an opaque object that allows a release to convey arbitrary information to its consumers |
+
+The transitions between releases are represented as an array in the top-level `edges` array. Each of these arrays has two entries: the index of the starting node, and the index of the ending node. Both are non-negative integers, ranging from 0 to `len(nodes)-1`.
 
 
 #### Example ####
@@ -143,8 +153,8 @@ The following response represents the graph shown in Figure 2:
 	"nodes": [
 	{
 		"version": "1.0.0",
-			"metadata": {},
-			"payload": "quay.io/openshift/manifest:v1.0.0"
+		"metadata": {},
+		"payload": "quay.io/openshift/manifest:v1.0.0"
 	},
 	{
 		"version": "1.1.0",
@@ -181,5 +191,5 @@ The following response represents the graph shown in Figure 2:
 
 ## Alternatives Considered ##
 
-* **Continue using Omaha** - Tectonic used an augmented Omaha flow. It made use of the Omaha mechanism for discovering updates, but then instead of following the server’s instruction, it fetched a list of all packages from the server and then chose from this list. Other than the initial discover and reporting events, Tectonic didn’t use any other aspects of the Omaha protocol.
-* **No central server** - From a point of correctness, the Cincinnati components aren’t required for updates. This is because the update payloads include the Cincinnati metadata, which defines the valid transitions. The cluster can validate the update payload before attempting to apply it. Without the policy engine, though, it would be difficult to impose rate-limits on updates (which allows those in charge of rolling out updates to stop updates if a problem is discovered). It would also be difficult to make changes to the policies that govern update paths since each cluster would have to make the decisions themselves if there was no central server.
+* **Continue using Omaha** - Tectonic used an augmented Omaha flow. It made use of the Omaha mechanism for discovering updates, but then instead of following the server's instruction, it fetched a list of all packages from the server and then chose from this list. Other than the initial discover and reporting events, Tectonic did not use any other aspects of the Omaha protocol.
+* **No central server** - From a point of correctness, the Cincinnati components are not required for updates. This is because the update payloads include the Cincinnati metadata, which defines the valid transitions. The cluster can validate the update payload before attempting to apply it. Without the policy engine, though, it would be difficult to impose rate-limits on updates (which allows those in charge of rolling out updates to stop updates if a problem is discovered). It would also be difficult to make changes to the policies that govern update paths since each cluster would have to make the decisions themselves if there was no central server.
