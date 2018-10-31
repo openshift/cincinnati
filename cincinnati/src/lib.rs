@@ -15,7 +15,6 @@
 extern crate daggy;
 #[macro_use]
 extern crate failure;
-extern crate semver;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -23,11 +22,10 @@ extern crate serde_derive;
 use daggy::petgraph::visit::{IntoNodeReferences, NodeRef};
 use daggy::{Dag, Walker};
 use failure::Error;
-use semver::Version;
 use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::collections::HashMap;
-use std::fmt;
+use std::{collections, fmt};
 
 pub const CONTENT_TYPE: &str = "application/json";
 
@@ -44,7 +42,7 @@ pub enum Release {
 }
 
 impl Release {
-    pub fn version(&self) -> &Version {
+    pub fn version(&self) -> &str {
         match self {
             Release::Abstract(release) => &release.version,
             Release::Concrete(release) => &release.version,
@@ -54,14 +52,14 @@ impl Release {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ConcreteRelease {
-    pub version: Version,
+    pub version: String,
     pub payload: String,
     pub metadata: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AbstractRelease {
-    pub version: Version,
+    pub version: String,
 }
 
 pub struct ReleaseId(daggy::NodeIndex);
@@ -111,7 +109,7 @@ impl Graph {
         Ok(())
     }
 
-    pub fn find_by_version(&self, version: &Version) -> Option<ReleaseId> {
+    pub fn find_by_version(&self, version: &str) -> Option<ReleaseId> {
         self.dag
             .node_references()
             .find(|nr| nr.weight().version() == version)
@@ -174,9 +172,24 @@ impl<'a> Deserialize<'a> for Graph {
                 let mut graph = Graph {
                     dag: Dag::with_capacity(nodes.len(), edges.len()),
                 };
-                nodes.into_iter().for_each(|n| {
-                    graph.dag.add_node(n);
-                });
+                let mut versions = collections::HashSet::with_capacity(nodes.len());
+                for node in nodes {
+                    // Validate version string is non-empty.
+                    if node.version().is_empty() {
+                        return Err(de::Error::invalid_value(
+                            de::Unexpected::Str(node.version()),
+                            &"a non-empty string version",
+                        ));
+                    }
+                    // Validate version string is unique in "nodes" set.
+                    if !versions.insert(node.version().to_string()) {
+                        return Err(de::Error::invalid_value(
+                            de::Unexpected::Str(node.version()),
+                            &"a unique string version",
+                        ));
+                    }
+                    graph.dag.add_node(node);
+                }
                 graph
                     .dag
                     .add_edges(edges.into_iter().map(|(s, t)| (s, t, Empty {})))
@@ -234,17 +247,17 @@ mod tests {
     fn serialize_graph() {
         let mut graph = Graph::default();
         let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
-            version: Version::new(1, 0, 0),
+            version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
             metadata: HashMap::new(),
         }));
         let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
-            version: Version::new(2, 0, 0),
+            version: String::from("2.0.0"),
             payload: String::from("image/2.0.0"),
             metadata: HashMap::new(),
         }));
         let v3 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
-            version: Version::new(3, 0, 0),
+            version: String::from("3.0.0"),
             payload: String::from("image/3.0.0"),
             metadata: HashMap::new(),
         }));
