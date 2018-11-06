@@ -170,9 +170,10 @@ pub fn fetch_releases(
 
     let releases = layer_digests_tag
         .into_iter()
+        .rev()
         .filter_map(|(layer_digests, tag)| {
             let mut found = false;
-            let mut map = layer_digests.into_iter().filter_map(|layer_digest| {
+            let mut map = layer_digests.into_iter().rev().filter_map(|layer_digest| {
                 trace!("Downloading layer {}...", &layer_digest);
                 if found {
                     return None;
