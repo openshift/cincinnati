@@ -82,7 +82,6 @@ pub fn authenticate_client<'a>(
                         if !is_auth {
                             Err("login failed".into())
                         } else {
-                            println!("logged in!");
                             Ok(dclient.set_token(Some(token.token())))
                         }
                     })
