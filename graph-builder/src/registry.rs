@@ -30,7 +30,7 @@ use failure::Error;
 use registry::futures::prelude::*;
 use registry::tokio_core::reactor::Core;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Release {
     pub source: String,
     pub metadata: release::Metadata,
@@ -264,4 +264,94 @@ fn extract_metadata_from_layer_blob(
         None => bail!(format!("'{}' not found", metadata_filename)),
     }
     .map_err(Into::into)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use release::Metadata;
+    use release::MetadataKind::V0;
+    use semver::Version;
+
+    #[test]
+    fn fetch_release_with_credentials_must_succeed() {
+        let registry = "https://quay.io";
+        let repo = "steveej/cincinnati-test";
+        let credentials_path = Some(PathBuf::from(r"tests/net/quay_credentials.json"));
+        let releases =
+            fetch_releases(&registry, &repo, &credentials_path).expect("fetch_releases failed: ");
+        assert_eq!(2, releases.len());
+
+        let metadata0 = std::collections::HashMap::new();
+        let mut metadata1 = std::collections::HashMap::new();
+        metadata1.insert(String::from("kind"), String::from("test"));
+
+        assert_eq!(
+            vec![
+                Release {
+                    source: "quay.io/steveej/cincinnati-test:0.0.0".to_string(),
+                    metadata: Metadata {
+                        kind: V0,
+                        version: Version {
+                            major: 0,
+                            minor: 0,
+                            patch: 0,
+                            pre: vec![],
+                            build: vec![],
+                        },
+                        previous: vec![],
+                        next: vec![Version {
+                            major: 0,
+                            minor: 0,
+                            patch: 1,
+                            pre: vec![],
+                            build: vec![],
+                        }],
+                        metadata: metadata0,
+                    },
+                },
+                Release {
+                    source: "quay.io/steveej/cincinnati-test:0.0.1".to_string(),
+                    metadata: Metadata {
+                        kind: V0,
+                        version: Version {
+                            major: 0,
+                            minor: 0,
+                            patch: 1,
+                            pre: vec![],
+                            build: vec![],
+                        },
+                        previous: vec![Version {
+                            major: 0,
+                            minor: 0,
+                            patch: 0,
+                            pre: vec![],
+                            build: vec![],
+                        }],
+                        next: vec![],
+                        metadata: metadata1,
+                    },
+                },
+            ],
+            releases
+        )
+    }
+
+    #[test]
+    fn fetch_release_without_credentials_must_fail() {
+        let registry = "https://quay.io";
+        let repo = "steveej/cincinnati-test";
+        let credentials_path = None;
+        let releases = fetch_releases(&registry, &repo, &credentials_path);
+        assert_eq!(true, releases.is_err());
+        assert_eq!(
+            true,
+            releases
+                .err()
+                .unwrap()
+                .to_string()
+                .contains("401 Unauthorized")
+        );
+    }
+
 }
