@@ -76,20 +76,20 @@ fn create_graph(opts: &config::Options) -> Result<Graph, Error> {
             let current = graph.add_release(release)?;
 
             previous.iter().try_for_each(|version| {
-                let previous = match graph.find_by_version(version) {
+                let previous = match graph.find_by_version(&version.to_string()) {
                     Some(id) => id,
                     None => graph.add_release(Release::Abstract(AbstractRelease {
-                        version: version.clone(),
+                        version: version.to_string(),
                     }))?,
                 };
                 graph.add_transition(&previous, &current)
             })?;
 
             next.iter().try_for_each(|version| {
-                let next = match graph.find_by_version(version) {
+                let next = match graph.find_by_version(&version.to_string()) {
                     Some(id) => id,
                     None => graph.add_release(Release::Abstract(AbstractRelease {
-                        version: version.clone(),
+                        version: version.to_string(),
                     }))?,
                 };
                 graph.add_transition(&current, &next)
