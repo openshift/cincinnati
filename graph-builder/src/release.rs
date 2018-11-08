@@ -28,17 +28,20 @@ pub struct Metadata {
     pub next: Vec<Version>,
     #[serde(default)]
     pub metadata: HashMap<String, String>,
+    #[serde(default)]
+    pub manifest_labels: Option<HashMap<String, String>>,
 }
 
 impl fmt::Display for Metadata {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Metadata {{ version: {}, previous: [{}], next: [{}], metadata: {:?} }}",
+            "Metadata {{ version: {}, previous: [{}], next: [{}], metadata: {:?}, manifest_labels: {:?} }}",
             self.version,
             self.previous.iter().format(", "),
             self.next.iter().format(", "),
-            self.metadata
+            self.metadata,
+            self.manifest_labels,
         )
     }
 }

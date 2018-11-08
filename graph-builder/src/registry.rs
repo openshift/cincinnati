@@ -23,6 +23,7 @@ use flate2::read::GzDecoder;
 use release;
 use serde_json;
 use std;
+use std::collections::HashMap;
 use std::{fs::File, io::Read, path::Path, path::PathBuf};
 use tar::Archive;
 
@@ -122,12 +123,22 @@ pub fn fetch_releases(
         ))
         .map_err(|e| format_err!("{}", e))?;
 
-    let layer_digests_tag = authenticated_client
-        .get_tags(&repo, None)
+    let mut tags: Vec<String> = tcore.run(
+        authenticated_client
+            // According to https://docs.docker.com/registry/spec/api/#listing-image-tags
+            // the tags should be ordered lexically but they aren't
+            .get_tags(&repo, Some(20))
+            .map_err(|e| format_err!("{}", e))
+            .collect(),
+    )?;
+    tags.sort();
+
+    let layer_digests_tag = futures::stream::iter_ok(tags.into_iter())
         .and_then(|tag| {
             trace!("processing: {}:{}", &repo, &tag);
 
             let tag_clone0 = tag.clone(); // TODO(steveeJ): is there a way to avoid this?
+            let tag_clone1 = tag.clone(); // TODO(steveeJ): is there a way to avoid this?
             let manifest_kind_future = authenticated_client
                 .has_manifest(&repo, &tag, None)
                 .and_then(move |manifest_kind| match manifest_kind {
@@ -149,12 +160,28 @@ pub fn fetch_releases(
                         dkregistry::mediatypes::MediaTypes::ManifestV2S1Signed => {
                             let m: dkregistry::v2::manifest::ManifestSchema1Signed =
                                 serde_json::from_slice(manifest.as_slice())?;
-                            Ok((m.get_layers(), tag))
+                            Ok((
+                                tag_clone1,
+                                {
+                                    let mut l = m.get_layers();
+                                    l.reverse();
+                                    l
+                                },
+                                m.get_labels(0),
+                            ))
                         }
                         dkregistry::mediatypes::MediaTypes::ManifestV2S2 => {
                             let m: dkregistry::v2::manifest::ManifestSchema2 =
                             serde_json::from_slice(manifest.as_slice())?;
-                            Ok((m.get_layers(), tag))
+                            Ok((
+                                tag_clone1,
+                                {
+                                    let mut l = m.get_layers();
+                                    l.reverse();
+                                    l
+                                },
+                                None,
+                            ))
                         }
                         _ => Err(format_err!("unknown manifest_kind '{:?}'", manifest_kind)),
                     });
@@ -165,14 +192,13 @@ pub fn fetch_releases(
         .and_then(|f| f)
         .collect();
 
-    let layer_digests_tag = tcore.run(layer_digests_tag)?;
+    let layer_digests_tag_labels = tcore.run(layer_digests_tag)?;
 
-    let releases = layer_digests_tag
+    let releases = layer_digests_tag_labels
         .into_iter()
-        .rev()
-        .filter_map(|(layer_digests, tag)| {
+        .filter_map(|(tag, layer_digests, labels)| {
             let mut found = false;
-            let mut map = layer_digests.into_iter().rev().filter_map(|layer_digest| {
+            let mut map = layer_digests.into_iter().filter_map(|layer_digest| {
                 trace!("Downloading layer {}...", &layer_digest);
                 if found {
                     return None;
@@ -183,9 +209,8 @@ pub fn fetch_releases(
                         .get_blob(&repo, &layer_digest)
                         .map_err(|e| format_err!("{}", e))
                         .and_then(|blob| {
-                            trace!("Layer has {} bytes.", blob.len());
-                            let metadata =
-                                extract_metadata_from_layer_blob(&blob, "cincinnati.json")?;
+                            trace!("Layer has {} bytes.", &blob.len());
+                            let metadata = assemble_metadata(&blob, "cincinnati.json", &labels)?;
                             let release = Release {
                                 source: format!("{}/{}:{}", &registry_host, &repo, &tag),
                                 metadata: metadata,
@@ -232,9 +257,10 @@ struct Layer {
     blob_sum: String,
 }
 
-fn extract_metadata_from_layer_blob(
+fn assemble_metadata(
     blob: &[u8],
     metadata_filename: &str,
+    labels: &Option<HashMap<String, String>>,
 ) -> Result<release::Metadata, Error> {
     trace!("Looking for {} in archive", metadata_filename);
 
@@ -258,8 +284,10 @@ fn extract_metadata_from_layer_blob(
         Some(mut file) => {
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
-            serde_json::from_str(&contents)
-                .context(format!("failed to parse {}", metadata_filename))
+            let mut m = serde_json::from_str::<release::Metadata>(&contents)
+                .context(format!("failed to parse {}", metadata_filename))?;
+            m.manifest_labels = labels.to_owned();
+            Ok::<release::Metadata, Error>(m)
         }
         None => bail!(format!("'{}' not found", metadata_filename)),
     }
@@ -275,6 +303,8 @@ mod tests {
 
     #[test]
     fn fetch_release_with_credentials_must_succeed() {
+        env_logger::Builder::from_default_env().init();
+
         let registry = "https://quay.io";
         let repo = "steveej/cincinnati-test";
         let credentials_path = Some(PathBuf::from(r"tests/net/quay_credentials.json"));
@@ -308,6 +338,7 @@ mod tests {
                             build: vec![],
                         }],
                         metadata: metadata0,
+                        manifest_labels: None
                     },
                 },
                 Release {
@@ -330,6 +361,7 @@ mod tests {
                         }],
                         next: vec![],
                         metadata: metadata1,
+                        manifest_labels: None
                     },
                 },
             ],
@@ -352,6 +384,78 @@ mod tests {
                 .to_string()
                 .contains("401 Unauthorized")
         );
+    }
+
+    #[test]
+    fn fetch_release_with_labels() {
+        let registry = "https://quay.io";
+        let repo = "steveej/cincinnati-test-labels";
+        let credentials_path = Some(PathBuf::from(r"tests/net/quay_credentials.json"));
+        let releases =
+            fetch_releases(&registry, &repo, &credentials_path).expect("fetch_releases failed: ");
+        assert_eq!(2, releases.len());
+
+        assert_eq!(
+            vec![
+                Release {
+                    source: "quay.io/steveej/cincinnati-test-labels:0.0.0".to_string(),
+                    metadata: Metadata {
+                        kind: V0,
+                        version: Version {
+                            major: 0,
+                            minor: 0,
+                            patch: 0,
+                            pre: vec![],
+                            build: vec![],
+                        },
+                        previous: vec![],
+                        next: vec![],
+                        metadata: [("layer".to_string(), "1".to_string())]
+                            .iter()
+                            .cloned()
+                            .collect(),
+                        manifest_labels: Some(
+                            [("channel".into(), "alpha".into())]
+                                .iter()
+                                .cloned()
+                                .collect()
+                        ),
+                    },
+                },
+                Release {
+                    source: "quay.io/steveej/cincinnati-test-labels:0.0.1".to_string(),
+                    metadata: Metadata {
+                        kind: V0,
+                        version: Version {
+                            major: 0,
+                            minor: 0,
+                            patch: 1,
+                            pre: vec![],
+                            build: vec![],
+                        },
+                        previous: vec![Version {
+                            major: 0,
+                            minor: 0,
+                            patch: 0,
+                            pre: vec![],
+                            build: vec![],
+                        }],
+                        next: vec![],
+                        metadata: [("layer".to_string(), "1".to_string())]
+                            .iter()
+                            .cloned()
+                            .collect(),
+                        manifest_labels: Some(
+                            [("channel".into(), "beta".into())]
+                                .iter()
+                                .cloned()
+                                .collect()
+                        ),
+                    },
+                },
+            ],
+            releases
+        )
     }
 
 }
