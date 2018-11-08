@@ -133,58 +133,42 @@ pub fn fetch_releases(
     )?;
     tags.sort();
 
-    let layer_digests_tag = futures::stream::iter_ok(tags.into_iter())
+    let layer_digests_tag = futures::stream::iter_ok(tags.to_owned().into_iter())
         .and_then(|tag| {
             trace!("processing: {}:{}", &repo, &tag);
 
-            let tag_clone0 = tag.clone(); // TODO(steveeJ): is there a way to avoid this?
-            let tag_clone1 = tag.clone(); // TODO(steveeJ): is there a way to avoid this?
-            let manifest_kind_future = authenticated_client
+            let layer_digests_future = authenticated_client
                 .has_manifest(&repo, &tag, None)
-                .and_then(move |manifest_kind| match manifest_kind {
-                    Some(manifest_kind) => Ok(manifest_kind),
-                    None => {
-                        Err(format!("{}:{} doesn't have a manifest", &repo, &tag_clone0).into())
-                    }
-                })
-                .inspect(|manifest_kind| {
-                    trace!("manifest_kind: {:?}", manifest_kind);
-                });
-
-            let manifest_future = authenticated_client.get_manifest(&repo, &tag);
-
-            let layer_digests_future =
-                manifest_kind_future
-                    .join(manifest_future)
-                    .map(|(manifest_kind, manifest)| match manifest_kind {
-                        dkregistry::mediatypes::MediaTypes::ManifestV2S1Signed => {
-                            let m: dkregistry::v2::manifest::ManifestSchema1Signed =
+                .join(authenticated_client.get_manifest(&repo, &tag))
+                .map(|(manifest_kind, manifest)| match manifest_kind {
+                    Some(dkregistry::mediatypes::MediaTypes::ManifestV2S1Signed) => {
+                        let m: dkregistry::v2::manifest::ManifestSchema1Signed =
                                 serde_json::from_slice(manifest.as_slice())?;
-                            Ok((
-                                tag_clone1,
-                                {
-                                    let mut l = m.get_layers();
-                                    l.reverse();
-                                    l
-                                },
-                                m.get_labels(0),
-                            ))
-                        }
-                        dkregistry::mediatypes::MediaTypes::ManifestV2S2 => {
-                            let m: dkregistry::v2::manifest::ManifestSchema2 =
+                        Ok((
+                            tag,
+                            {
+                                let mut l = m.get_layers();
+                                l.reverse();
+                                l
+                            },
+                            m.get_labels(0),
+                        ))
+                    }
+                    Some(dkregistry::mediatypes::MediaTypes::ManifestV2S2) => {
+                        let m: dkregistry::v2::manifest::ManifestSchema2 =
                             serde_json::from_slice(manifest.as_slice())?;
-                            Ok((
-                                tag_clone1,
-                                {
-                                    let mut l = m.get_layers();
-                                    l.reverse();
-                                    l
-                                },
-                                None,
-                            ))
-                        }
-                        _ => Err(format_err!("unknown manifest_kind '{:?}'", manifest_kind)),
-                    });
+                        Ok((
+                            tag,
+                            {
+                                let mut l = m.get_layers();
+                                l.reverse();
+                                l
+                            },
+                            None,
+                        ))
+                    }
+                    _ => Err(format_err!("unknown manifest_kind '{:?}'", manifest_kind)),
+                });
 
             layer_digests_future
         })
