@@ -123,15 +123,23 @@ pub fn fetch_releases(
         ))
         .map_err(|e| format_err!("{}", e))?;
 
-    let mut tags: Vec<String> = tcore.run(
+    let tags = match tcore.run(
         authenticated_client
             // According to https://docs.docker.com/registry/spec/api/#listing-image-tags
             // the tags should be ordered lexically but they aren't
             .get_tags(&repo, Some(20))
             .map_err(|e| format_err!("{}", e))
             .collect(),
-    )?;
-    tags.sort();
+    ) {
+        Ok(mut tags) => {
+            if tags.len() == 0 {
+                bail!("{}/{} has no tags", registry, repo);
+            }
+            tags.sort();
+            Ok(tags)
+        }
+        Err(e) => Err(e),
+    }?;
 
     let releases = futures::stream::iter_ok(tags.to_owned().into_iter())
         .and_then(|tag| {
@@ -167,23 +175,36 @@ pub fn fetch_releases(
                             None,
                         ))
                     }
-                    _ => Err(format_err!("unknown manifest_kind '{:?}'", manifest_kind)),
+                    _ => bail!("unknown manifest_kind '{:?}'", manifest_kind),
                 });
 
             layer_digests_future
         })
         .map_err(|e| format_err!("{}", e))
         .and_then(|tag_layer_digests_labels| {
-            let (tag, mut layer_digests, labels) = tag_layer_digests_labels.unwrap();
-            let inner_loop =
-                futures::future::loop_fn(layer_digests.into_iter(), move |mut layer_digest_iter| {
+            let (tag, layer_digests, labels) = match tag_layer_digests_labels {
+                Ok(ok) => ok,
+                Err(e) => bail!("{}", e),
+            };
+
+            let mut layer_digests_iter = layer_digests.into_iter();
+            let inner_loop = futures::future::loop_fn(
+                (
+                    layer_digests_iter
+                        .next()
+                        .ok_or(format_err!("layer_digest_iter yielded none"))?,
+                    layer_digests_iter,
+                ),
+                move |(layer_digest, mut layer_digests_iter)| {
+                    // FIXME: it would be nice to avoid this
                     let (registry_host, repo, tag, labels, layer_digest) = (
                         registry_host.clone(),
                         repo.clone(),
                         tag.clone(),
                         labels.clone(),
-                        layer_digest_iter.next().unwrap().clone(),
+                        layer_digest.clone(),
                     );
+
                     trace!("Downloading layer {}...", &layer_digest);
                     authenticated_client
                         .get_blob(&repo, &layer_digest)
@@ -205,21 +226,34 @@ pub fn fetch_releases(
                                         metadata: metadata,
                                     };
                                     trace!("Found release '{:?}'", release);
-                                    Ok(futures::future::Loop::Break(release))
+                                    Ok(futures::future::Loop::Break(Ok(release)))
                                 }
                                 Err(e) => {
-                                    trace!("{}", e);
-                                    Ok(futures::future::Loop::Continue(layer_digest_iter))
+                                    warn!("{}", e);
+                                    match layer_digests_iter.next() {
+                                        Some(layer_digest) => Ok(futures::future::Loop::Continue(
+                                            (layer_digest, layer_digests_iter),
+                                        )),
+                                        None => Ok(futures::future::Loop::Break(Err(format_err!(
+                                            "Could not find {} in any layer of tag {}",
+                                            &metadata_filename,
+                                            &tag
+                                        )))),
+                                    }
                                 }
                             }
                         })
-                });
-            inner_loop
+                },
+            );
+            Ok(inner_loop)
         })
+        .map_err(|e| format_err!("{}", e))
+        // FIXME: there must be a more generic way to flatten this (`flatten()` doesn't work)
+        .and_then(|f| f)
+        .and_then(|f| f)
         .collect();
 
     let releases = tcore.run(releases)?;
-
     Ok(releases)
 }
 
@@ -291,8 +325,14 @@ mod tests {
     use release::MetadataKind::V0;
     use semver::Version;
 
+    fn init_logger() {
+        let _ = env_logger::try_init_from_env(env_logger::Env::default());
+    }
+
     #[test]
     fn fetch_release_with_credentials_must_succeed() {
+        init_logger();
+
         let registry = "https://quay.io";
         let repo = "steveej/cincinnati-test";
         let credentials_path = Some(PathBuf::from(r"tests/net/quay_credentials.json"));
@@ -359,6 +399,8 @@ mod tests {
 
     #[test]
     fn fetch_release_without_credentials_must_fail() {
+        init_logger();
+
         let registry = "https://quay.io";
         let repo = "steveej/cincinnati-test";
         let credentials_path = None;
@@ -376,7 +418,7 @@ mod tests {
 
     #[test]
     fn fetch_release_with_labels() {
-        env_logger::Builder::from_default_env().init();
+        init_logger();
 
         let registry = "https://quay.io";
         let repo = "steveej/cincinnati-test-labels";
@@ -448,4 +490,22 @@ mod tests {
         )
     }
 
+    #[test]
+    fn fetch_release_with_non_existing_json_must_error_gracefully() {
+        init_logger();
+
+        let registry = "https://quay.io";
+        let repo = "steveej/cincinnati-test-nojson";
+        let credentials_path = None;
+        let releases = fetch_releases(&registry, &repo, &credentials_path);
+        assert_eq!(true, releases.is_err());
+        assert_eq!(
+            true,
+            releases
+                .err()
+                .unwrap()
+                .to_string()
+                .contains("Could not find")
+        );
+    }
 }
