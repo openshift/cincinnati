@@ -133,7 +133,7 @@ pub fn fetch_releases(
     )?;
     tags.sort();
 
-    let layer_digests_tag = futures::stream::iter_ok(tags.to_owned().into_iter())
+    let releases = futures::stream::iter_ok(tags.to_owned().into_iter())
         .and_then(|tag| {
             trace!("processing: {}:{}", &repo, &tag);
 
@@ -173,47 +173,52 @@ pub fn fetch_releases(
             layer_digests_future
         })
         .map_err(|e| format_err!("{}", e))
-        .and_then(|f| f)
-        .collect();
-
-    let layer_digests_tag_labels = tcore.run(layer_digests_tag)?;
-
-    let releases = layer_digests_tag_labels
-        .into_iter()
-        .filter_map(|(tag, layer_digests, labels)| {
-            let mut found = false;
-            let mut map = layer_digests.into_iter().filter_map(|layer_digest| {
-                trace!("Downloading layer {}...", &layer_digest);
-                if found {
-                    return None;
-                }
-
-                match tcore.run(
+        .and_then(|tag_layer_digests_labels| {
+            let (tag, mut layer_digests, labels) = tag_layer_digests_labels.unwrap();
+            let inner_loop =
+                futures::future::loop_fn(layer_digests.into_iter(), move |mut layer_digest_iter| {
+                    let (registry_host, repo, tag, labels, layer_digest) = (
+                        registry_host.clone(),
+                        repo.clone(),
+                        tag.clone(),
+                        labels.clone(),
+                        layer_digest_iter.next().unwrap().clone(),
+                    );
+                    trace!("Downloading layer {}...", &layer_digest);
                     authenticated_client
                         .get_blob(&repo, &layer_digest)
                         .map_err(|e| format_err!("{}", e))
-                        .and_then(|blob| {
-                            trace!("Layer has {} bytes.", &blob.len());
-                            let metadata = assemble_metadata(&blob, "cincinnati.json", &labels)?;
-                            let release = Release {
-                                source: format!("{}/{}:{}", &registry_host, &repo, &tag),
-                                metadata: metadata,
-                            };
-                            trace!("Found release '{:?}'", release);
-                            found = true;
-                            Ok(release)
-                        }),
-                ) {
-                    Ok(release) => Some(release),
-                    Err(e) => {
-                        debug!("No release in layer with digest {}: {}", &layer_digest, e);
-                        None
-                    }
-                }
-            });
-            map.nth(0)
+                        .and_then(move |blob| {
+                            let metadata_filename = "cincinnati.json";
+                            trace!(
+                                "{}: Looking for {} in archive {} with {} bytes",
+                                tag,
+                                metadata_filename,
+                                layer_digest,
+                                blob.len(),
+                            );
+
+                            match assemble_metadata(&blob, metadata_filename, labels) {
+                                Ok(metadata) => {
+                                    let release = Release {
+                                        source: format!("{}/{}:{}", &registry_host, &repo, &tag),
+                                        metadata: metadata,
+                                    };
+                                    trace!("Found release '{:?}'", release);
+                                    Ok(futures::future::Loop::Break(release))
+                                }
+                                Err(e) => {
+                                    trace!("{}", e);
+                                    Ok(futures::future::Loop::Continue(layer_digest_iter))
+                                }
+                            }
+                        })
+                });
+            inner_loop
         })
-        .collect::<Vec<Release>>();
+        .collect();
+
+    let releases = tcore.run(releases)?;
 
     Ok(releases)
 }
@@ -244,10 +249,8 @@ struct Layer {
 fn assemble_metadata(
     blob: &[u8],
     metadata_filename: &str,
-    labels: &Option<HashMap<String, String>>,
+    labels: Option<HashMap<String, String>>,
 ) -> Result<release::Metadata, Error> {
-    trace!("Looking for {} in archive", metadata_filename);
-
     let mut archive = Archive::new(GzDecoder::new(blob.as_ref()));
     match archive
         .entries()?
@@ -268,10 +271,13 @@ fn assemble_metadata(
         Some(mut file) => {
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
-            let mut m = serde_json::from_str::<release::Metadata>(&contents)
-                .context(format!("failed to parse {}", metadata_filename))?;
-            m.manifest_labels = labels.to_owned();
-            Ok::<release::Metadata, Error>(m)
+            match serde_json::from_str::<release::Metadata>(&contents) {
+                Ok(mut m) => {
+                    m.manifest_labels = labels.to_owned();
+                    Ok::<release::Metadata, Error>(m)
+                }
+                Err(e) => bail!(format!("couldn't parse '{}': {}", metadata_filename, e)),
+            }
         }
         None => bail!(format!("'{}' not found", metadata_filename)),
     }
@@ -287,8 +293,6 @@ mod tests {
 
     #[test]
     fn fetch_release_with_credentials_must_succeed() {
-        env_logger::Builder::from_default_env().init();
-
         let registry = "https://quay.io";
         let repo = "steveej/cincinnati-test";
         let credentials_path = Some(PathBuf::from(r"tests/net/quay_credentials.json"));
@@ -372,6 +376,8 @@ mod tests {
 
     #[test]
     fn fetch_release_with_labels() {
+        env_logger::Builder::from_default_env().init();
+
         let registry = "https://quay.io";
         let repo = "steveej/cincinnati-test-labels";
         let credentials_path = Some(PathBuf::from(r"tests/net/quay_credentials.json"));
