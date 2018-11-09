@@ -18,7 +18,6 @@ extern crate futures;
 extern crate tokio_core;
 
 use cincinnati;
-use failure::ResultExt;
 use flate2::read::GzDecoder;
 use release;
 use serde_json;
@@ -144,117 +143,145 @@ pub fn fetch_releases(
     let releases = futures::stream::iter_ok(tags.to_owned().into_iter())
         .and_then(|tag| {
             trace!("processing: {}:{}", &repo, &tag);
-
-            let layer_digests_future = authenticated_client
+            authenticated_client
                 .has_manifest(&repo, &tag, None)
                 .join(authenticated_client.get_manifest(&repo, &tag))
-                .map(|(manifest_kind, manifest)| match manifest_kind {
-                    Some(dkregistry::mediatypes::MediaTypes::ManifestV2S1Signed) => {
-                        let m: dkregistry::v2::manifest::ManifestSchema1Signed =
-                                serde_json::from_slice(manifest.as_slice())?;
-                        Ok((
-                            tag,
-                            {
-                                let mut l = m.get_layers();
-                                l.reverse();
-                                l
-                            },
-                            m.get_labels(0),
-                        ))
-                    }
-                    Some(dkregistry::mediatypes::MediaTypes::ManifestV2S2) => {
-                        let m: dkregistry::v2::manifest::ManifestSchema2 =
-                            serde_json::from_slice(manifest.as_slice())?;
-                        Ok((
-                            tag,
-                            {
-                                let mut l = m.get_layers();
-                                l.reverse();
-                                l
-                            },
-                            None,
-                        ))
-                    }
-                    _ => bail!("unknown manifest_kind '{:?}'", manifest_kind),
-                });
-
-            layer_digests_future
+                .map(|(manifest_kind, manifest)| {
+                    get_layers_for_manifest_with_kind(manifest_kind, manifest, tag)
+                })
+                .map_err(|e| format_err!("{}", e))
         })
-        .map_err(|e| format_err!("{}", e))
-        .and_then(|tag_layer_digests_labels| {
-            let (tag, layer_digests, labels) = match tag_layer_digests_labels {
-                Ok(ok) => ok,
-                Err(e) => bail!("{}", e),
-            };
-
-            let mut layer_digests_iter = layer_digests.into_iter();
-            let inner_loop = futures::future::loop_fn(
-                (
-                    layer_digests_iter
-                        .next()
-                        .ok_or(format_err!("layer_digest_iter yielded none"))?,
-                    layer_digests_iter,
-                ),
-                move |(layer_digest, mut layer_digests_iter)| {
-                    // FIXME: it would be nice to avoid this
-                    let (registry_host, repo, tag, labels, layer_digest) = (
-                        registry_host.clone(),
-                        repo.clone(),
-                        tag.clone(),
-                        labels.clone(),
-                        layer_digest.clone(),
-                    );
-
-                    trace!("Downloading layer {}...", &layer_digest);
-                    authenticated_client
-                        .get_blob(&repo, &layer_digest)
-                        .map_err(|e| format_err!("{}", e))
-                        .and_then(move |blob| {
-                            let metadata_filename = "cincinnati.json";
-                            trace!(
-                                "{}: Looking for {} in archive {} with {} bytes",
-                                tag,
-                                metadata_filename,
-                                layer_digest,
-                                blob.len(),
-                            );
-
-                            match assemble_metadata(&blob, metadata_filename, labels) {
-                                Ok(metadata) => {
-                                    let release = Release {
-                                        source: format!("{}/{}:{}", &registry_host, &repo, &tag),
-                                        metadata: metadata,
-                                    };
-                                    trace!("Found release '{:?}'", release);
-                                    Ok(futures::future::Loop::Break(Ok(release)))
-                                }
-                                Err(e) => {
-                                    warn!("{}", e);
-                                    match layer_digests_iter.next() {
-                                        Some(layer_digest) => Ok(futures::future::Loop::Continue(
-                                            (layer_digest, layer_digests_iter),
-                                        )),
-                                        None => Ok(futures::future::Loop::Break(Err(format_err!(
-                                            "Could not find {} in any layer of tag {}",
-                                            &metadata_filename,
-                                            &tag
-                                        )))),
-                                    }
-                                }
-                            }
-                        })
-                },
-            );
-            Ok(inner_loop)
+        .and_then(|tag_layer_digests_labels| match tag_layer_digests_labels {
+            Ok((tag, layer_digests, labels)) => {
+                if layer_digests.len() == 0 {
+                    bail!("layer_digests list empty")
+                };
+                Ok((tag, layer_digests, labels))
+            }
+            Err(e) => bail!("{}", e),
         })
-        .map_err(|e| format_err!("{}", e))
-        // FIXME: there must be a more generic way to flatten this (`flatten()` doesn't work)
-        .and_then(|f| f)
-        .and_then(|f| f)
+        .and_then(|(tag, layer_digests, labels)| {
+            find_first_release_in_layers(
+                authenticated_client.clone(),
+                layer_digests,
+                registry_host.into(),
+                repo.into(),
+                tag,
+                labels,
+            )
+        })
         .collect();
 
     let releases = tcore.run(releases)?;
     Ok(releases)
+}
+
+fn get_layers_for_manifest_with_kind(
+    manifest_kind: Option<dkregistry::mediatypes::MediaTypes>,
+    manifest: Vec<u8>,
+    tag: String,
+) -> Result<(String, Vec<String>, Option<HashMap<String, String>>), failure::Error> {
+    match manifest_kind {
+        Some(dkregistry::mediatypes::MediaTypes::ManifestV2S1Signed) => {
+            serde_json::from_slice::<dkregistry::v2::manifest::ManifestSchema1Signed>(
+                manifest.as_slice(),
+            )
+            .and_then(|m| {
+                Ok((
+                    tag,
+                    {
+                        let mut l = m.get_layers();
+                        l.reverse();
+                        l
+                    },
+                    m.get_labels(0),
+                ))
+            })
+        }
+        Some(dkregistry::mediatypes::MediaTypes::ManifestV2S2) => {
+            serde_json::from_slice::<dkregistry::v2::manifest::ManifestSchema2>(manifest.as_slice())
+                .and_then(|m| {
+                    Ok((
+                        tag,
+                        {
+                            let mut l = m.get_layers();
+                            l.reverse();
+                            l
+                        },
+                        None,
+                    ))
+                })
+        }
+        _ => bail!("unknown manifest_kind '{:?}'", manifest_kind),
+    }
+    .map_err(Into::into)
+}
+
+fn find_first_release_in_layers(
+    authenticated_client: dkregistry::v2::Client,
+    layer_digests: Vec<String>,
+    registry_host: String,
+    repo: String,
+    tag: String,
+    labels: Option<HashMap<String, String>>,
+) -> impl futures::future::Future<Item = Release, Error = failure::Error> {
+    assert!(layer_digests.len() > 0);
+    let mut layer_digests_iter = layer_digests.into_iter();
+
+    futures::future::loop_fn(
+        (layer_digests_iter.next().unwrap(), layer_digests_iter),
+        move |(layer_digest, mut layer_digests_iter)| {
+            // FIXME: it would be nice to avoid this
+            let (registry_host, repo, tag, labels, layer_digest) = (
+                registry_host.clone(),
+                repo.clone(),
+                tag.clone(),
+                labels.clone(),
+                layer_digest.clone(),
+            );
+
+            trace!("Downloading layer {}...", &layer_digest);
+            authenticated_client
+                .get_blob(&repo, &layer_digest)
+                .map_err(|e| format_err!("{}", e))
+                .and_then(move |blob| {
+                    let metadata_filename = "cincinnati.json";
+                    trace!(
+                        "{}: Looking for {} in archive {} with {} bytes",
+                        tag,
+                        metadata_filename,
+                        layer_digest,
+                        blob.len(),
+                    );
+
+                    match assemble_metadata(&blob, metadata_filename, labels) {
+                        Ok(metadata) => {
+                            let release = Release {
+                                source: format!("{}/{}:{}", &registry_host, &repo, &tag),
+                                metadata: metadata,
+                            };
+                            trace!("Found release '{:?}'", release);
+                            Ok(futures::future::Loop::Break(Ok(release)))
+                        }
+                        Err(e) => {
+                            warn!("{}", e);
+                            match layer_digests_iter.next() {
+                                Some(layer_digest) => Ok(futures::future::Loop::Continue((
+                                    layer_digest,
+                                    layer_digests_iter,
+                                ))),
+                                None => Ok(futures::future::Loop::Break(Err(format_err!(
+                                    "Could not find {} in any layer of tag {}",
+                                    &metadata_filename,
+                                    &tag
+                                )))),
+                            }
+                        }
+                    }
+                })
+        },
+    )
+    .flatten()
 }
 
 #[derive(Debug, Deserialize)]
