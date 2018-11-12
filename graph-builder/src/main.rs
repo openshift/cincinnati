@@ -13,32 +13,12 @@
 // limitations under the License.
 
 extern crate actix_web;
-extern crate cincinnati;
-extern crate dkregistry;
-extern crate env_logger;
-extern crate itertools;
-#[macro_use]
 extern crate failure;
-extern crate flate2;
-extern crate futures;
-#[macro_use]
+extern crate graph_builder;
 extern crate log;
-extern crate reqwest;
-extern crate semver;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-#[macro_use]
 extern crate structopt;
-extern crate tar;
-extern crate tokio;
-extern crate tokio_core;
 
-mod config;
-mod graph;
-mod registry;
-mod release;
+use graph_builder::{config, graph};
 
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
