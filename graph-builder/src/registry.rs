@@ -42,6 +42,7 @@ impl Into<cincinnati::Release> for Release {
             version: self.metadata.version.to_string(),
             payload: self.source,
             metadata: self.metadata.metadata,
+            manifest_labels: self.metadata.manifest_labels.unwrap_or_default(),
         })
     }
 }

@@ -55,6 +55,7 @@ pub struct ConcreteRelease {
     pub version: String,
     pub payload: String,
     pub metadata: HashMap<String, String>,
+    pub manifest_labels: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -250,27 +251,30 @@ mod tests {
             version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
             metadata: HashMap::new(),
+            manifest_labels: HashMap::new(),
         }));
         let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("2.0.0"),
             payload: String::from("image/2.0.0"),
             metadata: HashMap::new(),
+            manifest_labels: HashMap::new(),
         }));
         let v3 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("3.0.0"),
             payload: String::from("image/3.0.0"),
             metadata: HashMap::new(),
+            manifest_labels: HashMap::new(),
         }));
         graph.dag.add_edge(v1, v2, Empty {}).unwrap();
         graph.dag.add_edge(v2, v3, Empty {}).unwrap();
         graph.dag.add_edge(v1, v3, Empty {}).unwrap();
 
-        assert_eq!(serde_json::to_string(&graph).unwrap(), r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#);
+        assert_eq!(serde_json::to_string(&graph).unwrap(), r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{},"manifest_labels":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{},"manifest_labels":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{},"manifest_labels":{}}],"edges":[[0,1],[1,2],[0,2]]}"#);
     }
 
     #[test]
     fn deserialize_graph() {
-        let json = r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#;
+        let json = r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{},"manifest_labels":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{},"manifest_labels":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{},"manifest_labels":{}}],"edges":[[0,1],[1,2],[0,2]]}"#;
         assert_eq!(
             serde_json::to_string(&serde_json::from_str::<Graph>(json).unwrap()).unwrap(),
             json
