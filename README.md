@@ -1,6 +1,6 @@
 # Cincinnati
 
-Cincinnati is an update protocol designed to facility automatic updates. It describes a particular method for representing transitions between releases of a project and allowing a client to perform automatic updates between these releases.
+Cincinnati is an update protocol designed to facilitate automatic updates. It describes a particular method for representing transitions between releases of a project and allowing a client to perform automatic updates between these releases.
 
 ## Quick Start
 
