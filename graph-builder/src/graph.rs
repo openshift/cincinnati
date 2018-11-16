@@ -14,7 +14,7 @@
 
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
-use cincinnati::{AbstractRelease, CONTENT_TYPE, Graph, Release};
+use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
 use config;
 use failure::{Error, ResultExt};
 use registry;

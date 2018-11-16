@@ -14,7 +14,7 @@
 
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
-use cincinnati::{CONTENT_TYPE, Graph};
+use cincinnati::{Graph, CONTENT_TYPE};
 use failure::Error;
 use futures::{future, Future, Stream};
 use hyper::{Body, Client, Request, Uri};

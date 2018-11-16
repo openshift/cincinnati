@@ -32,7 +32,11 @@ pub struct Options {
     pub repository: String,
 
     /// Duration of the pause (in seconds) between scans of the registry
-    #[structopt(long = "period", default_value = "30", parse(try_from_str = "parse_duration"))]
+    #[structopt(
+        long = "period",
+        default_value = "30",
+        parse(try_from_str = "parse_duration")
+    )]
     pub period: Duration,
 
     /// Address on which the server will listen

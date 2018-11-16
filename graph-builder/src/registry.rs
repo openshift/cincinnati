@@ -162,5 +162,6 @@ fn fetch_metadata_from_layer(
             serde_json::from_str(&contents).context("failed to parse cincinnati.json")
         }
         None => bail!("cincinnati.json not found"),
-    }.map_err(Into::into)
+    }
+    .map_err(Into::into)
 }
