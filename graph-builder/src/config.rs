@@ -14,6 +14,7 @@
 
 use std::net::IpAddr;
 use std::num::ParseIntError;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -32,7 +33,11 @@ pub struct Options {
     pub repository: String,
 
     /// Duration of the pause (in seconds) between scans of the registry
-    #[structopt(long = "period", default_value = "30", parse(try_from_str = "parse_duration"))]
+    #[structopt(
+        long = "period",
+        default_value = "30",
+        parse(try_from_str = "parse_duration")
+    )]
     pub period: Duration,
 
     /// Address on which the server will listen
@@ -42,6 +47,10 @@ pub struct Options {
     /// Port to which the server will bind
     #[structopt(long = "port", default_value = "8080")]
     pub port: u16,
+
+    /// Credentials file for authentication against the image registry
+    #[structopt(long = "credentials-file", parse(from_os_str))]
+    pub credentials_path: Option<PathBuf>,
 }
 
 fn parse_duration(src: &str) -> Result<Duration, ParseIntError> {

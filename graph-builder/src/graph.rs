@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+extern crate dkregistry;
+
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
-use cincinnati::{AbstractRelease, CONTENT_TYPE, Graph, Release};
+use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
 use config;
 use failure::{Error, ResultExt};
 use registry;
@@ -51,9 +53,18 @@ impl State {
 }
 
 pub fn run(opts: &config::Options, state: &State) -> ! {
+    // Read the credentials outside the loop to avoid re-reading the file
+    let (username, password) =
+        registry::read_credentials(opts.credentials_path.as_ref(), &opts.registry)
+            .expect("could not read credentials");
+
     loop {
         debug!("Updating graph...");
-        match create_graph(&opts) {
+        match create_graph(
+            &opts,
+            username.as_ref().map(String::as_ref),
+            password.as_ref().map(String::as_ref),
+        ) {
             Ok(graph) => match serde_json::to_string(&graph) {
                 Ok(json) => *state.json.write().expect("json lock has been poisoned") = json,
                 Err(err) => error!("Failed to serialize graph: {}", err),
@@ -64,10 +75,14 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
     }
 }
 
-fn create_graph(opts: &config::Options) -> Result<Graph, Error> {
+fn create_graph(
+    opts: &config::Options,
+    username: Option<&str>,
+    password: Option<&str>,
+) -> Result<Graph, Error> {
     let mut graph = Graph::default();
 
-    registry::fetch_releases(&opts.registry, &opts.repository)
+    registry::fetch_releases(&opts.registry, &opts.repository, username, password)
         .context("failed to fetch all release metadata")?
         .into_iter()
         .try_for_each(|release| {

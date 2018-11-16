@@ -14,6 +14,7 @@
 
 extern crate actix_web;
 extern crate cincinnati;
+extern crate dkregistry;
 extern crate env_logger;
 extern crate itertools;
 #[macro_use]
@@ -69,7 +70,8 @@ fn main() -> Result<(), Error> {
         App::with_state(state.clone())
             .middleware(Logger::default())
             .route("/v1/graph", Method::GET, graph::index)
-    }).bind(addr)?
-        .run();
+    })
+    .bind(addr)?
+    .run();
     Ok(())
 }
