@@ -20,18 +20,25 @@ extern crate tokio_core;
 use cincinnati;
 use failure::Error;
 use flate2::read::GzDecoder;
-use registry::futures::future::Either;
+use registry::futures::future::{self, Either, Future};
 use registry::futures::prelude::*;
 use registry::tokio_core::reactor::Core;
-use release;
+use release::Metadata;
 use serde_json;
-use std::{self, fs::File, io::Read, path::Path, path::PathBuf};
+use std::{
+    fs::File,
+    io::Read,
+    iter::{Iterator, Peekable},
+    path::Path,
+    path::PathBuf,
+    string::String,
+};
 use tar::Archive;
 
 #[derive(Debug, Clone)]
 pub struct Release {
     pub source: String,
-    pub metadata: release::Metadata,
+    pub metadata: Metadata,
 }
 
 impl Into<cincinnati::Release> for Release {
@@ -63,9 +70,8 @@ pub fn read_credentials(
 
 pub fn authenticate_client(
     client: &mut dkregistry::v2::Client,
-    login_scope: std::string::String,
-) -> impl futures::future::Future<Item = &dkregistry::v2::Client, Error = dkregistry::errors::Error>
-{
+    login_scope: String,
+) -> impl Future<Item = &dkregistry::v2::Client, Error = dkregistry::errors::Error> {
     client
         .is_v2_supported()
         .and_then(move |v2_supported| {
@@ -189,15 +195,15 @@ fn find_first_release(
     registry_host: String,
     repo: String,
     tag: String,
-) -> impl futures::future::Future<Item = Release, Error = failure::Error> {
-    futures::future::loop_fn(
+) -> impl Future<Item = Release, Error = Error> {
+    future::loop_fn(
         layer_digests.into_iter().peekable(),
         move |mut layer_digests_iter| {
             let layer_digest = {
                 if let Some(layer_digest) = layer_digests_iter.next() {
                     layer_digest
                 } else {
-                    let no_release_found = futures::future::ok(continue_or_break_loop(
+                    let no_release_found = future::ok(continue_or_break_loop(
                         layer_digests_iter,
                         None,
                         Some(format_err!(
@@ -232,7 +238,7 @@ fn find_first_release(
                     );
 
                     match assemble_metadata(&blob, metadata_filename) {
-                        Ok(metadata) => futures::future::ok(continue_or_break_loop(
+                        Ok(metadata) => future::ok(continue_or_break_loop(
                             layer_digests_iter,
                             Some(Release {
                                 source: format!("{}/{}:{}", &registry_host, &repo, &tag),
@@ -240,7 +246,7 @@ fn find_first_release(
                             }),
                             None,
                         )),
-                        Err(e) => futures::future::ok(continue_or_break_loop(
+                        Err(e) => future::ok(continue_or_break_loop(
                             layer_digests_iter,
                             None,
                             Some(format_err!(
@@ -280,7 +286,7 @@ struct Layer {
     blob_sum: String,
 }
 
-fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<release::Metadata, Error> {
+fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<Metadata, Error> {
     let mut archive = Archive::new(GzDecoder::new(blob));
     match archive
         .entries()?
@@ -301,8 +307,8 @@ fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<release::Me
         Some(mut file) => {
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
-            match serde_json::from_str::<release::Metadata>(&contents) {
-                Ok(m) => Ok::<release::Metadata, Error>(m),
+            match serde_json::from_str::<Metadata>(&contents) {
+                Ok(m) => Ok::<Metadata, Error>(m),
                 Err(e) => bail!(format!("couldn't parse '{}': {}", metadata_filename, e)),
             }
         }
@@ -312,23 +318,25 @@ fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<release::Me
 }
 
 fn continue_or_break_loop<I>(
-    mut layer_digests_iter: std::iter::Peekable<I>,
+    mut layer_digests_iter: Peekable<I>,
     r: Option<Release>,
     e: Option<Error>,
-) -> futures::future::Loop<Result<Release, Error>, std::iter::Peekable<I>>
+) -> future::Loop<Result<Release, Error>, Peekable<I>>
 where
-    I: std::iter::Iterator<Item = String>,
+    I: Iterator<Item = String>,
 {
+    use registry::future::Loop::{Break, Continue};
+
     match (r, e) {
         (Some(r), _) => {
             trace!("Found release '{:?}'", r);
-            futures::future::Loop::Break(Ok(r))
+            Break(Ok(r))
         }
         (_, Some(e)) => {
             warn!("{}", e);
             match layer_digests_iter.peek() {
-                Some(_) => futures::future::Loop::Continue(layer_digests_iter),
-                None => futures::future::Loop::Break(Err(e)),
+                Some(_) => Continue(layer_digests_iter),
+                None => Break(Err(e)),
             }
         }
         _ => continue_or_break_loop(
