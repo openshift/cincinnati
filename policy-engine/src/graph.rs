@@ -1,16 +1,4 @@
-// Copyright 2018 Alex Crawford
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//! Cincinnati graph service.
 
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
@@ -18,19 +6,55 @@ use cincinnati::{Graph, CONTENT_TYPE};
 use failure::Error;
 use futures::{future, Future, Stream};
 use hyper::{Body, Client, Request, Uri};
+use prometheus::{Counter, Histogram};
 use serde_json;
 
-pub fn index(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+lazy_static! {
+    static ref HTTP_GRAPH_REQS: Counter = register_counter!(
+        "http_graph_requests_total",
+        "Total number of HTTP /v1/graph requests."
+    )
+    .unwrap();
+    static ref HTTP_GRAPH_BAD_REQS: Counter = register_counter!(
+        "http_graph_bad_requests_total",
+        "Total number of bad HTTP /v1/graph requests."
+    )
+    .unwrap();
+    static ref HTTP_UPSTREAM_REQS: Counter = register_counter!(
+        "http_upstream_requests_total",
+        "Total number of HTTP upstream requests."
+    )
+    .unwrap();
+    static ref HTTP_UPSTREAM_UNREACHABLE: Counter = register_counter!(
+        "http_upstream_errors_total",
+        "Total number of HTTP upstream unreachable errors."
+    )
+    .unwrap();
+    static ref HTTP_SERVE_HIST: Histogram = register_histogram!(
+        "http_graph_serve_duration_seconds",
+        "HTTP graph serving latency in seconds."
+    )
+    .unwrap();
+}
+
+/// Serve Cincinnati graph requests.
+pub(crate) fn index(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+    HTTP_GRAPH_REQS.inc();
     match req.headers().get(header::ACCEPT) {
-        Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE) => Box::new(
-            Client::new()
-                .request(
-                    Request::get(&req.state().upstream)
-                        .header(header::ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
-                        .body(Body::empty())
-                        .expect("unable to form request"),
-                )
+        Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE) => {
+            let ups_req = Request::get(&req.state().upstream)
+                .header(header::ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
+                .body(Body::empty())
+                .expect("unable to form request");
+            HTTP_UPSTREAM_REQS.inc();
+            let timer = HTTP_SERVE_HIST.start_timer();
+            let serve = Client::new()
+                .request(ups_req)
                 .from_err::<Error>()
+                .map_err(|e| {
+                    HTTP_UPSTREAM_UNREACHABLE.inc();
+                    e
+                })
                 .and_then(|res| {
                     if res.status().is_success() {
                         future::ok(res)
@@ -47,9 +71,17 @@ pub fn index(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error =
                     Ok(HttpResponse::Ok()
                         .content_type(CONTENT_TYPE)
                         .body(serde_json::to_string(&graph)?))
-                }),
-        ),
-        _ => Box::new(future::ok(HttpResponse::NotAcceptable().finish())),
+                })
+                .then(move |r| {
+                    timer.observe_duration();
+                    r
+                });
+            Box::new(serve)
+        }
+        _ => {
+            HTTP_GRAPH_BAD_REQS.inc();
+            Box::new(future::ok(HttpResponse::NotAcceptable().finish()))
+        }
     }
 }
 

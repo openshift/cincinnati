@@ -1,17 +1,6 @@
-// Copyright 2018 Alex Crawford
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+//! Cincinnati backend: policy-engine server.
 
+extern crate actix;
 extern crate actix_web;
 extern crate cincinnati;
 extern crate env_logger;
@@ -19,7 +8,11 @@ extern crate env_logger;
 extern crate failure;
 extern crate futures;
 extern crate hyper;
+#[macro_use]
+extern crate lazy_static;
 extern crate log;
+#[macro_use]
+extern crate prometheus;
 extern crate semver;
 extern crate serde_json;
 #[macro_use]
@@ -27,6 +20,7 @@ extern crate structopt;
 
 mod config;
 mod graph;
+mod metrics;
 
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
@@ -34,6 +28,7 @@ use log::LevelFilter;
 use structopt::StructOpt;
 
 fn main() -> Result<(), Error> {
+    let sys = actix::System::new("policy-engine");
     let opts = config::Options::from_args();
 
     env_logger::Builder::from_default_env()
@@ -48,6 +43,16 @@ fn main() -> Result<(), Error> {
         )
         .init();
 
+    // Metrics service.
+    server::new(move || {
+        App::new()
+            .middleware(Logger::default())
+            .route("/metrics", Method::GET, metrics::serve)
+    })
+    .bind((opts.metrics_address, opts.metrics_port))?
+    .start();
+
+    // Main service.
     let state = graph::State {
         upstream: opts.upstream,
     };
@@ -57,6 +62,8 @@ fn main() -> Result<(), Error> {
             .route("/v1/graph", Method::GET, graph::index)
     })
     .bind((opts.address, opts.port))?
-    .run();
+    .start();
+
+    sys.run();
     Ok(())
 }
