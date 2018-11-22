@@ -12,28 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate dkregistry;
-extern crate failure;
-extern crate futures;
-extern crate tokio_core;
-
 use cincinnati;
 use failure::Error;
 use flate2::read::GzDecoder;
-use registry::futures::future::{self, Either, Future};
-use registry::futures::prelude::*;
-use registry::tokio_core::reactor::Core;
+use futures::future::{self, Either, Future};
+use futures::prelude::*;
 use release::Metadata;
 use serde_json;
-use std::{
-    fs::File,
-    io::Read,
-    iter::{Iterator, Peekable},
-    path::Path,
-    path::PathBuf,
-    string::String,
-};
+use std::fs::File;
+use std::io::Read;
+use std::iter::{Iterator, Peekable};
+use std::path::{Path, PathBuf};
+use std::string::String;
 use tar::Archive;
+use tokio_core::reactor::Core;
 
 #[derive(Debug, Clone)]
 pub struct Release {
@@ -169,8 +161,8 @@ fn get_layer_digests(
     manifest_kind: &Option<dkregistry::mediatypes::MediaTypes>,
     manifest: &[u8],
 ) -> Result<Vec<String>, failure::Error> {
-    use registry::dkregistry::mediatypes::MediaTypes::{ManifestV2S1Signed, ManifestV2S2};
-    use registry::dkregistry::v2::manifest::{ManifestSchema1Signed, ManifestSchema2};
+    use dkregistry::mediatypes::MediaTypes::{ManifestV2S1Signed, ManifestV2S2};
+    use dkregistry::v2::manifest::{ManifestSchema1Signed, ManifestSchema2};
 
     match manifest_kind {
         Some(ManifestV2S1Signed) => serde_json::from_slice::<ManifestSchema1Signed>(manifest)

@@ -20,6 +20,7 @@ extern crate itertools;
 #[macro_use]
 extern crate failure;
 extern crate flate2;
+extern crate futures;
 #[macro_use]
 extern crate log;
 extern crate reqwest;
@@ -31,6 +32,7 @@ extern crate serde_json;
 #[macro_use]
 extern crate structopt;
 extern crate tar;
+extern crate tokio_core;
 
 mod config;
 mod graph;
