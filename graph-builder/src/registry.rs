@@ -196,6 +196,7 @@ fn find_first_release(
     repo: String,
     tag: String,
 ) -> impl Future<Item = Release, Error = Error> {
+    let outer_tag = tag.clone();
     future::loop_fn(
         layer_digests.into_iter().peekable(),
         move |mut layer_digests_iter| {
@@ -250,8 +251,8 @@ fn find_first_release(
                             layer_digests_iter,
                             None,
                             Some(format_err!(
-                                "could not assemble metadata from blob '{:?}': {}",
-                                String::from_utf8_lossy(&blob),
+                                "could not assemble metadata from blob ({}): {}",
+                                layer_digest,
                                 e,
                             )),
                         )),
@@ -261,6 +262,7 @@ fn find_first_release(
         },
     )
     .flatten()
+    .map_err(move |_| format_err!("metadata not found in any layer of tag {}", outer_tag))
 }
 
 #[derive(Debug, Deserialize)]
