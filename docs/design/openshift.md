@@ -34,7 +34,7 @@ The series of steps that the Cluster Version Operator follows is detailed below:
 6. CVO instructs the local container runtime to download the image specified in the "desired update" field.
 7. CVO validates the digest in the downloaded image and verifies that it was signed by the private half of one of its hard coded keys.
     1. If the image is invalid, it is removed from the local system and CVO goes back to step 1.
-8. CVO validates that the downloaded image can be applied to the currently running version by inspecting cincinnati.json.
+8. CVO validates that the downloaded image can be applied to the currently running version by inspecting `release-metadata`.
     1. If the image cannot be applied, it is removed from the local system and CVO goes back to step 1.
 9. CVO applies the deployment for itself, triggering Kubernetes to replace CVO with a newer version.
 10. CVO applies the remainder of the deployments from the downloaded image, in order, triggering the SLOs to begin updating.
@@ -135,6 +135,6 @@ The image field references the Update Image which contains the actual update to 
 
 ## Update Image ##
 
-The Update Image is a container image consisting of a series of Kubernetes manifests describing the Second-Level Operators (SLOs), the cincinnati.json file required by Cincinnati, and a manifest specific to OpenShift. In the future, this image may be expanded to include other assets.
+The Update Image is a container image consisting of a series of Kubernetes manifests describing the Second-Level Operators (SLOs), the `release-metadata` file required by Cincinnati, and a manifest specific to OpenShift. In the future, this image may be expanded to include other assets.
 
 The OpenShift manifest describes the format of the Update Image and provides a cryptographic signature of the surrounding image. The details of this manifest have not yet been finalized.
