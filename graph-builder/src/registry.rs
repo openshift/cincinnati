@@ -221,7 +221,7 @@ fn find_first_release(
                 .get_blob(&repo, &layer_digest)
                 .map_err(|e| format_err!("could not download blob: {}", e))
                 .and_then(move |blob| {
-                    let metadata_filename = "cincinnati.json";
+                    let metadata_filename = "release-metadata";
                     trace!(
                         "{}: Looking for {} in archive {} with {} bytes",
                         tag,
