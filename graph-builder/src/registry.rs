@@ -15,13 +15,12 @@
 use cincinnati;
 use failure::Error;
 use flate2::read::GzDecoder;
-use futures::future::{self, Either, Future};
 use futures::prelude::*;
 use release::Metadata;
 use serde_json;
 use std::fs::File;
 use std::io::Read;
-use std::iter::{Iterator, Peekable};
+use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::string::String;
 use tar::Archive;
@@ -115,46 +114,105 @@ pub fn fetch_releases(
         ))
         .map_err(|e| format_err!("{}", e))?;
 
-    let tags = tcore
-        .run(
-            authenticated_client
-                // According to https://docs.docker.com/registry/spec/api/#listing-image-tags
-                // the tags should be ordered lexically but they aren't
-                .get_tags(&repo, Some(20))
-                .map_err(|e| format_err!("{}", e))
-                .collect(),
-        )
-        .map(|mut tags| {
-            if tags.is_empty() {
-                warn!("{}/{} has no tags", registry_host, repo)
-            };
-            tags.sort();
-            tags
-        })?;
-
-    let releases = futures::stream::iter_ok(tags)
-        .and_then(|tag| {
-            trace!("processing: {}:{}", &repo, &tag);
-            authenticated_client
-                .has_manifest(&repo, &tag, None)
-                .join(authenticated_client.get_manifest(&repo, &tag))
-                .map_err(|e| format_err!("{}", e))
-                .and_then(|(manifest_kind, manifest)| {
-                    Ok((tag, get_layer_digests(&manifest_kind, &manifest)?))
-                })
-        })
+    let releases = get_tags(repo.to_owned(), authenticated_client)
+        .and_then(|tag| get_manifest_and_layers(tag, repo.to_owned(), authenticated_client))
         .and_then(|(tag, layer_digests)| {
             find_first_release(
                 layer_digests,
-                authenticated_client.clone(),
-                registry_host.into(),
-                repo.into(),
-                tag,
+                authenticated_client.to_owned(),
+                registry_host.to_owned(),
+                repo.to_owned(),
+                tag.to_owned(),
             )
         })
         .collect();
 
     tcore.run(releases)
+}
+
+// Get a stream of tags
+fn get_tags(
+    repo: String,
+    authenticated_client: &dkregistry::v2::Client,
+) -> impl Stream<Item = String, Error = Error> {
+    authenticated_client
+        // According to https://docs.docker.com/registry/spec/api/#listing-image-tags
+        // the tags should be ordered lexically but they aren't
+        .get_tags(&repo, Some(20))
+        .map_err(|e| format_err!("{}", e))
+}
+
+fn get_manifest_and_layers(
+    tag: String,
+    repo: String,
+    authenticated_client: &dkregistry::v2::Client,
+) -> impl Future<Item = (String, Vec<String>), Error = failure::Error> {
+    trace!("processing: {}:{}", &repo, &tag);
+    authenticated_client
+        .has_manifest(&repo, &tag, None)
+        .join(authenticated_client.get_manifest(&repo, &tag))
+        .map_err(|e| format_err!("{}", e))
+        .and_then(|(manifest_kind, manifest)| {
+            Ok((tag, get_layer_digests(&manifest_kind, &manifest)?))
+        })
+}
+
+fn find_first_release(
+    layer_digests: Vec<String>,
+    authenticated_client: dkregistry::v2::Client,
+    registry_host: String,
+    repo: String,
+    tag: String,
+) -> impl Future<Item = Release, Error = Error> {
+    let tag_for_error = tag.clone();
+
+    let releases = layer_digests.into_iter().map(move |layer_digest| {
+        trace!("Downloading layer {}...", &layer_digest);
+        let (registry_host, repo, tag) = (registry_host.clone(), repo.clone(), tag.clone());
+
+        authenticated_client
+            .get_blob(&repo, &layer_digest)
+            .map_err(|e| format_err!("{}", e))
+            .into_stream()
+            .filter_map(move |blob| {
+                let metadata_filename = "release-metadata";
+
+                trace!(
+                    "{}: Looking for {} in archive {} with {} bytes",
+                    &tag,
+                    &metadata_filename,
+                    &layer_digest,
+                    &blob.len(),
+                );
+
+                match assemble_metadata(&blob, metadata_filename) {
+                    Ok(metadata) => Some(Release {
+                        source: format!("{}/{}:{}", registry_host, repo, &tag),
+                        metadata,
+                    }),
+                    Err(e) => {
+                        trace!(
+                            "could not assemble metadata from layer ({}): {}",
+                            &layer_digest,
+                            e,
+                        );
+                        None
+                    }
+                }
+            })
+    });
+
+    futures::stream::iter_ok::<_, Error>(releases)
+        .flatten()
+        .into_future()
+        .map_err(|(e, _)| e)
+        .and_then(move |(release, _)| match release {
+            Some(release) => Ok(release),
+            None => Err(format_err!(
+                "could not find any release in tag {}",
+                tag_for_error
+            )),
+        })
 }
 
 fn get_layer_digests(
@@ -179,82 +237,6 @@ fn get_layer_digests(
         _ => bail!("unknown manifest_kind '{:?}'", manifest_kind),
     }
     .map_err(Into::into)
-}
-
-fn find_first_release(
-    layer_digests: Vec<String>,
-    authenticated_client: dkregistry::v2::Client,
-    registry_host: String,
-    repo: String,
-    tag: String,
-) -> impl Future<Item = Release, Error = Error> {
-    let outer_tag = tag.clone();
-    future::loop_fn(
-        layer_digests.into_iter().peekable(),
-        move |mut layer_digests_iter| {
-            let layer_digest = {
-                if let Some(layer_digest) = layer_digests_iter.next() {
-                    layer_digest
-                } else {
-                    let no_release_found = future::ok(continue_or_break_loop(
-                        layer_digests_iter,
-                        None,
-                        Some(format_err!(
-                            "no release found for tag '{}' and no more layers to examine",
-                            tag
-                        )),
-                    ));
-                    return Either::A(no_release_found);
-                }
-            };
-
-            // FIXME: it would be nice to avoid this
-            let (registry_host, repo, tag, layer_digest) = (
-                registry_host.clone(),
-                repo.clone(),
-                tag.clone(),
-                layer_digest.clone(),
-            );
-
-            trace!("Downloading layer {}...", &layer_digest);
-            let examine_blobs = authenticated_client
-                .get_blob(&repo, &layer_digest)
-                .map_err(|e| format_err!("could not download blob: {}", e))
-                .and_then(move |blob| {
-                    let metadata_filename = "release-metadata";
-                    trace!(
-                        "{}: Looking for {} in archive {} with {} bytes",
-                        tag,
-                        metadata_filename,
-                        layer_digest,
-                        blob.len(),
-                    );
-
-                    match assemble_metadata(&blob, metadata_filename) {
-                        Ok(metadata) => future::ok(continue_or_break_loop(
-                            layer_digests_iter,
-                            Some(Release {
-                                source: format!("{}/{}:{}", &registry_host, &repo, &tag),
-                                metadata,
-                            }),
-                            None,
-                        )),
-                        Err(e) => future::ok(continue_or_break_loop(
-                            layer_digests_iter,
-                            None,
-                            Some(format_err!(
-                                "could not assemble metadata from blob ({}): {}",
-                                layer_digest,
-                                e,
-                            )),
-                        )),
-                    }
-                });
-            Either::B(examine_blobs)
-        },
-    )
-    .flatten()
-    .map_err(move |_| format_err!("metadata not found in any layer of tag {}", outer_tag))
 }
 
 #[derive(Debug, Deserialize)]
@@ -309,36 +291,4 @@ fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<Metadata, E
         None => bail!(format!("'{}' not found", metadata_filename)),
     }
     .map_err(Into::into)
-}
-
-fn continue_or_break_loop<I>(
-    mut layer_digests_iter: Peekable<I>,
-    r: Option<Release>,
-    e: Option<Error>,
-) -> future::Loop<Result<Release, Error>, Peekable<I>>
-where
-    I: Iterator<Item = String>,
-{
-    use registry::future::Loop::{Break, Continue};
-
-    match (r, e) {
-        (Some(r), _) => {
-            trace!("Found release '{:?}'", r);
-            Break(Ok(r))
-        }
-        (_, Some(e)) => {
-            warn!("{}", e);
-            match layer_digests_iter.peek() {
-                Some(_) => Continue(layer_digests_iter),
-                None => Break(Err(e)),
-            }
-        }
-        _ => continue_or_break_loop(
-            layer_digests_iter,
-            None,
-            Some(format_err!(
-                "continue_or_break called with unexpected condition"
-            )),
-        ),
-    }
 }

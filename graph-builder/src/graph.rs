@@ -83,6 +83,7 @@ fn create_graph(
     registry::fetch_releases(&opts.registry, &opts.repository, username, password)
         .context("failed to fetch all release metadata")?
         .into_iter()
+        .inspect(|release| trace!("Adding a release to the graph '{:?}'", release))
         .try_for_each(|release| {
             let previous = release.metadata.previous.clone();
             let next = release.metadata.next.clone();
