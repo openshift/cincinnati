@@ -3,7 +3,7 @@ FROM centos
 RUN yum -y groupinstall 'Development Tools'
 RUN yum -y install openssl-devel
 
-ADD https://static.rust-lang.org/dist/rust-1.29.0-x86_64-unknown-linux-gnu.tar.gz rust.tar.gz
+ADD https://static.rust-lang.org/dist/rust-1.30.1-x86_64-unknown-linux-gnu.tar.gz rust.tar.gz
 RUN tar -xf rust.tar.gz --strip 1
 RUN ./install.sh
 
