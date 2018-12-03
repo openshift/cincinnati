@@ -13,6 +13,6 @@ COPY . .
 RUN cargo build --release
 
 FROM centos
-ENV RUST_LOG=actix_web=error
+ENV RUST_LOG=actix_web=error,dkregistry=error
 ENTRYPOINT ["/usr/bin/graph-builder"]
 COPY --from=0 /app/target/release/graph-builder /app/target/release/policy-engine /usr/bin/
