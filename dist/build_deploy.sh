@@ -3,13 +3,13 @@
 set -e
 
 ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-IMAGE_BUILD="${IMAGE_BUILD:-ekidd/rust-musl-builder:1.30.1}"
+IMAGE_BUILD="${IMAGE_BUILD:-clux/muslrust:1.30.0-stable}"
 IMAGE="quay.io/app-sre/cincinnati"
 IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 PROJECT_PARENT_DIR=$ABSOLUTE_PATH/../
 DOCKERFILE_DEPLOY="$ABSOLUTE_PATH/Dockerfile"
 
-docker run --rm -v $PROJECT_PARENT_DIR:/home/rust/src $IMAGE_BUILD cargo build --release
+docker run -t --rm -v $PROJECT_PARENT_DIR:/volume:Z $IMAGE_BUILD cargo build --release
 
 docker build -f $DOCKERFILE_DEPLOY -t "${IMAGE}:${IMAGE_TAG}" $PROJECT_PARENT_DIR
 
