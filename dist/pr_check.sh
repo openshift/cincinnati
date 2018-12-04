@@ -3,7 +3,12 @@
 set -e
 
 ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-IMAGE_BUILD="${IMAGE_BUILD:-clux/muslrust:1.30.0-stable}"
-PROJECT_PARENT_DIR=$ABSOLUTE_PATH/../
+source "${ABSOLUTE_PATH}/commons.sh"
 
-docker run -t --rm -v $PROJECT_PARENT_DIR:/volume:Z $IMAGE_BUILD cargo test
+function cleanup() {
+    set +e
+    docker_cargo clean
+}
+trap cleanup EXIT
+
+docker_cargo test
