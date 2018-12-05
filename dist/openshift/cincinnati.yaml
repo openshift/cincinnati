@@ -1,0 +1,169 @@
+---
+apiVersion: v1
+kind: Template
+metadata:
+  name: cincinnati
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: cincinnati
+    name: cincinnati
+  spec:
+    replicas: 1
+    selector:
+      app: cincinnati
+      deploymentconfig: cincinnati
+    strategy:
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          app: cincinnati
+          deploymentconfig: cincinnati
+      spec:
+        containers:
+        - image: ${IMAGE}:${IMAGE_TAG}
+          imagePullPolicy: Always
+          name: cincinnati-graph-builder
+          env:
+            - name: ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                    key: gb.address
+                    name: cincinnati
+            - name: REGISTRY
+              valueFrom:
+                configMapKeyRef:
+                  key: gb.registry
+                  name: cincinnati
+            - name: REPOSITORY
+              valueFrom:
+                configMapKeyRef:
+                  key: gb.repository
+                  name: cincinnati
+          args: ["-vvv", "--address", "$(ADDRESS)", "--port", "${GB_PORT}", "--registry", "$(REGISTRY)", "--repository", "$(REPOSITORY)", "--credentials-file=/etc/secrets/registry-credentials"]
+          ports:
+          - containerPort: ${{GB_PORT}}
+          livenessProbe:
+            httpGet:
+              path: /v1/graph
+              port: ${{GB_PORT}}
+              httpHeaders:
+              - name: Accept
+                value: application/json
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /v1/graph
+              port: ${{GB_PORT}}
+              httpHeaders:
+              - name: Accept
+                value: application/json
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            limits:
+              memory: ${MEMORY_LIMIT}
+          volumeMounts:
+              - name: secrets
+                mountPath: /etc/secrets
+                readOnly: true
+        - image: ${IMAGE}:${IMAGE_TAG}
+          name: cincinnati-policy-engine
+          imagePullPolicy: Always
+          env:
+            - name: ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                    key: pe.address
+                    name: cincinnati
+            - name: UPSTREAM
+              valueFrom:
+                configMapKeyRef:
+                  key: pe.upstream
+                  name: cincinnati
+          command: ["/usr/bin/policy-engine"]
+          args: ["-vvv", "--address", "$(ADDRESS)", "--port", "${PE_PORT}", "--upstream", "$(UPSTREAM)"]
+          ports:
+          - containerPort: ${{PE_PORT}}
+          livenessProbe:
+            httpGet:
+              path: /v1/graph
+              port: ${{PE_PORT}}
+              httpHeaders:
+              - name: Accept
+                value: application/json
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /v1/graph
+              port: ${{PE_PORT}}
+              httpHeaders:
+              - name: Accept
+                value: application/json
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            limits:
+              memory: ${MEMORY_LIMIT}
+        volumes:
+          - name: secrets
+            secret:
+              secretName: cincinnati-registry-credetials
+    triggers:
+    - type: ConfigChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: cincinnati-graph-builder
+  spec:
+    ports:
+      - protocol: TCP
+        port: ${{GB_PORT}}
+        targetPort: ${{GB_PORT}}
+    selector:
+      deploymentconfig: cincinnati
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: cincinnati-policy-engine
+  spec:
+    ports:
+      - protocol: TCP
+        port: 80
+        targetPort: ${{PE_PORT}}
+    selector:
+      deploymentconfig: cincinnati
+parameters:
+- name: IMAGE
+  value: "quay.io/app-sre/cincinnati"
+  displayName: cincinnati image
+  description: cincinnati docker image. Defaults to quay.io/app-sre/cincinnati
+- name: IMAGE_TAG
+  value: "latest"
+  displayName: cincinnati version
+  description: cincinnati version which defaults to latest
+- name: MEMORY_LIMIT
+  value: "256Mi"
+  displayName: Memory Limit
+  description: Maximum amount of memory the container can use. Defaults 256Mi
+- name: GB_PORT
+  value: "8181"
+  displayName: Graph builder port
+- name: PE_PORT
+  value: "8080"
+  displayName: Policy enigine port
