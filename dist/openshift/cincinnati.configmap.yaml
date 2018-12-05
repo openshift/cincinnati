@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cincinnati
+type: Opaque
+data:
+  gb.address: "0.0.0.0"
+  gb.registry: "quay.io"
+  gb.repository: "steveej/cincinnati-test"
+  pe.address: "0.0.0.0"
+  pe.upstream: "http://cincinnati-graph-builder.cincinnati-staging.svc:8181/v1/graph"
+
