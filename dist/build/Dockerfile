@@ -1,4 +1,4 @@
-FROM clux/muslrust:1.30.0-stable
+FROM clux/muslrust:1.31.0-stable
 
 RUN \
   mkdir -p /root/.cargo/git/ && \
