@@ -9,7 +9,10 @@ ensure_build_container
 
 function cleanup() {
     set +e
-    docker_cargo clean
+    docker_cargo_stop_all
+    if [[ ! -n "$KEEP_CARGO_OUTPUT" ]]; then
+        docker_cargo clean
+    fi
 }
 trap cleanup EXIT
 
