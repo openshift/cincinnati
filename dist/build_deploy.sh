@@ -5,20 +5,23 @@ set -e
 ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${ABSOLUTE_PATH}/commons.sh"
 
-IMAGE="quay.io/app-sre/cincinnati"
-IMAGE_TAG=$(git rev-parse --short=7 HEAD)
+ensure_build_container
+
 DOCKERFILE_DEPLOY="$ABSOLUTE_PATH/Dockerfile"
 RELEASE_DIR="${PROJECT_PARENT_DIR}/target/x86_64-unknown-linux-musl/release"
 RELEASE_OUTPUT_DIR="${PROJECT_PARENT_DIR}/release-$(date +'%Y%m%d.%H%M%S')"
 
 function cleanup() {
     set +e
+    docker_cargo_stop_all
     if [[ ! -n "$KEEP_RELEASE_OUTPUT" ]]; then
         rm -f ${RELEASE_OUTPUT_DIR}/{graph-builder,policy-engine}
         rm -f ${RELEASE_OUTPUT_DIR}/$(basename ${DOCKERFILE_DEPLOY})
         rmdir ${RELEASE_OUTPUT_DIR}
     fi
-    docker_cargo clean
+    if [[ ! -n "$KEEP_CARGO_OUTPUT" ]]; then
+        docker_cargo clean
+    fi
 }
 trap cleanup EXIT
 
