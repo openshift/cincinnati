@@ -7,6 +7,8 @@ source "${ABSOLUTE_PATH}/commons.sh"
 
 IMAGE="quay.io/app-sre/cincinnati"
 IMAGE_TAG=$(git rev-parse --short=7 HEAD)
+ensure_build_container
+
 DOCKERFILE_DEPLOY="$ABSOLUTE_PATH/Dockerfile"
 RELEASE_DIR="${PROJECT_PARENT_DIR}/target/x86_64-unknown-linux-musl/release"
 RELEASE_OUTPUT_DIR="${PROJECT_PARENT_DIR}/release-$(date +'%Y%m%d.%H%M%S')"

@@ -5,6 +5,8 @@ set -e
 ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${ABSOLUTE_PATH}/commons.sh"
 
+ensure_build_container
+
 function cleanup() {
     set +e
     docker_cargo clean
