@@ -49,7 +49,12 @@ objects:
                 configMapKeyRef:
                   key: gb.repository
                   name: cincinnati
-          args: ["-vvv", "--address", "$(ADDRESS)", "--port", "${GB_PORT}", "--registry", "$(REGISTRY)", "--repository", "$(REPOSITORY)", "--credentials-file=/etc/secrets/registry-credentials"]
+            - name: GB_LOG_VERBOSITY
+              valueFrom:
+                configMapKeyRef:
+                  key: gb.log.verbosity
+                  name: cincinnati
+          args: ["-$(GB_LOG_VERBOSITY)", "--address", "$(ADDRESS)", "--port", "${GB_PORT}", "--registry", "$(REGISTRY)", "--repository", "$(REPOSITORY)", "--credentials-file=/etc/secrets/registry-credentials"]
           ports:
           - containerPort: ${{GB_PORT}}
           livenessProbe:
@@ -93,8 +98,13 @@ objects:
                 configMapKeyRef:
                   key: pe.upstream
                   name: cincinnati
+            - name: PE_LOG_VERBOSITY
+              valueFrom:
+                configMapKeyRef:
+                  key: pe.log.verbosity
+                  name: cincinnati
           command: ["/usr/bin/policy-engine"]
-          args: ["-vvv", "--address", "$(ADDRESS)", "--port", "${PE_PORT}", "--upstream", "$(UPSTREAM)"]
+          args: ["-$(PE_LOG_VERBOSITY)", "--address", "$(ADDRESS)", "--port", "${PE_PORT}", "--upstream", "$(UPSTREAM)"]
           ports:
           - containerPort: ${{PE_PORT}}
           livenessProbe:
