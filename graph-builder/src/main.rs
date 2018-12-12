@@ -33,6 +33,7 @@ extern crate serde_json;
 extern crate structopt;
 extern crate tar;
 extern crate tokio_core;
+extern crate tokio;
 
 mod config;
 mod graph;
