@@ -95,11 +95,11 @@ pub fn fetch_releases(
     username: Option<&str>,
     password: Option<&str>,
 ) -> Result<Vec<Release>, Error> {
-    let mut tcore = Core::new()?;
+    let mut thread_runtime = tokio::runtime::current_thread::Runtime::new()?;
 
     let registry_host = trim_protocol(&registry);
 
-    let mut client = dkregistry::v2::Client::configure(&tcore.handle())
+    let mut client = dkregistry::v2::Client::configure(&Core::new()?.handle())
         .registry(registry_host)
         .insecure_registry(false)
         .username(username.map(|s| s.to_string()))
@@ -107,8 +107,8 @@ pub fn fetch_releases(
         .build()
         .map_err(|e| format_err!("{}", e))?;
 
-    let authenticated_client = tcore
-        .run(authenticate_client(
+    let authenticated_client = thread_runtime
+        .block_on(authenticate_client(
             &mut client,
             format!("repository:{}:pull", &repo),
         ))
@@ -127,7 +127,7 @@ pub fn fetch_releases(
         })
         .collect();
 
-    tcore.run(releases)
+    thread_runtime.block_on(releases)
 }
 
 // Get a stream of tags

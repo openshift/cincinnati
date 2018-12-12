@@ -20,4 +20,5 @@ structopt = "^0.2.10"
 tar = "^0.4.16"
 dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "b6573b0e2c18da6f1e50ebfc1a0d6b7ec3c8accf" }
 tokio-core = "0.1"
+tokio = "0.1"
 futures = "0.1"
