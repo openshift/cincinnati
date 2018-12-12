@@ -25,7 +25,6 @@ use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::string::String;
 use tar::Archive;
-use tokio_core::reactor::Core;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Release {
@@ -101,7 +100,7 @@ pub fn fetch_releases(
 
     let registry_host = trim_protocol(&registry);
 
-    let mut client = dkregistry::v2::Client::configure(&Core::new()?.handle())
+    let mut client = dkregistry::v2::Client::configure()
         .registry(registry_host)
         .insecure_registry(false)
         .username(username.map(|s| s.to_string()))
