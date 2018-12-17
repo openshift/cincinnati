@@ -191,10 +191,9 @@ fn find_first_release(
                         metadata,
                     }),
                     Err(e) => {
-                        trace!(
-                            "could not assemble metadata from layer ({}): {}",
-                            &layer_digest,
-                            e,
+                        debug!(
+                            "could not assemble metadata from layer ({}) of tag '{}': {}",
+                            &layer_digest, &tag, e,
                         );
                         None
                     }
