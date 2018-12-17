@@ -32,8 +32,8 @@ extern crate serde_json;
 #[macro_use]
 extern crate structopt;
 extern crate tar;
-extern crate tokio_core;
 extern crate tokio;
+extern crate tokio_core;
 
 mod config;
 mod graph;
