@@ -80,8 +80,18 @@ fn create_graph(
 ) -> Result<Graph, Error> {
     let mut graph = Graph::default();
 
-    registry::fetch_releases(&opts.registry, &opts.repository, username, password)
-        .context("failed to fetch all release metadata")?
+    let releases = registry::fetch_releases(&opts.registry, &opts.repository, username, password)
+        .context("failed to fetch all release metadata")?;
+
+    if releases.is_empty() {
+        warn!(
+            "could not find any releases in {}/{}",
+            &opts.registry, &opts.repository
+        );
+        return Ok(graph);
+    };
+
+    releases
         .into_iter()
         .inspect(|release| trace!("Adding a release to the graph '{:?}'", release))
         .try_for_each(|release| {
