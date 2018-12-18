@@ -175,7 +175,7 @@ fn find_first_release(
             .map_err(|e| format_err!("{}", e))
             .into_stream()
             .filter_map(move |blob| {
-                let metadata_filename = "release-metadata";
+                let metadata_filename = "release-manifests/release-metadata";
 
                 trace!(
                     "{}: Looking for {} in archive {} with {} bytes",
