@@ -125,6 +125,7 @@ pub fn fetch_releases(
                 tag.to_owned(),
             )
         })
+        .filter_map(|release| release)
         .collect();
 
     thread_runtime.block_on(releases)
@@ -163,7 +164,7 @@ fn find_first_release(
     registry_host: String,
     repo: String,
     tag: String,
-) -> impl Future<Item = Release, Error = Error> {
+) -> impl Future<Item = Option<Release>, Error = Error> {
     let tag_for_error = tag.clone();
 
     let releases = layer_digests.into_iter().map(move |layer_digest| {
@@ -191,10 +192,9 @@ fn find_first_release(
                         metadata,
                     }),
                     Err(e) => {
-                        trace!(
-                            "could not assemble metadata from layer ({}): {}",
-                            &layer_digest,
-                            e,
+                        debug!(
+                            "could not assemble metadata from layer ({}) of tag '{}': {}",
+                            &layer_digest, &tag, e,
                         );
                         None
                     }
@@ -204,14 +204,15 @@ fn find_first_release(
 
     futures::stream::iter_ok::<_, Error>(releases)
         .flatten()
-        .into_future()
-        .map_err(|(e, _)| e)
-        .and_then(move |(release, _)| match release {
-            Some(release) => Ok(release),
-            None => Err(format_err!(
-                "could not find any release in tag {}",
-                tag_for_error
-            )),
+        .take(1)
+        .collect()
+        .map(move |mut releases| {
+            if releases.is_empty() {
+                warn!("could not find any release in tag {}", tag_for_error);
+                None
+            } else {
+                Some(releases.remove(0))
+            }
         })
 }
 
