@@ -13,19 +13,19 @@ RELEASE_OUTPUT_DIR="${PROJECT_PARENT_DIR}/release-$(date +'%Y%m%d.%H%M%S')"
 
 function cleanup() {
     set +e
+    if [[ ! -n "$KEEP_CARGO_OUTPUT" ]]; then
+        docker_cargo cargo clean
+    fi
     docker_cargo_stop_all
     if [[ ! -n "$KEEP_RELEASE_OUTPUT" ]]; then
         rm -f ${RELEASE_OUTPUT_DIR}/{graph-builder,policy-engine}
         rm -f ${RELEASE_OUTPUT_DIR}/$(basename ${DOCKERFILE_DEPLOY})
         rmdir ${RELEASE_OUTPUT_DIR}
     fi
-    if [[ ! -n "$KEEP_CARGO_OUTPUT" ]]; then
-        docker_cargo clean
-    fi
 }
 trap cleanup EXIT
 
-docker_cargo build --release
+docker_cargo cargo build --release
 mkdir $RELEASE_OUTPUT_DIR
 cp ${RELEASE_DIR}/{graph-builder,policy-engine} $DOCKERFILE_DEPLOY  $RELEASE_OUTPUT_DIR/
 
