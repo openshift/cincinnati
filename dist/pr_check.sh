@@ -4,7 +4,7 @@ set -ex
 
 declare -A cargo_test_flags
 cargo_test_flags["cincinnati"]=""
-cargo_test_flags["graph-builder"]=""
+cargo_test_flags["graph-builder"]="--features test-net"
 cargo_test_flags["policy-engine"]=""
 
 declare -A executors
