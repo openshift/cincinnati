@@ -19,6 +19,7 @@ use config;
 use failure::{Error, ResultExt};
 use registry;
 use serde_json;
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::thread;
 
@@ -51,6 +52,9 @@ impl State {
 }
 
 pub fn run(opts: &config::Options, state: &State) -> ! {
+    // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
+    let mut cache = HashMap::new();
+
     // Read the credentials outside the loop to avoid re-reading the file
     let (username, password) =
         registry::read_credentials(opts.credentials_path.as_ref(), &opts.registry)
@@ -62,6 +66,7 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
             &opts,
             username.as_ref().map(String::as_ref),
             password.as_ref().map(String::as_ref),
+            &mut cache,
         ) {
             Ok(graph) => match serde_json::to_string(&graph) {
                 Ok(json) => *state.json.write().expect("json lock has been poisoned") = json,
@@ -77,11 +82,13 @@ fn create_graph(
     opts: &config::Options,
     username: Option<&str>,
     password: Option<&str>,
+    cache: &mut HashMap<u64, Option<registry::Release>>,
 ) -> Result<Graph, Error> {
     let mut graph = Graph::default();
 
-    let releases = registry::fetch_releases(&opts.registry, &opts.repository, username, password)
-        .context("failed to fetch all release metadata")?;
+    let releases =
+        registry::fetch_releases(&opts.registry, &opts.repository, username, password, cache)
+            .context("failed to fetch all release metadata")?;
 
     if releases.is_empty() {
         warn!(
