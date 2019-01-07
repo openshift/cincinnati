@@ -15,6 +15,7 @@
 use cincinnati;
 use failure::{Error, Fallible, ResultExt};
 use flate2::read::GzDecoder;
+use futures::future;
 use futures::prelude::*;
 use release::Metadata;
 use serde_json;
@@ -59,10 +60,10 @@ pub fn read_credentials(
     })
 }
 
-pub fn authenticate_client(
-    client: &mut dkregistry::v2::Client,
+fn authenticate_client(
+    client: dkregistry::v2::Client,
     login_scope: String,
-) -> impl Future<Item = &dkregistry::v2::Client, Error = dkregistry::errors::Error> {
+) -> impl Future<Item = dkregistry::v2::Client, Error = Error> {
     client
         .is_v2_supported()
         .and_then(move |v2_supported| {
@@ -72,19 +73,21 @@ pub fn authenticate_client(
                 Ok(client)
             }
         })
-        .and_then(move |dclient| {
-            dclient.login(&[&login_scope]).and_then(|token| {
+        .and_then(move |mut dclient| {
+            dclient.login(&[&login_scope]).and_then(move |token| {
                 dclient
                     .is_auth(Some(token.token()))
                     .and_then(move |is_auth| {
                         if !is_auth {
                             Err("login failed".into())
                         } else {
-                            Ok(dclient.set_token(Some(token.token())))
+                            dclient.set_token(Some(token.token()));
+                            Ok(dclient)
                         }
                     })
             })
         })
+        .map_err(|e| format_err!("{}", e))
 }
 
 /// Fetches a vector of all release metadata from the given repository, hosted on the given
@@ -96,32 +99,36 @@ pub fn fetch_releases(
     password: Option<&str>,
     cache: &mut HashMap<u64, Option<Release>>,
 ) -> Result<Vec<Release>, Error> {
-    let mut thread_runtime = tokio::runtime::current_thread::Runtime::new()?;
-
     let registry_host = trim_protocol(&registry);
+    let login_scope = format!("repository:{}:pull", &repo);
 
-    let mut client = dkregistry::v2::Client::configure()
+    let client = dkregistry::v2::Client::configure()
         .registry(registry_host)
         .insecure_registry(false)
         .username(username.map(|s| s.to_string()))
         .password(password.map(|s| s.to_string()))
         .build()
-        .map_err(|e| format_err!("{}", e))?;
+        .map_err(|e| format_err!("{}", e));
 
-    let authenticated_client = thread_runtime
-        .block_on(authenticate_client(
-            &mut client,
-            format!("repository:{}:pull", &repo),
-        ))
-        .map_err(|e| format_err!("{}", e))?;
-
-    let tags = get_tags(repo.to_owned(), authenticated_client)
-        .and_then(|tag| get_manifest_and_layers(tag, repo.to_owned(), authenticated_client))
-        .collect();
-    let tagged_layers = thread_runtime.block_on(tags)?;
+    let tagged_layers = {
+        let mut thread_runtime = tokio::runtime::current_thread::Runtime::new()?;
+        let fetch_tags = future::result(client)
+            .map(move |client| (client, login_scope))
+            .and_then(|(client, scope)| authenticate_client(client, scope))
+            .and_then(|authenticated_client| {
+                let tags_stream = get_tags(repo, authenticated_client);
+                future::ok(tags_stream)
+            })
+            .flatten_stream()
+            .and_then(|(authenticated_client, tag)| {
+                get_manifest_and_layers(tag, repo, authenticated_client)
+            })
+            .collect();
+        thread_runtime.block_on(fetch_tags)?
+    };
 
     let mut releases = Vec::with_capacity(tagged_layers.len());
-    for (tag, layer_digests) in tagged_layers {
+    for (authenticated_client, tag, layer_digests) in tagged_layers {
         let release = cache_release(
             layer_digests,
             authenticated_client.to_owned(),
@@ -191,31 +198,39 @@ fn cache_release(
     Ok(release)
 }
 
-// Get a stream of tags
+/// Fetch all tags for a repository, as a stream.
+///
+/// Tags order depends on registry implementation.
+/// According to [specs](https://docs.docker.com/registry/spec/api/#listing-image-tags),
+/// remote API should return tags in lexicographic order.
+/// However on Quay 2.9 this is not true.
 fn get_tags(
-    repo: String,
-    authenticated_client: &dkregistry::v2::Client,
-) -> impl Stream<Item = String, Error = Error> {
+    repo: &str,
+    authenticated_client: dkregistry::v2::Client,
+) -> impl Stream<Item = (dkregistry::v2::Client, String), Error = Error> {
+    // Paginate results, 20 tags per page.
+    let tags_per_page = Some(20);
+
+    trace!("fetching tags for repo {}", repo);
     authenticated_client
-        // According to https://docs.docker.com/registry/spec/api/#listing-image-tags
-        // the tags should be ordered lexically but they aren't
-        .get_tags(&repo, Some(20))
+        .get_tags(repo, tags_per_page)
+        .map(move |tags| (authenticated_client.clone(), tags))
         .map_err(|e| format_err!("{}", e))
 }
 
+/// Fetch manifest for a tag, and return its layers digests.
 fn get_manifest_and_layers(
     tag: String,
-    repo: String,
-    authenticated_client: &dkregistry::v2::Client,
-) -> impl Future<Item = (String, Vec<String>), Error = failure::Error> {
-    trace!("processing: {}:{}", &repo, &tag);
+    repo: &str,
+    authenticated_client: dkregistry::v2::Client,
+) -> impl Future<Item = (dkregistry::v2::Client, String, Vec<String>), Error = failure::Error> {
+    trace!("processing: {}:{}", repo, &tag);
     authenticated_client
-        .has_manifest(&repo, &tag, None)
-        .join(authenticated_client.get_manifest(&repo, &tag))
+        .has_manifest(repo, &tag, None)
+        .join(authenticated_client.get_manifest(repo, &tag))
         .map_err(|e| format_err!("{}", e))
-        .and_then(|(manifest_kind, manifest)| {
-            Ok((tag, get_layer_digests(&manifest_kind, &manifest)?))
-        })
+        .and_then(move |(manifest_kind, manifest)| get_layer_digests(&manifest_kind, &manifest))
+        .map(move |digests| (authenticated_client, tag, digests))
 }
 
 fn find_first_release(
