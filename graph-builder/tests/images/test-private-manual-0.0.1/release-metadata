@@ -1,0 +1,9 @@
+{
+	"kind": "cincinnati-metadata-v0",
+	"schema": 1,
+	"version": "0.0.1",
+	"previous": ["0.0.0"],
+	"metadata": {
+		"kind": "test"
+	}
+}

@@ -26,7 +26,7 @@ use std::string::String;
 use tar::Archive;
 use tokio_core::reactor::Core;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Release {
     pub source: String,
     pub metadata: Metadata,

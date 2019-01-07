@@ -22,3 +22,7 @@ dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "b657
 tokio-core = "0.1"
 tokio = "0.1"
 futures = "0.1"
+
+[features]
+test-net = []
+test-net-private = []
