@@ -6,6 +6,7 @@ use self::graph_builder::registry::{fetch_releases, read_credentials, Release};
 use self::graph_builder::release::Metadata;
 use self::graph_builder::release::MetadataKind::V0;
 use self::semver::Version;
+use std::collections::HashMap;
 
 fn init_logger() {
     let _ = env_logger::try_init_from_env(env_logger::Env::default());
@@ -70,6 +71,7 @@ fn fetch_release_private_with_credentials_must_succeed() {
 
     let registry = "quay.io";
     let repo = "redhat/openshift-cincinnati-test-private-manual";
+    let mut cache = HashMap::new();
     let credentials_path = match std::env::var("CINCINNATI_TEST_CREDENTIALS_PATH") {
         Ok(value) => Some(PathBuf::from(value)),
         Err(_) => {
@@ -82,6 +84,7 @@ fn fetch_release_private_with_credentials_must_succeed() {
         &repo,
         username.as_ref().map(String::as_ref),
         password.as_ref().map(String::as_ref),
+        &mut cache,
     )
     .expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
@@ -97,7 +100,8 @@ fn fetch_release_public_without_credentials_must_fail() {
 
     let registry = "quay.io";
     let repo = "redhat/openshift-cincinnati-test-private-manual";
-    let releases = fetch_releases(&registry, &repo, None, None);
+    let mut cache = HashMap::new();
+    let releases = fetch_releases(&registry, &repo, None, None, &mut cache);
     assert_eq!(true, releases.is_err());
     assert_eq!(
         true,
@@ -115,8 +119,9 @@ fn fetch_release_public_with_no_release_metadata_must_not_error() {
 
     let registry = "quay.io";
     let repo = "redhat/openshift-cincinnati-test-nojson-public-manual";
-    let releases =
-        fetch_releases(&registry, &repo, None, None).expect("should not error on emtpy repo");
+    let mut cache = HashMap::new();
+    let releases = fetch_releases(&registry, &repo, None, None, &mut cache)
+        .expect("should not error on emtpy repo");
     assert!(releases.is_empty())
 }
 
@@ -126,7 +131,9 @@ fn fetch_release_public_with_first_empty_tag_must_succeed() {
 
     let registry = "quay.io";
     let repo = "redhat/openshift-cincinnati-test-emptyfirsttag-public-manual";
-    let releases = fetch_releases(&registry, &repo, None, None).expect("fetch_releases failed: ");
+    let mut cache = HashMap::new();
+    let releases =
+        fetch_releases(&registry, &repo, None, None, &mut cache).expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
     assert_eq!(
         expected_releases(&format!("{}/{}", registry, repo), 2, 1),

@@ -13,11 +13,12 @@
 // limitations under the License.
 
 use cincinnati;
-use failure::Error;
+use failure::{Error, Fallible, ResultExt};
 use flate2::read::GzDecoder;
 use futures::prelude::*;
 use release::Metadata;
 use serde_json;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::iter::Iterator;
@@ -94,6 +95,7 @@ pub fn fetch_releases(
     repo: &str,
     username: Option<&str>,
     password: Option<&str>,
+    cache: &mut HashMap<u64, Option<Release>>,
 ) -> Result<Vec<Release>, Error> {
     let mut thread_runtime = tokio::runtime::current_thread::Runtime::new()?;
 
@@ -114,21 +116,80 @@ pub fn fetch_releases(
         ))
         .map_err(|e| format_err!("{}", e))?;
 
-    let releases = get_tags(repo.to_owned(), authenticated_client)
+    let tags = get_tags(repo.to_owned(), authenticated_client)
         .and_then(|tag| get_manifest_and_layers(tag, repo.to_owned(), authenticated_client))
-        .and_then(|(tag, layer_digests)| {
-            find_first_release(
-                layer_digests,
-                authenticated_client.to_owned(),
-                registry_host.to_owned(),
-                repo.to_owned(),
-                tag.to_owned(),
-            )
-        })
-        .filter_map(|release| release)
         .collect();
+    let tagged_layers = thread_runtime.block_on(tags)?;
 
-    thread_runtime.block_on(releases)
+    let mut releases = Vec::with_capacity(tagged_layers.len());
+    for (tag, layer_digests) in tagged_layers {
+        let release = cache_release(
+            layer_digests,
+            authenticated_client.to_owned(),
+            registry_host.to_owned(),
+            repo.to_owned(),
+            tag.to_owned(),
+            cache,
+        )?;
+        if let Some(metadata) = release {
+            releases.push(metadata);
+        };
+    }
+    releases.shrink_to_fit();
+
+    Ok(releases)
+}
+
+/// Look up release metadata for a specific tag, and cache it.
+///
+/// Each tagged release is looked up at most once and both
+/// positive (Some metadata) and negative (None) results cached
+/// indefinitely.
+///
+/// Update Images with release metadata should be immutable, but
+/// tags on registry can be mutated at any time. Thus, the cache
+/// is keyed on the hash of tag layers.
+fn cache_release(
+    layer_digests: Vec<String>,
+    authenticated_client: dkregistry::v2::Client,
+    registry_host: String,
+    repo: String,
+    tag: String,
+    cache: &mut HashMap<u64, Option<Release>>,
+) -> Fallible<Option<Release>> {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    // TODO(lucab): get rid of this synchronous lookup, by
+    // introducing a dedicated actor which owns the cache
+    // and handles queries and insertions.
+    let mut thread_runtime = tokio::runtime::current_thread::Runtime::new()?;
+
+    let hashed_tag_layers = {
+        let mut hasher = DefaultHasher::new();
+        layer_digests.hash(&mut hasher);
+        hasher.finish()
+    };
+
+    if let Some(release) = cache.get(&hashed_tag_layers) {
+        trace!("Using cached release metadata for tag {}", &tag);
+        return Ok(release.clone());
+    }
+
+    let tagged_release = find_first_release(
+        layer_digests,
+        authenticated_client,
+        registry_host,
+        repo,
+        tag,
+    );
+    let (tag, release) = thread_runtime
+        .block_on(tagged_release)
+        .context("failed to find first release")?;
+
+    trace!("Caching release metadata for new tag {}", &tag);
+    cache.insert(hashed_tag_layers, release.clone());
+    Ok(release)
 }
 
 // Get a stream of tags
@@ -163,13 +224,13 @@ fn find_first_release(
     authenticated_client: dkregistry::v2::Client,
     registry_host: String,
     repo: String,
-    tag: String,
-) -> impl Future<Item = Option<Release>, Error = Error> {
-    let tag_for_error = tag.clone();
+    repo_tag: String,
+) -> impl Future<Item = (String, Option<Release>), Error = Error> {
+    let tag = repo_tag.clone();
 
     let releases = layer_digests.into_iter().map(move |layer_digest| {
         trace!("Downloading layer {}...", &layer_digest);
-        let (registry_host, repo, tag) = (registry_host.clone(), repo.clone(), tag.clone());
+        let (registry_host, repo, tag) = (registry_host.clone(), repo.clone(), repo_tag.clone());
 
         authenticated_client
             .get_blob(&repo, &layer_digest)
@@ -208,10 +269,10 @@ fn find_first_release(
         .collect()
         .map(move |mut releases| {
             if releases.is_empty() {
-                warn!("could not find any release in tag {}", tag_for_error);
-                None
+                warn!("could not find any release in tag {}", tag);
+                (tag, None)
             } else {
-                Some(releases.remove(0))
+                (tag, Some(releases.remove(0)))
             }
         })
 }
