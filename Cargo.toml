@@ -2,6 +2,7 @@
 
 members = [
 	"cincinnati",
+	"commons",
 	"graph-builder",
 	"policy-engine",
 ]

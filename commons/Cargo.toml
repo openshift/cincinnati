@@ -1,0 +1,6 @@
+[package]
+name = "commons"
+version = "0.1.0"
+authors = ["Stefan Junker <mail@stefanjunker.de>"]
+
+[dependencies]
