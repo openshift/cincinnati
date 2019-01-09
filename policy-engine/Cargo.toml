@@ -7,6 +7,7 @@ authors = ["Alex Crawford <crawford@redhat.com>"]
 actix = "^0.7.6"
 actix-web = "^0.7.8"
 cincinnati = { path = "../cincinnati" }
+commons = { path = "../commons" }
 env_logger = "^0.6.0"
 failure = "^0.1.1"
 futures = "^0.1.23"

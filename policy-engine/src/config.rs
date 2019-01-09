@@ -1,5 +1,6 @@
 //! Command-line options for policy-engine.
 
+use commons::parse_path_namespace;
 use hyper::Uri;
 use std::net::IpAddr;
 
@@ -28,4 +29,12 @@ pub struct Options {
     /// Port to which the metrics server will bind.
     #[structopt(long = "metrics_port", default_value = "9081")]
     pub metrics_port: u16,
+
+    /// Path namespace prefix for all paths. Must be given without leading and ending '/'
+    #[structopt(
+        long = "path-namespace",
+        default_value = "",
+        parse(from_str = "parse_path_namespace")
+    )]
+    pub path_namespace: String,
 }

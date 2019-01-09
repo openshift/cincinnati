@@ -3,6 +3,7 @@
 extern crate actix;
 extern crate actix_web;
 extern crate cincinnati;
+extern crate commons;
 extern crate env_logger;
 #[macro_use]
 extern crate failure;
@@ -56,10 +57,12 @@ fn main() -> Result<(), Error> {
     let state = graph::State {
         upstream: opts.upstream,
     };
+
+    let graph_path = format!("/{}/v1/graph", opts.path_namespace);
     server::new(move || {
         App::with_state(state.clone())
             .middleware(Logger::default())
-            .route("/v1/graph", Method::GET, graph::index)
+            .route(&graph_path, Method::GET, graph::index)
     })
     .bind((opts.address, opts.port))?
     .start();
