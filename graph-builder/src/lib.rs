@@ -1,4 +1,5 @@
 extern crate cincinnati;
+extern crate commons;
 extern crate dkregistry;
 extern crate env_logger;
 extern crate flate2;

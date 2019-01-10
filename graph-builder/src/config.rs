@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use commons::parse_path_namespace;
 use std::net::IpAddr;
 use std::num::ParseIntError;
 use std::path::PathBuf;
@@ -51,6 +52,14 @@ pub struct Options {
     /// Credentials file for authentication against the image registry
     #[structopt(long = "credentials-file", parse(from_os_str))]
     pub credentials_path: Option<PathBuf>,
+
+    /// Path namespace prefix for all paths. Shall be given without leading and trailing slashes.
+    #[structopt(
+        long = "path-namespace",
+        default_value = "",
+        parse(from_str = "parse_path_namespace")
+    )]
+    pub path_namespace: String,
 }
 
 fn parse_duration(src: &str) -> Result<Duration, ParseIntError> {
