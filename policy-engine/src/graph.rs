@@ -5,9 +5,10 @@ use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{Graph, CONTENT_TYPE};
 use failure::Error;
 use futures::{future, Future, Stream};
-use hyper::{Body, Client, Request, Uri};
+use hyper::{Body, Client, Request};
 use prometheus::{Counter, Histogram};
 use serde_json;
+use AppState;
 
 lazy_static! {
     static ref HTTP_GRAPH_REQS: Counter = register_counter!(
@@ -38,7 +39,7 @@ lazy_static! {
 }
 
 /// Serve Cincinnati graph requests.
-pub(crate) fn index(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+pub(crate) fn index(req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
     HTTP_GRAPH_REQS.inc();
     match req.headers().get(header::ACCEPT) {
         Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE) => {
@@ -83,9 +84,4 @@ pub(crate) fn index(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, 
             Box::new(future::ok(HttpResponse::NotAcceptable().finish()))
         }
     }
-}
-
-#[derive(Clone)]
-pub struct State {
-    pub upstream: Uri,
 }

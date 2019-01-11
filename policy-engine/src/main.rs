@@ -45,7 +45,7 @@ fn main() -> Result<(), Error> {
         .init();
 
     // Metrics service.
-    server::new(move || {
+    server::new(|| {
         App::new()
             .middleware(Logger::default())
             .route("/metrics", Method::GET, metrics::serve)
@@ -54,19 +54,27 @@ fn main() -> Result<(), Error> {
     .start();
 
     // Main service.
-    let state = graph::State {
-        upstream: opts.upstream,
+    let state = AppState {
+        upstream: opts.upstream.clone(),
+        path_prefix: opts.path_prefix.clone(),
     };
 
-    let graph_path = format!("/{}/v1/graph", opts.path_namespace);
     server::new(move || {
+        let app_prefix = state.path_prefix.clone();
         App::with_state(state.clone())
             .middleware(Logger::default())
-            .route(&graph_path, Method::GET, graph::index)
+            .prefix(app_prefix)
+            .route("/v1/graph", Method::GET, graph::index)
     })
     .bind((opts.address, opts.port))?
     .start();
 
     sys.run();
     Ok(())
+}
+
+#[derive(Debug, Clone)]
+pub struct AppState {
+    pub upstream: hyper::Uri,
+    pub path_prefix: String,
 }

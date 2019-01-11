@@ -43,7 +43,7 @@ fn main() -> Result<(), Error> {
 
     let state = graph::State::new();
     let addr = (opts.address, opts.port);
-    let graph_path = format!("/{}/v1/graph", opts.path_namespace);
+    let app_prefix = opts.path_prefix.clone();
 
     {
         let state = state.clone();
@@ -51,9 +51,12 @@ fn main() -> Result<(), Error> {
     }
 
     server::new(move || {
-        App::with_state(state.clone())
+        let app_prefix = app_prefix.clone();
+        let state = state.clone();
+        App::with_state(state)
             .middleware(Logger::default())
-            .route(&graph_path, Method::GET, graph::index)
+            .prefix(app_prefix)
+            .route("/v1/graph", Method::GET, graph::index)
     })
     .bind(addr)?
     .run();
