@@ -1,0 +1,103 @@
+{
+    "openapi": "3.0.2",
+    "info": {
+        "version": "0.0.0",
+        "title": "OpenShift Cincinnati Policy-Engine",
+        "license": {
+            "name": "Apache2"
+        },
+        "contact": {}
+    },
+    "servers": [],
+    "paths": {
+        "/v1/graph": {
+            "get": {
+                "summary": "Get the update graph",
+                "operationId": "getGraph",
+                "responses": {
+                    "200": {
+                        "description": "An update graph",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Graph"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "unexpected error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Graph": {
+                "properties": {
+                    "nodes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Node"
+                        }
+                    },
+                    "edges": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Edge"
+                        }
+                    }
+                }
+            },
+            "Node": {
+                "required": [
+                    "version",
+                    "payload",
+                    "metadata"
+                ],
+                "properties": {
+                    "version": {
+                        "type": "string"
+                    },
+                    "payload": {
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "type": "string"
+                    }
+                }
+            },
+            "Edge": {
+                "type": "array",
+                "items": {
+                    "type": "integer",
+                    "format": "int32"
+                }
+            },
+            "Error": {
+                "required": [
+                    "code",
+                    "message"
+                ],
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    },
+    "security": []
+}

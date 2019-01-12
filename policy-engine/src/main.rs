@@ -11,6 +11,7 @@ extern crate futures;
 extern crate hyper;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate prometheus;
@@ -18,10 +19,12 @@ extern crate semver;
 extern crate serde_json;
 #[macro_use]
 extern crate structopt;
+extern crate openapiv3;
 
 mod config;
 mod graph;
 mod metrics;
+mod openapi;
 
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
@@ -65,6 +68,7 @@ fn main() -> Result<(), Error> {
             .middleware(Logger::default())
             .prefix(app_prefix)
             .route("/v1/graph", Method::GET, graph::index)
+            .route("/v1/openapi", Method::GET, openapi::index)
     })
     .bind((opts.address, opts.port))?
     .start();
