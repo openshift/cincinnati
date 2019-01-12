@@ -14,7 +14,6 @@ extern crate actix_web;
 extern crate serde_json;
 extern crate tar;
 extern crate tokio;
-extern crate tokio_core;
 #[macro_use]
 extern crate failure;
 #[macro_use]
