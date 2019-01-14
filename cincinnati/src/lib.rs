@@ -122,6 +122,11 @@ impl Graph {
             dag: &self.dag,
         }
     }
+
+    /// Return the number of releases (nodes) in the graph.
+    pub fn releases_count(&self) -> u64 {
+        self.dag.node_count() as u64
+    }
 }
 
 impl<'a> Deserialize<'a> for Graph {
@@ -271,9 +276,11 @@ mod tests {
     #[test]
     fn deserialize_graph() {
         let json = r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#;
-        assert_eq!(
-            serde_json::to_string(&serde_json::from_str::<Graph>(json).unwrap()).unwrap(),
-            json
-        );
+
+        let de: Graph = serde_json::from_str(json).unwrap();
+        assert_eq!(de.releases_count(), 3);
+
+        let ser = serde_json::to_string(&de).unwrap();
+        assert_eq!(ser, json);
     }
 }
