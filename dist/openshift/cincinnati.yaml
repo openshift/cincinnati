@@ -104,12 +104,12 @@ objects:
                   key: pe.log.verbosity
                   name: cincinnati
           command: ["/usr/bin/policy-engine"]
-          args: ["-$(PE_LOG_VERBOSITY)", "--address", "$(ADDRESS)", "--port", "${PE_PORT}", "--upstream", "$(UPSTREAM)"]
+          args: ["-$(PE_LOG_VERBOSITY)", "--address", "$(ADDRESS)", "--port", "${PE_PORT}", "--upstream", "$(UPSTREAM)", "--path-prefix", "${PE_PATH_PREFIX}"]
           ports:
           - containerPort: ${{PE_PORT}}
           livenessProbe:
             httpGet:
-              path: /v1/graph
+              path: ${{PE_PATH_PREFIX}}/v1/graph
               port: ${{PE_PORT}}
               httpHeaders:
               - name: Accept
@@ -119,7 +119,7 @@ objects:
             timeoutSeconds: 3
           readinessProbe:
             httpGet:
-              path: /v1/graph
+              path: ${{PE_PATH_PREFIX}}/v1/graph
               port: ${{PE_PORT}}
               httpHeaders:
               - name: Accept
@@ -177,3 +177,6 @@ parameters:
 - name: PE_PORT
   value: "8080"
   displayName: Policy enigine port
+- name: PE_PATH_PREFIX
+  value: "/api/upgrades_info"
+  displayName: Policy engine path prefix
