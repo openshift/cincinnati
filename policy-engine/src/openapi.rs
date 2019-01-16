@@ -1,7 +1,9 @@
 use actix_web::{HttpRequest, HttpResponse};
-use openapiv3::OpenAPI;
+use openapiv3::{OpenAPI, ReferenceOr};
+use std::collections::HashSet;
 use AppState;
 
+/// Template for policy-engine OpenAPIv3 document.
 const SPEC: &str = include_str!("openapiv3.json");
 
 pub(crate) fn index(req: HttpRequest<AppState>) -> HttpResponse {
@@ -18,6 +20,11 @@ pub(crate) fn index(req: HttpRequest<AppState>) -> HttpResponse {
 
     // Prefix all paths with `path_prefix`
     spec_object.paths = rewrite_paths(spec_object.paths, path_prefix);
+
+    // Add mandatory parameters to the `graph` endpoint.
+    if let Some(path) = spec_object.paths.get_mut("/v1/graph") {
+        add_mandatory_params(path, &req.state().mandatory_params);
+    }
 
     match serde_json::to_string(&spec_object) {
         Ok(s) => HttpResponse::from(s),
@@ -40,8 +47,49 @@ fn rewrite_paths(paths: openapiv3::Paths, path_prefix: &str) -> openapiv3::Paths
         .collect()
 }
 
+// Add mandatory parameters to the `graph` endpoint.
+fn add_mandatory_params(path: &mut ReferenceOr<openapiv3::PathItem>, reqs: &HashSet<String>) {
+    // Template for building an `openapiv3::Parameter`, which otherwise has private fields.
+    static PARAM_TEMPLATE: &str = r#"
+{
+    "in": "query",
+    "name": "TEMPLATE",
+    "required": true,
+    "schema": {
+        "type": "string"
+    }
+}
+"#;
+
+    match path {
+        ReferenceOr::Item(item) => {
+            let template: openapiv3::Parameter =
+                serde_json::from_str(PARAM_TEMPLATE).expect("hardcoded deserialization failed");
+            for key in reqs {
+                let mut data = template.clone();
+                match data {
+                    openapiv3::Parameter::Query {
+                        parameter_data: ref mut p,
+                        ..
+                    } => {
+                        p.name = key.clone();
+                    }
+                    _ => {
+                        error!("non-query parameters not allowed");
+                        continue;
+                    }
+                };
+                let param = ReferenceOr::Item(data);
+                item.parameters.push(param);
+            }
+        }
+        _ => error!("reference manipulation for paths not allowed"),
+    };
+}
+
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
 
     #[test]
     fn test_rewrite_paths() {
@@ -61,5 +109,31 @@ mod tests {
                 assert!(path_after.as_str().starts_with(prefix));
             },
         );
+    }
+
+    #[test]
+    fn graph_params() {
+        use super::{add_mandatory_params, SPEC};
+        use openapiv3::OpenAPI;
+
+        let params: HashSet<String> = vec!["MARKER1".to_string(), "MARKER2".to_string()]
+            .into_iter()
+            .collect();
+        let mut spec: OpenAPI = serde_json::from_str(SPEC).expect("couldn't parse JSON file");
+
+        {
+            let mut graph_path = spec.paths.get_mut("/v1/graph").unwrap();
+            add_mandatory_params(&mut graph_path, &params);
+        }
+        let output = serde_json::to_string(&spec).unwrap();
+
+        for p in params {
+            assert!(
+                output.contains(&p),
+                "marker {} not found in output: {}",
+                p,
+                output
+            )
+        }
     }
 }

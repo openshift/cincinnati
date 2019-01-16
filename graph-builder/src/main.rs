@@ -41,7 +41,7 @@ fn main() -> Result<(), Error> {
         )
         .init();
 
-    let state = graph::State::new();
+    let state = graph::State::new(opts.mandatory_client_parameters.clone());
     let addr = (opts.address, opts.port);
     let app_prefix = opts.path_prefix.clone();
 
