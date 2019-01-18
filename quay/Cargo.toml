@@ -1,0 +1,21 @@
+[package]
+name = "quay"
+version = "0.0.0-dev"
+authors = ["Luca Bruno <luca.bruno@coreos.com>"]
+publish = false
+
+[dependencies]
+failure = "^0.1.5"
+futures = "^0.1.25"
+reqwest = "^0.9.8"
+serde = "^1.0.84"
+serde_derive = "^1.0.84"
+serde_json = "^1.0.34"
+
+[dev-dependencies]
+env_logger = "^0.6.0"
+tokio = "^0.1.14"
+
+[features]
+test-net = []
+test-net-private = []

@@ -6,6 +6,7 @@ declare -A cargo_test_flags
 cargo_test_flags["cincinnati"]=""
 cargo_test_flags["graph-builder"]="--features test-net"
 cargo_test_flags["policy-engine"]=""
+cargo_test_flags["quay"]="--features test-net"
 
 declare -A executors
 executors["cargo"]="execute_native"
