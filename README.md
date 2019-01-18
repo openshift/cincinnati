@@ -4,8 +4,18 @@ Cincinnati is an update protocol designed to facilitate automatic updates. It de
 
 ## Quick Start
 
+Prepare custom environment variables
+
 ```console
-cargo run --package graph-builder -- --address 0.0.0.0 --registry https://quay.io --repository <namespace/reponame> &
+# Please change these accordingly
+export CINCINNATI_REGISTRY="https://quay.io"
+export CINCINNATI_REPO="redhat/openshift-cincinnati-test-public-manual"
+```
+
+### Executables on the build host
+
+```console
+cargo run --package graph-builder -- --address 0.0.0.0 --registry "${CINCINNATI_REGISTRY}" --repository "${CINCINNATI_REPO}" &
 cargo run --package policy-engine -- --address 0.0.0.0 &
 curl --verbose --header 'Accept:application/json' http://localhost:8081/v1/graph
 ```
