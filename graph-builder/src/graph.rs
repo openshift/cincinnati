@@ -19,11 +19,17 @@ use config;
 use failure::{Error, ResultExt};
 use registry;
 use serde_json;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use std::thread;
 
 pub fn index(req: HttpRequest<State>) -> HttpResponse {
+    // Check for required client parameters.
+    let mandatory_params = &req.state().mandatory_params;
+    if commons::ensure_query_params(mandatory_params, req.query_string()).is_err() {
+        return HttpResponse::BadRequest().finish();
+    }
+
     match req.headers().get(header::ACCEPT) {
         Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE) => {
             HttpResponse::Ok().content_type(CONTENT_TYPE).body(
@@ -41,12 +47,15 @@ pub fn index(req: HttpRequest<State>) -> HttpResponse {
 #[derive(Clone)]
 pub struct State {
     json: Arc<RwLock<String>>,
+    /// Query parameters that must be present in all client requests.
+    mandatory_params: HashSet<String>,
 }
 
 impl State {
-    pub fn new() -> State {
+    pub fn new(mandatory_params: HashSet<String>) -> State {
         State {
             json: Arc::new(RwLock::new(String::new())),
+            mandatory_params,
         }
     }
 }

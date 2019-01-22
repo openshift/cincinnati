@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use commons::parse_path_prefix;
+use commons::{parse_params_set, parse_path_prefix};
+use std::collections::HashSet;
 use std::net::IpAddr;
 use std::num::ParseIntError;
 use std::path::PathBuf;
@@ -60,6 +61,14 @@ pub struct Options {
         parse(from_str = "parse_path_prefix")
     )]
     pub path_prefix: String,
+
+    /// Comma-separated set of mandatory client parameters.
+    #[structopt(
+        long = "mandatory-client-parameters",
+        default_value = "",
+        parse(from_str = "parse_params_set")
+    )]
+    pub mandatory_client_parameters: HashSet<String>,
 }
 
 fn parse_duration(src: &str) -> Result<Duration, ParseIntError> {

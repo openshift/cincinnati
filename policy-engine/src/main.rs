@@ -29,6 +29,7 @@ mod openapi;
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
 use log::LevelFilter;
+use std::collections::HashSet;
 use structopt::StructOpt;
 
 fn main() -> Result<(), Error> {
@@ -58,6 +59,7 @@ fn main() -> Result<(), Error> {
 
     // Main service.
     let state = AppState {
+        mandatory_params: opts.mandatory_client_parameters.clone(),
         upstream: opts.upstream.clone(),
         path_prefix: opts.path_prefix.clone(),
     };
@@ -79,6 +81,8 @@ fn main() -> Result<(), Error> {
 
 #[derive(Debug, Clone)]
 pub struct AppState {
+    /// Query parameters that must be present in all client requests.
+    pub mandatory_params: HashSet<String>,
     pub upstream: hyper::Uri,
     pub path_prefix: String,
 }

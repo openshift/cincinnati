@@ -3,6 +3,7 @@
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{Graph, CONTENT_TYPE};
+use commons;
 use failure::Error;
 use futures::{future, Future, Stream};
 use hyper::{Body, Client, Request};
@@ -41,6 +42,14 @@ lazy_static! {
 /// Serve Cincinnati graph requests.
 pub(crate) fn index(req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
     HTTP_GRAPH_REQS.inc();
+
+    // Check for required client parameters.
+    let mandatory_params = &req.state().mandatory_params;
+    if commons::ensure_query_params(mandatory_params, req.query_string()).is_err() {
+        HTTP_GRAPH_BAD_REQS.inc();
+        return Box::new(future::ok(HttpResponse::BadRequest().finish()));
+    }
+
     match req.headers().get(header::ACCEPT) {
         Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE) => {
             let ups_req = Request::get(&req.state().upstream)

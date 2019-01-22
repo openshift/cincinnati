@@ -4,3 +4,5 @@ version = "0.1.0"
 authors = ["Stefan Junker <mail@stefanjunker.de>"]
 
 [dependencies]
+failure = "^0.1.5"
+url = "^1.7.2"
