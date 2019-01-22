@@ -5,11 +5,13 @@ pub fn parse_path_prefix(path_prefix: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_parse_path_prefix() {
-        assert_eq!(super::parse_path_prefix("//a/b/c//"), "/a/b/c");
-        assert_eq!(super::parse_path_prefix("/a/b/c/"), "/a/b/c");
-        assert_eq!(super::parse_path_prefix("/a/b/c"), "/a/b/c");
-        assert_eq!(super::parse_path_prefix("a/b/c"), "/a/b/c");
+        assert_eq!(parse_path_prefix("//a/b/c//"), "/a/b/c");
+        assert_eq!(parse_path_prefix("/a/b/c/"), "/a/b/c");
+        assert_eq!(parse_path_prefix("/a/b/c"), "/a/b/c");
+        assert_eq!(parse_path_prefix("a/b/c"), "/a/b/c");
     }
 }
