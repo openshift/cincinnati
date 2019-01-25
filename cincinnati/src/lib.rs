@@ -128,6 +128,28 @@ impl Graph {
     pub fn releases_count(&self) -> u64 {
         self.dag.node_count() as u64
     }
+
+    /// Prune the graph from all abstract releases
+    ///
+    /// Return the number of pruned releases
+    pub fn prune_abstract(&mut self) -> usize {
+        let to_remove: Vec<daggy::NodeIndex> = self
+            .dag
+            .node_references()
+            .filter_map(|nr| {
+                if let Release::Abstract(_) = nr.weight() {
+                    Some(nr.0)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        to_remove
+            .iter()
+            .filter(|ni| self.dag.remove_node(**ni).is_some())
+            .count()
+    }
 }
 
 impl<'a> Deserialize<'a> for Graph {
