@@ -71,12 +71,31 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
 
     loop {
         debug!("graph update triggered");
-        match create_graph(
-            &opts,
+
+        let releases = match registry::fetch_releases(
+            &opts.registry,
+            &opts.repository,
             username.as_ref().map(String::as_ref),
             password.as_ref().map(String::as_ref),
             &mut cache,
         ) {
+            Ok(releases) => {
+                if releases.is_empty() {
+                    warn!(
+                        "could not find any releases in {}/{}",
+                        &opts.registry, &opts.repository
+                    );
+                };
+                releases
+            }
+            Err(err) => {
+                err.iter_chain()
+                    .for_each(|cause| error!("failed to fetch all release metadata: {}", cause));
+                vec![]
+            }
+        };
+
+        match create_graph(releases) {
             Ok(graph) => match serde_json::to_string(&graph) {
                 Ok(json) => {
                     *state.json.write().expect("json lock has been poisoned") = json;
@@ -93,25 +112,8 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
     }
 }
 
-fn create_graph(
-    opts: &config::Options,
-    username: Option<&str>,
-    password: Option<&str>,
-    cache: &mut HashMap<u64, Option<registry::Release>>,
-) -> Result<Graph, Error> {
+pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
     let mut graph = Graph::default();
-
-    let releases =
-        registry::fetch_releases(&opts.registry, &opts.repository, username, password, cache)
-            .context("failed to fetch all release metadata")?;
-
-    if releases.is_empty() {
-        warn!(
-            "could not find any releases in {}/{}",
-            &opts.registry, &opts.repository
-        );
-        return Ok(graph);
-    };
 
     releases
         .into_iter()
