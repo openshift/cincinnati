@@ -8,6 +8,7 @@ extern crate url;
 use self::graph_builder::registry::{self, fetch_releases, Release};
 use self::graph_builder::release::{Metadata, MetadataKind::V0};
 use self::semver::Version;
+use net::quay_io::graph_builder::graph::create_graph;
 use net::quay_io::graph_builder::metadata::{
     fetch_and_populate_dynamic_metadata, MetadataFetcher, QuayMetadataFetcher,
     DEFAULT_QUAY_LABEL_FILTER, MANIFESTREF_KEY,
@@ -283,4 +284,44 @@ fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
     .iter()
     .map(|url| registry::Registry::try_from_str(url).unwrap())
     .for_each(test);
+}
+
+#[test]
+fn create_graph_handles_quay_labels_correctly() {
+    init_logger();
+
+    let registry = registry::Registry::try_from_str("quay.io").unwrap();
+    let repo = "redhat/openshift-cincinnati-test-labels-public-manual";
+
+    let releases = expected_releases_labels_test_annoated(&registry, &repo);
+    let graph = create_graph(releases, &DEFAULT_QUAY_LABEL_FILTER).expect("could not create graph");
+
+    let graph_expected = {
+        let metadata: HashMap<usize, HashMap<String, String>> = [
+            (0, HashMap::new()),
+            (
+                1,
+                [(String::from("kind"), String::from("test"))]
+                    .iter()
+                    .cloned()
+                    .collect(),
+            ),
+            (2, [].iter().cloned().collect()),
+            (3, [].iter().cloned().collect()),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
+        let mut expected_releases = expected_releases(&registry, repo, 4, 0, Some(metadata));
+
+        expected_releases[1].metadata.previous = Default::default();
+        expected_releases[3].metadata.previous =
+            vec![semver::Version::new(0, 0, 0), semver::Version::new(0, 0, 1)];
+        expected_releases.remove(2);
+
+        create_graph(expected_releases, &DEFAULT_QUAY_LABEL_FILTER).expect("create_graph to work")
+    };
+
+    assert_eq!(graph, graph_expected);
 }

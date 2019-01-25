@@ -229,7 +229,8 @@ pub fn fetch_releases(
     let tagged_layers = thread_runtime.block_on(tags)?;
 
     let mut releases = Vec::with_capacity(tagged_layers.len());
-    for (tag, mut manifestref, layer_digests) in tagged_layers {
+
+    for (tag, manifestref, layer_digests) in tagged_layers {
         let mut release = match cache_release(
             layer_digests,
             authenticated_client.to_owned(),
