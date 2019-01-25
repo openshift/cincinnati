@@ -75,6 +75,7 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
         let releases = match registry::fetch_releases(
             &opts.registry,
             &opts.repository,
+            &opts.quay_label_filter,
             username.as_ref().map(String::as_ref),
             password.as_ref().map(String::as_ref),
             &mut cache,
