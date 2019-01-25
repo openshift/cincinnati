@@ -29,8 +29,8 @@ fn test_public_stream_active_tags() {
 #[test]
 fn test_public_get_labels() {
     let mut rt = common_init();
-    let repo = "redhat/openshift-cincinnati-test-public-manual";
-    let tag_name = "0.0.0";
+    let repo = "redhat/openshift-cincinnati-test-labels-public-manual";
+    let tag_name = "0.0.1";
 
     let client = quay::v1::Client::builder().build().unwrap();
     let fetch_tags = client.stream_tags(repo, true).collect();
@@ -46,7 +46,20 @@ fn test_public_get_labels() {
     assert_eq!(tag.name, tag_name);
 
     let digest = tag.manifest_digest.clone().unwrap();
-    let fetch_labels = client.get_labels(repo.to_string(), digest);
+    let fetch_labels = client.get_labels(
+        repo.to_string(),
+        digest,
+        Some("com.openshift.upgrades.graph".to_string()),
+    );
     let labels = rt.block_on(fetch_labels).unwrap();
-    assert_eq!(labels, vec![]);
+    assert_eq!(
+        labels
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<(String, String)>>(),
+        vec![(
+            "com.openshift.upgrades.graph.previous.remove".to_string(),
+            "0.0.0".to_string()
+        )]
+    );
 }

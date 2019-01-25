@@ -65,7 +65,7 @@ fn test_get_labels() {
     assert_eq!(tag.name, tag_name);
 
     let digest = tag.manifest_digest.clone().unwrap();
-    let fetch_labels = client.get_labels(repo.to_string(), digest);
+    let fetch_labels = client.get_labels(repo.to_string(), digest, None);
     let labels = rt.block_on(fetch_labels).unwrap();
     assert_eq!(labels, vec![]);
 }
