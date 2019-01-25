@@ -20,7 +20,7 @@ serde_json = "^1.0.22"
 structopt = "^0.2.10"
 tar = "^0.4.16"
 tokio = "0.1"
-dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "4f8a1816156cf21605574c1452ca7d97c758747e" }
+dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "8103686fb41c5fe3c9f24794bda60ced411174c6" }
 futures = "0.1"
 
 [features]

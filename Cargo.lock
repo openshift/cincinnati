@@ -440,7 +440,7 @@ dependencies = [
 [[package]]
 name = "dkregistry"
 version = "0.2.2-alpha.0"
-source = "git+https://github.com/camallo/dkregistry-rs.git?rev=4f8a1816156cf21605574c1452ca7d97c758747e#4f8a1816156cf21605574c1452ca7d97c758747e"
+source = "git+https://github.com/camallo/dkregistry-rs.git?rev=8103686fb41c5fe3c9f24794bda60ced411174c6#8103686fb41c5fe3c9f24794bda60ced411174c6"
 dependencies = [
  "base64 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "dirs 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -661,7 +661,7 @@ dependencies = [
  "actix-web 0.7.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "cincinnati 0.1.0",
  "commons 0.1.0",
- "dkregistry 0.2.2-alpha.0 (git+https://github.com/camallo/dkregistry-rs.git?rev=4f8a1816156cf21605574c1452ca7d97c758747e)",
+ "dkregistry 0.2.2-alpha.0 (git+https://github.com/camallo/dkregistry-rs.git?rev=8103686fb41c5fe3c9f24794bda60ced411174c6)",
  "env_logger 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2387,7 +2387,7 @@ dependencies = [
 "checksum ct-logs 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "95a4bf5107667e12bf6ce31a3a5066d67acc88942b6742117a41198734aaccaa"
 "checksum daggy 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e2099ef075418d7b252af69583c831cde749af9423c2a212dea8895e8ea78841"
 "checksum dirs 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "88972de891f6118092b643d85a0b28e0678e0f948d7f879aa32f2d5aafe97d2a"
-"checksum dkregistry 0.2.2-alpha.0 (git+https://github.com/camallo/dkregistry-rs.git?rev=4f8a1816156cf21605574c1452ca7d97c758747e)" = "<none>"
+"checksum dkregistry 0.2.2-alpha.0 (git+https://github.com/camallo/dkregistry-rs.git?rev=8103686fb41c5fe3c9f24794bda60ced411174c6)" = "<none>"
 "checksum dtoa 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "6d301140eb411af13d3115f9a562c85cc6b541ade9dfa314132244aaee7489dd"
 "checksum either 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3be565ca5c557d7f59e7cfcf1844f9e3033650c929c6566f511e8005f205c1d0"
 "checksum encoding 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)" = "6b0d943856b990d12d3b55b359144ff341533e516d94098b1d3fc1ac666d36ec"
