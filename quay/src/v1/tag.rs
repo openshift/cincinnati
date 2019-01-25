@@ -1,4 +1,4 @@
-//! Manifest API.
+//! Tag API.
 
 use super::Client;
 use failure::Error;
@@ -13,7 +13,7 @@ pub(crate) struct PaginatedTags {
     pub(crate) has_additional: bool,
     /// Pagination index.
     pub(crate) page: u32,
-    /// Set of tags in current page.
+    /// List of tags in current page.
     pub(crate) tags: Vec<Tag>,
 }
 
@@ -30,11 +30,14 @@ pub struct Tag {
 
 impl Client {
     /// Fetch tags in a repository, in a streaming way.
-    pub fn stream_tags<S: AsRef<str>>(
+    pub fn stream_tags<S>(
         &self,
         repository: S,
         only_active_tags: bool,
-    ) -> impl Stream<Item = Tag, Error = Error> {
+    ) -> impl Stream<Item = Tag, Error = Error>
+    where
+        S: AsRef<str>,
+    {
         // TODO(lucab): implement pagination, filtering, and other advanced options.
         let endpoint = format!("repository/{}/tag", repository.as_ref());
         let actives_only = format!("{}", only_active_tags);
