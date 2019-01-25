@@ -16,7 +16,7 @@ use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
 use config;
-use failure::{Error, ResultExt};
+use failure::Error;
 use registry;
 use serde_json;
 use std::collections::{HashMap, HashSet};
