@@ -29,6 +29,8 @@ use std::{collections, fmt};
 
 pub const CONTENT_TYPE: &str = "application/json";
 
+const EXPECT_NODE_WEIGHT: &str = "all exisitng nodes to have a weight (release)";
+
 #[derive(Debug, Default)]
 pub struct Graph {
     dag: Dag<Release, Empty>,
@@ -75,7 +77,7 @@ impl<'a> Iterator for NextReleases<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         self.children
             .walk_next(self.dag)
-            .map(|(_, i)| self.dag.node_weight(i).unwrap())
+            .map(|(_, i)| self.dag.node_weight(i).expect(EXPECT_NODE_WEIGHT))
     }
 }
 
@@ -90,7 +92,7 @@ impl Graph {
         let release = release.into();
         match self.find_by_version(&release.version()) {
             Some(id) => {
-                let mut node = self.dag.node_weight_mut(id.0).unwrap();
+                let mut node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
                 if let Release::Concrete(_) = node {
                     bail!(
                         "Concrete release with the same version ({}) already exists",
