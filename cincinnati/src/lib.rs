@@ -28,13 +28,14 @@ use std::collections::HashMap;
 use std::{collections, fmt};
 
 pub const CONTENT_TYPE: &str = "application/json";
+const EXPECT_NODE_WEIGHT: &str = "all exisitng nodes to have a weight (release)";
 
 #[derive(Debug, Default)]
 pub struct Graph {
     dag: Dag<Release, Empty>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Release {
     Concrete(ConcreteRelease),
@@ -50,14 +51,14 @@ impl Release {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct ConcreteRelease {
     pub version: String,
     pub payload: String,
     pub metadata: HashMap<String, String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct AbstractRelease {
     pub version: String,
 }
@@ -75,7 +76,7 @@ impl<'a> Iterator for NextReleases<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         self.children
             .walk_next(self.dag)
-            .map(|(_, i)| self.dag.node_weight(i).unwrap())
+            .map(|(_, i)| self.dag.node_weight(i).expect(EXPECT_NODE_WEIGHT))
     }
 }
 
@@ -90,7 +91,7 @@ impl Graph {
         let release = release.into();
         match self.find_by_version(&release.version()) {
             Some(id) => {
-                let mut node = self.dag.node_weight_mut(id.0).unwrap();
+                let mut node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
                 if let Release::Concrete(_) = node {
                     bail!(
                         "Concrete release with the same version ({}) already exists",
@@ -242,14 +243,92 @@ impl Serialize for Graph {
     }
 }
 
+impl PartialEq for Graph {
+    fn eq(&self, other: &Graph) -> bool {
+        use daggy::petgraph::visit::IntoNeighbors;
+
+        let asc_order_release_by_version = {
+            use std::cmp::Ordering::{self, *};
+
+            |a: &&Release, b: &&Release| -> Ordering {
+                if a.version() < b.version() {
+                    Less
+                } else if a.version() == b.version() {
+                    Equal
+                } else {
+                    Greater
+                }
+            }
+        };
+
+        // Look through all nodes in self
+        self.dag.node_references().all(|node_ref| {
+            let dag_other = &other.dag;
+            let node_index = node_ref.0;
+            let release = node_ref.1;
+
+            // For each node in self, look through all nodes in other and find a match
+            dag_other
+                .node_references()
+                .filter(|node_ref_other| {
+                    let node_index_other = node_ref_other.0;
+                    let release_other = node_ref_other.1;
+
+                    // Ensure the set of neighbors of release and release_other are identical
+                    let compare_neighbors = || {
+                        let (neighbors_count, neighbors_other_count) = (
+                            self.dag.neighbors(node_index).count(),
+                            dag_other.neighbors(node_index_other).count(),
+                        );
+
+                        if neighbors_count != neighbors_other_count {
+                            return false;
+                        }
+
+                        let mut neighbors = self
+                            .dag
+                            .neighbors(node_index)
+                            .zip(dag_other.neighbors(node_index_other))
+                            .fold(
+                                Vec::with_capacity(neighbors_count * 2),
+                                |mut neighbors, (neighbor, neighbor_other)| {
+                                    neighbors.push(
+                                        self.dag.node_weight(neighbor).expect(EXPECT_NODE_WEIGHT),
+                                    );
+                                    neighbors.push(
+                                        dag_other
+                                            .node_weight(neighbor_other)
+                                            .expect(EXPECT_NODE_WEIGHT),
+                                    );
+                                    neighbors
+                                },
+                            );
+
+                        // dedup() requires consecutive sorting
+                        neighbors.sort_by(asc_order_release_by_version);
+                        neighbors.dedup();
+
+                        neighbors.len() == neighbors_count
+                    };
+
+                    release == release_other && compare_neighbors()
+                })
+                // Ensure each node in self has exactly one matching node in including its neighbors
+                .count()
+                == 1
+        })
+    }
+}
+
+impl Eq for Graph{}
+
 #[cfg(test)]
 mod tests {
     extern crate serde_json;
 
     use super::*;
 
-    #[test]
-    fn serialize_graph() {
+    fn generate_graph() -> Graph {
         let mut graph = Graph::default();
         let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("1.0.0"),
@@ -270,6 +349,12 @@ mod tests {
         graph.dag.add_edge(v2, v3, Empty {}).unwrap();
         graph.dag.add_edge(v1, v3, Empty {}).unwrap();
 
+        graph
+    }
+
+    #[test]
+    fn serialize_graph() {
+        let graph = generate_graph();
         assert_eq!(serde_json::to_string(&graph).unwrap(), r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#);
     }
 
@@ -282,5 +367,91 @@ mod tests {
 
         let ser = serde_json::to_string(&de).unwrap();
         assert_eq!(ser, json);
+    }
+
+    #[test]
+    fn test_graph_eq_false_for_unequal_graphs() {
+        let graph1 = {
+            let mut graph = Graph::default();
+            let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+                version: String::from("1.0.0"),
+                payload: String::from("image/1.0.0"),
+                metadata: HashMap::new(),
+            }));
+            let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+                version: String::from("2.0.0"),
+                payload: String::from("image/2.0.0"),
+                metadata: HashMap::new(),
+            }));
+            graph.dag.add_edge(v1, v2, Empty {}).unwrap();
+
+            graph
+        };
+        let graph2 = {
+            let mut graph = Graph::default();
+            let v3 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+                version: String::from("3.0.0"),
+                payload: String::from("image/3.0.0"),
+                metadata: HashMap::new(),
+            }));
+            let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+                version: String::from("2.0.0"),
+                payload: String::from("image/2.0.0"),
+                metadata: HashMap::new(),
+            }));
+            graph.dag.add_edge(v2, v3, Empty {}).unwrap();
+
+            graph
+        };
+        assert_ne!(graph1, graph2);
+    }
+
+    #[test]
+    fn test_graph_eq_true_for_equal_graphs() {
+        assert_eq!(generate_graph(), generate_graph())
+    }
+
+    #[test]
+    fn test_graph_eq_is_agnostic_to_node_and_edge_order() {
+        let r1 = Release::Concrete(ConcreteRelease {
+            version: String::from("1.0.0"),
+            payload: String::from("image/1.0.0"),
+            metadata: HashMap::new(),
+        });
+        let r2 = Release::Concrete(ConcreteRelease {
+            version: String::from("2.0.0"),
+            payload: String::from("image/2.0.0"),
+            metadata: HashMap::new(),
+        });
+
+        let r3 = Release::Concrete(ConcreteRelease {
+            version: String::from("3.0.0"),
+            payload: String::from("image/3.0.0"),
+            metadata: HashMap::new(),
+        });
+
+        let graph1 = {
+            let mut graph = Graph::default();
+            let v1 = graph.dag.add_node(r1.clone());
+            let v2 = graph.dag.add_node(r2.clone());
+            let v3 = graph.dag.add_node(r3.clone());
+            graph.dag.add_edge(v1, v2, Empty {}).unwrap();
+            graph.dag.add_edge(v1, v3, Empty {}).unwrap();
+            graph.dag.add_edge(v2, v3, Empty {}).unwrap();
+
+            graph
+        };
+        let graph2 = {
+            let mut graph = Graph::default();
+            let v3 = graph.dag.add_node(r3.clone());
+            let v2 = graph.dag.add_node(r2.clone());
+            let v1 = graph.dag.add_node(r1.clone());
+            graph.dag.add_edge(v2, v3, Empty {}).unwrap();
+            graph.dag.add_edge(v1, v2, Empty {}).unwrap();
+            graph.dag.add_edge(v1, v3, Empty {}).unwrap();
+
+            graph
+        };
+        assert_eq!(graph1, graph2);
     }
 }
