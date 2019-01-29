@@ -54,7 +54,7 @@ impl Release {
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct ConcreteRelease {
     pub version: String,
-    pub payload: String,
+    pub image: String,
     pub metadata: HashMap<String, String>,
 }
 
@@ -332,17 +332,17 @@ mod tests {
         let mut graph = Graph::default();
         let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("1.0.0"),
-            payload: String::from("image/1.0.0"),
+            image: String::from("image/1.0.0"),
             metadata: HashMap::new(),
         }));
         let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("2.0.0"),
-            payload: String::from("image/2.0.0"),
+            image: String::from("image/2.0.0"),
             metadata: HashMap::new(),
         }));
         let v3 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("3.0.0"),
-            payload: String::from("image/3.0.0"),
+            image: String::from("image/3.0.0"),
             metadata: HashMap::new(),
         }));
         graph.dag.add_edge(v1, v2, Empty {}).unwrap();
@@ -355,12 +355,12 @@ mod tests {
     #[test]
     fn serialize_graph() {
         let graph = generate_graph();
-        assert_eq!(serde_json::to_string(&graph).unwrap(), r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#);
+        assert_eq!(serde_json::to_string(&graph).unwrap(), r#"{"nodes":[{"version":"1.0.0","image":"image/1.0.0","metadata":{}},{"version":"2.0.0","image":"image/2.0.0","metadata":{}},{"version":"3.0.0","image":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#);
     }
 
     #[test]
     fn deserialize_graph() {
-        let json = r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#;
+        let json = r#"{"nodes":[{"version":"1.0.0","image":"image/1.0.0","metadata":{}},{"version":"2.0.0","image":"image/2.0.0","metadata":{}},{"version":"3.0.0","image":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#;
 
         let de: Graph = serde_json::from_str(json).unwrap();
         assert_eq!(de.releases_count(), 3);
@@ -375,12 +375,12 @@ mod tests {
             let mut graph = Graph::default();
             let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
                 version: String::from("1.0.0"),
-                payload: String::from("image/1.0.0"),
+                image: String::from("image/1.0.0"),
                 metadata: HashMap::new(),
             }));
             let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
                 version: String::from("2.0.0"),
-                payload: String::from("image/2.0.0"),
+                image: String::from("image/2.0.0"),
                 metadata: HashMap::new(),
             }));
             graph.dag.add_edge(v1, v2, Empty {}).unwrap();
@@ -391,12 +391,12 @@ mod tests {
             let mut graph = Graph::default();
             let v3 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
                 version: String::from("3.0.0"),
-                payload: String::from("image/3.0.0"),
+                image: String::from("image/3.0.0"),
                 metadata: HashMap::new(),
             }));
             let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
                 version: String::from("2.0.0"),
-                payload: String::from("image/2.0.0"),
+                image: String::from("image/2.0.0"),
                 metadata: HashMap::new(),
             }));
             graph.dag.add_edge(v2, v3, Empty {}).unwrap();
@@ -415,18 +415,18 @@ mod tests {
     fn test_graph_eq_is_agnostic_to_node_and_edge_order() {
         let r1 = Release::Concrete(ConcreteRelease {
             version: String::from("1.0.0"),
-            payload: String::from("image/1.0.0"),
+            image: String::from("image/1.0.0"),
             metadata: HashMap::new(),
         });
         let r2 = Release::Concrete(ConcreteRelease {
             version: String::from("2.0.0"),
-            payload: String::from("image/2.0.0"),
+            image: String::from("image/2.0.0"),
             metadata: HashMap::new(),
         });
 
         let r3 = Release::Concrete(ConcreteRelease {
             version: String::from("3.0.0"),
-            payload: String::from("image/3.0.0"),
+            image: String::from("image/3.0.0"),
             metadata: HashMap::new(),
         });
 
