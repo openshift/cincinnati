@@ -5,4 +5,5 @@ members = [
 	"commons",
 	"graph-builder",
 	"policy-engine",
+	"quay",
 ]
