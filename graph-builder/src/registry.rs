@@ -93,6 +93,7 @@ pub fn fetch_releases(
     registry: &str,
     repo: &str,
     quay_label_filter: &str,
+    quay_api_token: Option<&str>,
     username: Option<&str>,
     password: Option<&str>,
     cache: &mut HashMap<u64, Option<Release>>,
@@ -109,7 +110,9 @@ pub fn fetch_releases(
         .build()
         .map_err(|e| format_err!("{}", e))?;
 
-    let quay_client: quay::v1::Client = quay::v1::Client::builder().build()?;
+    let quay_client: quay::v1::Client = quay::v1::Client::builder()
+        .access_token(quay_api_token.map(|s| s.to_string()))
+        .build()?;
 
     let authenticated_client = thread_runtime
         .block_on(authenticate_client(

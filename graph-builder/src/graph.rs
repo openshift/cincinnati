@@ -67,7 +67,10 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
     // Read the credentials outside the loop to avoid re-reading the file
     let (username, password) =
         registry::read_credentials(opts.credentials_path.as_ref(), &opts.registry)
-            .expect("could not read credentials");
+            .expect("could not read registry credentials");
+
+    let quay_api_token = quay::read_credentials(opts.quay_api_credentials_path.as_ref())
+        .expect("could not read quay API credentials");
 
     loop {
         debug!("graph update triggered");
@@ -76,6 +79,7 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
             &opts.registry,
             &opts.repository,
             &opts.quay_label_filter,
+            quay_api_token.as_ref().map(String::as_str),
             username.as_ref().map(String::as_ref),
             password.as_ref().map(String::as_ref),
             &mut cache,
