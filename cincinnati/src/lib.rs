@@ -320,7 +320,7 @@ impl PartialEq for Graph {
     }
 }
 
-impl Eq for Graph{}
+impl Eq for Graph {}
 
 #[cfg(test)]
 mod tests {
