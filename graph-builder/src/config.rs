@@ -69,6 +69,17 @@ pub struct Options {
         parse(from_str = "parse_params_set")
     )]
     pub mandatory_client_parameters: HashSet<String>,
+
+    /// Filter for receiving quay labels
+    #[structopt(
+        long = "quay-label-filter",
+        default_value = "com.openshift.upgrades.graph"
+    )]
+    pub quay_label_filter: String,
+
+    /// Credentials file for authentication against API described at https://docs.quay.io/api/
+    #[structopt(long = "quay-api-credentials-path", parse(from_os_str))]
+    pub quay_api_credentials_path: Option<PathBuf>,
 }
 
 fn parse_duration(src: &str) -> Result<Duration, ParseIntError> {

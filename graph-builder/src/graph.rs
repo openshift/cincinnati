@@ -16,7 +16,7 @@ use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
 use config;
-use failure::{Error, ResultExt};
+use failure::Error;
 use registry;
 use serde_json;
 use std::collections::{HashMap, HashSet};
@@ -67,16 +67,40 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
     // Read the credentials outside the loop to avoid re-reading the file
     let (username, password) =
         registry::read_credentials(opts.credentials_path.as_ref(), &opts.registry)
-            .expect("could not read credentials");
+            .expect("could not read registry credentials");
+
+    let quay_api_token = quay::read_credentials(opts.quay_api_credentials_path.as_ref())
+        .expect("could not read quay API credentials");
 
     loop {
         debug!("graph update triggered");
-        match create_graph(
-            &opts,
+
+        let releases = match registry::fetch_releases(
+            &opts.registry,
+            &opts.repository,
+            &opts.quay_label_filter,
+            quay_api_token.as_ref().map(String::as_str),
             username.as_ref().map(String::as_ref),
             password.as_ref().map(String::as_ref),
             &mut cache,
         ) {
+            Ok(releases) => {
+                if releases.is_empty() {
+                    warn!(
+                        "could not find any releases in {}/{}",
+                        &opts.registry, &opts.repository
+                    );
+                };
+                releases
+            }
+            Err(err) => {
+                err.iter_chain()
+                    .for_each(|cause| error!("failed to fetch all release metadata: {}", cause));
+                vec![]
+            }
+        };
+
+        match create_graph(releases) {
             Ok(graph) => match serde_json::to_string(&graph) {
                 Ok(json) => {
                     *state.json.write().expect("json lock has been poisoned") = json;
@@ -93,25 +117,8 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
     }
 }
 
-fn create_graph(
-    opts: &config::Options,
-    username: Option<&str>,
-    password: Option<&str>,
-    cache: &mut HashMap<u64, Option<registry::Release>>,
-) -> Result<Graph, Error> {
+pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
     let mut graph = Graph::default();
-
-    let releases =
-        registry::fetch_releases(&opts.registry, &opts.repository, username, password, cache)
-            .context("failed to fetch all release metadata")?;
-
-    if releases.is_empty() {
-        warn!(
-            "could not find any releases in {}/{}",
-            &opts.registry, &opts.repository
-        );
-        return Ok(graph);
-    };
 
     releases
         .into_iter()

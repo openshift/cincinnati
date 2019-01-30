@@ -92,6 +92,8 @@ pub fn authenticate_client(
 pub fn fetch_releases(
     registry: &str,
     repo: &str,
+    quay_label_filter: &str,
+    quay_api_token: Option<&str>,
     username: Option<&str>,
     password: Option<&str>,
     cache: &mut HashMap<u64, Option<Release>>,
@@ -108,6 +110,10 @@ pub fn fetch_releases(
         .build()
         .map_err(|e| format_err!("{}", e))?;
 
+    let quay_client: quay::v1::Client = quay::v1::Client::builder()
+        .access_token(quay_api_token.map(|s| s.to_string()))
+        .build()?;
+
     let authenticated_client = thread_runtime
         .block_on(authenticate_client(
             &mut client,
@@ -121,18 +127,49 @@ pub fn fetch_releases(
     let tagged_layers = thread_runtime.block_on(tags)?;
 
     let mut releases = Vec::with_capacity(tagged_layers.len());
-    for (tag, layer_digests) in tagged_layers {
-        let release = cache_release(
+    for (tag, manifestref, layer_digests) in tagged_layers {
+        let release = match cache_release(
             layer_digests,
             authenticated_client.to_owned(),
             registry_host.to_owned(),
             repo.to_owned(),
             tag.to_owned(),
             cache,
-        )?;
-        if let Some(metadata) = release {
-            releases.push(metadata);
+        ) {
+            Ok(Some(release)) => release,
+            Ok(None) => {
+                // Reminder: this means the layer_digests point to layers
+                // without any release and we've cached this before
+                continue;
+            }
+            Err(e) => bail!(e),
         };
+
+        let manifestref = manifestref.as_str();
+        let quay_labels = thread_runtime.block_on(quay_client.get_labels(
+            &repo,
+            &manifestref,
+            Some(&quay_label_filter),
+        ))?;
+
+        let metadata = Metadata {
+            metadata: release
+                .metadata
+                .metadata
+                .into_iter()
+                .chain(
+                    quay_labels
+                        .into_iter()
+                        .map(|label| (label.key, label.value)),
+                )
+                .collect(),
+            ..release.metadata
+        };
+
+        releases.push(Release {
+            metadata,
+            ..release
+        });
     }
     releases.shrink_to_fit();
 
@@ -207,14 +244,18 @@ fn get_manifest_and_layers(
     tag: String,
     repo: String,
     authenticated_client: &dkregistry::v2::Client,
-) -> impl Future<Item = (String, Vec<String>), Error = failure::Error> {
+) -> impl Future<Item = (String, String, Vec<String>), Error = failure::Error> {
     trace!("processing: {}:{}", &repo, &tag);
     authenticated_client
         .has_manifest(&repo, &tag, None)
-        .join(authenticated_client.get_manifest(&repo, &tag))
+        .join(authenticated_client.get_manifest_and_ref(&repo, &tag))
         .map_err(|e| format_err!("{}", e))
-        .and_then(|(manifest_kind, manifest)| {
-            Ok((tag, get_layer_digests(&manifest_kind, &manifest)?))
+        .and_then(|(manifest_kind, (manifest, manifestref))| {
+            Ok((
+                tag,
+                manifestref,
+                get_layer_digests(&manifest_kind, &manifest)?,
+            ))
         })
 }
 

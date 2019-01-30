@@ -20,6 +20,7 @@ extern crate failure;
 extern crate log;
 #[macro_use]
 extern crate structopt;
+extern crate quay;
 
 pub mod config;
 pub mod graph;
