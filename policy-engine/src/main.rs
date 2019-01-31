@@ -86,3 +86,13 @@ pub struct AppState {
     pub upstream: hyper::Uri,
     pub path_prefix: String,
 }
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            mandatory_params: HashSet::new(),
+            upstream: hyper::Uri::from_static(config::DEFAULT_UPSTREAM_URL),
+            path_prefix: String::new(),
+        }
+    }
+}
