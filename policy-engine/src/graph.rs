@@ -94,3 +94,46 @@ pub(crate) fn index(req: HttpRequest<AppState>) -> Box<Future<Item = HttpRespons
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    extern crate tokio;
+
+    use self::tokio::runtime::current_thread::Runtime;
+    use crate::graph;
+    use crate::AppState;
+    use actix_web::http;
+
+    fn common_init() -> Runtime {
+        let _ = env_logger::try_init_from_env(env_logger::Env::default());
+        Runtime::new().unwrap()
+    }
+
+    #[test]
+    fn missing_content_type() {
+        let mut rt = common_init();
+        let state = AppState::default();
+
+        let http_req = actix_web::test::TestRequest::with_state(state).finish();
+        let graph_call = graph::index(http_req);
+        let resp = rt.block_on(graph_call).unwrap();
+
+        assert_eq!(resp.status(), http::StatusCode::NOT_ACCEPTABLE);
+    }
+
+    #[test]
+    fn missing_mandatory_params() {
+        let mut rt = common_init();
+        let mandatory_params = vec!["id".to_string()].into_iter().collect();
+        let state = AppState {
+            mandatory_params,
+            ..Default::default()
+        };
+        let http_req = actix_web::test::TestRequest::with_state(state).finish();
+
+        let graph_call = graph::index(http_req);
+        let resp = rt.block_on(graph_call).unwrap();
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+    }
+}

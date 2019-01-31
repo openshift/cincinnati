@@ -5,6 +5,9 @@ use hyper::Uri;
 use std::collections::HashSet;
 use std::net::IpAddr;
 
+/// Default URL to upstream graph provider.
+pub(crate) static DEFAULT_UPSTREAM_URL: &str = "http://localhost:8080/v1/graph";
+
 #[derive(Debug, StructOpt)]
 pub struct Options {
     /// Verbosity level
@@ -12,7 +15,7 @@ pub struct Options {
     pub verbosity: u64,
 
     /// URL for the upstream graph builder or policy engine
-    #[structopt(long = "upstream", default_value = "http://localhost:8080/v1/graph")]
+    #[structopt(long = "upstream", raw(default_value = "DEFAULT_UPSTREAM_URL"))]
     pub upstream: Uri,
 
     /// Address on which the server will listen
