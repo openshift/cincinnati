@@ -89,4 +89,5 @@ mod tests {
         ensure_query_params(&simple, "").unwrap_err();
         ensure_query_params(&simple, "c=d").unwrap_err();
     }
+
 }

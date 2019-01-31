@@ -1,15 +1,17 @@
 extern crate cincinnati;
+extern crate commons;
 extern crate graph_builder;
 extern crate semver;
+extern crate url;
+
+use self::graph_builder::registry::{self, fetch_releases, Release};
+use self::graph_builder::release::{Metadata, MetadataKind::V0};
+use self::semver::Version;
+use net::quay_io::graph_builder::registry::Registry;
+use std::collections::HashMap;
 
 #[cfg(feature = "test-net-private")]
 use self::graph_builder::registry::read_credentials;
-
-use self::graph_builder::registry::{fetch_releases, Release};
-use self::graph_builder::release::Metadata;
-use self::graph_builder::release::MetadataKind::V0;
-use self::semver::Version;
-use std::collections::HashMap;
 
 static QUAY_LABEL_FILTER: &str = "com.openshift.upgrades.graph";
 
@@ -18,12 +20,15 @@ fn init_logger() {
 }
 
 fn expected_releases(
-    source_base: &str,
+    registry: &Registry,
+    repo: &str,
     count: usize,
     start: usize,
     metadata: Option<HashMap<usize, HashMap<String, String>>>,
 ) -> Vec<Release> {
     use std::collections::HashMap;
+
+    let source_base = &format!("{}/{}", registry.host_port_string(), repo);
 
     let mut releases = Vec::new();
     let mut metadata: HashMap<usize, HashMap<String, String>> = metadata.unwrap_or_else(|| {
@@ -80,7 +85,7 @@ fn fetch_release_private_with_credentials_must_succeed() {
 
     init_logger();
 
-    let registry = "quay.io";
+    let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
     let mut cache = HashMap::new();
     let credentials_path = match std::env::var("CINCINNATI_TEST_CREDENTIALS_PATH") {
@@ -89,7 +94,8 @@ fn fetch_release_private_with_credentials_must_succeed() {
             panic!("CINCINNATI_TEST_CREDENTIALS_PATH unset, skipping...");
         }
     };
-    let (username, password) = read_credentials(credentials_path.as_ref(), registry).unwrap();
+    let (username, password) =
+        read_credentials(credentials_path.as_ref(), registry.host().unwrap()).unwrap();
     let releases = fetch_releases(
         &registry,
         &repo,
@@ -102,17 +108,14 @@ fn fetch_release_private_with_credentials_must_succeed() {
     )
     .expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
-    assert_eq!(
-        expected_releases(&format!("{}/{}", registry, repo), 2, 0, None),
-        releases
-    )
+    assert_eq!(expected_releases(&registry, repo, 2, 0, None), releases)
 }
 
 #[test]
 fn fetch_release_public_without_credentials_must_fail() {
     init_logger();
 
-    let registry = "quay.io";
+    let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
     let mut cache = HashMap::new();
     let releases = fetch_releases(
@@ -139,7 +142,7 @@ fn fetch_release_public_without_credentials_must_fail() {
 fn fetch_release_public_with_no_release_metadata_must_not_error() {
     init_logger();
 
-    let registry = "quay.io";
+    let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-nojson-public-manual";
     let mut cache = HashMap::new();
     let releases = fetch_releases(
@@ -159,7 +162,7 @@ fn fetch_release_public_with_no_release_metadata_must_not_error() {
 fn fetch_release_public_with_first_empty_tag_must_succeed() {
     init_logger();
 
-    let registry = "quay.io";
+    let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-emptyfirsttag-public-manual";
     let mut cache = HashMap::new();
     let releases = fetch_releases(
@@ -173,13 +176,10 @@ fn fetch_release_public_with_first_empty_tag_must_succeed() {
     )
     .expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
-    assert_eq!(
-        expected_releases(&format!("{}/{}", registry, repo), 2, 1, None),
-        releases
-    )
+    assert_eq!(expected_releases(&registry, repo, 2, 1, None), releases)
 }
 
-fn expected_releases_labels_test_annoated(registry: &str, repo: &str) -> Vec<Release> {
+fn expected_releases_labels_test_annoated(registry: &Registry, repo: &str) -> Vec<Release> {
     let metadata: HashMap<usize, HashMap<String, String>> = [
         (0, HashMap::new()),
         (
@@ -220,14 +220,14 @@ fn expected_releases_labels_test_annoated(registry: &str, repo: &str) -> Vec<Rel
     .cloned()
     .collect();
 
-    expected_releases(&format!("{}/{}", registry, repo), 4, 0, Some(metadata))
+    expected_releases(registry, repo, 4, 0, Some(metadata))
 }
 
 #[test]
 fn fetch_release_annotates_releases_with_quay_labels() {
     init_logger();
 
-    let registry = "quay.io";
+    let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-labels-public-manual";
     let mut cache = HashMap::new();
     let releases = fetch_releases(
@@ -245,4 +245,38 @@ fn fetch_release_annotates_releases_with_quay_labels() {
         releases,
         expected_releases_labels_test_annoated(&registry, &repo)
     );
+}
+
+#[test]
+fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
+    init_logger();
+
+    let test = |registry: Registry| {
+        let repo = "redhat/openshift-cincinnati-test-public-manual";
+        let mut cache = HashMap::new();
+        let (username, password) = (None, None);
+        let releases = fetch_releases(
+            &registry,
+            &repo,
+            &QUAY_LABEL_FILTER,
+            // TODO: insert a quay API token here to unbreak this test
+            None,
+            username.as_ref().map(String::as_ref),
+            password.as_ref().map(String::as_ref),
+            &mut cache,
+        )
+        .expect("fetch_releases failed: ");
+        assert_eq!(2, releases.len());
+        assert_eq!(expected_releases(&registry, repo, 2, 0, None), releases);
+    };
+
+    [
+        "quay.io",
+        // TODO: enable this when the dkregistry-rs migration to reqwest is complete
+        //"http://quay.io",
+        "https://quay.io",
+    ]
+    .iter()
+    .map(|url| registry::Registry::try_from_str(url).unwrap())
+    .for_each(test);
 }

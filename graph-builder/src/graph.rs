@@ -17,7 +17,7 @@ use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
 use config;
 use failure::Error;
-use registry;
+use registry::{self, Registry};
 use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
@@ -64,9 +64,12 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
     // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
     let mut cache = HashMap::new();
 
+    let registry = Registry::try_from_str(&opts.registry)
+        .expect(&format!("failed to parse '{}' as Url", &opts.registry));
+
     // Read the credentials outside the loop to avoid re-reading the file
     let (username, password) =
-        registry::read_credentials(opts.credentials_path.as_ref(), &opts.registry)
+        registry::read_credentials(opts.credentials_path.as_ref(), &registry.host)
             .expect("could not read registry credentials");
 
     let quay_api_token = quay::read_credentials(opts.quay_api_credentials_path.as_ref())
@@ -76,7 +79,7 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
         debug!("graph update triggered");
 
         let releases = match registry::fetch_releases(
-            &opts.registry,
+            &registry,
             &opts.repository,
             &opts.quay_label_filter,
             quay_api_token.as_ref().map(String::as_str),
@@ -88,7 +91,8 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
                 if releases.is_empty() {
                     warn!(
                         "could not find any releases in {}/{}",
-                        &opts.registry, &opts.repository
+                        &registry.host_port_string(),
+                        &opts.repository
                     );
                 };
                 releases

@@ -21,6 +21,7 @@ extern crate log;
 #[macro_use]
 extern crate structopt;
 extern crate quay;
+extern crate regex;
 
 pub mod config;
 pub mod graph;
