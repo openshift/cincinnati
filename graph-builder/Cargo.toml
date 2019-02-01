@@ -23,6 +23,8 @@ tokio = "0.1"
 dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "eedc6786a2aa0596637e0bea01c88bea00a63b01" }
 futures = "0.1"
 quay = { path = "../quay" }
+url = "^1.7.2"
+
 
 [features]
 test-net = []
