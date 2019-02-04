@@ -1,19 +1,23 @@
 extern crate cincinnati;
 extern crate commons;
 extern crate graph_builder;
+extern crate quay;
 extern crate semver;
 extern crate url;
 
 use self::graph_builder::registry::{self, fetch_releases, Release};
 use self::graph_builder::release::{Metadata, MetadataKind::V0};
 use self::semver::Version;
+use net::quay_io::graph_builder::metadata::{
+    fetch_and_populate_dynamic_metadata, MetadataFetcher, QuayMetadataFetcher,
+    DEFAULT_QUAY_LABEL_FILTER, MANIFESTREF_KEY,
+};
 use net::quay_io::graph_builder::registry::Registry;
+use net::quay_io::quay::v1::DEFAULT_API_BASE;
 use std::collections::HashMap;
 
 #[cfg(feature = "test-net-private")]
 use self::graph_builder::registry::read_credentials;
-
-static QUAY_LABEL_FILTER: &str = "com.openshift.upgrades.graph";
 
 fn init_logger() {
     let _ = env_logger::try_init_from_env(env_logger::Env::default());
@@ -78,6 +82,12 @@ fn expected_releases(
     releases
 }
 
+fn remove_metadata_by_key(releases: &mut Vec<Release>, key: &str) {
+    for ref mut release in releases.iter_mut() {
+        release.metadata.metadata.remove(key).unwrap();
+    }
+}
+
 #[cfg(feature = "test-net-private")]
 #[test]
 fn fetch_release_private_with_credentials_must_succeed() {
@@ -96,18 +106,18 @@ fn fetch_release_private_with_credentials_must_succeed() {
     };
     let (username, password) =
         read_credentials(credentials_path.as_ref(), registry.host().unwrap()).unwrap();
-    let releases = fetch_releases(
+    let mut releases = fetch_releases(
         &registry,
         &repo,
-        &QUAY_LABEL_FILTER,
-        // TODO: insert a quay API token here to unbreak this test
-        None,
         username.as_ref().map(String::as_ref),
         password.as_ref().map(String::as_ref),
         &mut cache,
     )
     .expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
+
+    let releases = remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
+
     assert_eq!(expected_releases(&registry, repo, 2, 0, None), releases)
 }
 
@@ -118,15 +128,7 @@ fn fetch_release_public_without_credentials_must_fail() {
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
     let mut cache = HashMap::new();
-    let releases = fetch_releases(
-        &registry,
-        &repo,
-        &QUAY_LABEL_FILTER,
-        None,
-        None,
-        None,
-        &mut cache,
-    );
+    let releases = fetch_releases(&registry, &repo, None, None, &mut cache);
     assert_eq!(true, releases.is_err());
     assert_eq!(
         true,
@@ -145,16 +147,8 @@ fn fetch_release_public_with_no_release_metadata_must_not_error() {
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-nojson-public-manual";
     let mut cache = HashMap::new();
-    let releases = fetch_releases(
-        &registry,
-        &repo,
-        &QUAY_LABEL_FILTER,
-        None,
-        None,
-        None,
-        &mut cache,
-    )
-    .expect("should not error on emtpy repo");
+    let releases = fetch_releases(&registry, &repo, None, None, &mut cache)
+        .expect("should not error on emtpy repo");
     assert!(releases.is_empty())
 }
 
@@ -165,17 +159,10 @@ fn fetch_release_public_with_first_empty_tag_must_succeed() {
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-emptyfirsttag-public-manual";
     let mut cache = HashMap::new();
-    let releases = fetch_releases(
-        &registry,
-        &repo,
-        &QUAY_LABEL_FILTER,
-        None,
-        None,
-        None,
-        &mut cache,
-    )
-    .expect("fetch_releases failed: ");
+    let mut releases =
+        fetch_releases(&registry, &repo, None, None, &mut cache).expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
+    remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
     assert_eq!(expected_releases(&registry, repo, 2, 1, None), releases)
 }
 
@@ -228,18 +215,37 @@ fn fetch_release_annotates_releases_with_quay_labels() {
     init_logger();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
+    let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
     let repo = "redhat/openshift-cincinnati-test-labels-public-manual";
+
     let mut cache = HashMap::new();
-    let releases = fetch_releases(
-        &registry,
-        &repo,
-        &QUAY_LABEL_FILTER,
-        None,
-        None,
-        None,
-        &mut cache,
-    )
-    .expect("fetch_releases failed: ");
+    let (username, password) = (None, None);
+    let (label_filter, api_token, api_base) = (DEFAULT_QUAY_LABEL_FILTER, None, DEFAULT_API_BASE);
+
+    let metadata_fetcher: Option<MetadataFetcher> = Some(
+        QuayMetadataFetcher::try_new(
+            label_filter.to_string(),
+            api_token,
+            api_base.to_string(),
+            repo.to_string(),
+        )
+        .expect("to try_new to yield a metadata fetcher"),
+    );
+
+    let mut releases = fetch_releases(&registry, &repo, username, password, &mut cache)
+        .expect("fetch_releases failed: ");
+
+    if let Some(metadata_fetcher) = &metadata_fetcher {
+        let populated_releases: Vec<registry::Release> = runtime
+            .block_on(fetch_and_populate_dynamic_metadata(
+                metadata_fetcher,
+                releases,
+            ))
+            .expect("fetch and population of dynamic metadata to work");
+
+        releases = populated_releases;
+    };
+
     assert_eq!(4, releases.len());
     assert_eq!(
         releases,
@@ -255,18 +261,16 @@ fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
         let repo = "redhat/openshift-cincinnati-test-public-manual";
         let mut cache = HashMap::new();
         let (username, password) = (None, None);
-        let releases = fetch_releases(
+        let mut releases = fetch_releases(
             &registry,
             &repo,
-            &QUAY_LABEL_FILTER,
-            // TODO: insert a quay API token here to unbreak this test
-            None,
             username.as_ref().map(String::as_ref),
             password.as_ref().map(String::as_ref),
             &mut cache,
         )
         .expect("fetch_releases failed: ");
         assert_eq!(2, releases.len());
+        remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
         assert_eq!(expected_releases(&registry, repo, 2, 0, None), releases);
     };
 

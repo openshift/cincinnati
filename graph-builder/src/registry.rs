@@ -16,6 +16,7 @@ use cincinnati;
 use failure::{Error, Fallible, ResultExt};
 use flate2::read::GzDecoder;
 use futures::prelude::*;
+use metadata;
 use release::Metadata;
 use serde_json;
 use std::collections::HashMap;
@@ -194,8 +195,6 @@ pub fn authenticate_client(
 pub fn fetch_releases(
     registry: &Registry,
     repo: &str,
-    quay_label_filter: &str,
-    quay_api_token: Option<&str>,
     username: Option<&str>,
     password: Option<&str>,
     cache: &mut HashMap<u64, Option<Release>>,
@@ -224,10 +223,6 @@ pub fn fetch_releases(
         }
     };
 
-    let quay_client: quay::v1::Client = quay::v1::Client::builder()
-        .access_token(quay_api_token.map(|s| s.to_string()))
-        .build()?;
-
     let tags = get_tags(repo.to_owned(), authenticated_client)
         .and_then(|tag| get_manifest_and_layers(tag, repo.to_owned(), authenticated_client))
         .collect();
@@ -235,7 +230,7 @@ pub fn fetch_releases(
 
     let mut releases = Vec::with_capacity(tagged_layers.len());
     for (tag, mut manifestref, layer_digests) in tagged_layers {
-        let release = match cache_release(
+        let mut release = match cache_release(
             layer_digests,
             authenticated_client.to_owned(),
             registry.host.to_owned().to_string(),
@@ -252,35 +247,15 @@ pub fn fetch_releases(
             Err(e) => bail!(e),
         };
 
-        if let Some(manifestref) = manifestref.as_ref() {
-            let manifestref = manifestref.as_str();
-            let quay_labels = thread_runtime.block_on(quay_client.get_labels(
-                &repo,
-                &manifestref,
-                Some(&quay_label_filter),
-            ))?;
-
-            let metadata = Metadata {
-                metadata: release
-                    .metadata
-                    .metadata
-                    .into_iter()
-                    .chain(
-                        quay_labels
-                            .into_iter()
-                            .map(|label| (label.key, label.value)),
-                    )
-                    .collect(),
-                ..release.metadata
-            };
-
-            releases.push(Release {
-                metadata,
-                ..release
-            });
-        } else {
-            releases.push(release);
+        if let Some(manifestref) = manifestref {
+            // Attach the manifestref this release was found in for further processing
+            release
+                .metadata
+                .metadata
+                .insert(metadata::MANIFESTREF_KEY.to_string(), manifestref);
         }
+
+        releases.push(release);
     }
     releases.shrink_to_fit();
 

@@ -6,7 +6,7 @@ mod manifest;
 mod tag;
 pub use self::tag::Tag;
 
-static DEFAULT_API_BASE: &str = "https://quay.io/api/v1/";
+pub static DEFAULT_API_BASE: &str = "https://quay.io/api/v1/";
 
 /// Client to make outgoing API requests to a quay instance.
 #[derive(Clone, Debug)]

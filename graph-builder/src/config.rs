@@ -13,6 +13,8 @@
 // limitations under the License.
 
 use commons::{parse_params_set, parse_path_prefix};
+use metadata::DEFAULT_QUAY_LABEL_FILTER;
+use quay::v1::DEFAULT_API_BASE;
 use std::collections::HashSet;
 use std::net::IpAddr;
 use std::num::ParseIntError;
@@ -70,10 +72,22 @@ pub struct Options {
     )]
     pub mandatory_client_parameters: HashSet<String>,
 
+    /// Whether to disable the fetching and processing metadata from the quay API
+    #[structopt(long = "disable-quay-api-metadata")]
+    pub disable_quay_api_metadata: bool,
+
+    /// Base URL to the quay API host
+    #[structopt(
+        long = "quay-api-base",
+        long_help = "API base URL",
+        raw(default_value = "DEFAULT_API_BASE")
+    )]
+    pub quay_api_base: String,
+
     /// Filter for receiving quay labels
     #[structopt(
         long = "quay-label-filter",
-        default_value = "com.openshift.upgrades.graph"
+        raw(default_value = "DEFAULT_QUAY_LABEL_FILTER")
     )]
     pub quay_label_filter: String,
 

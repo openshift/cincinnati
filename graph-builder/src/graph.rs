@@ -17,6 +17,7 @@ use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
 use config;
 use failure::Error;
+use metadata::{fetch_and_populate_dynamic_metadata, MetadataFetcher, QuayMetadataFetcher};
 use registry::{self, Registry};
 use serde_json;
 use std::collections::{HashMap, HashSet};
@@ -60,7 +61,7 @@ impl State {
     }
 }
 
-pub fn run(opts: &config::Options, state: &State) -> ! {
+pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
     // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
     let mut cache = HashMap::new();
 
@@ -72,17 +73,29 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
         registry::read_credentials(opts.credentials_path.as_ref(), &registry.host)
             .expect("could not read registry credentials");
 
-    let quay_api_token = quay::read_credentials(opts.quay_api_credentials_path.as_ref())
-        .expect("could not read quay API credentials");
+    let metadata_fetcher: Option<MetadataFetcher> = if opts.disable_quay_api_metadata {
+        debug!("Disable fetching of quay metadata..");
+        None
+    } else {
+        Some(
+            QuayMetadataFetcher::try_new(
+                opts.quay_label_filter.clone(),
+                opts.quay_api_credentials_path.as_ref(),
+                opts.quay_api_base.clone(),
+                opts.repository.clone(),
+            )
+            .expect("try_new to yield a metadata fetcher"),
+        )
+    };
+
+    let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
 
     loop {
         debug!("graph update triggered");
 
-        let releases = match registry::fetch_releases(
+        let mut releases = match registry::fetch_releases(
             &registry,
             &opts.repository,
-            &opts.quay_label_filter,
-            quay_api_token.as_ref().map(String::as_str),
             username.as_ref().map(String::as_ref),
             password.as_ref().map(String::as_ref),
             &mut cache,
@@ -102,6 +115,17 @@ pub fn run(opts: &config::Options, state: &State) -> ! {
                     .for_each(|cause| error!("failed to fetch all release metadata: {}", cause));
                 vec![]
             }
+        };
+
+        if let Some(metadata_fetcher) = &metadata_fetcher {
+            let populated_releases: Vec<registry::Release> = runtime
+                .block_on(fetch_and_populate_dynamic_metadata(
+                    metadata_fetcher,
+                    releases,
+                ))
+                .expect("fetch and population of dynamic metadata to work");
+
+            releases = populated_releases;
         };
 
         match create_graph(releases) {
