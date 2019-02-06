@@ -14,14 +14,14 @@ Cincinnati is the successor to the [Omaha update protocol][google-omaha]. It des
 
 ## Update Graph ##
 
-Cincinnati uses a [directed acyclic graph][dag] (DAG) to represent the valid updates. Each node in the graph is a release image and each edge is a valid transition. The Graph Builder is responsible for iterating over the set of releases and building a DAG that can be queried.
+Cincinnati uses a [directed acyclic graph][dag] (DAG) to represent the valid updates. Each node in the graph is a release payload and each edge is a valid transition. The Graph Builder is responsible for iterating over the set of releases and building a DAG that can be queried.
 
-Release images within Cincinnati contain a small JSON-formatted metadata document which declares the following information about the release:
+Release payloads within Cincinnati contain a small JSON-formatted metadata document which declares the following information about the payload:
 
 |   Key    | Optional | Description                                                                             |
 |:--------:|:--------:|:----------------------------------------------------------------------------------------|
 |   kind   | required | the document type - Must be `cincinnati-metadata-v0`                                    |
-| version  | required | the version of the release in the current image                                         |
+| version  | required | the version of the release in the current payload                                       |
 | previous | optional | the list of valid previous versions <sup>[1](#1)</sup>                                  |
 |   next   | optional | the list of valid next versions <sup>[2](#2)</sup>                                      |
 | metadata | optional | an opaque object that allows a release to convey arbitrary information to its consumers |
@@ -87,14 +87,14 @@ There are a number of components that make up the Cincinnati update system. Most
 
 ### Storage ###
 
-The storage component is responsible for actually storing and hosting the release images. The storage implementation is entirely up to this component and the hosting implementation will be coupled to the Graph Builder. Examples of storage include the Docker v2 Registry and Amazon S3.
+The storage component is responsible for actually storing and hosting the release payloads. The storage implementation is entirely up to this component and the hosting implementation will be coupled to the Graph Builder. Examples of storage include the Docker v2 Registry and Amazon S3.
 
 
 ### Graph Builder ###
 
-The Graph Builder iterates over the release images hosted by the storage component and builds a DAG of the releases. It is responsible for verifying that the graph described by the releases is acyclic and connected.
+The Graph Builder iterates over the release payloads hosted by the storage component and builds a DAG of the releases. It is responsible for verifying that the graph described by the releases is acyclic and connected.
 
-In order to avoid the Graph Builder from having to serve the full images, Cincinnati implementations may choose to instead serve a modified image which directs the client to download the full release image directly from the storage component. It is important to note that in these implementations, the Graph Builder should not generate these modified images directly. Doing so would directly couple the Graph Builder to the client, which would make it difficult to change the format of the modified image in future versions while still supporting arbitrarily old clients.
+In order to avoid the Graph Builder from having to serve the full payloads, Cincinnati implementations may choose to instead serve a modified payload which directs the client to download the full release payload directly from the storage component. It is important to note that in these implementations, the Graph Builder should not generate these modified payloads directly. Doing so would directly couple the Graph Builder to the client, which would make it difficult to change the format of the modified payload in future versions while still supporting arbitrarily old clients.
 
 There is no defined interface between the Graph Builder and storage since the Graph Builder will be specific to the storage. There is, however, a [defined interface](#graph-api) between the Graph Builder and the Policy Engine. This is to allow alternate implementations of the Policy Engine including the lack of an implementation altogether.
 
@@ -113,12 +113,12 @@ Clients periodically query a Policy Engine for any updates they should perform. 
 
 ### Client ###
 
-Cincinnati clients are the end consumers of the release images. The clients periodically query the Policy Engine for updates and apply them if available.
+Cincinnati clients are the end consumers of the release payloads. The clients periodically query the Policy Engine for updates and apply them if available.
 
 
 ## Graph API ##
 
-The Graph API defines the interface exposed by implementations of Graph Builders and Policy Engines. This will most commonly be used by Policy Engines to discover the available update images, but may be used by visualization utilities or by clients themselves.
+The Graph API defines the interface exposed by implementations of Graph Builders and Policy Engines. This will most commonly be used by Policy Engines to discover the available update payloads, but may be used by visualization utilities or by clients themselves.
 
 
 ### Request ###
@@ -133,12 +133,12 @@ Clients may provide additional parameters as URL query parameters in the request
 
 ### Response ###
 
-The response to the `/v1/graph` endpoint is a JSON representation of the release graph. Each of the releases are represented in an entry in the top-level `nodes` array. Each of these entries includes the release version label, an image identifier and any metadata according to the following schema:
+The response to the `/v1/graph` endpoint is a JSON representation of the release graph. Each of the releases are represented in an entry in the top-level `nodes` array. Each of these entries includes the release version label, a payload identifier and any metadata according to the following schema:
 
 |   Key    | Optional | Description                                                                             |
 |:--------:|:--------:|:----------------------------------------------------------------------------------------|
 | version  | required | the version of the release, as a unique (across "nodes" array) non-empty JSON string    |
-| image    | required | image identifier, as a JSON string                                                      |
+| payload  | required | payload identifier, as a JSON string                                                    |
 | metadata | required | an opaque object that allows a release to convey arbitrary information to its consumers |
 
 The transitions between releases are represented as an array in the top-level `edges` array. Each of these arrays has two entries: the index of the starting node, and the index of the ending node. Both are non-negative integers, ranging from 0 to `len(nodes)-1`.
@@ -154,27 +154,27 @@ The following response represents the graph shown in Figure 2:
 	{
 		"version": "1.0.0",
 		"metadata": {},
-		"image": "quay.io/openshift/manifest:v1.0.0"
+		"payload": "quay.io/openshift/manifest:v1.0.0"
 	},
 	{
 		"version": "1.1.0",
 		"metadata": { "kind": "security" },
-		"image": "quay.io/openshift/manifest:v1.1.0"
+		"payload": "quay.io/openshift/manifest:v1.1.0"
 	},
 	{
 		"version": "1.1.1",
 		"metadata": { "kind": "security" },
-		"image": "quay.io/openshift/manifest:v1.1.1"
+		"payload": "quay.io/openshift/manifest:v1.1.1"
 	},
 	{
 		"version": "1.2.0",
 		"metadata": { "kind": "bug-fix" },
-		"image": "quay.io/openshift/manifest:v1.2.0"
+		"payload": "quay.io/openshift/manifest:v1.2.0"
 	},
 	{
 		"version": "1.3.0",
 		"metadata": { "kind": "feature" },
-		"image": "quay.io/openshift/manifest:v1.3.0"
+		"payload": "quay.io/openshift/manifest:v1.3.0"
 	}
 	],
 	"edges": [
@@ -192,4 +192,4 @@ The following response represents the graph shown in Figure 2:
 ## Alternatives Considered ##
 
 * **Continue using Omaha** - Tectonic used an augmented Omaha flow. It made use of the Omaha mechanism for discovering updates, but then instead of following the server's instruction, it fetched a list of all packages from the server and then chose from this list. Other than the initial discover and reporting events, Tectonic did not use any other aspects of the Omaha protocol.
-* **No central server** - From a point of correctness, the Cincinnati components are not required for updates. This is because the update images include the Cincinnati metadata, which defines the valid transitions. The cluster can validate the update image before attempting to apply it. Without the policy engine, though, it would be difficult to impose rate-limits on updates (which allows those in charge of rolling out updates to stop updates if a problem is discovered). It would also be difficult to make changes to the policies that govern update paths since each cluster would have to make the decisions themselves if there was no central server.
+* **No central server** - From a point of correctness, the Cincinnati components are not required for updates. This is because the update payloads include the Cincinnati metadata, which defines the valid transitions. The cluster can validate the update payload before attempting to apply it. Without the policy engine, though, it would be difficult to impose rate-limits on updates (which allows those in charge of rolling out updates to stop updates if a problem is discovered). It would also be difficult to make changes to the policies that govern update paths since each cluster would have to make the decisions themselves if there was no central server.
