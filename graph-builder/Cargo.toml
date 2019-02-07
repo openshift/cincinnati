@@ -24,6 +24,7 @@ dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "eedc
 futures = "0.1"
 quay = { path = "../quay" }
 url = "^1.7.2"
+regex = "^1.1.0"
 
 
 [features]
