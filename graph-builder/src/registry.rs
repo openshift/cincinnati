@@ -42,55 +42,157 @@ impl Into<cincinnati::Release> for Release {
     }
 }
 
-fn trim_protocol(src: &str) -> &str {
-    src.trim_left_matches("https://")
-        .trim_left_matches("http://")
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Registry {
+    pub(crate) scheme: String,
+    pub(crate) insecure: bool,
+    pub(crate) host: String,
+    pub(crate) port: Option<u16>,
+}
+
+impl Registry {
+    pub fn try_from_str(src: &str) -> Fallible<Self> {
+        macro_rules! process_regex {
+            ($a:ident, $r:expr, $b:tt) => {
+                if let Some($a) = regex::Regex::new($r)
+                    .context(format!("could not compile regex pattern {}", $r))?
+                    .captures(src)
+                {
+                    $b
+                };
+            };
+        }
+
+        process_regex!(
+            capture,
+            // match scheme://h.o.s.t:port
+            r"^(?P<scheme>[a-z]+)(:/{2})(?P<host>([0-9a-zA-Z]+\.)*([0-9a-zA-Z]+)):(?P<port>[0-9]+)$",
+            {
+                let scheme = capture["scheme"].to_string();
+                return Ok(Registry {
+                    insecure: Registry::insecure_scheme(&scheme)?,
+                    scheme,
+                    host: capture["host"].to_string(),
+                    port: Some(
+                        capture["port"]
+                            .parse()
+                            .expect("could not parse port as a number"),
+                    ),
+                });
+            }
+        );
+
+        process_regex!(
+            capture,
+            // match scheme://h.o.s.t
+            r"^(?P<scheme>[a-z]+)(:/{2})(?P<host>([0-9a-zA-Z]+\.)*([0-9a-zA-Z]+))$",
+            {
+                let scheme = capture["scheme"].to_string();
+                return Ok(Registry {
+                    insecure: Registry::insecure_scheme(&scheme)?,
+                    scheme,
+                    host: capture["host"].to_string(),
+                    ..Default::default()
+                });
+            }
+        );
+
+        process_regex!(
+            capture,
+            // match h.o.s.t:port
+            r"^(?P<host>([0-9a-zA-Z\-]+\.)+([0-9a-zA-Z]+)):(?P<port>[0-9]+)$",
+            {
+                return Ok(Registry {
+                    host: capture["host"].to_string(),
+                    port: Some(
+                        capture["port"]
+                            .parse()
+                            .expect("could not parse port as a number"),
+                    ),
+                    ..Default::default()
+                });
+            }
+        );
+
+        process_regex!(
+            capture,
+            // match h.o.s.t
+            r"^(?P<host>([0-9a-zA-Z\-]+\.)*([0-9a-zA-Z]+))$",
+            {
+                return Ok(Registry {
+                    host: capture["host"].to_string(),
+                    ..Default::default()
+                });
+            }
+        );
+
+        bail!("unsupported registry format {}", src)
+    }
+
+    pub fn try_new(scheme: String, host: String, port: Option<u16>) -> Fallible<Self> {
+        Ok(Registry {
+            host,
+            port,
+            insecure: Self::insecure_scheme(&scheme)?,
+            scheme,
+        })
+    }
+
+    pub fn host_port_string(&self) -> String {
+        format!(
+            "{}{}",
+            self.host,
+            if let Some(port) = self.port {
+                format!(":{}", port)
+            } else {
+                "".to_string()
+            }
+        )
+    }
+
+    fn insecure_scheme(scheme: &str) -> Fallible<bool> {
+        match scheme {
+            "https" => Ok(false),
+            "http" => Ok(true),
+            scheme => bail!("unsupported url scheme specified '{}'", scheme),
+        }
+    }
 }
 
 pub fn read_credentials(
     credentials_path: Option<&PathBuf>,
-    registry: &str,
+    registry_host: &str,
 ) -> Result<(Option<String>, Option<String>), Error> {
-    credentials_path.clone().map_or(Ok((None, None)), |path| {
-        Ok(
-            dkregistry::get_credentials(File::open(&path)?, trim_protocol(registry))
-                .map_err(|e| format_err!("{}", e))?,
-        )
+    credentials_path.map_or(Ok((None, None)), |path| {
+        let file = File::open(&path).context(format!("could not open '{:?}'", path))?;
+
+        Ok(dkregistry::get_credentials(file, &registry_host).map_err(|e| format_err!("{}", e))?)
     })
 }
 
 pub fn authenticate_client(
-    client: &mut dkregistry::v2::Client,
+    dclient: &mut dkregistry::v2::Client,
     login_scope: String,
 ) -> impl Future<Item = &dkregistry::v2::Client, Error = dkregistry::errors::Error> {
-    client
-        .is_v2_supported()
-        .and_then(move |v2_supported| {
-            if !v2_supported {
-                Err("API v2 not supported".into())
-            } else {
-                Ok(client)
-            }
+    dclient.clone().ensure_v2_registry().and_then(move |_| {
+        dclient.login(&[&login_scope]).and_then(move |token| {
+            dclient
+                .is_auth(Some(token.token()))
+                .and_then(move |is_auth| {
+                    if !is_auth {
+                        Err("login failed".into())
+                    } else {
+                        Ok(dclient.set_token(Some(token.token())))
+                    }
+                })
         })
-        .and_then(move |dclient| {
-            dclient.login(&[&login_scope]).and_then(|token| {
-                dclient
-                    .is_auth(Some(token.token()))
-                    .and_then(move |is_auth| {
-                        if !is_auth {
-                            Err("login failed".into())
-                        } else {
-                            Ok(dclient.set_token(Some(token.token())))
-                        }
-                    })
-            })
-        })
+    })
 }
 
 /// Fetches a vector of all release metadata from the given repository, hosted on the given
 /// registry.
 pub fn fetch_releases(
-    registry: &str,
+    registry: &Registry,
     repo: &str,
     quay_label_filter: &str,
     quay_api_token: Option<&str>,
@@ -100,26 +202,31 @@ pub fn fetch_releases(
 ) -> Result<Vec<Release>, Error> {
     let mut thread_runtime = tokio::runtime::current_thread::Runtime::new()?;
 
-    let registry_host = trim_protocol(&registry);
-
     let mut client = dkregistry::v2::Client::configure()
-        .registry(registry_host)
-        .insecure_registry(false)
+        .registry(&registry.host_port_string())
+        .insecure_registry(registry.insecure)
         .username(username.map(|s| s.to_string()))
         .password(password.map(|s| s.to_string()))
         .build()
         .map_err(|e| format_err!("{}", e))?;
 
+    let authenticated_client = {
+        let is_auth =
+            thread_runtime.block_on(client.is_auth(None).map_err(|e| format_err!("{}", e)))?;
+
+        if is_auth {
+            &client
+        } else {
+            thread_runtime.block_on(
+                authenticate_client(&mut client, format!("repository:{}:pull", &repo))
+                    .map_err(|e| format_err!("{}", e)),
+            )?
+        }
+    };
+
     let quay_client: quay::v1::Client = quay::v1::Client::builder()
         .access_token(quay_api_token.map(|s| s.to_string()))
         .build()?;
-
-    let authenticated_client = thread_runtime
-        .block_on(authenticate_client(
-            &mut client,
-            format!("repository:{}:pull", &repo),
-        ))
-        .map_err(|e| format_err!("{}", e))?;
 
     let tags = get_tags(repo.to_owned(), authenticated_client)
         .and_then(|tag| get_manifest_and_layers(tag, repo.to_owned(), authenticated_client))
@@ -127,11 +234,11 @@ pub fn fetch_releases(
     let tagged_layers = thread_runtime.block_on(tags)?;
 
     let mut releases = Vec::with_capacity(tagged_layers.len());
-    for (tag, manifestref, layer_digests) in tagged_layers {
+    for (tag, mut manifestref, layer_digests) in tagged_layers {
         let release = match cache_release(
             layer_digests,
             authenticated_client.to_owned(),
-            registry_host.to_owned(),
+            registry.host.to_owned().to_string(),
             repo.to_owned(),
             tag.to_owned(),
             cache,
@@ -145,31 +252,35 @@ pub fn fetch_releases(
             Err(e) => bail!(e),
         };
 
-        let manifestref = manifestref.as_str();
-        let quay_labels = thread_runtime.block_on(quay_client.get_labels(
-            &repo,
-            &manifestref,
-            Some(&quay_label_filter),
-        ))?;
+        if let Some(manifestref) = manifestref.as_ref() {
+            let manifestref = manifestref.as_str();
+            let quay_labels = thread_runtime.block_on(quay_client.get_labels(
+                &repo,
+                &manifestref,
+                Some(&quay_label_filter),
+            ))?;
 
-        let metadata = Metadata {
-            metadata: release
-                .metadata
-                .metadata
-                .into_iter()
-                .chain(
-                    quay_labels
-                        .into_iter()
-                        .map(|label| (label.key, label.value)),
-                )
-                .collect(),
-            ..release.metadata
-        };
+            let metadata = Metadata {
+                metadata: release
+                    .metadata
+                    .metadata
+                    .into_iter()
+                    .chain(
+                        quay_labels
+                            .into_iter()
+                            .map(|label| (label.key, label.value)),
+                    )
+                    .collect(),
+                ..release.metadata
+            };
 
-        releases.push(Release {
-            metadata,
-            ..release
-        });
+            releases.push(Release {
+                metadata,
+                ..release
+            });
+        } else {
+            releases.push(release);
+        }
     }
     releases.shrink_to_fit();
 
@@ -244,7 +355,7 @@ fn get_manifest_and_layers(
     tag: String,
     repo: String,
     authenticated_client: &dkregistry::v2::Client,
-) -> impl Future<Item = (String, String, Vec<String>), Error = failure::Error> {
+) -> impl Future<Item = (String, Option<String>, Vec<String>), Error = failure::Error> {
     trace!("processing: {}:{}", &repo, &tag);
     authenticated_client
         .has_manifest(&repo, &tag, None)
@@ -393,4 +504,66 @@ fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<Metadata, E
         None => bail!(format!("'{}' not found", metadata_filename)),
     }
     .map_err(Into::into)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn registry_try_parse_valid() {
+        let tests = vec![
+            (
+                "http://localhost:8080",
+                Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                },
+            ),
+            (
+                "127.0.0.1",
+                Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "127.0.0.1".to_string(),
+                    port: None,
+                },
+            ),
+            (
+                "sat-r220-02.lab.eng.rdu2.redhat.com:5000",
+                Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
+                    port: Some(5000),
+                },
+            ),
+            (
+                "quay.io",
+                Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "quay.io".to_string(),
+                    port: None,
+                },
+            ),
+            (
+                "https://quay.io",
+                Registry {
+                    scheme: "https".to_string(),
+                    insecure: false,
+                    host: "quay.io".to_string(),
+                    port: None,
+                },
+            ),
+        ];
+
+        for (input, expected) in tests {
+            let registry: Registry = Registry::try_from_str(input)
+                .expect(&format!("could not parse {} to registry", input));
+            assert_eq!(registry, expected);
+        }
+    }
 }
