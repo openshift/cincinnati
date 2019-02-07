@@ -60,14 +60,14 @@
             "Node": {
                 "required": [
                     "version",
-                    "image",
+                    "payload",
                     "metadata"
                 ],
                 "properties": {
                     "version": {
                         "type": "string"
                     },
-                    "image": {
+                    "payload": {
                         "type": "string"
                     },
                     "metadata": {

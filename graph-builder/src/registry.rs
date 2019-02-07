@@ -36,7 +36,7 @@ impl Into<cincinnati::Release> for Release {
     fn into(self) -> cincinnati::Release {
         cincinnati::Release::Concrete(cincinnati::ConcreteRelease {
             version: self.metadata.version.to_string(),
-            image: self.source,
+            payload: self.source,
             metadata: self.metadata.metadata,
         })
     }

@@ -1,6 +1,6 @@
 # Cincinnati in OpenShift #
 
-OpenShift will make use of the [Cincinnati update scheme](cincinnati.md) to provide over-the-air updates to all clusters. Because Cincinnati is a generic scheme, OpenShift specifics will need to be defined. This document serves to document those specifics, which include: the Quay Graph Builder, OpenShift Policy Engine, update image format, and client update protocol.
+OpenShift will make use of the [Cincinnati update scheme](cincinnati.md) to provide over-the-air updates to all clusters. Because Cincinnati is a generic scheme, OpenShift specifics will need to be defined. This document serves to document those specifics, which include: the Quay Graph Builder, OpenShift Policy Engine, update payload format, and client update protocol.
 
 <figure align="center">
   <img src="figures/openshift-1.svg" alt="Figure 1: An overview of the relationships between the Cincinnati components within OpenShift" />
@@ -10,11 +10,11 @@ OpenShift will make use of the [Cincinnati update scheme](cincinnati.md) to prov
 
 ## Key Decisions ##
 
-* **Images declare transitions** - In order to ensure the integrity of updates, the declared transitions (a window into the overall DAG) should remain a part of the update image. Coupling the declaration of valid transitions allows the client to validate that the update was intended for the currently running release. This also makes the future maintenance of a project easier if the DAG can be committed alongside the code. This coupling is the result of the fact that the DAG is really just an easy-to-parse declaration of the intention of the implementation.
-* **Decouple image delivery** - By decoupling the image delivery mechanism from Cincinnati, it allows many different forms of image and their delivery to be supported. The Cincinnati server is able to provide metadata about images in a uniform manner but leaves the retrieval up to each of the clients.
-* **image availability declared in Quay** - Using Quay’s image labels to annotate images allows Quay to be treated as the sole source of truth for the Graph Builders.
-* **image digest and signature is self contained** - If the image contains its digest and signature, the cluster will be able to verify the authenticity of the image without any additional metadata. This is a requirement for offline installations since clusters in these environments won’t communicate with the root Policy Engines.
-* **Each graph API endpoint represents a single product** - All of the versions and channels in a graph are expected to refer to a related set of content, and all images can be assumed to be related.
+* **Payloads declare transitions** - In order to ensure the integrity of updates, the declared transitions (a window into the overall DAG) should remain a part of the update payload. Coupling the declaration of valid transitions allows the client to validate that the update was intended for the currently running release. This also makes the future maintenance of a project easier if the DAG can be committed alongside the code. This coupling is the result of the fact that the DAG is really just an easy-to-parse declaration of the intention of the implementation.
+* **Decouple payload delivery** - By decoupling the payload delivery mechanism from Cincinnati, it allows many different forms of payload and their delivery to be supported. The Cincinnati server is able to provide metadata about payloads in a uniform manner but leaves the retrieval up to each of the clients.
+* **Payload availability declared in Quay** - Using Quay’s image labels to annotate images allows Quay to be treated as the sole source of truth for the Graph Builders.
+* **Payload digest and signature is self contained** - If the payload contains its digest and signature, the cluster will be able to verify the authenticity of the payload without any additional metadata. This is a requirement for offline installations since clusters in these environments won’t communicate with the root Policy Engines.
+* **Each graph API endpoint represents a single product** - All of the versions and channels in a graph are expected to refer to a related set of content, and all payloads can be assumed to be related.
 
 
 ## Update Process ##
@@ -119,9 +119,9 @@ The response from the policy engine will conform to the [Cincinnati Graph API re
 
 ## Update Format ##
 
-### Update Image ###
+### Update Payload ###
 
-The Update Images served by Cincinnati to the Cluster Version Operator are formatted as a JSON document containing a reference to a container image. This document is versioned so that it may change over time. An example of this document is shown below:
+The Update Payloads served by Cincinnati to the Cluster Version Operator are formatted as a JSON document containing a reference to a container image. This document is versioned so that it may change over time. An example of this document is shown below:
 
 ```json
 {
