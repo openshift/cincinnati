@@ -145,31 +145,35 @@ pub fn fetch_releases(
             Err(e) => bail!(e),
         };
 
-        let manifestref = manifestref.as_str();
-        let quay_labels = thread_runtime.block_on(quay_client.get_labels(
-            &repo,
-            &manifestref,
-            Some(&quay_label_filter),
-        ))?;
+        if let Some(manifestref) = manifestref.as_ref() {
+            let manifestref = manifestref.as_str();
+            let quay_labels = thread_runtime.block_on(quay_client.get_labels(
+                &repo,
+                &manifestref,
+                Some(&quay_label_filter),
+            ))?;
 
-        let metadata = Metadata {
-            metadata: release
-                .metadata
-                .metadata
-                .into_iter()
-                .chain(
-                    quay_labels
-                        .into_iter()
-                        .map(|label| (label.key, label.value)),
-                )
-                .collect(),
-            ..release.metadata
-        };
+            let metadata = Metadata {
+                metadata: release
+                    .metadata
+                    .metadata
+                    .into_iter()
+                    .chain(
+                        quay_labels
+                            .into_iter()
+                            .map(|label| (label.key, label.value)),
+                    )
+                    .collect(),
+                ..release.metadata
+            };
 
-        releases.push(Release {
-            metadata,
-            ..release
-        });
+            releases.push(Release {
+                metadata,
+                ..release
+            });
+        } else {
+            releases.push(release);
+        }
     }
     releases.shrink_to_fit();
 
@@ -244,7 +248,7 @@ fn get_manifest_and_layers(
     tag: String,
     repo: String,
     authenticated_client: &dkregistry::v2::Client,
-) -> impl Future<Item = (String, String, Vec<String>), Error = failure::Error> {
+) -> impl Future<Item = (String, Option<String>, Vec<String>), Error = failure::Error> {
     trace!("processing: {}:{}", &repo, &tag);
     authenticated_client
         .has_manifest(&repo, &tag, None)
