@@ -20,7 +20,7 @@ serde_json = "^1.0.22"
 structopt = "^0.2.10"
 tar = "^0.4.16"
 tokio = "0.1"
-dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "eedc6786a2aa0596637e0bea01c88bea00a63b01" }
+dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "a10c1aba444ce5c07e113c81160eb67c9711e327" }
 futures = "0.1"
 quay = { path = "../quay" }
 url = "^1.7.2"
