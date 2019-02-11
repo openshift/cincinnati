@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
+use commons::GraphError;
 use config;
 use failure::Error;
 use metadata::{fetch_and_populate_dynamic_metadata, MetadataFetcher, QuayMetadataFetcher};
@@ -24,25 +24,22 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use std::thread;
 
-pub fn index(req: HttpRequest<State>) -> HttpResponse {
+pub fn index(req: HttpRequest<State>) -> Result<HttpResponse, GraphError> {
+    // Check that the client can accept JSON media type.
+    commons::ensure_content_type(req.headers(), CONTENT_TYPE)?;
+
     // Check for required client parameters.
     let mandatory_params = &req.state().mandatory_params;
-    if commons::ensure_query_params(mandatory_params, req.query_string()).is_err() {
-        return HttpResponse::BadRequest().finish();
-    }
+    commons::ensure_query_params(mandatory_params, req.query_string())?;
 
-    match req.headers().get(header::ACCEPT) {
-        Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE) => {
-            HttpResponse::Ok().content_type(CONTENT_TYPE).body(
-                req.state()
-                    .json
-                    .read()
-                    .expect("json lock has been poisoned")
-                    .clone(),
-            )
-        }
-        _ => HttpResponse::NotAcceptable().finish(),
-    }
+    let resp = HttpResponse::Ok().content_type(CONTENT_TYPE).body(
+        req.state()
+            .json
+            .read()
+            .expect("json lock has been poisoned")
+            .clone(),
+    );
+    Ok(resp)
 }
 
 #[derive(Clone)]
