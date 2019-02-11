@@ -316,7 +316,9 @@ dependencies = [
 name = "commons"
 version = "0.1.0"
 dependencies = [
+ "actix-web 0.7.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.34 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
