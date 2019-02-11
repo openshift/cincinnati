@@ -26,16 +26,16 @@ impl actix_web::error::ResponseError for GraphError {
 impl GraphError {
     // Return the HTTP JSON error response.
     pub fn as_json_error(&self) -> HttpResponse {
-        let code = self.as_status_code();
+        let code = self.status_code();
         let json_body = json!({
-            "kind": self.as_kind(),
-            "value": self.as_value(),
+            "kind": self.kind(),
+            "value": self.value(),
         });
         HttpResponse::build(code).json(json_body)
     }
 
     // Return the HTTP status code for the error.
-    fn as_status_code(&self) -> http::StatusCode {
+    fn status_code(&self) -> http::StatusCode {
         match *self {
             GraphError::FailedJsonIn(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
             GraphError::FailedJsonOut(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -47,7 +47,7 @@ impl GraphError {
     }
 
     // Return the kind for the error.
-    fn as_kind(&self) -> String {
+    fn kind(&self) -> String {
         let kind = match *self {
             GraphError::FailedJsonIn(_) => "failed_json_in",
             GraphError::FailedJsonOut(_) => "failed_json_out",
@@ -60,7 +60,7 @@ impl GraphError {
     }
 
     // Return the value for the error.
-    fn as_value(&self) -> String {
+    fn value(&self) -> String {
         format!("{}", self)
     }
 }

@@ -56,7 +56,7 @@ pub fn ensure_query_params(
     Ok(())
 }
 
-/// Make sure client requested the relevant content type.
+/// Make sure client requested a valid content type.
 pub fn ensure_content_type(
     headers: &actix_web::http::HeaderMap,
     content_type: &'static str,
