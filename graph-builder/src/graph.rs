@@ -128,7 +128,7 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
             releases = populated_releases;
         };
 
-        match create_graph(releases) {
+        match create_graph(releases, &opts.quay_label_filter) {
             Ok(graph) => match serde_json::to_string(&graph) {
                 Ok(json) => {
                     *state.json.write().expect("json lock has been poisoned") = json;
@@ -145,11 +145,16 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
     }
 }
 
-pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
+pub fn create_graph(
+    releases: Vec<registry::Release>,
+    quay_label_filter: &str,
+) -> Result<Graph, Error> {
     let mut graph = Graph::default();
 
     releases
         .into_iter()
+        .filter_map(|release| process_release_remove_label(quay_label_filter, release))
+        .map(|release| process_neighbor_labels(quay_label_filter, release))
         .inspect(|release| trace!("Adding a release to the graph '{:?}'", release))
         .try_for_each(|release| {
             let previous = release.metadata.previous.clone();
@@ -177,5 +182,101 @@ pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
             })
         })?;
 
+    graph.prune_abstract();
+
     Ok(graph)
+}
+
+/// Removes and retrieves the metadata value of the given `key` which is prefixed
+/// by `filter`
+fn remove_prefixed_label(
+    release: &mut registry::Release,
+    filter: &str,
+    key: &str,
+) -> Option<String> {
+    release
+        .metadata
+        .metadata
+        .remove(&format!("{}.{}", filter, key))
+}
+
+/// Remove releases which are labeled for removal.
+///
+/// The labels are assumed to have the syntax `{filter}.release-remove=<bool>`
+fn process_release_remove_label(
+    filter: &str,
+    release: registry::Release,
+) -> Option<registry::Release> {
+    let mut release = release;
+
+    if let Some(s) = remove_prefixed_label(&mut release, filter, "release.remove") {
+        // Filter releases which have "{prefix}.release-remove=true"
+        let remove = std::str::FromStr::from_str(&s).unwrap_or_else(|e| {
+            error!("could not parse '{}' as bool: {} (assuming false)", s, e);
+            false
+        });
+
+        if remove {
+            debug!("Removing release '{:?}'", release);
+            return None;
+        }
+    };
+
+    Some(release)
+}
+
+/// Add next and previous releases from quay labels
+///
+/// The labels are assumed to have the syntax `{prefix}.(previous|next)=[<Version>, ...]>`
+fn process_neighbor_labels(filter: &str, release: registry::Release) -> registry::Release {
+    use semver::Version;
+    use std::collections::HashSet;
+
+    let mut release = release;
+
+    macro_rules! process_neighbor_add_labels {
+        ($dir:tt, $neighbors:expr) => {
+            if let Some(s) = remove_prefixed_label(&mut release, filter, $dir) {
+                let mut neighbors_additional: Vec<Version> = s
+                    .split(',')
+                    .map(|neighbor_version| -> Version {
+                        let version = Version::parse(neighbor_version).unwrap();
+                        debug!(
+                            "Adding neighbor '{}' to '{}' due to label '{}={}' ",
+                            version, release.metadata.version, $dir, neighbor_version
+                        );
+                        version
+                    })
+                    .collect();
+
+                $neighbors.append(&mut neighbors_additional);
+            };
+        };
+    }
+    process_neighbor_add_labels!("previous.add", &mut release.metadata.previous);
+    process_neighbor_add_labels!("next.add", &mut release.metadata.next);
+
+    macro_rules! process_neighbor_remove_labels {
+        ($dir:tt, $neighbors:expr) => {
+            if let Some(s) = remove_prefixed_label(&mut release, filter, $dir) {
+                let mut neighbors_to_remove: HashSet<Version> = s
+                    .split(',')
+                    .map(|neighbor_version| -> Version {
+                        let version = Version::parse(neighbor_version).unwrap();
+                        debug!(
+                            "Removing neighbor '{}' from '{}' due to label '{}={}' ",
+                            version, release.metadata.version, $dir, neighbor_version
+                        );
+                        version
+                    })
+                    .collect();
+
+                $neighbors.retain(|version| !neighbors_to_remove.contains(&version));
+            };
+        };
+    }
+    process_neighbor_remove_labels!("previous.remove", &mut release.metadata.previous);
+    process_neighbor_remove_labels!("next.remove", &mut release.metadata.next);
+
+    release
 }
