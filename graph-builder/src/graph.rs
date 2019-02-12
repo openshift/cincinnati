@@ -127,14 +127,19 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
         };
 
         if let Some(metadata_fetcher) = &metadata_fetcher {
-            let populated_releases: Vec<registry::Release> = runtime
-                .block_on(fetch_and_populate_dynamic_metadata(
-                    metadata_fetcher,
-                    releases,
-                ))
-                .expect("fetch and population of dynamic metadata to work");
-
-            releases = populated_releases;
+            match runtime.block_on(fetch_and_populate_dynamic_metadata(
+                metadata_fetcher,
+                releases.clone(),
+            )) {
+                Ok(populated_releases) => {
+                    releases = populated_releases;
+                }
+                Err(err) => {
+                    err.iter_chain()
+                        .for_each(|cause| error!("failed to fetch dynamic metadata: {}", cause));
+                    continue;
+                }
+            }
         };
 
         let graph = match create_graph(releases, &opts.quay_label_filter) {
