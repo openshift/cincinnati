@@ -90,7 +90,16 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
 
     let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
 
+    // Don't wait on the first iteration
+    let mut first_iteration = true;
+
     loop {
+        if first_iteration {
+            first_iteration = false;
+        } else {
+            thread::sleep(opts.period);
+        }
+
         debug!("graph update triggered");
 
         let mut releases = match registry::fetch_releases(
@@ -128,8 +137,16 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
             releases = populated_releases;
         };
 
-        match create_graph(releases, &opts.quay_label_filter) {
-            Ok(graph) => match serde_json::to_string(&graph) {
+        let graph = match create_graph(releases, &opts.quay_label_filter) {
+            Ok(graph) => Some(graph),
+            Err(err) => {
+                err.iter_chain().for_each(|cause| error!("{}", cause));
+                continue;
+            }
+        };
+
+        if let Some(graph) = graph {
+            match serde_json::to_string(&graph) {
                 Ok(json) => {
                     *state.json.write().expect("json lock has been poisoned") = json;
                     debug!(
@@ -138,10 +155,8 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
                     );
                 }
                 Err(err) => error!("Failed to serialize graph: {}", err),
-            },
-            Err(err) => err.iter_chain().for_each(|cause| error!("{}", cause)),
-        }
-        thread::sleep(opts.period);
+            }
+        };
     }
 }
 
