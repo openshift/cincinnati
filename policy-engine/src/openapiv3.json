@@ -26,11 +26,11 @@
                         }
                     },
                     "default": {
-                        "description": "unexpected error",
+                        "description": "Graph error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Error"
+                                    "$ref": "#/components/schemas/GraphError"
                                 }
                             }
                         }
@@ -82,17 +82,16 @@
                     "format": "int32"
                 }
             },
-            "Error": {
+            "GraphError": {
                 "required": [
-                    "code",
-                    "message"
+                    "kind",
+                    "value"
                 ],
                 "properties": {
-                    "code": {
-                        "type": "integer",
-                        "format": "int32"
+                    "kind": {
+                        "type": "string"
                     },
-                    "message": {
+                    "value": {
                         "type": "string"
                     }
                 }
