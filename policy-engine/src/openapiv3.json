@@ -25,8 +25,38 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad client request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
+                    "406": {
+                        "description": "Invalid Content-Type",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
                     "default": {
-                        "description": "Graph error",
+                        "description": "Generic graph error",
                         "content": {
                             "application/json": {
                                 "schema": {
