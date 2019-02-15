@@ -3,8 +3,7 @@
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{Graph, CONTENT_TYPE};
-use commons;
-use failure::Error;
+use commons::{self, GraphError};
 use futures::{future, Future, Stream};
 use hyper::{Body, Client, Request};
 use prometheus::{Counter, Histogram};
@@ -40,59 +39,65 @@ lazy_static! {
 }
 
 /// Serve Cincinnati graph requests.
-pub(crate) fn index(req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+pub(crate) fn index(
+    req: HttpRequest<AppState>,
+) -> Box<Future<Item = HttpResponse, Error = GraphError>> {
     HTTP_GRAPH_REQS.inc();
+
+    // Check that the client can accept JSON media type.
+    if let Err(e) = commons::ensure_content_type(req.headers(), CONTENT_TYPE) {
+        HTTP_GRAPH_BAD_REQS.inc();
+        return Box::new(future::err(e));
+    }
 
     // Check for required client parameters.
     let mandatory_params = &req.state().mandatory_params;
-    if commons::ensure_query_params(mandatory_params, req.query_string()).is_err() {
+    if let Err(e) = commons::ensure_query_params(mandatory_params, req.query_string()) {
         HTTP_GRAPH_BAD_REQS.inc();
-        return Box::new(future::ok(HttpResponse::BadRequest().finish()));
+        return Box::new(future::err(e));
     }
 
-    match req.headers().get(header::ACCEPT) {
-        Some(entry) if entry == HeaderValue::from_static(CONTENT_TYPE) => {
-            let ups_req = Request::get(&req.state().upstream)
-                .header(header::ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
-                .body(Body::empty())
-                .expect("unable to form request");
-            HTTP_UPSTREAM_REQS.inc();
-            let timer = HTTP_SERVE_HIST.start_timer();
-            let serve = Client::new()
-                .request(ups_req)
-                .from_err::<Error>()
-                .map_err(|e| {
-                    HTTP_UPSTREAM_UNREACHABLE.inc();
-                    e
-                })
-                .and_then(|res| {
-                    if res.status().is_success() {
-                        future::ok(res)
-                    } else {
-                        future::err(format_err!(
-                            "failed to fetch upstream graph: {}",
-                            res.status()
-                        ))
-                    }
-                })
-                .and_then(|res| res.into_body().concat2().from_err::<Error>())
-                .and_then(|body| {
-                    let graph: Graph = serde_json::from_slice(&body)?;
-                    Ok(HttpResponse::Ok()
-                        .content_type(CONTENT_TYPE)
-                        .body(serde_json::to_string(&graph)?))
-                })
-                .then(move |r| {
-                    timer.observe_duration();
-                    r
-                });
-            Box::new(serve)
-        }
-        _ => {
-            HTTP_GRAPH_BAD_REQS.inc();
-            Box::new(future::ok(HttpResponse::NotAcceptable().finish()))
-        }
-    }
+    // Assemble a request for the upstream Cincinnati service.
+    let ups_req = match Request::get(&req.state().upstream)
+        .header(header::ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
+        .body(Body::empty())
+    {
+        Ok(req) => req,
+        Err(_) => return Box::new(future::err(GraphError::FailedUpstreamRequest)),
+    };
+
+    HTTP_UPSTREAM_REQS.inc();
+    let timer = HTTP_SERVE_HIST.start_timer();
+    let serve = Client::new()
+        .request(ups_req)
+        .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
+        .and_then(|res| {
+            if res.status().is_success() {
+                future::ok(res)
+            } else {
+                HTTP_UPSTREAM_UNREACHABLE.inc();
+                future::err(GraphError::FailedUpstreamFetch(res.status().to_string()))
+            }
+        })
+        .and_then(|res| {
+            res.into_body()
+                .concat2()
+                .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
+        })
+        .and_then(|body| {
+            let graph: Graph = serde_json::from_slice(&body)
+                .map_err(|e| GraphError::FailedJsonIn(e.to_string()))?;
+            let resp = HttpResponse::Ok().content_type(CONTENT_TYPE).body(
+                serde_json::to_string(&graph)
+                    .map_err(|e| GraphError::FailedJsonOut(e.to_string()))?,
+            );
+            Ok(resp)
+        })
+        .then(move |r| {
+            timer.observe_duration();
+            r
+        });
+    Box::new(serve)
 }
 
 #[cfg(test)]
@@ -116,9 +121,9 @@ mod tests {
 
         let http_req = actix_web::test::TestRequest::with_state(state).finish();
         let graph_call = graph::index(http_req);
-        let resp = rt.block_on(graph_call).unwrap();
+        let resp = rt.block_on(graph_call).unwrap_err();
 
-        assert_eq!(resp.status(), http::StatusCode::NOT_ACCEPTABLE);
+        assert_eq!(resp, graph::GraphError::InvalidContentType);
     }
 
     #[test]
@@ -129,11 +134,16 @@ mod tests {
             mandatory_params,
             ..Default::default()
         };
-        let http_req = actix_web::test::TestRequest::with_state(state).finish();
 
+        let http_req = actix_web::test::TestRequest::with_state(state)
+            .header(
+                http::header::ACCEPT,
+                http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
+            )
+            .finish();
         let graph_call = graph::index(http_req);
-        let resp = rt.block_on(graph_call).unwrap();
+        let resp = rt.block_on(graph_call).unwrap_err();
 
-        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+        assert_eq!(resp, graph::GraphError::MissingParams);
     }
 }

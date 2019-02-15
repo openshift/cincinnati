@@ -1,8 +1,14 @@
+extern crate actix_web;
 #[macro_use]
 extern crate failure;
+#[macro_use]
+extern crate serde_json;
 extern crate url;
 
-use failure::Fallible;
+mod errors;
+pub use errors::GraphError;
+
+use actix_web::http::header;
 use std::collections::HashSet;
 use url::form_urlencoded;
 
@@ -27,9 +33,12 @@ pub fn parse_params_set(params: &str) -> HashSet<String> {
 }
 
 /// Make sure `query` string contains all `params` keys.
-pub fn ensure_query_params(params: &HashSet<String>, query: &str) -> Fallible<()> {
+pub fn ensure_query_params(
+    required_params: &HashSet<String>,
+    query: &str,
+) -> Result<(), GraphError> {
     // No mandatory parameters, always fine.
-    if params.is_empty() {
+    if required_params.is_empty() {
         return Ok(());
     }
 
@@ -40,12 +49,29 @@ pub fn ensure_query_params(params: &HashSet<String>, query: &str) -> Fallible<()
         .collect();
 
     // Make sure all mandatory parameters are present.
-    ensure!(
-        params.is_subset(&query_keys),
-        "mandatory parameters missing"
-    );
+    if !required_params.is_subset(&query_keys) {
+        return Err(GraphError::MissingParams);
+    }
 
     Ok(())
+}
+
+/// Make sure client requested a valid content type.
+pub fn ensure_content_type(
+    headers: &actix_web::http::HeaderMap,
+    content_type: &'static str,
+) -> Result<(), GraphError> {
+    let content_json = header::HeaderValue::from_static(content_type);
+
+    if !headers
+        .get(header::ACCEPT)
+        .map(|accept| accept == content_json)
+        .unwrap_or(false)
+    {
+        Err(GraphError::InvalidContentType)
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(test)]

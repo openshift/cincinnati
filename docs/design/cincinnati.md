@@ -143,6 +143,15 @@ The response to the `/v1/graph` endpoint is a JSON representation of the release
 
 The transitions between releases are represented as an array in the top-level `edges` array. Each of these arrays has two entries: the index of the starting node, and the index of the ending node. Both are non-negative integers, ranging from 0 to `len(nodes)-1`.
 
+### Errors ###
+
+Errors on the `/v1/graph` endpoint are returned to the client as JSON objects, with a 4xx or 5xx HTTP status code.
+Error values carry a type identifier and a textual description, according to the folloowing schema:
+
+|  Key   | Optional | Description                                                  |
+|:------:|:--------:|:-------------------------------------------------------------|
+| kind   | required | error type identifier, as a non-empty JSON string            |
+| value  | required | human-friendly error description, as a non-empty JSON string |
 
 #### Example ####
 

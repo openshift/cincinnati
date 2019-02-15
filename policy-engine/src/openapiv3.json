@@ -25,12 +25,42 @@
                             }
                         }
                     },
-                    "default": {
-                        "description": "unexpected error",
+                    "400": {
+                        "description": "Bad client request",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Error"
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
+                    "406": {
+                        "description": "Invalid Content-Type",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Generic graph error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
                                 }
                             }
                         }
@@ -82,17 +112,16 @@
                     "format": "int32"
                 }
             },
-            "Error": {
+            "GraphError": {
                 "required": [
-                    "code",
-                    "message"
+                    "kind",
+                    "value"
                 ],
                 "properties": {
-                    "code": {
-                        "type": "integer",
-                        "format": "int32"
+                    "kind": {
+                        "type": "string"
                     },
-                    "message": {
+                    "value": {
                         "type": "string"
                     }
                 }
