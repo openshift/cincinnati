@@ -127,6 +127,84 @@ impl Graph {
             .map(|nr| ReleaseId(nr.id()))
     }
 
+    pub fn remove_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
+        if let Some(edge) = self.dag.find_edge(from.0, to.0) {
+            self.dag
+                .remove_edge(edge)
+                .map(|_| ())
+                .ok_or_else(|| format_err!("could not remove edge '{:?}'", edge))
+        } else {
+            bail!("could not find edge from '{:?}' to '{:?}'", from, to);
+        }
+    }
+
+    pub fn remove_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
+        indices
+            .iter()
+            .try_for_each(|(from, to)| self.remove_edge(from, to))
+    }
+
+    pub fn add_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
+        self.dag
+            .add_edge(from.0, to.0, Empty {})
+            .map(|_| ())
+            .map_err(Into::into)
+    }
+
+    pub fn add_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
+        indices
+            .iter()
+            .try_fold((), |_, (from, to)| self.add_edge(&from, &to))
+    }
+
+    /// Returns tuples of ReleaseId and its version String for releases which
+    /// match the given metadata key/value pair.
+    pub fn find_by_metadata_pair(&self, key: &str, value: &str) -> Vec<(ReleaseId, String)> {
+        self.dag
+            .node_references()
+            .filter(|nr| {
+                if let Release::Concrete(release) = nr.weight() {
+                    if let Some(found_value) = release.metadata.get(key) {
+                        return found_value == value;
+                    }
+                }
+                false
+            })
+            .map(|nr| (ReleaseId(nr.id()), nr.1.version().to_owned()))
+            .collect()
+    }
+
+    /// Returns tuples of ReleaseId, its version String, and the value for the given key for releases
+    /// which match the given metadata key.
+    pub fn find_by_metadata_key(&self, key: &str) -> Vec<(ReleaseId, String, String)> {
+        self.dag
+            .node_references()
+            .filter_map(|nr| {
+                if let Release::Concrete(release) = nr.weight() {
+                    if let Some(value) = release.metadata.get(key) {
+                        return Some((
+                            ReleaseId(nr.id()),
+                            release.version.to_owned(),
+                            value.to_owned(),
+                        ));
+                    }
+                }
+                None
+            })
+            .collect()
+    }
+
+    // Returns a mutable reference to the metadata for the given release
+    pub fn get_metadata_as_ref_mut(
+        &mut self,
+        release_id: &ReleaseId,
+    ) -> Result<&mut HashMap<String, String>, Error> {
+        match self.dag.node_weight_mut(release_id.0) {
+            Some(Release::Concrete(release)) => Ok(&mut release.metadata),
+            _ => bail!("could not get metadata reference"),
+        }
+    }
+
     pub fn next_releases(&self, source: &ReleaseId) -> NextReleases {
         NextReleases {
             children: self.dag.children(source.0),
@@ -137,6 +215,32 @@ impl Graph {
     /// Return the number of releases (nodes) in the graph.
     pub fn releases_count(&self) -> u64 {
         self.dag.node_count() as u64
+    }
+
+    /// Removes the nodes with the given ReleaseIds and returns the number of
+    /// removed releases.
+    ///
+    /// The ReleaseIds are sorted and removed in reverse order.
+    /// This is required because `daggy::Dag::remove_node()` shifts the NodeIndices
+    /// and therefore invalidates all the ones which are higher than the removed one.
+    pub fn remove_releases(&mut self, mut to_remove: Vec<ReleaseId>) -> usize {
+        to_remove.sort_by(|a, b| {
+            use std::cmp::Ordering::*;
+
+            if a.0 < b.0 {
+                Less
+            } else if a.0 == b.0 {
+                Equal
+            } else {
+                Greater
+            }
+        });
+
+        to_remove
+            .iter()
+            .rev()
+            .filter(|ri| self.dag.remove_node(ri.0).is_some())
+            .count()
     }
 
     /// Prune the graph from all abstract releases
