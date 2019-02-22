@@ -8,6 +8,17 @@ daggy = { version = "^0.6.0", features = [ "serde-1" ] }
 failure = "^0.1.1"
 serde = "1.0.70"
 serde_derive = "1.0.70"
+commons = { path = "../commons" }
+quay = { path = "../quay" }
+protobuf = "2.0"
+url = "^1.7.2"
+log = "^0.4.3"
+futures = "0.1"
+tokio = "0.1"
+try_from = "0.3.2"
 
 [dev-dependencies]
 serde_json = "1.0.22"
+
+[build-dependencies]
+protoc-rust = "2.0"
