@@ -25,6 +25,5 @@ extern crate regex;
 
 pub mod config;
 pub mod graph;
-pub mod metadata;
 pub mod registry;
 pub mod release;

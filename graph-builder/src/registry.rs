@@ -16,7 +16,6 @@ use cincinnati;
 use failure::{Error, Fallible, ResultExt};
 use flate2::read::GzDecoder;
 use futures::prelude::*;
-use metadata;
 use release::Metadata;
 use serde_json;
 use std::collections::HashMap;
@@ -198,6 +197,7 @@ pub fn fetch_releases(
     username: Option<&str>,
     password: Option<&str>,
     cache: &mut HashMap<u64, Option<Release>>,
+    manifestref_key: &str,
 ) -> Result<Vec<Release>, Error> {
     let mut thread_runtime = tokio::runtime::current_thread::Runtime::new()?;
 
@@ -253,7 +253,7 @@ pub fn fetch_releases(
             release
                 .metadata
                 .metadata
-                .insert(metadata::MANIFESTREF_KEY.to_string(), manifestref);
+                .insert(manifestref_key.to_owned(), manifestref);
         }
 
         releases.push(release);

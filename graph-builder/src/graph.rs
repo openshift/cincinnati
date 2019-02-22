@@ -13,11 +13,10 @@
 // limitations under the License.
 
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
-use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
+use cincinnati::{plugins, AbstractRelease, Graph, Release, CONTENT_TYPE};
 use commons::GraphError;
 use config;
 use failure::Error;
-use metadata::{fetch_and_populate_dynamic_metadata, MetadataFetcher, QuayMetadataFetcher};
 use registry::{self, Registry};
 use serde_json;
 use std::collections::{HashMap, HashSet};
@@ -70,22 +69,37 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
         registry::read_credentials(opts.credentials_path.as_ref(), &registry.host)
             .expect("could not read registry credentials");
 
-    let metadata_fetcher: Option<MetadataFetcher> = if opts.disable_quay_api_metadata {
-        debug!("Disable fetching of quay metadata..");
-        None
-    } else {
-        Some(
-            QuayMetadataFetcher::try_new(
-                opts.quay_label_filter.clone(),
-                opts.quay_api_credentials_path.as_ref(),
-                opts.quay_api_base.clone(),
-                opts.repository.clone(),
-            )
-            .expect("try_new to yield a metadata fetcher"),
-        )
-    };
+    let configured_plugins: Vec<Box<plugins::Plugin<plugins::PluginIO>>> =
+        if opts.disable_quay_api_metadata {
+            debug!("Disabling fetching and processing of quay metadata..");
+            vec![]
+        } else {
+            use cincinnati::plugins::internal::{
+                edge_add_remove::EdgeAddRemovePlugin, metadata_fetch_quay::QuayMetadataFetchPlugin,
+                node_remove::NodeRemovePlugin,
+            };
+            use cincinnati::plugins::InternalPluginWrapper;
 
-    let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+            // TODO(steveeJ): actually make this vec configurable
+            vec![
+                Box::new(InternalPluginWrapper(
+                    QuayMetadataFetchPlugin::try_new(
+                        opts.repository.clone(),
+                        opts.quay_label_filter.clone(),
+                        opts.quay_manifestref_key.clone(),
+                        opts.quay_api_credentials_path.as_ref(),
+                        opts.quay_api_base.clone(),
+                    )
+                    .expect("could not initialize the QuayMetadataPlugin"),
+                )),
+                Box::new(InternalPluginWrapper(NodeRemovePlugin {
+                    key_prefix: opts.quay_label_filter.clone(),
+                })),
+                Box::new(InternalPluginWrapper(EdgeAddRemovePlugin {
+                    key_prefix: opts.quay_label_filter.clone(),
+                })),
+            ]
+        };
 
     // Don't wait on the first iteration
     let mut first_iteration = true;
@@ -99,12 +113,13 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
 
         debug!("graph update triggered");
 
-        let mut releases = match registry::fetch_releases(
+        let releases = match registry::fetch_releases(
             &registry,
             &opts.repository,
             username.as_ref().map(String::as_ref),
             password.as_ref().map(String::as_ref),
             &mut cache,
+            &opts.quay_manifestref_key,
         ) {
             Ok(releases) => {
                 if releases.is_empty() {
@@ -123,55 +138,47 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
             }
         };
 
-        if let Some(metadata_fetcher) = &metadata_fetcher {
-            match runtime.block_on(fetch_and_populate_dynamic_metadata(
-                metadata_fetcher,
-                releases.clone(),
-            )) {
-                Ok(populated_releases) => {
-                    releases = populated_releases;
-                }
-                Err(err) => {
-                    err.iter_chain()
-                        .for_each(|cause| error!("failed to fetch dynamic metadata: {}", cause));
-                    continue;
-                }
-            }
-        };
-
-        let graph = match create_graph(releases, &opts.quay_label_filter) {
-            Ok(graph) => Some(graph),
+        let graph = match create_graph(releases) {
+            Ok(graph) => graph,
             Err(err) => {
                 err.iter_chain().for_each(|cause| error!("{}", cause));
                 continue;
             }
         };
 
-        if let Some(graph) = graph {
-            match serde_json::to_string(&graph) {
-                Ok(json) => {
-                    *state.json.write().expect("json lock has been poisoned") = json;
-                    debug!(
-                        "graph update completed, {} valid releases",
-                        graph.releases_count()
-                    );
-                }
-                Err(err) => error!("Failed to serialize graph: {}", err),
+        let graph = match cincinnati::plugins::process(
+            &configured_plugins,
+            cincinnati::plugins::InternalIO {
+                graph,
+                // the plugins used in the graph-builder don't expect any parameters yet
+                parameters: Default::default(),
+            },
+        ) {
+            Ok(graph) => graph,
+            Err(err) => {
+                err.iter_chain().for_each(|cause| error!("{}", cause));
+                continue;
             }
+        };
+
+        match serde_json::to_string(&graph) {
+            Ok(json) => {
+                *state.json.write().expect("json lock has been poisoned") = json;
+                debug!(
+                    "graph update completed, {} valid releases",
+                    graph.releases_count()
+                );
+            }
+            Err(err) => error!("Failed to serialize graph: {}", err),
         };
     }
 }
 
-pub fn create_graph(
-    releases: Vec<registry::Release>,
-    quay_label_filter: &str,
-) -> Result<Graph, Error> {
+pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
     let mut graph = Graph::default();
 
     releases
         .into_iter()
-        .filter_map(|release| process_release_remove_label(quay_label_filter, release))
-        .map(|release| process_neighbor_labels(quay_label_filter, release))
         .inspect(|release| trace!("Adding a release to the graph '{:?}'", release))
         .try_for_each(|release| {
             let previous = release.metadata.previous.clone();
@@ -199,101 +206,5 @@ pub fn create_graph(
             })
         })?;
 
-    graph.prune_abstract();
-
     Ok(graph)
-}
-
-/// Removes and retrieves the metadata value of the given `key` which is prefixed
-/// by `filter`
-fn remove_prefixed_label(
-    release: &mut registry::Release,
-    filter: &str,
-    key: &str,
-) -> Option<String> {
-    release
-        .metadata
-        .metadata
-        .remove(&format!("{}.{}", filter, key))
-}
-
-/// Remove releases which are labeled for removal.
-///
-/// The labels are assumed to have the syntax `{filter}.release-remove=<bool>`
-fn process_release_remove_label(
-    filter: &str,
-    release: registry::Release,
-) -> Option<registry::Release> {
-    let mut release = release;
-
-    if let Some(s) = remove_prefixed_label(&mut release, filter, "release.remove") {
-        // Filter releases which have "{prefix}.release-remove=true"
-        let remove = std::str::FromStr::from_str(&s).unwrap_or_else(|e| {
-            error!("could not parse '{}' as bool: {} (assuming false)", s, e);
-            false
-        });
-
-        if remove {
-            debug!("Removing release '{:?}'", release);
-            return None;
-        }
-    };
-
-    Some(release)
-}
-
-/// Add next and previous releases from quay labels
-///
-/// The labels are assumed to have the syntax `{prefix}.(previous|next)=[<Version>, ...]>`
-fn process_neighbor_labels(filter: &str, release: registry::Release) -> registry::Release {
-    use semver::Version;
-    use std::collections::HashSet;
-
-    let mut release = release;
-
-    macro_rules! process_neighbor_add_labels {
-        ($dir:tt, $neighbors:expr) => {
-            if let Some(s) = remove_prefixed_label(&mut release, filter, $dir) {
-                let mut neighbors_additional: Vec<Version> = s
-                    .split(',')
-                    .map(|neighbor_version| -> Version {
-                        let version = Version::parse(neighbor_version).unwrap();
-                        debug!(
-                            "Adding neighbor '{}' to '{}' due to label '{}={}' ",
-                            version, release.metadata.version, $dir, neighbor_version
-                        );
-                        version
-                    })
-                    .collect();
-
-                $neighbors.append(&mut neighbors_additional);
-            };
-        };
-    }
-    process_neighbor_add_labels!("previous.add", &mut release.metadata.previous);
-    process_neighbor_add_labels!("next.add", &mut release.metadata.next);
-
-    macro_rules! process_neighbor_remove_labels {
-        ($dir:tt, $neighbors:expr) => {
-            if let Some(s) = remove_prefixed_label(&mut release, filter, $dir) {
-                let mut neighbors_to_remove: HashSet<Version> = s
-                    .split(',')
-                    .map(|neighbor_version| -> Version {
-                        let version = Version::parse(neighbor_version).unwrap();
-                        debug!(
-                            "Removing neighbor '{}' from '{}' due to label '{}={}' ",
-                            version, release.metadata.version, $dir, neighbor_version
-                        );
-                        version
-                    })
-                    .collect();
-
-                $neighbors.retain(|version| !neighbors_to_remove.contains(&version));
-            };
-        };
-    }
-    process_neighbor_remove_labels!("previous.remove", &mut release.metadata.previous);
-    process_neighbor_remove_labels!("next.remove", &mut release.metadata.next);
-
-    release
 }
