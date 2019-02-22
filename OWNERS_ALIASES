@@ -2,9 +2,7 @@
 
 aliases:
   cincinnati-approvers:
-    - aaronlevy
     - crawford
-    - smarterclayton
     - steveeJ
     - lucab
   cincinnati-reviewers:
