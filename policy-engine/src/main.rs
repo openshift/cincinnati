@@ -20,6 +20,7 @@ extern crate serde_json;
 #[macro_use]
 extern crate structopt;
 extern crate openapiv3;
+extern crate url;
 
 mod config;
 mod graph;
