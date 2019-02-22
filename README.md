@@ -71,3 +71,15 @@ For details please see [github.com/openshift/release/(...)/openshift-cincinnati-
 
 [1]: https://github.com/openshift/release/blob/master/ci-operator/config/openshift/cincinnati/openshift-cincinnati-master.yaml
 
+## Development
+
+### Updating the Plugin-Interface Scheme
+The interface for external plugins is defined as a Protobuf v3 scheme in the file [cincinnati/src/plugins/interface.proto][./cincinnati/src/plugins/interface.proto].
+In order to regenerate the files the *cincinnati* crate must be built with the `codegen-protoc` feature:
+
+```console
+cd cincinnati
+cargo build --features=codegen-protoc
+```
+
+The CI/CD system doesn't do this and it relies on the generated code being committed to the repository; please do so after generating new code!

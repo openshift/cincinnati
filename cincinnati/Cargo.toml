@@ -22,3 +22,6 @@ serde_json = "1.0.22"
 
 [build-dependencies]
 protoc-rust = "2.0"
+
+[features]
+codegen-protoc = []
