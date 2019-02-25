@@ -2,7 +2,7 @@
 
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
-use cincinnati::{Graph, CONTENT_TYPE};
+use cincinnati::{plugins, Graph, CONTENT_TYPE};
 use commons::{self, GraphError};
 use futures::{future, Future, Stream};
 use hyper::{Body, Client, Request};
@@ -57,6 +57,13 @@ pub(crate) fn index(
         return Box::new(future::err(e));
     }
 
+    let configured_plugins: Vec<Box<plugins::Plugin<plugins::PluginIO>>> = {
+        // TODO(steveeJ): actually make this vec configurable
+        vec![]
+    };
+
+    let plugin_params = req.query().to_owned();
+
     // Assemble a request for the upstream Cincinnati service.
     let ups_req = match Request::get(&req.state().upstream)
         .header(header::ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
@@ -84,9 +91,22 @@ pub(crate) fn index(
                 .concat2()
                 .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
         })
-        .and_then(|body| {
+        .and_then(move |body| {
             let graph: Graph = serde_json::from_slice(&body)
                 .map_err(|e| GraphError::FailedJsonIn(e.to_string()))?;
+
+            let graph = match cincinnati::plugins::process(
+                &configured_plugins,
+                cincinnati::plugins::InternalIO {
+                    graph,
+                    // the plugins used in the graph-builder don't expect any parameters yet
+                    parameters: plugin_params,
+                },
+            ) {
+                Ok(graph) => graph,
+                Err(e) => return Err(GraphError::FailedPluginExecution(e.to_string())),
+            };
+
             let resp = HttpResponse::Ok().content_type(CONTENT_TYPE).body(
                 serde_json::to_string(&graph)
                     .map_err(|e| GraphError::FailedJsonOut(e.to_string()))?,

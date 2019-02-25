@@ -18,6 +18,14 @@ extern crate failure;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate commons;
+#[macro_use]
+extern crate log;
+extern crate protobuf;
+extern crate try_from;
+extern crate url;
+
+pub mod plugins;
 
 use daggy::petgraph::visit::{IntoNodeReferences, NodeRef};
 use daggy::{Dag, Walker};
@@ -31,6 +39,7 @@ pub const CONTENT_TYPE: &str = "application/json";
 const EXPECT_NODE_WEIGHT: &str = "all exisitng nodes to have a weight (release)";
 
 #[derive(Debug, Default)]
+#[cfg_attr(test, derive(Clone))]
 pub struct Graph {
     dag: Dag<Release, Empty>,
 }
@@ -63,6 +72,7 @@ pub struct AbstractRelease {
     pub version: String,
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct ReleaseId(daggy::NodeIndex);
 
 pub struct NextReleases<'a> {
@@ -80,7 +90,7 @@ impl<'a> Iterator for NextReleases<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Empty;
 
 impl Graph {
@@ -117,6 +127,84 @@ impl Graph {
             .map(|nr| ReleaseId(nr.id()))
     }
 
+    pub fn remove_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
+        if let Some(edge) = self.dag.find_edge(from.0, to.0) {
+            self.dag
+                .remove_edge(edge)
+                .map(|_| ())
+                .ok_or_else(|| format_err!("could not remove edge '{:?}'", edge))
+        } else {
+            bail!("could not find edge from '{:?}' to '{:?}'", from, to);
+        }
+    }
+
+    pub fn remove_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
+        indices
+            .iter()
+            .try_for_each(|(from, to)| self.remove_edge(from, to))
+    }
+
+    pub fn add_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
+        self.dag
+            .add_edge(from.0, to.0, Empty {})
+            .map(|_| ())
+            .map_err(Into::into)
+    }
+
+    pub fn add_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
+        indices
+            .iter()
+            .try_fold((), |_, (from, to)| self.add_edge(&from, &to))
+    }
+
+    /// Returns tuples of ReleaseId and its version String for releases which
+    /// match the given metadata key/value pair.
+    pub fn find_by_metadata_pair(&self, key: &str, value: &str) -> Vec<(ReleaseId, String)> {
+        self.dag
+            .node_references()
+            .filter(|nr| {
+                if let Release::Concrete(release) = nr.weight() {
+                    if let Some(found_value) = release.metadata.get(key) {
+                        return found_value == value;
+                    }
+                }
+                false
+            })
+            .map(|nr| (ReleaseId(nr.id()), nr.1.version().to_owned()))
+            .collect()
+    }
+
+    /// Returns tuples of ReleaseId, its version String, and the value for the given key for releases
+    /// which match the given metadata key.
+    pub fn find_by_metadata_key(&self, key: &str) -> Vec<(ReleaseId, String, String)> {
+        self.dag
+            .node_references()
+            .filter_map(|nr| {
+                if let Release::Concrete(release) = nr.weight() {
+                    if let Some(value) = release.metadata.get(key) {
+                        return Some((
+                            ReleaseId(nr.id()),
+                            release.version.to_owned(),
+                            value.to_owned(),
+                        ));
+                    }
+                }
+                None
+            })
+            .collect()
+    }
+
+    // Returns a mutable reference to the metadata for the given release
+    pub fn get_metadata_as_ref_mut(
+        &mut self,
+        release_id: &ReleaseId,
+    ) -> Result<&mut HashMap<String, String>, Error> {
+        match self.dag.node_weight_mut(release_id.0) {
+            Some(Release::Concrete(release)) => Ok(&mut release.metadata),
+            _ => bail!("could not get metadata reference"),
+        }
+    }
+
     pub fn next_releases(&self, source: &ReleaseId) -> NextReleases {
         NextReleases {
             children: self.dag.children(source.0),
@@ -127,6 +215,32 @@ impl Graph {
     /// Return the number of releases (nodes) in the graph.
     pub fn releases_count(&self) -> u64 {
         self.dag.node_count() as u64
+    }
+
+    /// Removes the nodes with the given ReleaseIds and returns the number of
+    /// removed releases.
+    ///
+    /// The ReleaseIds are sorted and removed in reverse order.
+    /// This is required because `daggy::Dag::remove_node()` shifts the NodeIndices
+    /// and therefore invalidates all the ones which are higher than the removed one.
+    pub fn remove_releases(&mut self, mut to_remove: Vec<ReleaseId>) -> usize {
+        to_remove.sort_by(|a, b| {
+            use std::cmp::Ordering::*;
+
+            if a.0 < b.0 {
+                Less
+            } else if a.0 == b.0 {
+                Equal
+            } else {
+                Greater
+            }
+        });
+
+        to_remove
+            .iter()
+            .rev()
+            .filter(|ri| self.dag.remove_node(ri.0).is_some())
+            .count()
     }
 
     /// Prune the graph from all abstract releases
@@ -344,13 +458,92 @@ impl PartialEq for Graph {
 
 impl Eq for Graph {}
 
+impl From<plugins::interface::Graph> for Graph {
+    fn from(mut graph: plugins::interface::Graph) -> Self {
+        let mut graph_converted = Graph::default();
+
+        // Convert nodes
+        for node in graph.take_nodes().into_iter() {
+            graph_converted
+                .dag
+                .add_node(Release::Concrete(ConcreteRelease {
+                    version: node.version,
+                    payload: node.payload,
+                    metadata: node.metadata,
+                }));
+        }
+
+        // Convert edges
+        for edge in graph.take_edges().into_iter() {
+            graph_converted
+                .dag
+                .add_edge(
+                    daggy::NodeIndex::from(edge.from as u32),
+                    daggy::NodeIndex::from(edge.to as u32),
+                    Empty {},
+                )
+                .expect("add_edge");
+        }
+
+        graph_converted
+    }
+}
+
+impl From<Graph> for plugins::interface::Graph {
+    fn from(graph: Graph) -> Self {
+        use daggy::petgraph::visit::IntoNeighborsDirected;
+        use daggy::petgraph::Direction;
+        use Release::{Abstract, Concrete};
+
+        let mut nodes_converted: Vec<plugins::interface::Graph_Node> =
+            std::vec::Vec::with_capacity(graph.dag.node_count());
+        let mut edges_converted: Vec<plugins::interface::Graph_Edge> =
+            std::vec::Vec::with_capacity(graph.dag.edge_count());
+
+        for node_reference in graph.dag.node_references() {
+            let node_index = node_reference.0;
+            let release = node_reference.1;
+
+            // Convert and push node
+            let mut node_converted = plugins::interface::Graph_Node::new();
+            match release {
+                Concrete(concrete_release) => {
+                    // TODO(steveeJ): avoid cloning all release content
+                    node_converted.set_version(concrete_release.version.clone());
+                    node_converted.set_metadata(concrete_release.metadata.clone());
+                    node_converted.set_payload(concrete_release.payload.clone());
+                }
+                Abstract(_) => panic!("found Abstract release type"),
+            }
+            nodes_converted.push(node_converted);
+
+            // find neighbors and push edges
+            for neighbor in graph
+                .dag
+                .neighbors_directed(node_index, Direction::Outgoing)
+            {
+                let mut edge_converted = plugins::interface::Graph_Edge::new();
+                edge_converted.set_from(node_index.index() as u64);
+                edge_converted.set_to(neighbor.index() as u64);
+                edges_converted.push(edge_converted);
+            }
+        }
+
+        let mut graph_converted = plugins::interface::Graph::new();
+        graph_converted.set_nodes(nodes_converted.into());
+        graph_converted.set_edges(edges_converted.into());
+
+        graph_converted
+    }
+}
+
 #[cfg(test)]
 mod tests {
     extern crate serde_json;
 
     use super::*;
 
-    fn generate_graph() -> Graph {
+    pub(crate) fn generate_graph() -> Graph {
         let mut graph = Graph::default();
         let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("1.0.0"),
@@ -370,6 +563,47 @@ mod tests {
         graph.dag.add_edge(v1, v2, Empty {}).unwrap();
         graph.dag.add_edge(v2, v3, Empty {}).unwrap();
         graph.dag.add_edge(v1, v3, Empty {}).unwrap();
+
+        graph
+    }
+
+    pub(crate) fn generate_custom_graph(
+        start: usize,
+        count: usize,
+        mut metadata: HashMap<usize, HashMap<String, String>>,
+        edges: Option<Vec<(usize, usize)>>,
+    ) -> Graph {
+        let mut graph = Graph::default();
+
+        let nodes: Vec<daggy::NodeIndex> = (start..(start + count))
+            .map(|i| {
+                let metadata = metadata.remove(&i).unwrap_or(HashMap::new());
+
+                let release = Release::Concrete(ConcreteRelease {
+                    version: format!("{}.0.0", i),
+                    payload: format!("image/{}.0.0", i),
+                    metadata,
+                });
+                graph.dag.add_node(release)
+            })
+            .collect();
+
+        assert_eq!(count as u64, graph.releases_count());
+
+        if let Some(edges) = edges {
+            for (key, value) in &edges {
+                let one = nodes[*key];
+                let two = nodes[*value];
+                graph.dag.add_edge(one, two, Empty {}).unwrap();
+            }
+            assert_eq!(edges.len(), graph.dag.edge_count());
+        } else {
+            for i in 0..(nodes.len() - 1) {
+                let one = nodes[i];
+                let two = nodes[i + 1];
+                graph.dag.add_edge(one, two, Empty {}).unwrap();
+            }
+        };
 
         graph
     }
@@ -475,5 +709,13 @@ mod tests {
             graph
         };
         assert_eq!(graph1, graph2);
+    }
+
+    #[test]
+    fn roundtrip_conversion_from_graph_via_plugin_interface() {
+        let graph_plugin_interface: plugins::interface::Graph = generate_graph().into();
+        let graph_native_converted: Graph = graph_plugin_interface.into();
+
+        assert_eq!(generate_graph(), graph_native_converted);
     }
 }

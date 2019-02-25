@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use cincinnati::plugins::internal::metadata_fetch_quay::{
+    DEFAULT_QUAY_LABEL_FILTER, DEFAULT_QUAY_MANIFESTREF_KEY,
+};
 use commons::{parse_params_set, parse_path_prefix};
-use metadata::DEFAULT_QUAY_LABEL_FILTER;
 use quay::v1::DEFAULT_API_BASE;
 use std::collections::HashSet;
 use std::net::IpAddr;
@@ -90,6 +92,13 @@ pub struct Options {
         raw(default_value = "DEFAULT_QUAY_LABEL_FILTER")
     )]
     pub quay_label_filter: String,
+
+    /// Metadata key where the quay fetcher expects the manifestref
+    #[structopt(
+        long = "quay-manifestref-key",
+        raw(default_value = "DEFAULT_QUAY_MANIFESTREF_KEY")
+    )]
+    pub quay_manifestref_key: String,
 
     /// Credentials file for authentication against API described at https://docs.quay.io/api/
     #[structopt(long = "quay-api-credentials-path", parse(from_os_str))]
