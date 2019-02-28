@@ -56,7 +56,10 @@ objects:
                   name: cincinnati
           args: ["-$(GB_LOG_VERBOSITY)", "--address", "$(ADDRESS)", "--port", "${GB_PORT}", "--registry", "$(REGISTRY)", "--repository", "$(REPOSITORY)", "--credentials-file=/etc/secrets/registry-credentials"]
           ports:
-          - containerPort: ${{GB_PORT}}
+          - name: graph-builder
+            containerPort: ${{GB_PORT}}
+          - name: prometheus-graph-builder
+            containerPort: 9080
           livenessProbe:
             httpGet:
               path: /v1/graph
@@ -106,7 +109,10 @@ objects:
           command: ["/usr/bin/policy-engine"]
           args: ["-$(PE_LOG_VERBOSITY)", "--address", "$(ADDRESS)", "--port", "${PE_PORT}", "--upstream", "$(UPSTREAM)", "--path-prefix", "${PE_PATH_PREFIX}"]
           ports:
-          - containerPort: ${{PE_PORT}}
+          - name: policy-engine 
+            containerPort: ${{PE_PORT}}
+          - name: prometheus-policy-engine
+            containerPort: 9081
           livenessProbe:
             httpGet:
               path: ${PE_PATH_PREFIX}/v1/graph
@@ -144,9 +150,14 @@ objects:
       app: cincinnati
   spec:
     ports:
-      - protocol: TCP
+      - name: graph-builder
+        protocol: TCP
         port: ${{GB_PORT}}
         targetPort: ${{GB_PORT}}
+      - name: prometheus-graph-builder
+        protocol: TCP
+        port: 9080
+        targetPort: 9080
     selector:
       deploymentconfig: cincinnati
 - apiVersion: v1
@@ -157,9 +168,14 @@ objects:
       app: cincinnati
   spec:
     ports:
-      - protocol: TCP
+      - name: policy-engine 
+        protocol: TCP
         port: 80
         targetPort: ${{PE_PORT}}
+      - name: prometheus-policy-engine
+        protocol: TCP
+        port: 9081
+        targetPort: 9081
     selector:
       deploymentconfig: cincinnati
 parameters:
