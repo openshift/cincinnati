@@ -140,7 +140,8 @@ objects:
   kind: Service
   metadata:
     name: cincinnati-graph-builder
-    app: cincinnati
+    labels:
+      app: cincinnati
   spec:
     ports:
       - protocol: TCP
@@ -152,7 +153,8 @@ objects:
   kind: Service
   metadata:
     name: cincinnati-policy-engine
-    app: cincinnati
+    labels:
+      app: cincinnati
   spec:
     ports:
       - protocol: TCP
