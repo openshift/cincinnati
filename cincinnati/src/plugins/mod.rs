@@ -4,7 +4,9 @@
 pub mod external;
 pub mod interface;
 pub mod internal;
+mod registry;
 
+pub use self::registry::{sanitize_config, try_from_settings};
 use crate as cincinnati;
 use failure::{Error, Fallible, ResultExt};
 use plugins::interface::{PluginError, PluginExchange};

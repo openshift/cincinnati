@@ -10,18 +10,96 @@ extern crate tokio;
 
 use self::futures::future::Future;
 use failure::{Fallible, ResultExt};
-use plugins::{InternalIO, InternalPlugin};
-use std::path::PathBuf;
+use plugins::{InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO};
+use std::collections::HashMap;
+use toml::value::Value;
 use ReleaseId;
 
 pub static DEFAULT_QUAY_LABEL_FILTER: &str = "com.openshift.upgrades.graph";
 pub static DEFAULT_QUAY_MANIFESTREF_KEY: &str = "com.openshift.upgrades.graph.release.manifestref";
+pub static DEFAULT_QUAY_REPOSITORY: &str = "openshift";
 
 pub struct QuayMetadataFetchPlugin {
     client: quay::v1::Client,
     repo: String,
     label_filter: String,
     manifestref_key: String,
+}
+
+/// Plugin settings.
+#[derive(Deserialize)]
+struct PluginSettings {
+    api_base: String,
+    api_credentials_path: Option<String>,
+    repository: String,
+    label_filter: String,
+    manifestref_key: String,
+}
+
+impl QuayMetadataFetchPlugin {
+    /// Plugin name, for configuration.
+    pub(crate) const PLUGIN_NAME: &'static str = "quay-metadata";
+
+    /// Validate plugin configuration and fill in defaults.
+    pub fn sanitize_config(cfg: &mut HashMap<String, String>) -> Fallible<()> {
+        let name = cfg.get("name").cloned().unwrap_or_default();
+        ensure!(name == Self::PLUGIN_NAME, "unexpected plugin name");
+
+        cfg.entry("api_base".to_string())
+            .or_insert_with(|| quay::v1::DEFAULT_API_BASE.to_string());
+        cfg.entry("repository".to_string())
+            .or_insert_with(|| DEFAULT_QUAY_REPOSITORY.to_string());
+        cfg.entry("label_filter".to_string())
+            .or_insert_with(|| DEFAULT_QUAY_LABEL_FILTER.to_string());
+        cfg.entry("manifestref_key".to_string())
+            .or_insert_with(|| DEFAULT_QUAY_MANIFESTREF_KEY.to_string());
+        // TODO(lucab): perform validation.
+
+        Ok(())
+    }
+
+    /// Try to build a plugin from settings.
+    pub fn from_settings(cfg: &HashMap<String, String>) -> Fallible<Box<Plugin<PluginIO>>> {
+        let cfg: PluginSettings = Value::try_from(cfg)?.try_into()?;
+
+        let plugin = Self::try_new(
+            cfg.repository,
+            cfg.label_filter,
+            cfg.manifestref_key,
+            cfg.api_credentials_path,
+            cfg.api_base,
+        )?;
+        Ok(Box::new(InternalPluginWrapper(plugin)))
+    }
+
+    fn try_new(
+        repo: String,
+        label_filter: String,
+        manifestref_key: String,
+        api_token_path: Option<String>,
+        api_base: String,
+    ) -> Fallible<Self> {
+        let api_token = match api_token_path {
+            Some(p) => {
+                let token =
+                    quay::read_credentials(p).context("could not read quay API credentials")?;
+                Some(token)
+            }
+            None => None,
+        };
+
+        let client: quay::v1::Client = quay::v1::Client::builder()
+            .access_token(api_token)
+            .api_base(Some(api_base))
+            .build()?;
+
+        Ok(Self {
+            client,
+            repo,
+            label_filter,
+            manifestref_key,
+        })
+    }
 }
 
 impl InternalPlugin for QuayMetadataFetchPlugin {
@@ -98,30 +176,5 @@ impl InternalPlugin for QuayMetadataFetchPlugin {
         )?;
 
         Ok(InternalIO { graph, parameters })
-    }
-}
-
-impl QuayMetadataFetchPlugin {
-    pub fn try_new(
-        repo: String,
-        label_filter: String,
-        manifestref_key: String,
-        api_token_path: Option<&PathBuf>,
-        api_base: String,
-    ) -> Fallible<Self> {
-        let api_token =
-            quay::read_credentials(api_token_path).expect("could not read quay API credentials");
-
-        let client: quay::v1::Client = quay::v1::Client::builder()
-            .access_token(api_token.map(|s| s.to_string()))
-            .api_base(Some(api_base.to_string()))
-            .build()?;
-
-        Ok(Self {
-            client,
-            repo,
-            label_filter,
-            manifestref_key,
-        })
     }
 }

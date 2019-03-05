@@ -22,6 +22,7 @@ extern crate commons;
 #[macro_use]
 extern crate log;
 extern crate protobuf;
+extern crate toml;
 extern crate try_from;
 extern crate url;
 

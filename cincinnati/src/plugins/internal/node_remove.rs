@@ -1,10 +1,41 @@
 //! This plugin removes releases according to its metadata
 
 use failure::Fallible;
-use plugins::{InternalIO, InternalPlugin};
+use plugins::{InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO};
+use std::collections::HashMap;
+
+static DEFAULT_KEY_FILTER: &str = "com.openshift.upgrades.graph";
 
 pub struct NodeRemovePlugin {
     pub key_prefix: String,
+}
+
+impl NodeRemovePlugin {
+    /// Plugin name, for configuration.
+    pub(crate) const PLUGIN_NAME: &'static str = "node-remove";
+
+    /// Validate plugin configuration and fill in defaults.
+    pub fn sanitize_config(cfg: &mut HashMap<String, String>) -> Fallible<()> {
+        let name = cfg.get("name").cloned().unwrap_or_default();
+        ensure!(name == Self::PLUGIN_NAME, "unexpected plugin name");
+
+        cfg.entry("key_prefix".to_string())
+            .or_insert_with(|| DEFAULT_KEY_FILTER.to_string());
+        // TODO(lucab): perform semantic validation.
+
+        Ok(())
+    }
+
+    /// Try to build a plugin from settings.
+    pub fn from_settings(cfg: &HashMap<String, String>) -> Fallible<Box<Plugin<PluginIO>>> {
+        let key_prefix = cfg
+            .get("key_prefix")
+            .ok_or_else(|| format_err!("empty key_prefix"))?
+            .to_string();
+        let plugin = Self { key_prefix };
+
+        Ok(Box::new(InternalPluginWrapper(plugin)))
+    }
 }
 
 impl InternalPlugin for NodeRemovePlugin {

@@ -2,8 +2,11 @@
 
 use crate as cincinnati;
 use failure::Fallible;
-use plugins::{InternalIO, InternalPlugin};
+use plugins::{InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO};
+use std::collections::HashMap;
 use ReleaseId;
+
+static DEFAULT_KEY_FILTER: &str = "com.openshift.upgrades.graph";
 
 pub struct EdgeAddRemovePlugin {
     pub key_prefix: String,
@@ -25,6 +28,32 @@ impl InternalPlugin for EdgeAddRemovePlugin {
 ///
 /// The labels are assumed to have the syntax `<prefix>.(previous|next).(remove|add)=(<Version>,)*<Version>`
 impl EdgeAddRemovePlugin {
+    /// Plugin name, for configuration.
+    pub(crate) const PLUGIN_NAME: &'static str = "edge-add-remove";
+
+    /// Validate plugin configuration and fill in defaults.
+    pub fn sanitize_config(cfg: &mut HashMap<String, String>) -> Fallible<()> {
+        let name = cfg.get("name").cloned().unwrap_or_default();
+        ensure!(name == Self::PLUGIN_NAME, "unexpected plugin name");
+
+        cfg.entry("key_prefix".to_string())
+            .or_insert_with(|| DEFAULT_KEY_FILTER.to_string());
+        // TODO(lucab): perform semantic validation.
+
+        Ok(())
+    }
+
+    /// Try to build a plugin from configuration.
+    pub fn from_settings(cfg: &HashMap<String, String>) -> Fallible<Box<Plugin<PluginIO>>> {
+        let key_prefix = cfg
+            .get("key_prefix")
+            .ok_or_else(|| format_err!("empty key_prefix"))?
+            .to_string();
+        let plugin = Self { key_prefix };
+
+        Ok(Box::new(InternalPluginWrapper(plugin)))
+    }
+
     /// Remove next and previous releases from quay labels
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).remove=(<Version>,)*<Version>`
