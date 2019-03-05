@@ -153,7 +153,7 @@ Error values carry a type identifier and a textual description, according to the
 | kind   | required | error type identifier, as a non-empty JSON string            |
 | value  | required | human-friendly error description, as a non-empty JSON string |
 
-#### Example ####
+### Example ###
 
 The following response represents the graph shown in Figure 2:
 
@@ -196,6 +196,47 @@ The following response represents the graph shown in Figure 2:
 	]
 }
 ```
+
+### Traversal ###
+
+Determining valid graph traversals can be tricky to do by hand. The following [`jq`][jq] expression can be used to determine the next possible versions, given a current version:
+
+```jq
+. as $graph | $graph.nodes | map(.version == "<CURRENT VERSION>") | index(true) as $orig | $graph.edges | map(select(.[0] == $orig)[1]) | map($graph.nodes[.])
+```
+
+#### Example ####
+
+The following will fetch the graph from a remote endpoint and determine the set of versions to which "1.0.0" can transition:
+
+```
+$ curl --silent --header 'Accept:application/json' https://cincinnati.example.com/graph | jq '. as $graph | $graph.nodes | map(.version == "1.0.0") | index(true) as $orig | $graph.edges | map(select(.[0] == $orig)[1]) | map($graph.nodes[.])'
+[
+  {
+    "version": "1.1.0",
+    "metadata": {
+      "kind": "security"
+    },
+    "payload": "quay.io/openshift/manifest:v1.1.0"
+  },
+  {
+    "version": "1.1.1",
+    "metadata": {
+      "kind": "security"
+    },
+    "payload": "quay.io/openshift/manifest:v1.1.1"
+  },
+  {
+    "version": "1.3.0",
+    "metadata": {
+      "kind": "feature"
+    },
+    "payload": "quay.io/openshift/manifest:v1.3.0"
+  }
+]
+```
+
+[jq]: https://stedolan.github.io/jq/
 
 
 ## Alternatives Considered ##
