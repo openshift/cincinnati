@@ -58,7 +58,7 @@ objects:
           ports:
           - name: graph-builder
             containerPort: ${{GB_PORT}}
-          - name: prometheus-graph-builder
+          - name: status-graph-builder
             containerPort: 9080
           livenessProbe:
             httpGet:
@@ -111,7 +111,7 @@ objects:
           ports:
           - name: policy-engine 
             containerPort: ${{PE_PORT}}
-          - name: prometheus-policy-engine
+          - name: status-policy-engine
             containerPort: 9081
           livenessProbe:
             httpGet:
@@ -154,7 +154,7 @@ objects:
         protocol: TCP
         port: ${{GB_PORT}}
         targetPort: ${{GB_PORT}}
-      - name: prometheus-graph-builder
+      - name: status-graph-builder
         protocol: TCP
         port: 9080
         targetPort: 9080
@@ -172,7 +172,7 @@ objects:
         protocol: TCP
         port: 80
         targetPort: ${{PE_PORT}}
-      - name: prometheus-policy-engine
+      - name: status-policy-engine
         protocol: TCP
         port: 9081
         targetPort: 9081
