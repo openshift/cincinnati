@@ -147,7 +147,7 @@ objects:
   metadata:
     name: cincinnati-graph-builder
     labels:
-      app: cincinnati
+      app: cincinnati-graph-builder
   spec:
     ports:
       - name: graph-builder
@@ -165,7 +165,7 @@ objects:
   metadata:
     name: cincinnati-policy-engine
     labels:
-      app: cincinnati
+      app: cincinnati-policy-engine
   spec:
     ports:
       - name: policy-engine 
@@ -192,10 +192,10 @@ parameters:
   displayName: Memory Limit
   description: Maximum amount of memory the container can use. Defaults 256Mi
 - name: GB_PORT
-  value: "8181"
+  value: "8080"
   displayName: Graph builder port
 - name: PE_PORT
-  value: "8080"
+  value: "8081"
   displayName: Policy enigine port
 - name: PE_PATH_PREFIX
   value: "/api/upgrades_info"
