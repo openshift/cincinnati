@@ -1,59 +1,7 @@
-use failure::{format_err, Fallible};
-use reqwest::header::{HeaderValue, AUTHORIZATION};
-use reqwest::Response;
-use serde::Deserialize;
+use prometheus_query::v1::queries::{QueryData, QueryResult, QuerySuccess, VectorResult};
+use prometheus_query::v1::Client;
 use std::env;
 use test_case::test_case;
-use tokio::runtime::Runtime;
-use url::Url;
-
-#[derive(Deserialize)]
-struct PromMetric {
-    value: (f64, String),
-}
-
-#[derive(Deserialize)]
-struct PromData {
-    result: Vec<PromMetric>,
-}
-
-#[derive(Deserialize)]
-struct PromResponse {
-    status: String,
-    data: PromData,
-}
-
-async fn prom_http_request(url: String, token: String) -> Fallible<Response> {
-    let header_value = format!("Bearer {}", token);
-    let authorization_header = HeaderValue::from_str(&header_value).unwrap();
-    reqwest::ClientBuilder::new()
-        .danger_accept_invalid_certs(true)
-        .build()
-        .unwrap()
-        .get(&url)
-        .header(AUTHORIZATION, authorization_header)
-        .send()
-        .await
-        .map_err(Into::into)
-}
-
-fn query_prom(runtime: &mut Runtime, url: String, token: String) -> Fallible<String> {
-    let res = runtime.block_on(prom_http_request(url, token)).unwrap();
-    let text = runtime.block_on(res.text()).unwrap();
-    println!("Prom response: {}", text);
-
-    let r: PromResponse = match serde_json::from_str(&text) {
-        Ok(r) => r,
-        Err(e) => panic!("Failed to serialize json: {}", e),
-    };
-    match r.status.as_str() {
-        "success" => match r.data.result.len() {
-            1 => Ok(r.data.result[0].value.1.clone()),
-            n => Err(format_err!("unexpected number of results: {}", n)),
-        },
-        status => Err(format_err!("incorrect query status: {}", status)),
-    }
-}
 
 // Service reports at all times
 #[test_case(r#"min_over_time(up{job="cincinnati-policy-engine"}[1h])"#, "1")]
@@ -72,22 +20,36 @@ fn query_prom(runtime: &mut Runtime, url: String, token: String) -> Fallible<Str
 // No scrape errors
 #[test_case("cincinnati_gb_graph_upstream_errors_total", "0")]
 fn check_slo(query: &'static str, expected: &'static str) {
-    let prom_url = match env::var("PROM_ENDPOINT") {
-        Ok(env) => format!("https://{}/api/v1/query", env),
+    let prometheus_api_base = match env::var("PROM_ENDPOINT") {
+        Ok(env) => format!("{}/api/v1/query", env),
         _ => panic!("PROM_ENDPOINT unset"),
     };
 
-    let prom_token = match env::var("PROM_TOKEN") {
+    let prometheus_token = match env::var("PROM_TOKEN") {
         Ok(env) => env,
         _ => panic!("PROM_TOKEN unset"),
     };
 
     let mut runtime = commons::testing::init_runtime().unwrap();
 
-    let mut query_url = Url::parse(&prom_url).unwrap();
-    query_url.query_pairs_mut().append_pair("query", query);
+    let prometheus_client = Client::builder()
+        .api_base(Some(prometheus_api_base.clone()))
+        .access_token(Some(prometheus_token))
+        .build()
+        .unwrap();
 
-    println!("Querying {}", query_url.to_string());
-    let actual = query_prom(&mut runtime, query_url.to_string(), prom_token).unwrap();
-    pretty_assertions::assert_eq!(actual, expected)
+    let result: QuerySuccess = match runtime
+        .block_on(prometheus_client.query(query.to_string(), None, None))
+        .unwrap()
+    {
+        QueryResult::Success(query_success) => query_success,
+        _ => panic!("expected success"),
+    };
+    let vector_data: &Vec<VectorResult> = match result.data() {
+        QueryData::Vector(vector_data) => vector_data,
+        _ => panic!("expected vector"),
+    };
+    assert!(vector_data.len() > 0);
+    let first_result: &VectorResult = vector_data.get(0).unwrap();
+    assert_eq!(first_result.sample().to_string(), expected);
 }

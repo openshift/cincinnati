@@ -44,7 +44,6 @@ built = "^0.3.2"
 twoway = "^0.2"
 assert-json-diff = "1.0.0"
 test-case = "1.0.0"
-pretty_assertions = "0.6.1"
 
 [features]
 test-net = []
