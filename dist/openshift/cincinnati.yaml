@@ -59,7 +59,7 @@ objects:
           - name: graph-builder
             containerPort: ${{GB_PORT}}
           - name: status-gb
-            containerPort: 9080
+            containerPort: ${{GB_STATUS_PORT}}
           livenessProbe:
             httpGet:
               path: /v1/graph
@@ -112,7 +112,7 @@ objects:
           - name: policy-engine 
             containerPort: ${{PE_PORT}}
           - name: status-pe
-            containerPort: 9081
+            containerPort: ${{PE_STATUS_PORT}}
           livenessProbe:
             httpGet:
               path: ${PE_PATH_PREFIX}/v1/graph
@@ -156,8 +156,8 @@ objects:
         targetPort: ${{GB_PORT}}
       - name: status-gb
         protocol: TCP
-        port: 9080
-        targetPort: 9080
+        port: ${{GB_STATUS_PORT}}
+        targetPort: ${{GB_STATUS_PORT}}
     selector:
       deploymentconfig: cincinnati
 - apiVersion: v1
@@ -174,8 +174,8 @@ objects:
         targetPort: ${{PE_PORT}}
       - name: status-pe
         protocol: TCP
-        port: 9081
-        targetPort: 9081
+        port: ${{PE_STATUS_PORT}}
+        targetPort: ${{PE_STATUS_PORT}}
     selector:
       deploymentconfig: cincinnati
 parameters:
@@ -194,9 +194,15 @@ parameters:
 - name: GB_PORT
   value: "8080"
   displayName: Graph builder port
+- name: GB_STATUS_PORT
+  value: "9080"
+  displayName: Graph builder status port
 - name: PE_PORT
   value: "8081"
   displayName: Policy enigine port
+- name: PE_STATUS_PORT
+  value: "9081"
+  displayName: Policy enigine status port
 - name: PE_PATH_PREFIX
   value: "/api/upgrades_info"
   displayName: Policy engine path prefix
