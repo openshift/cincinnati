@@ -88,49 +88,52 @@ impl State {
     }
 }
 
-pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
+pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
     // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
     let mut cache = HashMap::new();
 
-    let registry = Registry::try_from_str(&opts.registry)
-        .expect(&format!("failed to parse '{}' as Url", &opts.registry));
+    let registry = Registry::try_from_str(&settings.registry)
+        .expect(&format!("failed to parse '{}' as Url", &settings.registry));
 
     // Read the credentials outside the loop to avoid re-reading the file
     let (username, password) =
-        registry::read_credentials(opts.credentials_path.as_ref(), &registry.host)
+        registry::read_credentials(settings.credentials_path.as_ref(), &registry.host)
             .expect("could not read registry credentials");
 
-    let configured_plugins: Vec<Box<plugins::Plugin<plugins::PluginIO>>> =
-        if opts.disable_quay_api_metadata {
-            debug!("Disabling fetching and processing of quay metadata..");
-            vec![]
-        } else {
-            use cincinnati::plugins::internal::{
-                edge_add_remove::EdgeAddRemovePlugin, metadata_fetch_quay::QuayMetadataFetchPlugin,
-                node_remove::NodeRemovePlugin,
-            };
-            use cincinnati::plugins::InternalPluginWrapper;
-
-            // TODO(steveeJ): actually make this vec configurable
-            vec![
-                Box::new(InternalPluginWrapper(
-                    QuayMetadataFetchPlugin::try_new(
-                        opts.repository.clone(),
-                        opts.quay_label_filter.clone(),
-                        opts.quay_manifestref_key.clone(),
-                        opts.quay_api_credentials_path.as_ref(),
-                        opts.quay_api_base.clone(),
-                    )
-                    .expect("could not initialize the QuayMetadataPlugin"),
-                )),
-                Box::new(InternalPluginWrapper(NodeRemovePlugin {
-                    key_prefix: opts.quay_label_filter.clone(),
-                })),
-                Box::new(InternalPluginWrapper(EdgeAddRemovePlugin {
-                    key_prefix: opts.quay_label_filter.clone(),
-                })),
-            ]
+    let mut configured_plugins: Vec<Box<plugins::Plugin<plugins::PluginIO>>> = {
+        use cincinnati::plugins::internal::{
+            edge_add_remove::EdgeAddRemovePlugin, metadata_fetch_quay::QuayMetadataFetchPlugin,
+            node_remove::NodeRemovePlugin,
         };
+        use cincinnati::plugins::{internal, InternalPluginWrapper};
+        use quay::v1::DEFAULT_API_BASE;
+
+        // TODO(steveeJ): actually make this vec configurable
+        vec![
+            Box::new(InternalPluginWrapper(
+                // TODO(lucab): source options from plugins config.
+                QuayMetadataFetchPlugin::try_new(
+                    settings.repository.clone(),
+                    internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER.to_string(),
+                    internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY.to_string(),
+                    None,
+                    DEFAULT_API_BASE.to_string(),
+                )
+                .expect("could not initialize the QuayMetadataPlugin"),
+            )),
+            Box::new(InternalPluginWrapper(NodeRemovePlugin {
+                key_prefix: internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER.to_string(),
+            })),
+            Box::new(InternalPluginWrapper(EdgeAddRemovePlugin {
+                key_prefix: internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER.to_string(),
+            })),
+        ]
+    };
+
+    // TODO(lucab): drop this when plugins are configurable.
+    if settings.disable_quay_api_metadata {
+        configured_plugins = vec![];
+    }
 
     // Don't wait on the first iteration
     let mut first_iteration = true;
@@ -139,18 +142,18 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
         if first_iteration {
             first_iteration = false;
         } else {
-            thread::sleep(opts.period);
+            thread::sleep(settings.pause_secs);
         }
 
         debug!("graph update triggered");
 
         let scrape = registry::fetch_releases(
             &registry,
-            &opts.repository,
+            &settings.repository,
             username.as_ref().map(String::as_ref),
             password.as_ref().map(String::as_ref),
             &mut cache,
-            &opts.quay_manifestref_key,
+            &settings.manifestref_key,
         );
         UPSTREAM_SCRAPES.inc();
 
@@ -160,7 +163,7 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
                     warn!(
                         "could not find any releases in {}/{}",
                         &registry.host_port_string(),
-                        &opts.repository
+                        &settings.repository
                     );
                 };
                 releases

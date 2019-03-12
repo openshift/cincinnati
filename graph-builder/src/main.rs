@@ -16,6 +16,7 @@ extern crate actix;
 extern crate actix_web;
 extern crate failure;
 extern crate graph_builder;
+#[macro_use]
 extern crate log;
 extern crate structopt;
 
@@ -23,39 +24,27 @@ use graph_builder::{config, graph, metrics};
 
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
-use log::LevelFilter;
-use std::{net, thread};
-use structopt::StructOpt;
+use std::thread;
 
 fn main() -> Result<(), Error> {
     let sys = actix::System::new("graph-builder");
 
-    let opts = config::Options::from_args();
+    let settings = config::AppSettings::assemble()?;
 
     env_logger::Builder::from_default_env()
-        .filter(
-            Some(module_path!()),
-            match opts.verbosity {
-                0 => LevelFilter::Warn,
-                1 => LevelFilter::Info,
-                2 => LevelFilter::Debug,
-                _ => LevelFilter::Trace,
-            },
-        )
+        .filter(Some(module_path!()), settings.verbosity)
         .init();
+    debug!("application settings:\n{:#?}", &settings);
 
-    let state = graph::State::new(opts.mandatory_client_parameters.clone());
-    let addr = (opts.address, opts.port);
-    let app_prefix = opts.path_prefix.clone();
+    let state = graph::State::new(settings.mandatory_client_parameters.clone());
+    let service_addr = (settings.address, settings.port);
+    let status_addr = (settings.status_address, settings.status_port);
+    let app_prefix = settings.path_prefix.clone();
 
     {
         let state = state.clone();
-        thread::spawn(move || graph::run(&opts, &state));
+        thread::spawn(move || graph::run(&settings, &state));
     }
-
-    // TODO(lucab): make these configurable.
-    let status_address: net::IpAddr = net::Ipv4Addr::UNSPECIFIED.into();
-    let status_port = 9080;
 
     // Status service.
     server::new(|| {
@@ -63,7 +52,7 @@ fn main() -> Result<(), Error> {
             .middleware(Logger::default())
             .route("/metrics", Method::GET, metrics::serve)
     })
-    .bind((status_address, status_port))?
+    .bind(status_addr)?
     .start();
 
     // Main service.
@@ -75,7 +64,7 @@ fn main() -> Result<(), Error> {
             .prefix(app_prefix)
             .route("/v1/graph", Method::GET, graph::index)
     })
-    .bind(addr)?
+    .bind(service_addr)?
     .start();
 
     sys.run();
