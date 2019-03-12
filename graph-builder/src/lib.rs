@@ -26,6 +26,7 @@ extern crate serde_json;
 extern crate structopt;
 extern crate tar;
 extern crate tokio;
+extern crate toml;
 
 pub mod config;
 pub mod graph;

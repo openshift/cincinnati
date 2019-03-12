@@ -88,7 +88,7 @@ impl State {
     }
 }
 
-pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
+pub fn run<'a>(opts: &'a config::AppSettings, state: &State) -> ! {
     // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
     let mut cache = HashMap::new();
 
@@ -100,37 +100,12 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
         registry::read_credentials(opts.credentials_path.as_ref(), &registry.host)
             .expect("could not read registry credentials");
 
-    let configured_plugins: Vec<Box<plugins::Plugin<plugins::PluginIO>>> =
-        if opts.disable_quay_api_metadata {
-            debug!("Disabling fetching and processing of quay metadata..");
-            vec![]
-        } else {
-            use cincinnati::plugins::internal::{
-                edge_add_remove::EdgeAddRemovePlugin, metadata_fetch_quay::QuayMetadataFetchPlugin,
-                node_remove::NodeRemovePlugin,
-            };
-            use cincinnati::plugins::InternalPluginWrapper;
-
-            // TODO(steveeJ): actually make this vec configurable
-            vec![
-                Box::new(InternalPluginWrapper(
-                    QuayMetadataFetchPlugin::try_new(
-                        opts.repository.clone(),
-                        opts.quay_label_filter.clone(),
-                        opts.quay_manifestref_key.clone(),
-                        opts.quay_api_credentials_path.as_ref(),
-                        opts.quay_api_base.clone(),
-                    )
-                    .expect("could not initialize the QuayMetadataPlugin"),
-                )),
-                Box::new(InternalPluginWrapper(NodeRemovePlugin {
-                    key_prefix: opts.quay_label_filter.clone(),
-                })),
-                Box::new(InternalPluginWrapper(EdgeAddRemovePlugin {
-                    key_prefix: opts.quay_label_filter.clone(),
-                })),
-            ]
-        };
+    // Initialize all plugins from runtime settings.
+    let plugins: Vec<_> = opts
+        .plugins
+        .iter()
+        .map(|cfg| plugins::try_from_settings(cfg).expect("could not initialize plugin"))
+        .collect();
 
     // Don't wait on the first iteration
     let mut first_iteration = true;
@@ -150,7 +125,7 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
             username.as_ref().map(String::as_ref),
             password.as_ref().map(String::as_ref),
             &mut cache,
-            &opts.quay_manifestref_key,
+            &opts.manifestref_key,
         );
         UPSTREAM_SCRAPES.inc();
 
@@ -183,7 +158,7 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
         };
 
         let graph = match cincinnati::plugins::process(
-            &configured_plugins,
+            &plugins,
             cincinnati::plugins::InternalIO {
                 graph,
                 // the plugins used in the graph-builder don't expect any parameters yet

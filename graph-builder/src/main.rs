@@ -16,6 +16,7 @@ extern crate actix;
 extern crate actix_web;
 extern crate failure;
 extern crate graph_builder;
+#[macro_use]
 extern crate log;
 extern crate structopt;
 
@@ -23,26 +24,17 @@ use graph_builder::{config, graph, metrics};
 
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
-use log::LevelFilter;
 use std::{net, thread};
-use structopt::StructOpt;
 
 fn main() -> Result<(), Error> {
     let sys = actix::System::new("graph-builder");
 
-    let opts = config::Options::from_args();
+    let opts = config::AppSettings::assemble()?;
 
     env_logger::Builder::from_default_env()
-        .filter(
-            Some(module_path!()),
-            match opts.verbosity {
-                0 => LevelFilter::Warn,
-                1 => LevelFilter::Info,
-                2 => LevelFilter::Debug,
-                _ => LevelFilter::Trace,
-            },
-        )
+        .filter(Some(module_path!()), opts.verbosity)
         .init();
+    debug!("application settings:\n{:#?}", &opts);
 
     let state = graph::State::new(opts.mandatory_client_parameters.clone());
     let addr = (opts.address, opts.port);
