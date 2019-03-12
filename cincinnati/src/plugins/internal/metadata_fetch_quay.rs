@@ -106,14 +106,16 @@ impl QuayMetadataFetchPlugin {
         repo: String,
         label_filter: String,
         manifestref_key: String,
-        api_token_path: Option<&PathBuf>,
+        api_token_path: Option<PathBuf>,
         api_base: String,
     ) -> Fallible<Self> {
-        let api_token =
-            quay::read_credentials(api_token_path).expect("could not read quay API credentials");
+        let api_token = api_token_path
+            .map(|path| quay::read_credentials(path))
+            .transpose()
+            .context("could not read quay API credentials")?;
 
         let client: quay::v1::Client = quay::v1::Client::builder()
-            .access_token(api_token.map(|s| s.to_string()))
+            .access_token(api_token)
             .api_base(Some(api_base.to_string()))
             .build()?;
 
