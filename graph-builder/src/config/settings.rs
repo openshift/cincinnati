@@ -77,6 +77,8 @@ impl AppSettings {
         };
 
         let mut plugins = cfg.plugins;
+        // TODO(lucab): drop default plugins after migration.
+        compat_hardcoded_plugins(&mut plugins);
         for plugin_cfg in &mut plugins {
             plugins::sanitize_config(plugin_cfg)?;
         }
@@ -96,4 +98,27 @@ impl AppSettings {
         };
         Ok(opts)
     }
+}
+
+// Fill-in hardcoded default plugins for retro-compatibility.
+fn compat_hardcoded_plugins(plugins: &mut Vec<HashMap<String, String>>) {
+    if !plugins.is_empty() {
+        return;
+    }
+
+    let mut quay_meta_fetch = HashMap::new();
+    quay_meta_fetch.insert("name".to_string(), "quay-metadata".to_string());
+    quay_meta_fetch.insert(
+        "repository".to_string(),
+        "openshift-release-dev/ocp-release".to_string(),
+    );
+    plugins.push(quay_meta_fetch);
+
+    let mut node_remove = HashMap::new();
+    node_remove.insert("name".to_string(), "node-remove".to_string());
+    plugins.push(node_remove);
+
+    let mut edge_add_remove = HashMap::new();
+    edge_add_remove.insert("name".to_string(), "edge-add-remove".to_string());
+    plugins.push(edge_add_remove);
 }
