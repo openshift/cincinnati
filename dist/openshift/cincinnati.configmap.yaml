@@ -9,5 +9,6 @@ data:
   gb.repository: "steveej/cincinnati-test"
   gb.log.verbosity: "vvv"
   pe.address: "0.0.0.0"
+  pe.metrics.address: "0.0.0.0"
   pe.upstream: "http://cincinnati-graph-builder.cincinnati-staging.svc:8080/v1/graph"
   pe.log.verbosity: "vvv"

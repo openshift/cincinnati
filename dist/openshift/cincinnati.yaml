@@ -96,6 +96,11 @@ objects:
                 configMapKeyRef:
                     key: pe.address
                     name: cincinnati
+            - name: PE_METRICS_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                    key: pe.metrics.address
+                    name: cincinnati
             - name: UPSTREAM
               valueFrom:
                 configMapKeyRef:
@@ -107,7 +112,7 @@ objects:
                   key: pe.log.verbosity
                   name: cincinnati
           command: ["/usr/bin/policy-engine"]
-          args: ["-$(PE_LOG_VERBOSITY)", "--address", "$(ADDRESS)", "--port", "${PE_PORT}", "--upstream", "$(UPSTREAM)", "--path-prefix", "${PE_PATH_PREFIX}"]
+          args: ["-$(PE_LOG_VERBOSITY)", "--address", "$(ADDRESS)", "--port", "${PE_PORT}", "--upstream", "$(UPSTREAM)", "--path-prefix", "${PE_PATH_PREFIX}", "--metrics_address", "$(PE_METRICS_ADDRESS)"]
           ports:
           - name: policy-engine 
             containerPort: ${{PE_PORT}}
