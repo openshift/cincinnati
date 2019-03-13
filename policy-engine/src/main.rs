@@ -80,11 +80,14 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
+/// Shared application configuration (cloned per-thread).
 #[derive(Debug, Clone)]
-pub struct AppState {
+struct AppState {
     /// Query parameters that must be present in all client requests.
     pub mandatory_params: HashSet<String>,
+    /// Upstream cincinnati service.
     pub upstream: hyper::Uri,
+    /// Common namespace for API endpoints.
     pub path_prefix: String,
 }
 
