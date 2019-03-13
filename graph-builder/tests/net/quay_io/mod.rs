@@ -8,12 +8,13 @@ extern crate url;
 use self::graph_builder::registry::{self, fetch_releases, Release};
 use self::graph_builder::release::{Metadata, MetadataKind::V0};
 use self::semver::Version;
-use net::quay_io::cincinnati::plugins::internal::metadata_fetch_quay::{
-    DEFAULT_QUAY_LABEL_FILTER, DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY,
-};
+use net::quay_io::cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY;
 use net::quay_io::graph_builder::registry::Registry;
-use net::quay_io::quay::v1::DEFAULT_API_BASE;
 use std::collections::HashMap;
+
+// TODO(steveeJ): fix and/or move this test to the plugin network tests
+//use net::quay_io::quay::v1::DEFAULT_API_BASE;
+//use net::quay_io::cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER;
 
 #[cfg(feature = "test-net-private")]
 use self::graph_builder::registry::read_credentials;
@@ -104,7 +105,7 @@ fn fetch_release_private_with_credentials_must_succeed() {
         }
     };
     let (username, password) =
-        read_credentials(credentials_path.as_ref(), registry.host().unwrap()).unwrap();
+        read_credentials(credentials_path.as_ref(), &registry.host_port_string()).unwrap();
     let mut releases = fetch_releases(
         &registry,
         &repo,
@@ -116,8 +117,7 @@ fn fetch_release_private_with_credentials_must_succeed() {
     .expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
 
-    let releases = remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
-
+    remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
     assert_eq!(expected_releases(&registry, repo, 2, 0, None), releases)
 }
 
