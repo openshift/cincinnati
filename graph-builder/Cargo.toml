@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Alex Crawford <crawford@redhat.com>"]
 
 [dependencies]
+actix = "^0.7.6"
 actix-web = "^0.7.8"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
@@ -13,7 +14,9 @@ failure = "^0.1.1"
 flate2 = "^1.0.1"
 futures = "0.1"
 itertools = "^0.7.8"
+lazy_static = "^1.2.0"
 log = "^0.4.3"
+prometheus = "^0.4.2"
 quay = { path = "../quay" }
 regex = "^1.1.0"
 reqwest = "^0.9.0"
