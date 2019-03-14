@@ -9,6 +9,8 @@ extern crate flate2;
 extern crate futures;
 extern crate itertools;
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate prometheus;
