@@ -10,6 +10,8 @@ extern crate futures;
 extern crate itertools;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate prometheus;
 extern crate quay;
 extern crate regex;
 extern crate reqwest;
@@ -25,5 +27,6 @@ extern crate tokio;
 
 pub mod config;
 pub mod graph;
+pub mod metrics;
 pub mod registry;
 pub mod release;
