@@ -660,6 +660,7 @@ dependencies = [
 name = "graph-builder"
 version = "0.1.0"
 dependencies = [
+ "actix 0.7.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-web 0.7.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "cincinnati 0.1.0",
  "commons 0.1.0",
@@ -669,7 +670,9 @@ dependencies = [
  "flate2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.7.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prometheus 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "quay 0.0.0-dev",
  "regex 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.9.8 (registry+https://github.com/rust-lang/crates.io-index)",
