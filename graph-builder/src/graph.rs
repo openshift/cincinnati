@@ -17,13 +17,44 @@ use cincinnati::{plugins, AbstractRelease, Graph, Release, CONTENT_TYPE};
 use commons::GraphError;
 use config;
 use failure::Error;
+use prometheus::{Counter, IntGauge};
 use registry::{self, Registry};
 use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use std::thread;
 
+lazy_static! {
+    static ref GRAPH_FINAL_RELEASES: IntGauge = register_int_gauge!(
+        "cincinnati_gb_graph_final_releases",
+        "Number of releases in the final graph, after processing"
+    )
+    .unwrap();
+    static ref GRAPH_UPSTREAM_RAW_RELEASES: IntGauge = register_int_gauge!(
+        "cincinnati_gb_graph_upstream_raw_releases",
+        "Number of releases fetched from upstream, before processing"
+    )
+    .unwrap();
+    static ref UPSTREAM_SCRAPES: Counter = register_counter!(
+        "cincinnati_gb_graph_upstream_scrapes_total",
+        "Total number of upstream scrapes"
+    )
+    .unwrap();
+    static ref UPSTREAM_ERRORS: Counter = register_counter!(
+        "cincinnati_gb_graph_upstream_errors_total",
+        "Total number of upstream scraping errors"
+    )
+    .unwrap();
+    static ref V1_GRAPH_INCOMING_REQS: Counter = register_counter!(
+        "cincinnati_gb_v1_graph_incoming_requests_total",
+        "Total number of incoming HTTP client request to /v1/graph"
+    )
+    .unwrap();
+}
+
 pub fn index(req: HttpRequest<State>) -> Result<HttpResponse, GraphError> {
+    V1_GRAPH_INCOMING_REQS.inc();
+
     // Check that the client can accept JSON media type.
     commons::ensure_content_type(req.headers(), CONTENT_TYPE)?;
 
@@ -113,14 +144,17 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
 
         debug!("graph update triggered");
 
-        let releases = match registry::fetch_releases(
+        let scrape = registry::fetch_releases(
             &registry,
             &opts.repository,
             username.as_ref().map(String::as_ref),
             password.as_ref().map(String::as_ref),
             &mut cache,
             &opts.quay_manifestref_key,
-        ) {
+        );
+        UPSTREAM_SCRAPES.inc();
+
+        let releases = match scrape {
             Ok(releases) => {
                 if releases.is_empty() {
                     warn!(
@@ -132,11 +166,13 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
                 releases
             }
             Err(err) => {
+                UPSTREAM_ERRORS.inc();
                 err.iter_chain()
                     .for_each(|cause| error!("failed to fetch all release metadata: {}", cause));
                 vec![]
             }
         };
+        GRAPH_UPSTREAM_RAW_RELEASES.set(releases.len() as i64);
 
         let graph = match create_graph(releases) {
             Ok(graph) => graph,
@@ -164,10 +200,9 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
         match serde_json::to_string(&graph) {
             Ok(json) => {
                 *state.json.write().expect("json lock has been poisoned") = json;
-                debug!(
-                    "graph update completed, {} valid releases",
-                    graph.releases_count()
-                );
+                let nodes_count = graph.releases_count();
+                GRAPH_FINAL_RELEASES.set(nodes_count as i64);
+                debug!("graph update completed, {} valid releases", nodes_count);
             }
             Err(err) => error!("Failed to serialize graph: {}", err),
         };

@@ -12,21 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+extern crate actix;
 extern crate actix_web;
 extern crate failure;
 extern crate graph_builder;
 extern crate log;
 extern crate structopt;
 
-use graph_builder::{config, graph};
+use graph_builder::{config, graph, metrics};
 
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
 use log::LevelFilter;
-use std::thread;
+use std::{net, thread};
 use structopt::StructOpt;
 
 fn main() -> Result<(), Error> {
+    let sys = actix::System::new("graph-builder");
+
     let opts = config::Options::from_args();
 
     env_logger::Builder::from_default_env()
@@ -50,6 +53,20 @@ fn main() -> Result<(), Error> {
         thread::spawn(move || graph::run(&opts, &state));
     }
 
+    // TODO(lucab): make these configurable.
+    let status_address: net::IpAddr = net::Ipv4Addr::UNSPECIFIED.into();
+    let status_port = 9080;
+
+    // Status service.
+    server::new(|| {
+        App::new()
+            .middleware(Logger::default())
+            .route("/metrics", Method::GET, metrics::serve)
+    })
+    .bind((status_address, status_port))?
+    .start();
+
+    // Main service.
     server::new(move || {
         let app_prefix = app_prefix.clone();
         let state = state.clone();
@@ -59,6 +76,8 @@ fn main() -> Result<(), Error> {
             .route("/v1/graph", Method::GET, graph::index)
     })
     .bind(addr)?
-    .run();
+    .start();
+
+    sys.run();
     Ok(())
 }
