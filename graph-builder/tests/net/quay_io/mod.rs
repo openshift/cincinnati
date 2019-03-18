@@ -90,6 +90,7 @@ fn remove_metadata_by_key(releases: &mut Vec<Release>, key: &str) {
 
 #[cfg(feature = "test-net-private")]
 #[test]
+#[ignore]
 fn fetch_release_private_with_credentials_must_succeed() {
     use std::path::PathBuf;
 
