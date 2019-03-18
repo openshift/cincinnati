@@ -24,7 +24,7 @@ use graph_builder::{config, graph, metrics};
 
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
-use std::{net, thread};
+use std::{thread};
 
 fn main() -> Result<(), Error> {
     let sys = actix::System::new("graph-builder");
@@ -37,7 +37,8 @@ fn main() -> Result<(), Error> {
     debug!("application settings:\n{:#?}", &opts);
 
     let state = graph::State::new(opts.mandatory_client_parameters.clone());
-    let addr = (opts.address, opts.port);
+    let service_addr = (opts.address, opts.port);
+    let status_addr = (opts.status_address, opts.status_port);
     let app_prefix = opts.path_prefix.clone();
 
     {
@@ -45,17 +46,13 @@ fn main() -> Result<(), Error> {
         thread::spawn(move || graph::run(&opts, &state));
     }
 
-    // TODO(lucab): make these configurable.
-    let status_address: net::IpAddr = net::Ipv4Addr::UNSPECIFIED.into();
-    let status_port = 9080;
-
     // Status service.
     server::new(|| {
         App::new()
             .middleware(Logger::default())
             .route("/metrics", Method::GET, metrics::serve)
     })
-    .bind((status_address, status_port))?
+    .bind(status_addr)?
     .start();
 
     // Main service.
@@ -67,7 +64,7 @@ fn main() -> Result<(), Error> {
             .prefix(app_prefix)
             .route("/v1/graph", Method::GET, graph::index)
     })
-    .bind(addr)?
+    .bind(service_addr)?
     .start();
 
     sys.run();

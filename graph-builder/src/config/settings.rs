@@ -30,6 +30,10 @@ pub struct AppSettings {
     pub registry: String,
     /// Target image for the registry scraper.
     pub repository: String,
+    /// Listening address for the status service.
+    pub status_address: IpAddr,
+    /// Listening port for the status service.
+    pub status_port: u16,
     /// Global log level.
     pub verbosity: log::LevelFilter,
 }
@@ -57,7 +61,8 @@ impl AppSettings {
 
     /// Try to validate configuration and build application settings from it.
     fn validate_config(cfg: unified::UnifiedConfig) -> Fallible<Self> {
-        let address = IpAddr::from_str(&cfg.address)?;
+        let service_address = IpAddr::from_str(&cfg.address)?;
+        let status_address = IpAddr::from_str(&cfg.status_address)?;
 
         let credentials_path = match cfg.credentials_path.as_str() {
             "" => None,
@@ -84,7 +89,7 @@ impl AppSettings {
         }
 
         let opts = Self {
-            address,
+            address: service_address,
             credentials_path,
             mandatory_client_parameters: cfg.mandatory_client_parameters,
             manifestref_key: cfg.manifestref_key,
@@ -94,6 +99,8 @@ impl AppSettings {
             port: cfg.port,
             registry: cfg.registry_url,
             repository: cfg.repository,
+            status_address,
+            status_port: cfg.status_port,
             verbosity,
         };
         Ok(opts)

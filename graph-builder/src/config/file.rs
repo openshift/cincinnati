@@ -17,6 +17,9 @@ pub struct FileOptions {
     /// Web frontend options.
     pub service: Option<ServiceOptions>,
 
+    /// Status service options.
+    pub status: Option<StatusOptions>,
+
     /// Plugins ordering and options.
     pub plugins: Option<Vec<HashMap<String, String>>>,
 }
@@ -64,6 +67,16 @@ pub struct ServiceOptions {
 
     /// Comma-separated set of mandatory client parameters.
     pub mandatory_client_parameters: Option<HashSet<String>>,
+}
+
+/// TOML configuration, status service.
+#[derive(Debug, Deserialize)]
+pub struct StatusOptions {
+    /// Address on which the status service will listen
+    pub address: Option<String>,
+
+    /// Port to which the status service will bind
+    pub port: Option<u16>,
 }
 
 /// TOML configuration, Docker-v2 registry fetcher.

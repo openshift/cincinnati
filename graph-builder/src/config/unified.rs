@@ -17,6 +17,9 @@ static DEFAULT_REGISTRY_MANIFESTREF_KEY: &str = "com.openshift.upgrades.graph.re
 static DEFAULT_REGISTRY_URL: &str = "http://localhost:5000";
 static DEFAULT_REGISTRY_REPO: &str = "openshift";
 
+static DEFAULT_STATUS_ADDR: &str = "127.0.0.1";
+static DEFAULT_STATUS_PORT: u16 = 9080;
+
 macro_rules! maybe_assign {
     ( $dst:expr, $src:expr ) => {{
         if let Some(x) = $src {
@@ -38,6 +41,8 @@ pub struct UnifiedConfig {
     pub port: u16,
     pub registry_url: String,
     pub repository: String,
+    pub status_address: String,
+    pub status_port: u16,
     pub verbosity: u8,
 }
 
@@ -54,6 +59,8 @@ impl Default for UnifiedConfig {
             port: DEFAULT_SERV_PORT,
             registry_url: DEFAULT_REGISTRY_URL.to_string(),
             repository: DEFAULT_REGISTRY_REPO.to_string(),
+            status_address: DEFAULT_STATUS_ADDR.to_string(),
+            status_port: DEFAULT_STATUS_PORT,
             verbosity: DEFAULT_VERBOSITY,
         }
     }
@@ -76,6 +83,10 @@ impl UnifiedConfig {
         if let Some(params) = cfg.service.mandatory_client_parameters {
             merged_cfg.mandatory_client_parameters = commons::parse_params_set(&params);
         }
+
+        // Status service options.
+        maybe_assign!(merged_cfg.status_address, cfg.status.address);
+        maybe_assign!(merged_cfg.status_port, cfg.status.port);
 
         // Registry upstream scraper options.
         maybe_assign!(merged_cfg.period, cfg.registry.period);
@@ -125,6 +136,12 @@ impl UnifiedConfig {
                 maybe_assign!(merged_cfg.repository, registry.repository);
                 maybe_assign!(merged_cfg.manifestref_key, registry.manifestref_key);
             }
+        }
+
+        // Status service options.
+        if let Some(status) = cfg.status {
+            maybe_assign!(merged_cfg.status_address, status.address);
+            maybe_assign!(merged_cfg.status_port, status.port);
         }
 
         // Plugins options. Order is relevant too.

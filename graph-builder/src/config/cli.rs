@@ -17,7 +17,22 @@ pub struct CliOptions {
     pub service: ServiceOptions,
 
     #[structopt(flatten)]
+    pub status: StatusOptions,
+
+    #[structopt(flatten)]
     pub registry: UpstreamRegistryOptions,
+}
+
+/// CLI configuration flags, status service.
+#[derive(Debug, StructOpt)]
+pub struct StatusOptions {
+    /// Address on which the status service will listen
+    #[structopt(long = "status.address")]
+    pub address: Option<String>,
+
+    /// Port to which the status service will bind
+    #[structopt(long = "status.port")]
+    pub port: Option<u16>,
 }
 
 /// CLI configuration flags, main Cincinnati service.
