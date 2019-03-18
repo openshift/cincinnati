@@ -39,6 +39,11 @@ objects:
                 configMapKeyRef:
                     key: gb.address
                     name: cincinnati
+            - name: STATUS_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                    key: gb.status.address
+                    name: cincinnati
             - name: REGISTRY
               valueFrom:
                 configMapKeyRef:
@@ -57,6 +62,8 @@ objects:
           args: ["-$(GB_LOG_VERBOSITY)",
                  "--service.address", "$(ADDRESS)",
                  "--service.port", "${GB_PORT}",
+                 "--status.address", "$(STATUS_ADDRESS)",
+                 "--status.port", "${GB_STATUS_PORT}",
                  "--upstream.registry.url", "$(REGISTRY)",
                  "--upstream.registry.repository", "$(REPOSITORY)",
                  "--upstream.registry.credentials_path", "/etc/secrets/registry-credentials"]
