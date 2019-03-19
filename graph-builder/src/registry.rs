@@ -249,6 +249,14 @@ pub fn fetch_releases(
         };
 
         if let Some(manifestref) = manifestref {
+            // Replace the tag specifier with the manifestref
+            release.source = {
+                let mut source_split: Vec<&str> = release.source.split(':').collect();
+                let _ = source_split.pop();
+
+                format!("{}@{}", source_split.join(":"), manifestref)
+            };
+
             // Attach the manifestref this release was found in for further processing
             release
                 .metadata
