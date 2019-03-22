@@ -12,10 +12,6 @@ use net::quay_io::cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QU
 use net::quay_io::graph_builder::registry::Registry;
 use std::collections::HashMap;
 
-// TODO(steveeJ): fix and/or move this test to the plugin network tests
-//use net::quay_io::quay::v1::DEFAULT_API_BASE;
-//use net::quay_io::cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER;
-
 #[cfg(feature = "test-net-private")]
 use self::graph_builder::registry::read_credentials;
 
@@ -29,6 +25,7 @@ fn expected_releases(
     count: usize,
     start: usize,
     metadata: Option<HashMap<usize, HashMap<String, String>>>,
+    payload_shas: Option<Vec<&str>>,
 ) -> Vec<Release> {
     use std::collections::HashMap;
 
@@ -52,7 +49,11 @@ fn expected_releases(
     });
     for i in 0..count {
         releases.push(Release {
-            source: format!("{}:0.0.{}", source_base, i + start).to_string(),
+            source: if let Some(payload_shas) = &payload_shas {
+                format!("{}@{}", source_base, payload_shas[i])
+            } else {
+                format!("{}:0.0.{}", source_base, i + start)
+            },
             metadata: Metadata {
                 kind: V0,
                 version: Version {
@@ -90,7 +91,6 @@ fn remove_metadata_by_key(releases: &mut Vec<Release>, key: &str) {
 
 #[cfg(feature = "test-net-private")]
 #[test]
-#[ignore]
 fn fetch_release_private_with_credentials_must_succeed() {
     use std::path::PathBuf;
 
@@ -119,7 +119,20 @@ fn fetch_release_private_with_credentials_must_succeed() {
     assert_eq!(2, releases.len());
 
     remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
-    assert_eq!(expected_releases(&registry, repo, 2, 0, None), releases)
+    assert_eq!(
+        expected_releases(
+            &registry,
+            repo,
+            2,
+            0,
+            None,
+            Some(vec![
+                "sha256:4a17dfe4b891de1edf7604bb51246924cb1caf93a46474603501812074665cd9",
+                "sha256:a01f4b9f291c0a687b9ff4bf904bf5f5ce57d25c2536ec5afc92393481023313",
+            ])
+        ),
+        releases
+    )
 }
 
 #[test]
@@ -164,7 +177,20 @@ fn fetch_release_public_with_first_empty_tag_must_succeed() {
         .expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
     remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
-    assert_eq!(expected_releases(&registry, repo, 2, 1, None), releases)
+    assert_eq!(
+        expected_releases(
+            &registry,
+            repo,
+            2,
+            1,
+            None,
+            Some(vec![
+                "sha256:e1f04336e1c78ae92c54a799bf6705bfe1f7edbda2f8f9c206ac1bb8f6019eb8",
+                "sha256:b5e7677333bdbfd69d749cb3a7045dd5f0ef891adb91f1f675c65ef4e8515442"
+            ])
+        ),
+        releases
+    )
 }
 
 fn expected_releases_labels_test_annoated(registry: &Registry, repo: &str) -> Vec<Release> {
@@ -208,7 +234,7 @@ fn expected_releases_labels_test_annoated(registry: &Registry, repo: &str) -> Ve
     .cloned()
     .collect();
 
-    expected_releases(registry, repo, 4, 0, Some(metadata))
+    expected_releases(registry, repo, 4, 0, Some(metadata), None)
 }
 
 #[test]
@@ -272,7 +298,20 @@ fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
         .expect("fetch_releases failed: ");
         assert_eq!(2, releases.len());
         remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
-        assert_eq!(expected_releases(&registry, repo, 2, 0, None), releases);
+        assert_eq!(
+            expected_releases(
+                &registry,
+                repo,
+                2,
+                0,
+                None,
+                Some(vec![
+                    "sha256:a264db3ac5288c9903dc3db269fca03a0b122fe4af80b57fc5087b329995013d",
+                    "sha256:73df5efa869eaf57d4125f7655e05e1a72b59d05e55fea06d3701ea5b59234ff"
+                ])
+            ),
+            releases
+        );
     };
 
     [
