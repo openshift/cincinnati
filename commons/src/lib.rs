@@ -13,13 +13,20 @@ use std::collections::HashSet;
 use url::form_urlencoded;
 
 /// Strip all but one leading slash and all trailing slashes
-pub fn parse_path_prefix(path_prefix: &str) -> String {
-    format!("/{}", path_prefix.to_string().trim_matches('/'))
+pub fn parse_path_prefix<S>(path_prefix: S) -> String
+where
+    S: AsRef<str>,
+{
+    format!("/{}", path_prefix.as_ref().to_string().trim_matches('/'))
 }
 
 /// Parse a comma-separated set of client parameters keys.
-pub fn parse_params_set(params: &str) -> HashSet<String> {
+pub fn parse_params_set<S>(params: S) -> HashSet<String>
+where
+    S: AsRef<str>,
+{
     params
+        .as_ref()
         .split(',')
         .filter_map(|key| {
             let trimmed = key.trim().to_string();
