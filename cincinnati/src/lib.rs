@@ -24,6 +24,9 @@ extern crate log;
 extern crate protobuf;
 extern crate try_from;
 extern crate url;
+#[macro_use]
+extern crate lazy_static;
+extern crate regex;
 
 pub mod plugins;
 
