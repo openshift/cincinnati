@@ -16,7 +16,7 @@ pub enum GraphError {
     #[fail(display = "invalid Content-Type requested")]
     InvalidContentType,
     #[fail(display = "mandatory client parameters missing")]
-    MissingParams,
+    MissingParams(Vec<String>),
 }
 
 impl actix_web::error::ResponseError for GraphError {
@@ -45,7 +45,7 @@ impl GraphError {
             GraphError::FailedPluginExecution(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
             GraphError::FailedUpstreamRequest => http::StatusCode::INTERNAL_SERVER_ERROR,
             GraphError::InvalidContentType => http::StatusCode::NOT_ACCEPTABLE,
-            GraphError::MissingParams => http::StatusCode::BAD_REQUEST,
+            GraphError::MissingParams(_) => http::StatusCode::BAD_REQUEST,
         }
     }
 
@@ -58,13 +58,35 @@ impl GraphError {
             GraphError::FailedPluginExecution(_) => "failed_plugin_execution",
             GraphError::FailedUpstreamRequest => "failed_upstream_request",
             GraphError::InvalidContentType => "invalid_content_type",
-            GraphError::MissingParams => "missing_params",
+            GraphError::MissingParams(_) => "missing_params",
         };
         kind.to_string()
     }
 
     // Return the value for the error.
     fn value(&self) -> String {
-        format!("{}", self)
+        let error_msg = format!("{}", self);
+        match self {
+            GraphError::MissingParams(params) => format!("{}: {}", error_msg, params.join(", ")),
+            _ => error_msg,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ensure_query_params;
+
+    #[test]
+    fn error_msg_missing_params() {
+        let expected = vec!["bar".to_string(), "foo".to_string()]
+            .into_iter()
+            .collect();
+        let err_msg = ensure_query_params(&expected, "key=value")
+            .unwrap_err()
+            .value();
+
+        assert!(err_msg.contains("bar, foo"), "unexpected: {}", err_msg);
+        assert!(!err_msg.contains("key"), "unexpected: {}", err_msg);
     }
 }

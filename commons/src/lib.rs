@@ -55,9 +55,11 @@ pub fn ensure_query_params(
         .map(|(k, _)| k)
         .collect();
 
-    // Make sure all mandatory parameters are present.
-    if !required_params.is_subset(&query_keys) {
-        return Err(GraphError::MissingParams);
+    // Make sure no mandatory parameters are missing.
+    let mut missing: Vec<String> = required_params.difference(&query_keys).cloned().collect();
+    if !missing.is_empty() {
+        missing.sort();
+        return Err(GraphError::MissingParams(missing));
     }
 
     Ok(())
@@ -122,5 +124,4 @@ mod tests {
         ensure_query_params(&simple, "").unwrap_err();
         ensure_query_params(&simple, "c=d").unwrap_err();
     }
-
 }
