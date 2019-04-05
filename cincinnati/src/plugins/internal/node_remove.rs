@@ -43,6 +43,8 @@ mod tests {
 
     #[test]
     fn ensure_release_remove() {
+        let _ = env_logger::try_init_from_env(env_logger::Env::default());
+
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "release.remove".to_string();
 
