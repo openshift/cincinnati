@@ -164,6 +164,9 @@ mod tests {
         let graph_call = graph::index(http_req);
         let resp = rt.block_on(graph_call).unwrap_err();
 
-        assert_eq!(resp, graph::GraphError::MissingParams);
+        assert_eq!(
+            resp,
+            graph::GraphError::MissingParams(vec!["id".to_string()])
+        );
     }
 }
