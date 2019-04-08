@@ -20,7 +20,7 @@ extern crate graph_builder;
 extern crate log;
 extern crate structopt;
 
-use graph_builder::{config, graph, metrics};
+use graph_builder::{config, graph, status};
 
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
@@ -50,7 +50,7 @@ fn main() -> Result<(), Error> {
     server::new(|| {
         App::new()
             .middleware(Logger::default())
-            .route("/metrics", Method::GET, metrics::serve)
+            .route("/metrics", Method::GET, status::serve_metrics)
     })
     .bind(status_addr)?
     .start();

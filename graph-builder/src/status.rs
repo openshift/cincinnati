@@ -1,12 +1,14 @@
-//! Metrics service.
+//! Status service.
 
 use actix_web::{HttpRequest, HttpResponse};
 use futures::future;
 use futures::prelude::*;
 use prometheus;
 
-/// Serve metrics requests (Prometheus textual format).
-pub fn serve(_req: HttpRequest<()>) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
+/// Expose metrics (Prometheus textual format).
+pub fn serve_metrics(
+    _req: HttpRequest<()>,
+) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
     use prometheus::Encoder;
 
     let resp = future::ok(prometheus::gather())
