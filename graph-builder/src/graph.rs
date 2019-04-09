@@ -169,7 +169,7 @@ pub fn run<'a>(opts: &'a config::Options, state: &State) -> ! {
                 UPSTREAM_ERRORS.inc();
                 err.iter_chain()
                     .for_each(|cause| error!("failed to fetch all release metadata: {}", cause));
-                vec![]
+                continue;
             }
         };
         GRAPH_UPSTREAM_RAW_RELEASES.set(releases.len() as i64);
