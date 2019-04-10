@@ -126,27 +126,13 @@ objects:
           command: ["/usr/bin/policy-engine"]
           args: ["-$(PE_LOG_VERBOSITY)", "--address", "$(ADDRESS)", "--port", "${PE_PORT}", "--upstream", "$(UPSTREAM)", "--path-prefix", "${PE_PATH_PREFIX}", "--metrics_address", "$(PE_METRICS_ADDRESS)"]
           ports:
-          - name: policy-engine 
+          - name: policy-engine
             containerPort: ${{PE_PORT}}
           - name: status-pe
             containerPort: ${{PE_STATUS_PORT}}
           livenessProbe:
-            httpGet:
-              path: ${PE_PATH_PREFIX}/v1/graph
+            tcpSocket:
               port: ${{PE_PORT}}
-              httpHeaders:
-              - name: Accept
-                value: application/json
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 3
-          readinessProbe:
-            httpGet:
-              path: ${PE_PATH_PREFIX}/v1/graph
-              port: ${{PE_PORT}}
-              httpHeaders:
-              - name: Accept
-                value: application/json
             initialDelaySeconds: 3
             periodSeconds: 10
             timeoutSeconds: 3
@@ -185,7 +171,7 @@ objects:
       app: cincinnati-policy-engine
   spec:
     ports:
-      - name: policy-engine 
+      - name: policy-engine
         protocol: TCP
         port: 80
         targetPort: ${{PE_PORT}}
