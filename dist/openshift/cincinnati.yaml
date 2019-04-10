@@ -74,11 +74,8 @@ objects:
             containerPort: ${{GB_STATUS_PORT}}
           livenessProbe:
             httpGet:
-              path: /v1/graph
-              port: ${{GB_PORT}}
-              httpHeaders:
-              - name: Accept
-                value: application/json
+              path: /liveness
+              port: ${{GB_STATUS_PORT}}
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 3

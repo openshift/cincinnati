@@ -80,9 +80,9 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(mandatory_params: HashSet<String>) -> State {
+    pub fn new(json: Arc<RwLock<String>>, mandatory_params: HashSet<String>) -> State {
         State {
-            json: Arc::new(RwLock::new(String::new())),
+            json,
             mandatory_params,
         }
     }

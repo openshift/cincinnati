@@ -20,10 +20,11 @@ extern crate graph_builder;
 extern crate log;
 extern crate structopt;
 
-use graph_builder::{config, graph, metrics};
+use graph_builder::{config, graph, status};
 
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
+use std::sync::{Arc, RwLock};
 use std::thread;
 
 fn main() -> Result<(), Error> {
@@ -36,21 +37,28 @@ fn main() -> Result<(), Error> {
         .init();
     debug!("application settings:\n{:#?}", &settings);
 
-    let state = graph::State::new(settings.mandatory_client_parameters.clone());
+    let json_graph = Arc::new(RwLock::new(String::new()));
+    let status_state = status::StatusState::new(json_graph.clone());
+    let app_state = graph::State::new(
+        json_graph.clone(),
+        settings.mandatory_client_parameters.clone(),
+    );
     let service_addr = (settings.address, settings.port);
     let status_addr = (settings.status_address, settings.status_port);
     let app_prefix = settings.path_prefix.clone();
 
     {
-        let state = state.clone();
+        let state = app_state.clone();
         thread::spawn(move || graph::run(&settings, &state));
     }
 
     // Status service.
-    server::new(|| {
-        App::new()
+    server::new(move || {
+        let state = status_state.clone();
+        App::with_state(state)
             .middleware(Logger::default())
-            .route("/metrics", Method::GET, metrics::serve)
+            .route("/liveness", Method::GET, status::serve_liveness)
+            .route("/metrics", Method::GET, status::serve_metrics)
     })
     .bind(status_addr)?
     .start();
@@ -58,7 +66,7 @@ fn main() -> Result<(), Error> {
     // Main service.
     server::new(move || {
         let app_prefix = app_prefix.clone();
-        let state = state.clone();
+        let state = app_state.clone();
         App::with_state(state)
             .middleware(Logger::default())
             .prefix(app_prefix)

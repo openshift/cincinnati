@@ -32,6 +32,6 @@ extern crate toml;
 
 pub mod config;
 pub mod graph;
-pub mod metrics;
 pub mod registry;
 pub mod release;
+pub mod status;
