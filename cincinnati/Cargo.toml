@@ -15,6 +15,7 @@ url = "^1.7.2"
 log = "^0.4.3"
 futures = "0.1"
 tokio = "0.1"
+toml = "^0.4.10"
 try_from = "0.3.2"
 
 [dev-dependencies]

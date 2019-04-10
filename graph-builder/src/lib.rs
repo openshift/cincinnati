@@ -23,9 +23,12 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
 #[macro_use]
+extern crate smart_default;
+#[macro_use]
 extern crate structopt;
 extern crate tar;
 extern crate tokio;
+extern crate toml;
 
 pub mod config;
 pub mod graph;

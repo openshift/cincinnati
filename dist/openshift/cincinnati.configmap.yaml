@@ -5,6 +5,7 @@ metadata:
 type: Opaque
 data:
   gb.address: "0.0.0.0"
+  gb.status.address: "0.0.0.0"
   gb.registry: "quay.io"
   gb.repository: "steveej/cincinnati-test"
   gb.log.verbosity: "vvv"
