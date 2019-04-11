@@ -117,8 +117,20 @@ objects:
                 configMapKeyRef:
                   key: pe.log.verbosity
                   name: cincinnati
+            - name: "PE_MANDATORY_CLIENT_PARAMETERS"
+              valueFrom:
+                configMapKeyRef:
+                  key: pe.mandatory_client_parameters
+                  name: cincinnati
           command: ["/usr/bin/policy-engine"]
-          args: ["-$(PE_LOG_VERBOSITY)", "--address", "$(ADDRESS)", "--port", "${PE_PORT}", "--upstream", "$(UPSTREAM)", "--path-prefix", "${PE_PATH_PREFIX}", "--metrics_address", "$(PE_METRICS_ADDRESS)"]
+          args: [ "-$(PE_LOG_VERBOSITY)",
+            "--address", "$(ADDRESS)",
+            "--port", "${PE_PORT}",
+            "--upstream", "$(UPSTREAM)",
+            "--path-prefix", "${PE_PATH_PREFIX}",
+            "--metrics_address", "$(PE_METRICS_ADDRESS)",
+            "--mandatory-client-parameters", "$(PE_MANDATORY_CLIENT_PARAMETERS)",
+          ]
           ports:
           - name: policy-engine
             containerPort: ${{PE_PORT}}
