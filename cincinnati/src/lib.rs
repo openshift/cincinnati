@@ -24,6 +24,9 @@ extern crate log;
 extern crate protobuf;
 extern crate try_from;
 extern crate url;
+#[macro_use]
+extern crate lazy_static;
+extern crate regex;
 
 pub mod plugins;
 
@@ -155,6 +158,30 @@ impl Graph {
         indices
             .iter()
             .try_fold((), |_, (from, to)| self.add_edge(&from, &to))
+    }
+
+    /// Returns tuples of ReleaseId and its version String for releases for which
+    /// filter_fn returns true.
+    ///
+    /// filter_fn is able to mutate the release as it receives a mutable borrow.
+    pub fn find_by_fn_mut<F>(&mut self, mut filter_fn: F) -> Vec<(ReleaseId, String)>
+    where
+        F: FnMut(&mut Release) -> bool,
+    {
+        self.dag
+            .node_weights_mut()
+            .enumerate()
+            .filter_map(|(i, nw)| {
+                if filter_fn(nw) {
+                    Some((
+                        ReleaseId(daggy::NodeIndex::from(i as u32)),
+                        nw.version().to_string(),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     /// Returns tuples of ReleaseId and its version String for releases which
@@ -717,5 +744,117 @@ mod tests {
         let graph_native_converted: Graph = graph_plugin_interface.into();
 
         assert_eq!(generate_graph(), graph_native_converted);
+    }
+
+    fn get_test_metadata_fn_mut(
+        key_prefix: &str,
+        key_suffix: &str,
+    ) -> HashMap<usize, HashMap<String, String>> {
+        [
+            (
+                0,
+                [(
+                    format!("{}.{}", &key_prefix, &key_suffix),
+                    String::from("A, C"),
+                )]
+                .iter()
+                .cloned()
+                .collect(),
+            ),
+            (
+                1,
+                [(
+                    format!("{}.{}", &key_prefix, &key_suffix),
+                    String::from("A, C"),
+                )]
+                .iter()
+                .cloned()
+                .collect(),
+            ),
+            (
+                2,
+                [(
+                    format!("{}.{}", &key_prefix, &key_suffix),
+                    String::from("B, C"),
+                )]
+                .iter()
+                .cloned()
+                .collect(),
+            ),
+            (
+                3,
+                [(
+                    format!("{}.{}", &key_prefix, &key_suffix),
+                    String::from("B, C"),
+                )]
+                .iter()
+                .cloned()
+                .collect(),
+            ),
+            (4, [].iter().cloned().collect()),
+        ]
+        .iter()
+        .cloned()
+        .collect()
+    }
+
+    #[test]
+    fn find_by_fn_mut_ensure_find_all() {
+        let metadata = get_test_metadata_fn_mut("prefix", "suffix");
+        let mut graph = generate_custom_graph(0, 4, metadata, Some(vec![]));
+
+        let expected = vec![(0, "0.0.0"), (1, "1.0.0"), (2, "2.0.0"), (3, "3.0.0")]
+            .into_iter()
+            .map(|(id, version)| {
+                (
+                    ReleaseId(daggy::NodeIndex::from(id as u32)),
+                    version.to_string(),
+                )
+            })
+            .collect::<Vec<(ReleaseId, String)>>();
+        let result = graph.find_by_fn_mut(|_| true);
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn find_by_fn_mut_ensure_mutate_metadata() {
+        let (prefix, suffix) = ("prefix", "suffix");
+        let metadata = get_test_metadata_fn_mut(&prefix, &suffix);
+        let mut graph = generate_custom_graph(0, 4, metadata, Some(vec![]));
+
+        let expected = vec![(0, "0.0.0"), (1, "1.0.0"), (2, "2.0.0"), (3, "3.0.0")]
+            .into_iter()
+            .map(|(id, version)| {
+                (
+                    ReleaseId(daggy::NodeIndex::from(id as u32)),
+                    version.to_string(),
+                )
+            })
+            .collect::<Vec<(ReleaseId, String)>>();
+
+        let metadata_key = format!("{}.{}", &prefix, &suffix);
+        let expected_metadata_value = "changed";
+
+        let result = graph.find_by_fn_mut(|release| match release {
+            Release::Concrete(concrete_release) => {
+                *concrete_release.metadata.get_mut(&metadata_key).unwrap() =
+                    expected_metadata_value.to_string();
+                true
+            }
+            _ => true,
+        });
+
+        assert_eq!(expected, result);
+
+        result.into_iter().for_each(|(release_id, _)| {
+            assert_eq!(
+                graph
+                    .get_metadata_as_ref_mut(&release_id)
+                    .unwrap()
+                    .get(&metadata_key)
+                    .unwrap(),
+                expected_metadata_value
+            )
+        });
     }
 }

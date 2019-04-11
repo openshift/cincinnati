@@ -2,6 +2,9 @@
 
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
+use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
+use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER;
+use cincinnati::plugins::InternalPluginWrapper;
 use cincinnati::{plugins, Graph, CONTENT_TYPE};
 use commons::{self, GraphError};
 use futures::{future, Future, Stream};
@@ -59,7 +62,11 @@ pub(crate) fn index(
 
     let configured_plugins: Vec<Box<plugins::Plugin<plugins::PluginIO>>> = {
         // TODO(steveeJ): actually make this vec configurable
-        vec![]
+        vec![Box::new(InternalPluginWrapper(ChannelFilterPlugin {
+            // TODO(steveej): make this configurable
+            key_prefix: String::from(DEFAULT_QUAY_LABEL_FILTER),
+            key_suffix: String::from("release.channels"),
+        }))]
     };
 
     let plugin_params = req.query().to_owned();
