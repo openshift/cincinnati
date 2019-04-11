@@ -59,6 +59,7 @@ fn main() -> Result<(), Error> {
             .middleware(Logger::default())
             .route("/liveness", Method::GET, status::serve_liveness)
             .route("/metrics", Method::GET, status::serve_metrics)
+            .route("/readiness", Method::GET, status::serve_readiness)
     })
     .bind(status_addr)?
     .start();
