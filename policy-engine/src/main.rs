@@ -16,7 +16,6 @@ extern crate hyper;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-#[macro_use]
 extern crate prometheus;
 extern crate semver;
 extern crate serde;
@@ -50,6 +49,7 @@ fn main() -> Result<(), Error> {
     debug!("application settings:\n{:#?}", &settings);
 
     // Metrics service.
+    graph::register_metrics(&metrics::PROM_REGISTRY)?;
     server::new(|| {
         App::new()
             .middleware(Logger::default())
