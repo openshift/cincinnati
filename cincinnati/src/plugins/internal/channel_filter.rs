@@ -3,13 +3,44 @@
 //! and the value must match the regex specified at CHANNEL_VALIDATION_REGEX_STR
 
 use failure::Fallible;
-use plugins::{InternalIO, InternalPlugin};
+use plugins::{
+    InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
+};
 
+static DEFAULT_KEY_FILTER: &str = "com.openshift.upgrades.graph";
+static DEFAULT_CHANNEL_KEY: &str = "release.channels";
+
+#[derive(Clone, Debug, Deserialize, SmartDefault)]
+#[serde(default)]
 pub struct ChannelFilterPlugin {
+    #[default(DEFAULT_KEY_FILTER.to_string())]
     pub key_prefix: String,
+
+    #[default(DEFAULT_CHANNEL_KEY.to_string())]
     pub key_suffix: String,
 }
 
+impl PluginSettings for ChannelFilterPlugin {
+    fn build_plugin(&self) -> Fallible<Box<Plugin<PluginIO>>> {
+        Ok(Box::new(InternalPluginWrapper(self.clone())))
+    }
+}
+
+impl ChannelFilterPlugin {
+    pub(crate) const PLUGIN_NAME: &'static str = "channel-filter";
+
+    /// Validate plugin configuration and fill in defaults.
+    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<PluginSettings>> {
+        let plugin: Self = cfg.try_into()?;
+
+        ensure!(!plugin.key_prefix.is_empty(), "empty channel-key prefix");
+        ensure!(!plugin.key_suffix.is_empty(), "empty channel-key suffix");
+
+        Ok(Box::new(plugin))
+    }
+}
+
+/// Regex for channel label validation.
 static CHANNEL_VALIDATION_REGEX_STR: &str = r"^[0-9a-z\-\.]+$";
 
 lazy_static! {

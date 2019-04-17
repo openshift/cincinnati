@@ -2,10 +2,17 @@
 
 use crate as cincinnati;
 use failure::Fallible;
-use plugins::{InternalIO, InternalPlugin};
+use plugins::{
+    InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
+};
 use ReleaseId;
 
+static DEFAULT_KEY_FILTER: &str = "com.openshift.upgrades.graph";
+
+#[derive(Clone, Debug, Deserialize, SmartDefault)]
+#[serde(default)]
 pub struct EdgeAddRemovePlugin {
+    #[default(DEFAULT_KEY_FILTER.to_string())]
     pub key_prefix: String,
 }
 
@@ -21,10 +28,28 @@ impl InternalPlugin for EdgeAddRemovePlugin {
     }
 }
 
+impl PluginSettings for EdgeAddRemovePlugin {
+    fn build_plugin(&self) -> Fallible<Box<Plugin<PluginIO>>> {
+        Ok(Box::new(InternalPluginWrapper(self.clone())))
+    }
+}
+
 /// Adds and removes next and previous releases to/from quay labels
 ///
 /// The labels are assumed to have the syntax `<prefix>.(previous|next).(remove|add)=(<Version>,)*<Version>`
 impl EdgeAddRemovePlugin {
+    /// Plugin name, for configuration.
+    pub(crate) const PLUGIN_NAME: &'static str = "edge-add-remove";
+
+    /// Validate plugin configuration and fill in defaults.
+    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<PluginSettings>> {
+        let plugin: Self = cfg.try_into()?;
+
+        ensure!(!plugin.key_prefix.is_empty(), "empty prefix");
+
+        Ok(Box::new(plugin))
+    }
+
     /// Remove next and previous releases from quay labels
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).remove=(<Version>,)*<Version>`

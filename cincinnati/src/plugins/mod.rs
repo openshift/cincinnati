@@ -3,10 +3,13 @@
 
 #[macro_use]
 pub mod macros;
+
+mod catalog;
 pub mod external;
 pub mod interface;
 pub mod internal;
 
+pub use self::catalog::{deserialize_config, PluginSettings};
 use crate as cincinnati;
 use failure::{Error, Fallible, ResultExt};
 use plugins::interface::{PluginError, PluginExchange};
