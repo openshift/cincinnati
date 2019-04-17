@@ -53,6 +53,7 @@ fn main() -> Result<(), Error> {
     }
 
     // Status service.
+    graph::register_metrics(&status::PROM_REGISTRY)?;
     server::new(move || {
         let state = status_state.clone();
         App::with_state(state)

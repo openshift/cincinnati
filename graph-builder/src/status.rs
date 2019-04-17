@@ -6,6 +6,16 @@ use futures::prelude::*;
 use prometheus;
 use std::sync::{Arc, RwLock};
 
+/// Common prefix for graph-builder metrics.
+static GB_METRICS_PREFIX: &str = "cincinnati_gb";
+
+lazy_static! {
+    /// Metrics registry.
+    pub static ref PROM_REGISTRY: prometheus::Registry =
+        prometheus::Registry::new_custom(Some(GB_METRICS_PREFIX.to_string()), None)
+            .expect("could not create metrics registry");
+}
+
 /// State for the status service.
 #[derive(Clone)]
 pub struct StatusState {
@@ -49,7 +59,7 @@ pub fn serve_metrics(
 ) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
     use prometheus::Encoder;
 
-    let resp = future::ok(prometheus::gather())
+    let resp = future::ok(PROM_REGISTRY.gather())
         .and_then(|metrics| {
             let tenc = prometheus::TextEncoder::new();
             let mut buf = vec![];

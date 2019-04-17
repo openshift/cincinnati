@@ -13,7 +13,6 @@ extern crate itertools;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-#[macro_use]
 extern crate prometheus;
 extern crate quay;
 extern crate regex;
