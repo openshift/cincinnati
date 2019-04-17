@@ -54,6 +54,7 @@ lazy_static! {
 
 /// Register relevant metrics to a prometheus registry.
 pub fn register_metrics(registry: &prometheus::Registry) -> Fallible<()> {
+    commons::register_metrics(&registry)?;
     registry.register(Box::new(GRAPH_FINAL_RELEASES.clone()))?;
     registry.register(Box::new(GRAPH_UPSTREAM_RAW_RELEASES.clone()))?;
     registry.register(Box::new(UPSTREAM_ERRORS.clone()))?;

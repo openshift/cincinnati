@@ -7,6 +7,9 @@ extern crate actix_web;
 extern crate failure;
 extern crate serde;
 #[macro_use]
+extern crate lazy_static;
+extern crate prometheus;
+#[macro_use]
 extern crate serde_json;
 extern crate url;
 
@@ -16,7 +19,7 @@ pub use config::MergeOptions;
 pub mod de;
 
 mod errors;
-pub use errors::GraphError;
+pub use errors::{register_metrics, GraphError};
 
 use actix_web::http::header;
 use std::collections::HashSet;

@@ -30,11 +30,6 @@ lazy_static! {
         "Total number of incoming HTTP client request to /v1/graph"
     )
     .unwrap();
-    static ref V1_GRAPH_BAD_REQS: Counter = Counter::new(
-        "v1_graph_incoming_bad_requests_total",
-        "Total number of incoming bad HTTP client request to /v1/graph"
-    )
-    .unwrap();
     static ref V1_GRAPH_SERVE_HIST: Histogram = Histogram::with_opts(HistogramOpts::new(
         "v1_graph_serve_duration_seconds",
         "HTTP graph serving latency in seconds"
@@ -44,8 +39,8 @@ lazy_static! {
 
 /// Register relevant metrics to a prometheus registry.
 pub(crate) fn register_metrics(registry: &Registry) -> Fallible<()> {
+    commons::register_metrics(&registry)?;
     registry.register(Box::new(V1_GRAPH_INCOMING_REQS.clone()))?;
-    registry.register(Box::new(V1_GRAPH_BAD_REQS.clone()))?;
     registry.register(Box::new(HTTP_UPSTREAM_REQS.clone()))?;
     registry.register(Box::new(HTTP_UPSTREAM_UNREACHABLE.clone()))?;
     registry.register(Box::new(V1_GRAPH_SERVE_HIST.clone()))?;
@@ -60,14 +55,12 @@ pub(crate) fn index(
 
     // Check that the client can accept JSON media type.
     if let Err(e) = commons::ensure_content_type(req.headers(), CONTENT_TYPE) {
-        V1_GRAPH_BAD_REQS.inc();
         return Box::new(future::err(e));
     }
 
     // Check for required client parameters.
     let mandatory_params = &req.state().mandatory_params;
     if let Err(e) = commons::ensure_query_params(mandatory_params, req.query_string()) {
-        V1_GRAPH_BAD_REQS.inc();
         return Box::new(future::err(e));
     }
 

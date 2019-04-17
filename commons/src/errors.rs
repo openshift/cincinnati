@@ -1,5 +1,21 @@
 use actix_web::http;
 use actix_web::HttpResponse;
+use failure::Fallible;
+use prometheus::{IntCounterVec, Opts, Registry};
+
+lazy_static! {
+    static ref V1_GRAPH_ERRORS: IntCounterVec = IntCounterVec::new(
+        Opts::new("v1_graph_errors_total", "Errors on /v1/graph"),
+        &["kind"]
+    )
+    .unwrap();
+}
+
+/// Register relevant metrics to a prometheus registry.
+pub fn register_metrics(registry: &Registry) -> Fallible<()> {
+    registry.register(Box::new(V1_GRAPH_ERRORS.clone()))?;
+    Ok(())
+}
 
 #[derive(Debug, Fail, Eq, PartialEq)]
 /// Error that can be returned by `/v1/graph` endpoint.
@@ -35,6 +51,8 @@ pub enum GraphError {
 
 impl actix_web::error::ResponseError for GraphError {
     fn error_response(&self) -> HttpResponse {
+        let kind = self.kind();
+        V1_GRAPH_ERRORS.with_label_values(&[&kind]).inc();
         self.as_json_error()
     }
 }
