@@ -1,7 +1,8 @@
 //! TOML file configuration options.
 
 use super::options;
-use super::{AppSettings, MergeOptions};
+use super::AppSettings;
+use commons::MergeOptions;
 use failure::{Fallible, ResultExt};
 use std::io::Read;
 use std::{fs, io, path};
@@ -93,7 +94,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::FileOptions;
-    use crate::config::{AppSettings, MergeOptions};
+    use crate::config::AppSettings;
+    use commons::MergeOptions;
 
     #[test]
     fn toml_basic() {

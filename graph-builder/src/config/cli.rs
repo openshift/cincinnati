@@ -1,7 +1,8 @@
 //! Command-line options.
 
 use super::options;
-use super::{AppSettings, MergeOptions};
+use super::AppSettings;
+use commons::MergeOptions;
 
 /// CLI configuration flags, top-level.
 #[derive(Debug, StructOpt)]
@@ -55,7 +56,8 @@ impl MergeOptions<CliOptions> for AppSettings {
 #[cfg(test)]
 mod tests {
     use super::CliOptions;
-    use crate::config::{AppSettings, MergeOptions};
+    use crate::config::AppSettings;
+    use commons::MergeOptions;
     use structopt::StructOpt;
 
     #[test]

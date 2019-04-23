@@ -1,5 +1,5 @@
-use super::MergeOptions;
 use super::{cli, file};
+use commons::MergeOptions;
 use failure::Fallible;
 use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr};

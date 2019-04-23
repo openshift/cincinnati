@@ -5,6 +5,9 @@ extern crate failure;
 extern crate serde_json;
 extern crate url;
 
+mod config;
+pub use config::MergeOptions;
+
 mod errors;
 pub use errors::GraphError;
 

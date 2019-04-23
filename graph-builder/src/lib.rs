@@ -1,5 +1,6 @@
 extern crate actix_web;
 extern crate cincinnati;
+#[macro_use]
 extern crate commons;
 extern crate dkregistry;
 extern crate env_logger;

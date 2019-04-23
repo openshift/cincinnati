@@ -1,7 +1,7 @@
 //! Options shared by CLI and TOML.
 
-use super::{AppSettings, MergeOptions};
-use commons::{parse_params_set, parse_path_prefix};
+use super::AppSettings;
+use commons::{parse_params_set, parse_path_prefix, MergeOptions};
 use std::collections::HashSet;
 use std::net::IpAddr;
 use std::path::PathBuf;
