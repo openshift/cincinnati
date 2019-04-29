@@ -1,5 +1,8 @@
 FROM centos:7 as builder
 
+# base: EPEL repo for extra tools
+RUN yum -y install epel-release
+
 # build: system utilities and libraries
 RUN yum -y groupinstall 'Development Tools'
 RUN yum -y install openssl-devel
