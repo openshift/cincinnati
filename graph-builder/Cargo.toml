@@ -8,7 +8,8 @@ actix = "^0.7.6"
 actix-web = "^0.7.8"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
-dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "a10c1aba444ce5c07e113c81160eb67c9711e327" }
+dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "eb6349f2b99cd3dbd681d18d692a8c69e2e7b339" }
+
 env_logger = "^0.6.0"
 failure = "^0.1.1"
 flate2 = "^1.0.1"
