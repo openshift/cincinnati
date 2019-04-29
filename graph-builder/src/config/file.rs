@@ -2,6 +2,7 @@
 
 use super::options;
 use super::AppSettings;
+use commons::de::de_loglevel;
 use commons::MergeOptions;
 use failure::{Fallible, ResultExt};
 use std::io::Read;
@@ -73,22 +74,6 @@ impl MergeOptions<Option<UpstreamOptions>> for AppSettings {
             self.merge(upstream.registry);
         }
     }
-}
-
-pub fn de_loglevel<'de, D>(deserializer: D) -> Result<Option<log::LevelFilter>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    use serde::Deserialize;
-    let numlevel = u8::deserialize(deserializer)?;
-
-    let verbosity = match numlevel {
-        0 => log::LevelFilter::Warn,
-        1 => log::LevelFilter::Info,
-        2 => log::LevelFilter::Debug,
-        _ => log::LevelFilter::Trace,
-    };
-    Ok(Some(verbosity))
 }
 
 #[cfg(test)]
