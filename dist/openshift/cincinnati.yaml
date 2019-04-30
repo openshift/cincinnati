@@ -127,12 +127,13 @@ objects:
               command: ["/usr/bin/policy-engine"]
               args: [
                 "-$(PE_LOG_VERBOSITY)",
-                "--address", "$(ADDRESS)",
-                "--port", "${PE_PORT}",
-                "--upstream", "$(UPSTREAM)",
-                "--path-prefix", "${PE_PATH_PREFIX}",
-                "--metrics_address", "$(PE_METRICS_ADDRESS)",
-                "--mandatory-client-parameters", "$(PE_MANDATORY_CLIENT_PARAMETERS)",
+                "--service.address", "$(ADDRESS)",
+                "--service.mandatory_client_parameters", "$(PE_MANDATORY_CLIENT_PARAMETERS)",
+                "--service.path_prefix", "${PE_PATH_PREFIX}",
+                "--service.port", "${PE_PORT}",
+                "--status.address", "$(PE_METRICS_ADDRESS)",
+                "--status.port", "${PE_METRICS_PORT}",
+                "--upstream.cincinnati.url", "$(UPSTREAM)",
               ]
               ports:
                 - name: policy-engine
