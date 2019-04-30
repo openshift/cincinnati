@@ -1,78 +1,62 @@
+//! Application settings for policy-engine.
+
 use super::{cli, file};
 use commons::MergeOptions;
 use failure::Fallible;
+use hyper::Uri;
 use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr};
-use std::path::PathBuf;
-use std::time;
 use structopt::StructOpt;
+
+/// Default URL to upstream graph provider.
+pub static DEFAULT_UPSTREAM_URL: &str = "http://localhost:8080/v1/graph";
 
 /// Runtime application settings (validated config).
 #[derive(Debug, SmartDefault)]
 pub struct AppSettings {
+    /// Global log level.
+    #[default(log::LevelFilter::Warn)]
+    pub verbosity: log::LevelFilter,
+
+    /// URL for the upstream graph builder or policy engine
+    #[default(Uri::from_static(DEFAULT_UPSTREAM_URL))]
+    pub upstream: Uri,
+
     /// Listening address for the main service.
     #[default(IpAddr::V4(Ipv4Addr::LOCALHOST))]
     pub address: IpAddr,
 
-    /// Optional auth secrets for the registry scraper.
-    pub credentials_path: Option<PathBuf>,
-
-    /// Required client parameters for the main service.
-    pub mandatory_client_parameters: HashSet<String>,
-
-    /// Metadata key where to record the manifest-reference.
-    #[default("com.openshift.upgrades.graph.release.manifestref")]
-    pub manifestref_key: String,
-
-    /// Endpoints namespace for the main service.
-    pub path_prefix: String,
-
-    /// Pause (in seconds) between registry scrapes.
-    #[default(time::Duration::from_secs(30))]
-    pub pause_secs: time::Duration,
-
     /// Listening port for the main service.
-    #[default(8080)]
+    #[default(8081)]
     pub port: u16,
-
-    // TODO(lucab): split this in (TLS, hostname+port).
-    /// Target host for the registry scraper.
-    #[default("http://localhost:5000")]
-    pub registry: String,
-
-    /// Target image for the registry scraper.
-    #[default("openshift")]
-    pub repository: String,
 
     /// Listening address for the status service.
     #[default(IpAddr::V4(Ipv4Addr::LOCALHOST))]
     pub status_address: IpAddr,
 
     /// Listening port for the status service.
-    #[default(9080)]
+    #[default(9081)]
     pub status_port: u16,
 
-    /// Global log level.
-    #[default(log::LevelFilter::Warn)]
-    pub verbosity: log::LevelFilter,
+    /// Endpoints namespace for the main service.
+    pub path_prefix: String,
 
-    // TODO(lucab): drop this when plugins are configurable.
-    /// Disable quay-metadata (Satellite compat).
-    #[default(false)]
-    pub disable_quay_api_metadata: bool,
+    /// Required client parameters for the main service.
+    pub mandatory_client_parameters: HashSet<String>,
 }
 
 impl AppSettings {
     /// Lookup all optional configs, merge them with defaults, and
     /// transform into valid runtime settings.
     pub fn assemble() -> Fallible<Self> {
+        let defaults = Self::default();
+
         // Source options.
         let cli_opts = cli::CliOptions::from_args();
         let file_opts = match &cli_opts.config_path {
             Some(ref path) => Some(file::FileOptions::read_filepath(path)?),
             None => None,
         };
-        let defaults = Self::default();
 
         // Combine options into a single config.
         let mut cfg = defaults;
@@ -85,8 +69,8 @@ impl AppSettings {
 
     /// Validate and build runtime settings.
     fn try_validate(self) -> Fallible<Self> {
-        if self.pause_secs.as_secs() == 0 {
-            bail!("unexpected 0s pause");
+        if self.address == self.status_address && self.port == self.status_port {
+            bail!("main and status service configured with the same address and port");
         }
 
         Ok(self)

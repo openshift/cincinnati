@@ -64,14 +64,14 @@ pub struct UpstreamOptions {
     /// Fetcher method.
     pub method: Option<String>,
 
-    /// Docker-registry-v2 upstream options.
-    pub registry: Option<options::DockerRegistryOptions>,
+    /// Cincinnati upstream options.
+    pub cincinnati: Option<options::UpCincinnatiOptions>,
 }
 
 impl MergeOptions<Option<UpstreamOptions>> for AppSettings {
     fn merge(&mut self, opts: Option<UpstreamOptions>) -> () {
         if let Some(upstream) = opts {
-            self.merge(upstream.registry);
+            self.merge(upstream.cincinnati);
         }
     }
 }
@@ -84,23 +84,18 @@ mod tests {
 
     #[test]
     fn toml_basic() {
-        let toml_input = "[upstream.registry]\npause_secs=25";
+        let url = hyper::Uri::from_static("https://example.com/foo");
+        let toml_input = "[upstream.cincinnati]\nurl='https://example.com/foo'";
         let file_opts: FileOptions = toml::from_str(toml_input).unwrap();
 
-        let pause = file_opts
-            .upstream
-            .unwrap()
-            .registry
-            .unwrap()
-            .pause_secs
-            .unwrap();
-        assert_eq!(pause, std::time::Duration::from_secs(25));
+        let pause = file_opts.upstream.unwrap().cincinnati.unwrap().url.unwrap();
+        assert_eq!(pause, url);
     }
 
     #[test]
     fn toml_merge_settings() {
         let mut settings = AppSettings::default();
-        assert_eq!(settings.status_port, 9080);
+        assert_eq!(settings.status_port, 9081);
 
         let toml_input = "status.port = 2222";
         let file_opts: FileOptions = toml::from_str(toml_input).unwrap();
@@ -111,15 +106,15 @@ mod tests {
 
     #[test]
     fn toml_sample_config() {
+        let input_url = hyper::Uri::from_static("https://example.com");
         let filepath = "tests/fixtures/sample-config.toml";
         let opts = FileOptions::read_filepath(filepath).unwrap();
 
         assert_eq!(opts.verbosity, Some(log::LevelFilter::Trace));
         assert!(opts.service.is_some());
 
-        let ups_registry = opts.upstream.unwrap().registry.unwrap();
-        assert!(ups_registry.credentials_path.is_none());
-        let repo = ups_registry.repository.unwrap();
-        assert_eq!(repo, "openshift-release-dev/ocp-release");
+        let ups = opts.upstream.unwrap().cincinnati.unwrap();
+        let ups_url = ups.url.unwrap();
+        assert_eq!(ups_url, input_url);
     }
 }

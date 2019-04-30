@@ -1,9 +1,15 @@
 extern crate actix_web;
 #[macro_use]
 extern crate failure;
+extern crate serde;
 #[macro_use]
 extern crate serde_json;
 extern crate url;
+
+mod config;
+pub use config::MergeOptions;
+
+pub mod de;
 
 mod errors;
 pub use errors::GraphError;

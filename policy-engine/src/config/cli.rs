@@ -1,4 +1,4 @@
-//! Command-line options.
+//! Command-line options for policy-engine.
 
 use super::options;
 use super::AppSettings;
@@ -9,15 +9,11 @@ use commons::MergeOptions;
 pub struct CliOptions {
     /// Verbosity level
     #[structopt(short = "v", parse(from_occurrences))]
-    pub verbosity: u8,
+    pub verbosity: u64,
 
     /// Path to configuration file
     #[structopt(short = "c")]
     pub config_path: Option<String>,
-
-    // TODO(lucab): drop this when plugins are configurable.
-    #[structopt(long = "disable_quay_api_metadata")]
-    pub disable_quay_api_metadata: Option<bool>,
 
     #[structopt(flatten)]
     pub service: options::ServiceOptions,
@@ -30,7 +26,7 @@ pub struct CliOptions {
     pub upstream_method: Option<String>,
 
     #[structopt(flatten)]
-    pub upstream_registry: options::DockerRegistryOptions,
+    pub upstream_cincinnati: options::UpCincinnatiOptions,
 }
 
 impl MergeOptions<CliOptions> for AppSettings {
@@ -43,13 +39,7 @@ impl MergeOptions<CliOptions> for AppSettings {
         };
         self.merge(Some(opts.service));
         self.merge(Some(opts.status));
-        self.merge(Some(opts.upstream_registry));
-
-        // TODO(lucab): drop this when plugins are configurable.
-        assign_if_some!(
-            self.disable_quay_api_metadata,
-            opts.disable_quay_api_metadata
-        );
+        self.merge(Some(opts.upstream_cincinnati));
     }
 }
 
@@ -78,17 +68,21 @@ mod tests {
 
     #[test]
     fn cli_merge_settings() {
-        let repo = "cincinnati/cli-test";
+        let upstream = "https://example.com";
+        let up_url = hyper::Uri::from_static(upstream);
 
         let mut settings = AppSettings::default();
-        assert_eq!(settings.repository, "openshift".to_string());
+        assert_eq!(
+            settings.upstream,
+            hyper::Uri::from_static("http://localhost:8080/v1/graph")
+        );
 
-        let args = vec!["argv0", "--upstream.registry.repository", repo];
+        let args = vec!["argv0", "--upstream.cincinnati.url", upstream];
         let cli = CliOptions::from_iter_safe(args).unwrap();
-        assert_eq!(cli.upstream_registry.repository, Some(repo.to_string()));
+        assert_eq!(cli.upstream_cincinnati.url, Some(up_url.clone()));
 
         settings.merge(cli);
-        assert_eq!(settings.repository, repo.to_string());
+        assert_eq!(settings.upstream, up_url);
     }
 
     #[test]

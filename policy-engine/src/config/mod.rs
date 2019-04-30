@@ -12,3 +12,4 @@ mod options;
 mod settings;
 
 pub use self::settings::AppSettings;
+pub use self::settings::DEFAULT_UPSTREAM_URL;

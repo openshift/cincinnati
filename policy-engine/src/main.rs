@@ -3,6 +3,7 @@
 extern crate actix;
 extern crate actix_web;
 extern crate cincinnati;
+#[macro_use]
 extern crate commons;
 extern crate env_logger;
 #[macro_use]
@@ -16,7 +17,12 @@ extern crate log;
 #[macro_use]
 extern crate prometheus;
 extern crate semver;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 extern crate serde_json;
+#[macro_use]
+extern crate smart_default;
 #[macro_use]
 extern crate structopt;
 extern crate openapiv3;
@@ -29,25 +35,17 @@ mod openapi;
 
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
-use log::LevelFilter;
 use std::collections::HashSet;
-use structopt::StructOpt;
 
 fn main() -> Result<(), Error> {
     let sys = actix::System::new("policy-engine");
-    let opts = config::Options::from_args();
+
+    let settings = config::AppSettings::assemble()?;
 
     env_logger::Builder::from_default_env()
-        .filter(
-            Some(module_path!()),
-            match opts.verbosity {
-                0 => LevelFilter::Warn,
-                1 => LevelFilter::Info,
-                2 => LevelFilter::Debug,
-                _ => LevelFilter::Trace,
-            },
-        )
+        .filter(Some(module_path!()), settings.verbosity)
         .init();
+    debug!("application settings:\n{:#?}", &settings);
 
     // Metrics service.
     server::new(|| {
@@ -55,14 +53,14 @@ fn main() -> Result<(), Error> {
             .middleware(Logger::default())
             .route("/metrics", Method::GET, metrics::serve)
     })
-    .bind((opts.metrics_address, opts.metrics_port))?
+    .bind((settings.status_address, settings.status_port))?
     .start();
 
     // Main service.
     let state = AppState {
-        mandatory_params: opts.mandatory_client_parameters.clone(),
-        upstream: opts.upstream.clone(),
-        path_prefix: opts.path_prefix.clone(),
+        mandatory_params: settings.mandatory_client_parameters.clone(),
+        upstream: settings.upstream.clone(),
+        path_prefix: settings.path_prefix.clone(),
     };
 
     server::new(move || {
@@ -73,7 +71,7 @@ fn main() -> Result<(), Error> {
             .route("/v1/graph", Method::GET, graph::index)
             .route("/v1/openapi", Method::GET, openapi::index)
     })
-    .bind((opts.address, opts.port))?
+    .bind((settings.address, settings.port))?
     .start();
 
     sys.run();
