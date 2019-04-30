@@ -132,7 +132,7 @@ objects:
                 "--service.path_prefix", "${PE_PATH_PREFIX}",
                 "--service.port", "${PE_PORT}",
                 "--status.address", "$(PE_METRICS_ADDRESS)",
-                "--status.port", "${PE_METRICS_PORT}",
+                "--status.port", "${PE_STATUS_PORT}",
                 "--upstream.cincinnati.url", "$(UPSTREAM)",
               ]
               ports:
