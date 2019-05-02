@@ -104,10 +104,10 @@ objects:
                     configMapKeyRef:
                       key: pe.address
                       name: cincinnati
-                - name: PE_METRICS_ADDRESS
+                - name: PE_STATUS_ADDRESS
                   valueFrom:
                     configMapKeyRef:
-                      key: pe.metrics.address
+                      key: pe.status.address
                       name: cincinnati
                 - name: UPSTREAM
                   valueFrom:
@@ -131,7 +131,7 @@ objects:
                 "--service.mandatory_client_parameters", "$(PE_MANDATORY_CLIENT_PARAMETERS)",
                 "--service.path_prefix", "${PE_PATH_PREFIX}",
                 "--service.port", "${PE_PORT}",
-                "--status.address", "$(PE_METRICS_ADDRESS)",
+                "--status.address", "$(PE_STATUS_ADDRESS)",
                 "--status.port", "${PE_STATUS_PORT}",
                 "--upstream.cincinnati.url", "$(UPSTREAM)",
               ]
