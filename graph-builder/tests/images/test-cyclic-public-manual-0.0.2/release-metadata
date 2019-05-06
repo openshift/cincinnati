@@ -1,6 +1,5 @@
 {
 	"kind": "cincinnati-metadata-v0",
-	"schema": 1,
 	"version": "0.0.2",
 	"previous": ["0.0.1"],
 	"next": ["0.0.1"],
