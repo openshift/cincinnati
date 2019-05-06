@@ -38,6 +38,8 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::collections::HashMap;
 use std::{collections, fmt};
 
+pub use daggy::WouldCycle;
+
 pub const CONTENT_TYPE: &str = "application/json";
 const EXPECT_NODE_WEIGHT: &str = "all exisitng nodes to have a weight (release)";
 
@@ -94,7 +96,7 @@ impl<'a> Iterator for NextReleases<'a> {
 }
 
 #[derive(Debug, Clone)]
-struct Empty;
+pub struct Empty;
 
 impl Graph {
     pub fn add_release<R>(&mut self, release: R) -> Result<ReleaseId, Error>
