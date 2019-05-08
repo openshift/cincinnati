@@ -26,6 +26,7 @@ pub struct FileOptions {
 }
 
 impl FileOptions {
+    /// Parse a TOML configuration from path.
     pub fn read_filepath<P>(cfg_path: P) -> Fallible<Self>
     where
         P: AsRef<path::Path>,

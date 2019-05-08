@@ -15,16 +15,19 @@ pub struct CliOptions {
     #[structopt(short = "c")]
     pub config_path: Option<String>,
 
+    // Status service options
     #[structopt(flatten)]
     pub service: options::ServiceOptions,
 
+    // Main service options
     #[structopt(flatten)]
     pub status: options::StatusOptions,
 
-    /// Fetcher method.
+    /// Upstream method
     #[structopt(long = "upstream.method")]
     pub upstream_method: Option<String>,
 
+    // Cincinnati upstream options
     #[structopt(flatten)]
     pub upstream_cincinnati: options::UpCincinnatiOptions,
 }
