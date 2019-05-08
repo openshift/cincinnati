@@ -1,5 +1,7 @@
 //! Cincinnati backend: policy-engine server.
 
+#![deny(missing_docs)]
+
 extern crate actix;
 extern crate actix_web;
 extern crate cincinnati;

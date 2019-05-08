@@ -79,6 +79,7 @@ impl MergeOptions<Option<UpCincinnatiOptions>> for AppSettings {
     }
 }
 
+/// Parse a URI from a string.
 pub fn uri_from_str<S>(input: S) -> failure::Fallible<hyper::Uri>
 where
     S: AsRef<str>,
@@ -87,6 +88,7 @@ where
     Ok(uri)
 }
 
+/// Deserialize a URI from a string value.
 pub fn de_uri<'de, D>(deserializer: D) -> Result<Option<hyper::Uri>, D::Error>
 where
     D: serde::Deserializer<'de>,
