@@ -4,6 +4,7 @@
 //! multiple inputs, merging, and validating them.
 
 #[macro_export]
+/// Assign to destination if source value is `Some`.
 macro_rules! assign_if_some {
     ( $dst:expr, $src:expr ) => {{
         if let Some(x) = $src {

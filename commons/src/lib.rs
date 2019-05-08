@@ -1,3 +1,7 @@
+//! Common utilities for Cincinnati backend.
+
+#![deny(missing_docs)]
+
 extern crate actix_web;
 #[macro_use]
 extern crate failure;
