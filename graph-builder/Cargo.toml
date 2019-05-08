@@ -31,6 +31,7 @@ tar = "^0.4.16"
 tokio = "0.1"
 toml = "^0.4.10"
 url = "^1.7.2"
+parking_lot = "^0.8.0"
 
 [features]
 test-net = []
