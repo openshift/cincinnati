@@ -3,8 +3,8 @@
 use actix_web::{HttpRequest, HttpResponse};
 use futures::future;
 use futures::prelude::*;
+use graph::State;
 use prometheus;
-use std::sync::{Arc, RwLock};
 
 /// Common prefix for graph-builder metrics.
 static GB_METRICS_PREFIX: &str = "cincinnati_gb";
@@ -16,46 +16,9 @@ lazy_static! {
             .expect("could not create metrics registry");
 }
 
-/// State for the status service.
-#[derive(Clone)]
-pub struct StatusState {
-    /// Cached graph.
-    json_graph: Arc<RwLock<String>>,
-    /// Track whether the main service is ready.
-    ready: Arc<RwLock<bool>>,
-}
-
-impl StatusState {
-    pub fn new(json_graph: Arc<RwLock<String>>) -> Self {
-        Self {
-            json_graph,
-            ready: Arc::new(RwLock::new(false)),
-        }
-    }
-
-    /// Check whether (non-poisoned and non-empty) graph-content can be served.
-    fn has_graph_data(&self) -> bool {
-        self.json_graph
-            .read()
-            .ok()
-            .map(|json| !json.is_empty())
-            .unwrap_or(false)
-    }
-
-    /// Return whether the main service is alive.
-    fn is_live(&self) -> bool {
-        self.json_graph.read().ok().map(|_| true).unwrap_or(false)
-    }
-
-    /// Return whether the main service is ready.
-    fn is_ready(&self) -> bool {
-        self.ready.read().ok().map(|val| *val).unwrap_or(false)
-    }
-}
-
 /// Expose metrics (Prometheus textual format).
 pub fn serve_metrics(
-    _req: HttpRequest<StatusState>,
+    _req: HttpRequest<State>,
 ) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
     use prometheus::Encoder;
 
@@ -73,10 +36,10 @@ pub fn serve_metrics(
 /// Expose liveness status.
 ///
 /// Status:
-///  * Live (200 code): JSON graph is accessible (lock not poisoned).
+///  * Live (200 code): The upstream scrape loop thread is running
 ///  * Not Live (500 code): everything else.
 pub fn serve_liveness(
-    req: HttpRequest<StatusState>,
+    req: HttpRequest<State>,
 ) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
     let resp = if req.state().is_live() {
         HttpResponse::Ok().finish()
@@ -89,21 +52,12 @@ pub fn serve_liveness(
 /// Expose readiness status.
 ///
 /// Status:
-///  * Ready (200 code): JSON graph is already available.
+///  * Ready (200 code): a JSON graph as the result of a successful scrape is available.
 ///  * Not Ready (500 code): no JSON graph available yet.
 pub fn serve_readiness(
-    req: HttpRequest<StatusState>,
+    req: HttpRequest<State>,
 ) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
-    let mut ready = req.state().is_ready();
-
-    if !ready && req.state().has_graph_data() {
-        if let Ok(mut ready_state) = req.state().ready.write() {
-            *ready_state = true;
-            ready = true;
-        }
-    }
-
-    let resp = if ready {
+    let resp = if req.state().is_ready() {
         HttpResponse::Ok().finish()
     } else {
         HttpResponse::InternalServerError().finish()
