@@ -1,5 +1,6 @@
 //! Deserializers.
 
+/// Deserialize a log-level from a numerical value.
 pub fn de_loglevel<'de, D>(deserializer: D) -> Result<Option<log::LevelFilter>, D::Error>
 where
     D: serde::Deserializer<'de>,

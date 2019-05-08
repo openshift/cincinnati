@@ -2,19 +2,33 @@ use actix_web::http;
 use actix_web::HttpResponse;
 
 #[derive(Debug, Fail, Eq, PartialEq)]
+/// Error that can be returned by `/v1/graph` endpoint.
 pub enum GraphError {
+    /// Failed to deserialize JSON.
     #[fail(display = "failed to deserialize JSON: {}", _0)]
     FailedJsonIn(String),
+
+    /// Failed to serialize JSON.
     #[fail(display = "failed to serialize JSON: {}", _0)]
     FailedJsonOut(String),
+
+    /// Error response from upstream.
     #[fail(display = "failed to fetch upstream graph: {}", _0)]
     FailedUpstreamFetch(String),
+
+    /// Plugin failure.
     #[fail(display = "failed to execute plugins: {}", _0)]
     FailedPluginExecution(String),
+
+    /// Error while reaching upstream.
     #[fail(display = "failed to assemble upstream request")]
     FailedUpstreamRequest,
+
+    /// Requested invalid mediatype.
     #[fail(display = "invalid Content-Type requested")]
     InvalidContentType,
+
+    /// Missing client parameters.
     #[fail(display = "mandatory client parameters missing")]
     MissingParams(Vec<String>),
 }
@@ -26,7 +40,7 @@ impl actix_web::error::ResponseError for GraphError {
 }
 
 impl GraphError {
-    // Return the HTTP JSON error response.
+    /// Return the HTTP JSON error response.
     pub fn as_json_error(&self) -> HttpResponse {
         let code = self.status_code();
         let json_body = json!({
@@ -36,7 +50,7 @@ impl GraphError {
         HttpResponse::build(code).json(json_body)
     }
 
-    // Return the HTTP status code for the error.
+    /// Return the HTTP status code for the error.
     fn status_code(&self) -> http::StatusCode {
         match *self {
             GraphError::FailedJsonIn(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -49,7 +63,7 @@ impl GraphError {
         }
     }
 
-    // Return the kind for the error.
+    /// Return the kind for the error.
     fn kind(&self) -> String {
         let kind = match *self {
             GraphError::FailedJsonIn(_) => "failed_json_in",
@@ -63,7 +77,7 @@ impl GraphError {
         kind.to_string()
     }
 
-    // Return the value for the error.
+    /// Return the value for the error.
     fn value(&self) -> String {
         let error_msg = format!("{}", self);
         match self {
