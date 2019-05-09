@@ -16,8 +16,8 @@ use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{plugins, AbstractRelease, Graph, Release, CONTENT_TYPE};
 use commons::GraphError;
 use config;
-use failure::Error;
-use prometheus::{Counter, IntGauge};
+use failure::{Error, Fallible};
+use prometheus::{self, Counter, IntGauge};
 use registry::{self, Registry};
 use serde_json;
 use std::collections::{HashMap, HashSet};
@@ -25,33 +25,45 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 
 lazy_static! {
-    static ref GRAPH_FINAL_RELEASES: IntGauge = register_int_gauge!(
-        "cincinnati_gb_graph_final_releases",
+    static ref GRAPH_FINAL_RELEASES: IntGauge = IntGauge::new(
+        "graph_final_releases",
         "Number of releases in the final graph, after processing"
     )
     .unwrap();
-    static ref GRAPH_UPSTREAM_RAW_RELEASES: IntGauge = register_int_gauge!(
-        "cincinnati_gb_graph_upstream_raw_releases",
+    static ref GRAPH_UPSTREAM_RAW_RELEASES: IntGauge = IntGauge::new(
+        "graph_upstream_raw_releases",
         "Number of releases fetched from upstream, before processing"
     )
     .unwrap();
-    static ref UPSTREAM_SCRAPES: Counter = register_counter!(
-        "cincinnati_gb_graph_upstream_scrapes_total",
-        "Total number of upstream scrapes"
-    )
-    .unwrap();
-    static ref UPSTREAM_ERRORS: Counter = register_counter!(
-        "cincinnati_gb_graph_upstream_errors_total",
+    static ref UPSTREAM_ERRORS: Counter = Counter::new(
+        "graph_upstream_errors_total",
         "Total number of upstream scraping errors"
     )
     .unwrap();
-    static ref V1_GRAPH_INCOMING_REQS: Counter = register_counter!(
-        "cincinnati_gb_v1_graph_incoming_requests_total",
+    static ref UPSTREAM_SCRAPES: Counter = Counter::new(
+        "graph_upstream_scrapes_total",
+        "Total number of upstream scrapes"
+    )
+    .unwrap();
+    static ref V1_GRAPH_INCOMING_REQS: Counter = Counter::new(
+        "v1_graph_incoming_requests_total",
         "Total number of incoming HTTP client request to /v1/graph"
     )
     .unwrap();
 }
 
+/// Register relevant metrics to a prometheus registry.
+pub fn register_metrics(registry: &prometheus::Registry) -> Fallible<()> {
+    commons::register_metrics(&registry)?;
+    registry.register(Box::new(GRAPH_FINAL_RELEASES.clone()))?;
+    registry.register(Box::new(GRAPH_UPSTREAM_RAW_RELEASES.clone()))?;
+    registry.register(Box::new(UPSTREAM_ERRORS.clone()))?;
+    registry.register(Box::new(UPSTREAM_SCRAPES.clone()))?;
+    registry.register(Box::new(V1_GRAPH_INCOMING_REQS.clone()))?;
+    Ok(())
+}
+
+/// Serve Cincinnati graph requests.
 pub fn index(req: HttpRequest<State>) -> Result<HttpResponse, GraphError> {
     V1_GRAPH_INCOMING_REQS.inc();
 

@@ -7,56 +7,60 @@ use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTE
 use cincinnati::plugins::InternalPluginWrapper;
 use cincinnati::{plugins, Graph, CONTENT_TYPE};
 use commons::{self, GraphError};
+use failure::Fallible;
 use futures::{future, Future, Stream};
 use hyper::{Body, Client, Request};
-use prometheus::{Counter, Histogram};
+use prometheus::{Counter, Histogram, HistogramOpts, Registry};
 use serde_json;
 use AppState;
 
 lazy_static! {
-    static ref HTTP_GRAPH_REQS: Counter = register_counter!(
-        "http_graph_requests_total",
-        "Total number of HTTP /v1/graph requests."
-    )
-    .unwrap();
-    static ref HTTP_GRAPH_BAD_REQS: Counter = register_counter!(
-        "http_graph_bad_requests_total",
-        "Total number of bad HTTP /v1/graph requests."
-    )
-    .unwrap();
-    static ref HTTP_UPSTREAM_REQS: Counter = register_counter!(
+    static ref HTTP_UPSTREAM_REQS: Counter = Counter::new(
         "http_upstream_requests_total",
-        "Total number of HTTP upstream requests."
+        "Total number of HTTP upstream requests"
     )
     .unwrap();
-    static ref HTTP_UPSTREAM_UNREACHABLE: Counter = register_counter!(
+    static ref HTTP_UPSTREAM_UNREACHABLE: Counter = Counter::new(
         "http_upstream_errors_total",
-        "Total number of HTTP upstream unreachable errors."
+        "Total number of HTTP upstream unreachable errors"
     )
     .unwrap();
-    static ref HTTP_SERVE_HIST: Histogram = register_histogram!(
-        "http_graph_serve_duration_seconds",
-        "HTTP graph serving latency in seconds."
+    static ref V1_GRAPH_INCOMING_REQS: Counter = Counter::new(
+        "v1_graph_incoming_requests_total",
+        "Total number of incoming HTTP client request to /v1/graph"
     )
     .unwrap();
+    static ref V1_GRAPH_SERVE_HIST: Histogram = Histogram::with_opts(HistogramOpts::new(
+        "v1_graph_serve_duration_seconds",
+        "HTTP graph serving latency in seconds"
+    ))
+    .unwrap();
+}
+
+/// Register relevant metrics to a prometheus registry.
+pub(crate) fn register_metrics(registry: &Registry) -> Fallible<()> {
+    commons::register_metrics(&registry)?;
+    registry.register(Box::new(V1_GRAPH_INCOMING_REQS.clone()))?;
+    registry.register(Box::new(HTTP_UPSTREAM_REQS.clone()))?;
+    registry.register(Box::new(HTTP_UPSTREAM_UNREACHABLE.clone()))?;
+    registry.register(Box::new(V1_GRAPH_SERVE_HIST.clone()))?;
+    Ok(())
 }
 
 /// Serve Cincinnati graph requests.
 pub(crate) fn index(
     req: HttpRequest<AppState>,
 ) -> Box<Future<Item = HttpResponse, Error = GraphError>> {
-    HTTP_GRAPH_REQS.inc();
+    V1_GRAPH_INCOMING_REQS.inc();
 
     // Check that the client can accept JSON media type.
     if let Err(e) = commons::ensure_content_type(req.headers(), CONTENT_TYPE) {
-        HTTP_GRAPH_BAD_REQS.inc();
         return Box::new(future::err(e));
     }
 
     // Check for required client parameters.
     let mandatory_params = &req.state().mandatory_params;
     if let Err(e) = commons::ensure_query_params(mandatory_params, req.query_string()) {
-        HTTP_GRAPH_BAD_REQS.inc();
         return Box::new(future::err(e));
     }
 
@@ -81,7 +85,7 @@ pub(crate) fn index(
     };
 
     HTTP_UPSTREAM_REQS.inc();
-    let timer = HTTP_SERVE_HIST.start_timer();
+    let timer = V1_GRAPH_SERVE_HIST.start_timer();
     let serve = Client::new()
         .request(ups_req)
         .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
