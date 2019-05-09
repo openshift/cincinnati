@@ -8,7 +8,11 @@ extern crate url;
 use self::graph_builder::registry::{self, fetch_releases, Release};
 use self::graph_builder::release::{Metadata, MetadataKind::V0};
 use self::semver::Version;
+use failure::Fallible;
 use net::quay_io::cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY;
+use net::quay_io::cincinnati::Empty;
+use net::quay_io::cincinnati::WouldCycle;
+use net::quay_io::graph_builder::graph::create_graph;
 use net::quay_io::graph_builder::registry::Registry;
 use std::collections::HashMap;
 
@@ -323,4 +327,37 @@ fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
     .iter()
     .map(|url| registry::Registry::try_from_str(url).unwrap())
     .for_each(test);
+}
+
+#[test]
+fn fetch_release_with_cyclic_metadata_fails() -> Fallible<()> {
+    init_logger();
+
+    let registry = Registry::try_from_str("quay.io").unwrap();
+    let repo = "redhat/openshift-cincinnati-test-cyclic-public-manual";
+
+    let mut cache = HashMap::new();
+    let (username, password) = (None, None);
+
+    let releases = fetch_releases(
+        &registry,
+        &repo,
+        username,
+        password,
+        &mut cache,
+        MANIFESTREF_KEY,
+    )
+    .expect("fetch_releases failed: ");
+
+    match create_graph(releases) {
+        Ok(_) => bail!("create_graph succeeded despite cyclic metadata"),
+        Err(err) => {
+            ensure!(
+                err.downcast_ref::<WouldCycle<Empty>>().is_some(),
+                "error {:#?} has wrong type",
+                err,
+            );
+            Ok(())
+        }
+    }
 }
