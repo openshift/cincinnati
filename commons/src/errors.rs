@@ -5,7 +5,7 @@ use prometheus::{IntCounterVec, Opts, Registry};
 
 lazy_static! {
     static ref V1_GRAPH_ERRORS: IntCounterVec = IntCounterVec::new(
-        Opts::new("v1_graph_errors_total", "Errors on /v1/graph"),
+        Opts::new("v1_graph_response_errors_total", "Error responses on /v1/graph"),
         &["kind"]
     )
     .unwrap();
