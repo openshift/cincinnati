@@ -20,11 +20,11 @@ extern crate graph_builder;
 extern crate log;
 extern crate structopt;
 
-use graph_builder::{config, graph, status};
+use graph_builder::{config, graph, graph::RwLock, status};
 
 use actix_web::{http::Method, middleware::Logger, server, App};
 use failure::Error;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::thread;
 
 fn main() -> Result<(), Error> {
@@ -37,26 +37,32 @@ fn main() -> Result<(), Error> {
         .init();
     debug!("application settings:\n{:#?}", &settings);
 
-    let json_graph = Arc::new(RwLock::new(String::new()));
-    let status_state = status::StatusState::new(json_graph.clone());
-    let app_state = graph::State::new(
-        json_graph.clone(),
-        settings.mandatory_client_parameters.clone(),
-    );
+    let app_state = {
+        let json_graph = Arc::new(RwLock::new(String::new()));
+        let live = Arc::new(RwLock::new(false));
+        let ready = Arc::new(RwLock::new(false));
+
+        graph::State::new(
+            json_graph.clone(),
+            settings.mandatory_client_parameters.clone(),
+            live.clone(),
+            ready.clone(),
+        )
+    };
+
     let service_addr = (settings.address, settings.port);
     let status_addr = (settings.status_address, settings.status_port);
     let app_prefix = settings.path_prefix.clone();
 
-    {
-        let state = app_state.clone();
-        thread::spawn(move || graph::run(&settings, &state));
-    }
+    // Graph scraper
+    let graph_state = app_state.clone();
+    thread::spawn(move || graph::run(&settings, &graph_state));
 
     // Status service.
     graph::register_metrics(&status::PROM_REGISTRY)?;
+    let status_state = app_state.clone();
     server::new(move || {
-        let state = status_state.clone();
-        App::with_state(state)
+        App::with_state(status_state.clone())
             .middleware(Logger::default())
             .route("/liveness", Method::GET, status::serve_liveness)
             .route("/metrics", Method::GET, status::serve_metrics)
@@ -66,12 +72,11 @@ fn main() -> Result<(), Error> {
     .start();
 
     // Main service.
+    let main_state = app_state.clone();
     server::new(move || {
-        let app_prefix = app_prefix.clone();
-        let state = app_state.clone();
-        App::with_state(state)
+        App::with_state(main_state.clone())
             .middleware(Logger::default())
-            .prefix(app_prefix)
+            .prefix(app_prefix.clone())
             .route("/v1/graph", Method::GET, graph::index)
     })
     .bind(service_addr)?

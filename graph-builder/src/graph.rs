@@ -18,10 +18,11 @@ use commons::GraphError;
 use config;
 use failure::{Error, Fallible};
 use prometheus::{self, Counter, IntGauge};
+pub use parking_lot::RwLock;
 use registry::{self, Registry};
 use serde_json;
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::thread;
 
 lazy_static! {
@@ -74,13 +75,9 @@ pub fn index(req: HttpRequest<State>) -> Result<HttpResponse, GraphError> {
     let mandatory_params = &req.state().mandatory_params;
     commons::ensure_query_params(mandatory_params, req.query_string())?;
 
-    let resp = HttpResponse::Ok().content_type(CONTENT_TYPE).body(
-        req.state()
-            .json
-            .read()
-            .expect("json lock has been poisoned")
-            .clone(),
-    );
+    let resp = HttpResponse::Ok()
+        .content_type(CONTENT_TYPE)
+        .body(req.state().json.read().clone());
     Ok(resp)
 }
 
@@ -89,14 +86,34 @@ pub struct State {
     json: Arc<RwLock<String>>,
     /// Query parameters that must be present in all client requests.
     mandatory_params: HashSet<String>,
+    live: Arc<RwLock<bool>>,
+    ready: Arc<RwLock<bool>>,
 }
 
 impl State {
-    pub fn new(json: Arc<RwLock<String>>, mandatory_params: HashSet<String>) -> State {
+    /// Creates a new State with the given arguments
+    pub fn new(
+        json: Arc<RwLock<String>>,
+        mandatory_params: HashSet<String>,
+        live: Arc<RwLock<bool>>,
+        ready: Arc<RwLock<bool>>,
+    ) -> State {
         State {
             json,
             mandatory_params,
+            live,
+            ready,
         }
+    }
+
+    /// Returns the boolean inside self.live
+    pub fn is_live(&self) -> bool {
+        *self.live.read()
+    }
+
+    /// Returns the boolean inside self.ready
+    pub fn is_ready(&self) -> bool {
+        *self.ready.read()
     }
 }
 
@@ -147,11 +164,21 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
         configured_plugins = vec![];
     }
 
+    // Indicate if a panic happens
+    let previous_hook = std::panic::take_hook();
+    let panic_live = state.live.clone();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        *panic_live.write() = false;
+        previous_hook(panic_info)
+    }));
+
     // Don't wait on the first iteration
     let mut first_iteration = true;
+    let mut first_success = true;
 
     loop {
         if first_iteration {
+            *state.live.write() = true;
             first_iteration = false;
         } else {
             thread::sleep(settings.pause_secs);
@@ -214,7 +241,13 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
 
         match serde_json::to_string(&graph) {
             Ok(json) => {
-                *state.json.write().expect("json lock has been poisoned") = json;
+                *state.json.write() = json;
+
+                if first_success {
+                    *state.ready.write() = true;
+                    first_success = false;
+                };
+
                 let nodes_count = graph.releases_count();
                 GRAPH_FINAL_RELEASES.set(nodes_count as i64);
                 debug!("graph update completed, {} valid releases", nodes_count);

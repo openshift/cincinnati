@@ -26,6 +26,7 @@ extern crate serde_json;
 extern crate smart_default;
 #[macro_use]
 extern crate structopt;
+extern crate parking_lot;
 extern crate tar;
 extern crate tokio;
 extern crate toml;

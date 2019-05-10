@@ -78,7 +78,7 @@ objects:
                 httpGet:
                   path: /liveness
                   port: ${{GB_STATUS_PORT}}
-                initialDelaySeconds: 30
+                initialDelaySeconds: 3
                 periodSeconds: 10
                 timeoutSeconds: 3
               readinessProbe:
