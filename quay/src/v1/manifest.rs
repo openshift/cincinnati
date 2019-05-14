@@ -18,14 +18,14 @@ use reqwest::Method;
 ///       "value": "0.0.1",
 ///       "media_type": "text/plain",
 ///       "id": "03e8f6db-4669-42d8-a4ec-2d2d2785b0b7",
-///       "key": "com.openshift.upgrades.graph.edge-previous-add",
+///       "key": "io.openshift.upgrades.graph.edge-previous-add",
 ///       "source_type": "api"
 ///     },
 ///     {
 ///       "value": "0.0.0",
 ///       "media_type": "text/plain",
 ///       "id": "b5e17080-08ce-4a98-a397-6869a0e16dbe",
-///       "key": "com.openshift.upgrades.graph.edge-previous-add",
+///       "key": "io.openshift.upgrades.graph.edge-previous-add",
 ///       "source_type": "api"
 ///     }
 ///   ]

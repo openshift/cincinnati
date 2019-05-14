@@ -205,7 +205,7 @@ fn expected_releases_labels_test_annoated(registry: &Registry, repo: &str) -> Ve
             [
                 (String::from("kind"), String::from("test")),
                 (
-                    String::from("com.openshift.upgrades.graph.previous.remove"),
+                    String::from("io.openshift.upgrades.graph.previous.remove"),
                     String::from("0.0.0"),
                 ),
             ]
@@ -216,7 +216,7 @@ fn expected_releases_labels_test_annoated(registry: &Registry, repo: &str) -> Ve
         (
             2,
             [(
-                String::from("com.openshift.upgrades.graph.release.remove"),
+                String::from("io.openshift.upgrades.graph.release.remove"),
                 String::from("true"),
             )]
             .iter()
@@ -226,7 +226,7 @@ fn expected_releases_labels_test_annoated(registry: &Registry, repo: &str) -> Ve
         (
             3,
             [(
-                String::from("com.openshift.upgrades.graph.previous.add"),
+                String::from("io.openshift.upgrades.graph.previous.add"),
                 String::from("0.0.1,0.0.0"),
             )]
             .iter()

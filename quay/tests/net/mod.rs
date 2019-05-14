@@ -49,7 +49,7 @@ fn test_public_get_labels() {
     let fetch_labels = client.get_labels(
         repo.to_string(),
         digest,
-        Some("com.openshift.upgrades.graph".to_string()),
+        Some("io.openshift.upgrades.graph".to_string()),
     );
     let labels = rt.block_on(fetch_labels).unwrap();
     assert_eq!(
@@ -58,7 +58,7 @@ fn test_public_get_labels() {
             .map(Into::into)
             .collect::<Vec<(String, String)>>(),
         vec![(
-            "com.openshift.upgrades.graph.previous.remove".to_string(),
+            "io.openshift.upgrades.graph.previous.remove".to_string(),
             "0.0.0".to_string()
         )]
     );
