@@ -10,18 +10,96 @@ extern crate tokio;
 
 use self::futures::future::Future;
 use failure::{Fallible, ResultExt};
-use plugins::{InternalIO, InternalPlugin};
+use plugins::{
+    InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
+};
 use std::path::PathBuf;
 use ReleaseId;
 
 pub static DEFAULT_QUAY_LABEL_FILTER: &str = "com.openshift.upgrades.graph";
 pub static DEFAULT_QUAY_MANIFESTREF_KEY: &str = "com.openshift.upgrades.graph.release.manifestref";
+pub static DEFAULT_QUAY_REPOSITORY: &str = "openshift";
 
+/// Plugin settings.
+#[derive(Clone, Debug, Deserialize, SmartDefault)]
+#[serde(default)]
+struct QuayMetadataSettings {
+    #[default(quay::v1::DEFAULT_API_BASE.to_string())]
+    api_base: String,
+
+    #[default(Option::None)]
+    api_credentials_path: Option<PathBuf>,
+
+    #[default(DEFAULT_QUAY_REPOSITORY.to_string())]
+    repository: String,
+
+    #[default(DEFAULT_QUAY_LABEL_FILTER.to_string())]
+    label_filter: String,
+
+    #[default(DEFAULT_QUAY_MANIFESTREF_KEY.to_string())]
+    manifestref_key: String,
+}
+
+/// Metadata fetcher for quay.io API.
 pub struct QuayMetadataFetchPlugin {
     client: quay::v1::Client,
     repo: String,
     label_filter: String,
     manifestref_key: String,
+}
+
+impl PluginSettings for QuayMetadataSettings {
+    fn build_plugin(&self) -> Fallible<Box<Plugin<PluginIO>>> {
+        let cfg = self.clone();
+        let plugin = QuayMetadataFetchPlugin::try_new(
+            cfg.repository,
+            cfg.label_filter,
+            cfg.manifestref_key,
+            cfg.api_credentials_path,
+            cfg.api_base,
+        )?;
+        Ok(Box::new(InternalPluginWrapper(plugin)))
+    }
+}
+
+impl QuayMetadataFetchPlugin {
+    /// Plugin name, for configuration.
+    pub(crate) const PLUGIN_NAME: &'static str = "quay-metadata";
+
+    /// Validate plugin configuration and fill in defaults.
+    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<PluginSettings>> {
+        let settings: QuayMetadataSettings = cfg.try_into()?;
+
+        ensure!(!settings.repository.is_empty(), "empty repository");
+        ensure!(!settings.label_filter.is_empty(), "empty label_filter");
+
+        Ok(Box::new(settings))
+    }
+
+    pub fn try_new(
+        repo: String,
+        label_filter: String,
+        manifestref_key: String,
+        api_token_path: Option<PathBuf>,
+        api_base: String,
+    ) -> Fallible<Self> {
+        let api_token = api_token_path
+            .map(quay::read_credentials)
+            .transpose()
+            .context("could not read quay API credentials")?;
+
+        let client: quay::v1::Client = quay::v1::Client::builder()
+            .access_token(api_token)
+            .api_base(Some(api_base.to_string()))
+            .build()?;
+
+        Ok(Self {
+            client,
+            repo,
+            label_filter,
+            manifestref_key,
+        })
+    }
 }
 
 impl InternalPlugin for QuayMetadataFetchPlugin {
@@ -98,32 +176,5 @@ impl InternalPlugin for QuayMetadataFetchPlugin {
         )?;
 
         Ok(InternalIO { graph, parameters })
-    }
-}
-
-impl QuayMetadataFetchPlugin {
-    pub fn try_new(
-        repo: String,
-        label_filter: String,
-        manifestref_key: String,
-        api_token_path: Option<PathBuf>,
-        api_base: String,
-    ) -> Fallible<Self> {
-        let api_token = api_token_path
-            .map(|path| quay::read_credentials(path))
-            .transpose()
-            .context("could not read quay API credentials")?;
-
-        let client: quay::v1::Client = quay::v1::Client::builder()
-            .access_token(api_token)
-            .api_base(Some(api_base.to_string()))
-            .build()?;
-
-        Ok(Self {
-            client,
-            repo,
-            label_filter,
-            manifestref_key,
-        })
     }
 }
