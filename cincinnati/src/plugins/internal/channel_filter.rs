@@ -7,7 +7,7 @@ use plugins::{
     InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
 };
 
-static DEFAULT_KEY_FILTER: &str = "com.openshift.upgrades.graph";
+static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 static DEFAULT_CHANNEL_KEY: &str = "release.channels";
 
 #[derive(Clone, Debug, Deserialize, SmartDefault)]

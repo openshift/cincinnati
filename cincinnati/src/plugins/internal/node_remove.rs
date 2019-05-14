@@ -5,7 +5,7 @@ use plugins::{
     InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
 };
 
-static DEFAULT_KEY_FILTER: &str = "com.openshift.upgrades.graph";
+static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 
 #[derive(Clone, Debug, Deserialize, SmartDefault)]
 #[serde(default)]

@@ -16,8 +16,8 @@ use plugins::{
 use std::path::PathBuf;
 use ReleaseId;
 
-pub static DEFAULT_QUAY_LABEL_FILTER: &str = "com.openshift.upgrades.graph";
-pub static DEFAULT_QUAY_MANIFESTREF_KEY: &str = "com.openshift.upgrades.graph.release.manifestref";
+pub static DEFAULT_QUAY_LABEL_FILTER: &str = "io.openshift.upgrades.graph";
+pub static DEFAULT_QUAY_MANIFESTREF_KEY: &str = "io.openshift.upgrades.graph.release.manifestref";
 pub static DEFAULT_QUAY_REPOSITORY: &str = "openshift";
 
 /// Plugin settings.
