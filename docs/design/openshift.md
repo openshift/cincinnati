@@ -70,7 +70,7 @@ The Policy Engine represents these channels as a series of pointers to particula
 
 The graphs served by the Policy Engine will always have a single root node (equal to the cluster’s current version) and a single leaf node (equal to the channel target). There may be any number of nodes between the root and the leaf, so the Cluster Version Operator will choose the newest version if it encounters a choice. Because there is a single leaf in the graph, every choice is valid and won’t leave the cluster in a state where it cannot update to the channel target. Above, in Figure 3, the Cluster Version Operator will opt to update from `1.0.0` to `1.3.0` (because `1.3.0` is newer than `1.1.0` and `1.1.1`) but both `1.1.0` and `1.1.1` are also valid options.
 
-Every update in the graph is annotated with its approved channels. In order for the update to be included in the graph for a particular channel, it must be approved for that channel. This is done to prevent an update destined for a less stable channel from being served to a cluster subscribed to a more stable channel. The following helps demonstrate this:
+Every release in the graph is annotated with its approved channels. In order for the update to be included in the graph for a particular channel, it must be approved for that channel. This is done to prevent a release destined for a less stable channel from being served to a cluster subscribed to a more stable channel. The following helps demonstrate this:
 
 <figure align="center">
   <img src="figures/openshift-4.svg" alt="Figure 4: The view of the update graph from a client in the Beta channel" />
@@ -82,8 +82,10 @@ Every update in the graph is annotated with its approved channels. In order for 
   <figcaption>Figure 5: The view of the update graph from a client in the Alpha channel</figcaption>
 </figure>
 
-Above, in Figure 4, the Beta channel does not include 1.1.0 in the update graph because it hasn’t been approved. For example, this may be because a bug was discovered in 1.1.0 and fixed in 1.1.1 before rolling out to the Beta channel.
-
+Above, in Figure 4, the Beta channel does not include 1.1.0 in the update graph because it hasn’t been approved.
+For example, this may be because a bug was discovered in 1.1.0 and fixed in 1.1.1 before rolling out to the Beta channel.
+For release issues serious enough to warrent exclusion from the Beta channel, the Alpha-channel edge will also be removed to avoid funneling Alpha clusters to the degraded release.
+However, the degraded release will remain in the Alpha channel to allow existing clusters to upgrade away from it.
 
 ### Client API ###
 
