@@ -12,7 +12,7 @@ pub mod internal;
 pub use self::catalog::{deserialize_config, PluginSettings};
 use crate as cincinnati;
 use failure::{Error, Fallible, ResultExt};
-use plugins::interface::{PluginError, PluginExchange};
+use crate::plugins::interface::{PluginError, PluginExchange};
 use std::collections::HashMap;
 use try_from::{TryFrom, TryInto};
 
@@ -61,7 +61,7 @@ where
 
 /// Trait to be implemented by internal plugins with their native IO type
 pub trait InternalPlugin {
-    fn run_internal(&self, InternalIO) -> Fallible<InternalIO>;
+    fn run_internal(&self, input: InternalIO) -> Fallible<InternalIO>;
 }
 
 /// Trait to be implemented by external plugins with its native IO type
@@ -69,7 +69,7 @@ pub trait InternalPlugin {
 /// There's a gotcha in that this type can't be used to access the information
 /// directly as it's merely bytes.
 pub trait ExternalPlugin {
-    fn run_external(&self, ExternalIO) -> Fallible<ExternalIO>;
+    fn run_external(&self, input: ExternalIO) -> Fallible<ExternalIO>;
 }
 
 /// Dummy converter to satisfy the Trait
@@ -321,8 +321,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use plugins::Plugin;
-    use tests::generate_graph;
+    use crate::plugins::Plugin;
+    use crate::tests::generate_graph;
 
     #[test]
     fn convert_externalio_pluginresult() {

@@ -16,7 +16,7 @@ use cincinnati;
 use failure::{Error, Fallible, ResultExt};
 use flate2::read::GzDecoder;
 use futures::prelude::*;
-use release::Metadata;
+use crate::release::Metadata;
 use serde_json;
 use std::collections::HashMap;
 use std::fs::File;

@@ -14,12 +14,12 @@ extern crate serde_json;
 extern crate url;
 
 mod config;
-pub use config::MergeOptions;
+pub use crate::config::MergeOptions;
 
 pub mod de;
 
 mod errors;
-pub use errors::{register_metrics, GraphError};
+pub use crate::errors::{register_metrics, GraphError};
 
 use actix_web::http::header;
 use std::collections::HashSet;

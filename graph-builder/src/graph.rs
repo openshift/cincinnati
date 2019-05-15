@@ -15,11 +15,11 @@
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{plugins, AbstractRelease, Graph, Release, CONTENT_TYPE};
 use commons::GraphError;
-use config;
+use crate::config;
 use failure::{Error, Fallible};
 use prometheus::{self, Counter, IntGauge};
 pub use parking_lot::RwLock;
-use registry::{self, Registry};
+use crate::registry::{self, Registry};
 use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

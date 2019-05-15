@@ -3,7 +3,7 @@
 //! and the value must match the regex specified at CHANNEL_VALIDATION_REGEX_STR
 
 use failure::Fallible;
-use plugins::{
+use crate::plugins::{
     InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
 };
 

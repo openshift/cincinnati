@@ -2,10 +2,10 @@
 
 use crate as cincinnati;
 use failure::Fallible;
-use plugins::{
+use crate::plugins::{
     InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
 };
-use ReleaseId;
+use crate::ReleaseId;
 
 static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 

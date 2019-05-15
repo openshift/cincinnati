@@ -1,7 +1,7 @@
 //! This plugin removes releases according to its metadata
 
 use failure::Fallible;
-use plugins::{
+use crate::plugins::{
     InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
 };
 

@@ -9,11 +9,11 @@ use self::graph_builder::registry::{self, fetch_releases, Release};
 use self::graph_builder::release::{Metadata, MetadataKind::V0};
 use self::semver::Version;
 use failure::Fallible;
-use net::quay_io::cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY;
-use net::quay_io::cincinnati::Empty;
-use net::quay_io::cincinnati::WouldCycle;
-use net::quay_io::graph_builder::graph::create_graph;
-use net::quay_io::graph_builder::registry::Registry;
+use self::cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY;
+use self::cincinnati::Empty;
+use self::cincinnati::WouldCycle;
+use self::graph_builder::graph::create_graph;
+use self::graph_builder::registry::Registry;
 use std::collections::HashMap;
 
 #[cfg(feature = "test-net-private")]
