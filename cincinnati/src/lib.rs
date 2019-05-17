@@ -268,10 +268,16 @@ impl Graph {
             }
         });
 
+        self.remove_nodes(to_remove.into_iter().map(|ri| ri.0).collect())
+    }
+
+    /// Removes the nodes with the given NodeIndex and returns the number of
+    /// removed nodes.
+    pub fn remove_nodes(&mut self, to_remove: Vec<daggy::NodeIndex>) -> usize {
         to_remove
-            .iter()
+            .into_iter()
             .rev()
-            .filter(|ri| self.dag.remove_node(ri.0).is_some())
+            .filter(|ni| self.dag.remove_node(*ni).is_some())
             .count()
     }
 
