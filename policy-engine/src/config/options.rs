@@ -18,7 +18,7 @@ pub struct StatusOptions {
 }
 
 impl MergeOptions<Option<StatusOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<StatusOptions>) -> () {
+    fn merge(&mut self, opts: Option<StatusOptions>) {
         if let Some(status) = opts {
             assign_if_some!(self.status_address, status.address);
             assign_if_some!(self.status_port, status.port);
@@ -50,7 +50,7 @@ pub struct ServiceOptions {
 }
 
 impl MergeOptions<Option<ServiceOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<ServiceOptions>) -> () {
+    fn merge(&mut self, opts: Option<ServiceOptions>) {
         if let Some(service) = opts {
             assign_if_some!(self.address, service.address);
             assign_if_some!(self.port, service.port);
@@ -72,7 +72,7 @@ pub struct UpCincinnatiOptions {
 }
 
 impl MergeOptions<Option<UpCincinnatiOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<UpCincinnatiOptions>) -> () {
+    fn merge(&mut self, opts: Option<UpCincinnatiOptions>) {
         if let Some(up) = opts {
             assign_if_some!(self.upstream, up.url);
         }
@@ -97,6 +97,6 @@ where
     use serde::Deserialize;
 
     let input = String::deserialize(deserializer)?;
-    let uri: hyper::Uri = input.parse().map_err(|e| D::Error::custom(e))?;
+    let uri: hyper::Uri = input.parse().map_err(D::Error::custom)?;
     Ok(Some(uri))
 }

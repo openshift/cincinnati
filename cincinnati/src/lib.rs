@@ -609,7 +609,7 @@ mod tests {
 
         let nodes: Vec<daggy::NodeIndex> = (start..(start + count))
             .map(|i| {
-                let metadata = metadata.remove(&i).unwrap_or(HashMap::new());
+                let metadata = metadata.remove(&i).unwrap_or_default();
 
                 let release = Release::Concrete(ConcreteRelease {
                     version: format!("{}.0.0", i),

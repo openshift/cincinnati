@@ -117,12 +117,13 @@ impl State {
     }
 }
 
+#[allow(clippy::useless_let_if_seq)]
 pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
     // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
     let mut cache = HashMap::new();
 
     let registry = Registry::try_from_str(&settings.registry)
-        .expect(&format!("failed to parse '{}' as Url", &settings.registry));
+        .unwrap_or_else(|_| panic!("failed to parse '{}' as Url", &settings.registry));
 
     // Read the credentials outside the loop to avoid re-reading the file
     let (username, password) =

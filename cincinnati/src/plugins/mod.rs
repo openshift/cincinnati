@@ -126,7 +126,7 @@ impl TryFrom<ExternalIO> for PluginExchange {
     fn try_from(external_io: ExternalIO) -> Fallible<Self> {
         protobuf::parse_from_bytes(&external_io.bytes)
             .context("could not parse ExternalIO to PluginExchange")
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 }
 
@@ -140,7 +140,7 @@ impl TryFrom<ExternalIO> for PluginError {
     fn try_from(external_io: ExternalIO) -> Fallible<Self> {
         protobuf::parse_from_bytes(&external_io.bytes)
             .context("could not parse ExternalIO to PluginError")
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 }
 
@@ -330,7 +330,7 @@ mod tests {
         let value = "test succeeds on error".to_string();
 
         let mut original_error = interface::PluginError::new();
-        original_error.set_kind(kind.clone());
+        original_error.set_kind(kind);
         original_error.set_value(value.clone());
 
         let expected_result = PluginResult::PluginError(original_error.clone());

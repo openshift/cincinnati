@@ -191,12 +191,12 @@ pub fn authenticate_client(
 
 /// Fetches a vector of all release metadata from the given repository, hosted on the given
 /// registry.
-pub fn fetch_releases(
+pub fn fetch_releases<S: ::std::hash::BuildHasher>(
     registry: &Registry,
     repo: &str,
     username: Option<&str>,
     password: Option<&str>,
-    cache: &mut HashMap<u64, Option<Release>>,
+    cache: &mut HashMap<u64, Option<Release>, S>,
     manifestref_key: &str,
 ) -> Result<Vec<Release>, Error> {
     let mut thread_runtime = tokio::runtime::current_thread::Runtime::new()?;
@@ -204,8 +204,8 @@ pub fn fetch_releases(
     let mut client = dkregistry::v2::Client::configure()
         .registry(&registry.host_port_string())
         .insecure_registry(registry.insecure)
-        .username(username.map(|s| s.to_string()))
-        .password(password.map(|s| s.to_string()))
+        .username(username.map(ToString::to_string))
+        .password(password.map(ToString::to_string))
         .build()
         .map_err(|e| format_err!("{}", e))?;
 
@@ -280,13 +280,13 @@ pub fn fetch_releases(
 /// Update Images with release metadata should be immutable, but
 /// tags on registry can be mutated at any time. Thus, the cache
 /// is keyed on the hash of tag layers.
-fn cache_release(
+fn cache_release<S: ::std::hash::BuildHasher>(
     layer_digests: Vec<String>,
     authenticated_client: dkregistry::v2::Client,
     registry_host: String,
     repo: String,
     tag: String,
-    cache: &mut HashMap<u64, Option<Release>>,
+    cache: &mut HashMap<u64, Option<Release>, S>,
 ) -> Fallible<Option<Release>> {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
@@ -546,7 +546,7 @@ mod tests {
 
         for (input, expected) in tests {
             let registry: Registry = Registry::try_from_str(input)
-                .expect(&format!("could not parse {} to registry", input));
+                .unwrap_or_else(|_| panic!("could not parse {} to registry", input));
             assert_eq!(registry, expected);
         }
     }

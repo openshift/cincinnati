@@ -59,7 +59,7 @@ impl EdgeAddRemovePlugin {
             .into_iter()
             .try_for_each(
                 |(to, to_version, from_csv): (ReleaseId, String, String)| -> Fallible<()> {
-                    for from_version in from_csv.split(',').map(|s| s.trim()) {
+                    for from_version in from_csv.split(',').map(str::trim) {
                         if let Some(from) = graph.find_by_version(&from_version) {
                             info!("[{}]: removing previous {}", from_version, to_version,);
                             graph.remove_edge(&from, &to)?
@@ -79,7 +79,7 @@ impl EdgeAddRemovePlugin {
             .into_iter()
             .try_for_each(
                 |(from, from_version, to_csv): (ReleaseId, String, String)| -> Fallible<()> {
-                    for to_version in to_csv.split(',').map(|s| s.trim()) {
+                    for to_version in to_csv.split(',').map(str::trim) {
                         if let Some(to) = graph.find_by_version(&to_version) {
                             info!("[{}]: removing next {}", from_version, to_version);
                             graph.remove_edge(&from, &to)?
@@ -105,7 +105,7 @@ impl EdgeAddRemovePlugin {
             .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "previous.add"))
             .into_iter()
             .try_for_each(|(to, to_version, from_csv)| -> Fallible<()> {
-                for from_version in from_csv.split(',').map(|s| s.trim()) {
+                for from_version in from_csv.split(',').map(str::trim) {
                     if let Some(from) = graph.find_by_version(&from_version) {
                         info!("[{}]: adding previous {}", &from_version, &to_version);
                         graph.add_edge(&from, &to)?
@@ -123,7 +123,7 @@ impl EdgeAddRemovePlugin {
             .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "next.add"))
             .into_iter()
             .try_for_each(|(from, from_string, to_csv)| -> Fallible<()> {
-                for to_string in to_csv.split(',').map(|s| s.trim()) {
+                for to_string in to_csv.split(',').map(str::trim) {
                     if let Some(to) = graph.find_by_version(&to_string) {
                         info!("[{}]: adding next {}", &from_string, &to_string);
                         graph.add_edge(&from, &to)?;
@@ -181,7 +181,7 @@ mod tests {
             0,
             metadata.len(),
             metadata,
-            Some([(0, 1)].iter().cloned().collect()),
+            Some([(0, 1)].to_vec()),
         );
 
         let processed_graph = EdgeAddRemovePlugin { key_prefix }
