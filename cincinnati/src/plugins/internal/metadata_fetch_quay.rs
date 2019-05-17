@@ -9,12 +9,12 @@ extern crate quay;
 extern crate tokio;
 
 use self::futures::future::Future;
-use failure::{Fallible, ResultExt};
 use crate::plugins::{
     InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
 };
-use std::path::PathBuf;
 use crate::ReleaseId;
+use failure::{Fallible, ResultExt};
+use std::path::PathBuf;
 
 pub static DEFAULT_QUAY_LABEL_FILTER: &str = "io.openshift.upgrades.graph";
 pub static DEFAULT_QUAY_MANIFESTREF_KEY: &str = "io.openshift.upgrades.graph.release.manifestref";

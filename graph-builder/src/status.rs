@@ -1,9 +1,9 @@
 //! Status service.
 
+use crate::graph::State;
 use actix_web::{HttpRequest, HttpResponse};
 use futures::future;
 use futures::prelude::*;
-use crate::graph::State;
 use prometheus;
 
 /// Common prefix for graph-builder metrics.

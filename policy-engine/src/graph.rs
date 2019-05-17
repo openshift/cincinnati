@@ -1,5 +1,6 @@
 //! Cincinnati graph service.
 
+use crate::AppState;
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
@@ -12,7 +13,6 @@ use futures::{future, Future, Stream};
 use hyper::{Body, Client, Request};
 use prometheus::{Counter, Histogram, HistogramOpts, Registry};
 use serde_json;
-use crate::AppState;
 
 lazy_static! {
     static ref HTTP_UPSTREAM_REQS: Counter = Counter::new(

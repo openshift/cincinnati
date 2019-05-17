@@ -1,9 +1,9 @@
 //! This plugin removes releases according to its metadata
 
-use failure::Fallible;
 use crate::plugins::{
     InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
 };
+use failure::Fallible;
 
 static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 

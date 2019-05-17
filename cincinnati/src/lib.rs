@@ -523,9 +523,9 @@ impl From<plugins::interface::Graph> for Graph {
 
 impl From<Graph> for plugins::interface::Graph {
     fn from(graph: Graph) -> Self {
+        use crate::Release::{Abstract, Concrete};
         use daggy::petgraph::visit::IntoNeighborsDirected;
         use daggy::petgraph::Direction;
-        use crate::Release::{Abstract, Concrete};
 
         let mut nodes_converted: Vec<plugins::interface::Graph_Node> =
             std::vec::Vec::with_capacity(graph.dag.node_count());

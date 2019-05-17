@@ -11,8 +11,8 @@ pub mod internal;
 
 pub use self::catalog::{deserialize_config, PluginSettings};
 use crate as cincinnati;
-use failure::{Error, Fallible, ResultExt};
 use crate::plugins::interface::{PluginError, PluginExchange};
+use failure::{Error, Fallible, ResultExt};
 use std::collections::HashMap;
 use try_from::{TryFrom, TryInto};
 

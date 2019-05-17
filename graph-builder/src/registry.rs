@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::release::Metadata;
 use cincinnati;
 use failure::{Error, Fallible, ResultExt};
 use flate2::read::GzDecoder;
 use futures::prelude::*;
-use crate::release::Metadata;
 use serde_json;
 use std::collections::HashMap;
 use std::fs::File;

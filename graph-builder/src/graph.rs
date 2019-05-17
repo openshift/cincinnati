@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::config;
+use crate::registry::{self, Registry};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{plugins, AbstractRelease, Graph, Release, CONTENT_TYPE};
 use commons::GraphError;
-use crate::config;
 use failure::{Error, Fallible};
-use prometheus::{self, Counter, IntGauge};
 pub use parking_lot::RwLock;
-use crate::registry::{self, Registry};
+use prometheus::{self, Counter, IntGauge};
 use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

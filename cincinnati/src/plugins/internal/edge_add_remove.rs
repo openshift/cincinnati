@@ -1,11 +1,11 @@
 //! This plugin adds and removes Edges from Nodes accordingly
 
 use crate as cincinnati;
-use failure::Fallible;
 use crate::plugins::{
     InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
 };
 use crate::ReleaseId;
+use failure::Fallible;
 
 static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 
