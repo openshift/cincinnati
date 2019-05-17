@@ -276,7 +276,7 @@ pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
                         version: version.to_string(),
                     }))?,
                 };
-                graph.add_transition(&previous, &current)
+                graph.add_edge(&previous, &current)
             })?;
 
             next.iter().try_for_each(|version| {
@@ -286,7 +286,7 @@ pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
                         version: version.to_string(),
                     }))?,
                 };
-                graph.add_transition(&current, &next)
+                graph.add_edge(&current, &next)
             })
         })?;
 

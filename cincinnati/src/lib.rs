@@ -123,11 +123,24 @@ impl Graph {
         }
     }
 
-    pub fn add_transition(&mut self, source: &ReleaseId, target: &ReleaseId) -> Result<(), Error> {
-        self.dag.add_edge(source.0, target.0, Empty {})?;
-        Ok(())
+    /// Add a transition (edge) from `source` to `target`.
+    ///
+    /// Fails with the `WoulcCycle` error if the new edge would lead to a cycle.
+    pub fn add_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
+        self.dag
+            .add_edge(from.0, to.0, Empty {})
+            .map(|_| ())
+            .map_err(Into::into)
     }
 
+    /// Add edges for all given key/value pairs of releases.
+    pub fn add_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
+        indices
+            .iter()
+            .try_fold((), |_, (from, to)| self.add_edge(&from, &to))
+    }
+
+    /// Returns a Some(ReleaseId) if the version exists in the graph, None otherwise.
     pub fn find_by_version(&self, version: &str) -> Option<ReleaseId> {
         self.dag
             .node_references()
@@ -150,19 +163,6 @@ impl Graph {
         indices
             .iter()
             .try_for_each(|(from, to)| self.remove_edge(from, to))
-    }
-
-    pub fn add_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
-        self.dag
-            .add_edge(from.0, to.0, Empty {})
-            .map(|_| ())
-            .map_err(Into::into)
-    }
-
-    pub fn add_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
-        indices
-            .iter()
-            .try_fold((), |_, (from, to)| self.add_edge(&from, &to))
     }
 
     /// Returns tuples of ReleaseId and its version String for releases for which
