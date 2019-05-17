@@ -1,7 +1,7 @@
 use actix_web::{HttpRequest, HttpResponse};
 use openapiv3::{OpenAPI, ReferenceOr};
 use std::collections::HashSet;
-use AppState;
+use crate::AppState;
 
 /// Template for policy-engine OpenAPIv3 document.
 const SPEC: &str = include_str!("openapiv3.json");

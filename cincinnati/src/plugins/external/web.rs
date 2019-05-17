@@ -16,8 +16,8 @@ pub struct _WebPluginClient {
 mod tests {
     use crate as cincinnati;
     use failure::Fallible;
-    use plugins::{interface, ExternalIO, ExternalPlugin, InternalIO, PluginResult};
-    use tests::generate_graph;
+    use crate::plugins::{interface, ExternalIO, ExternalPlugin, InternalIO, PluginResult};
+    use crate::tests::generate_graph;
     use try_from::TryInto;
 
     struct DummyWebClient {

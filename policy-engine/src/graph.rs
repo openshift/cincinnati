@@ -12,7 +12,7 @@ use futures::{future, Future, Stream};
 use hyper::{Body, Client, Request};
 use prometheus::{Counter, Histogram, HistogramOpts, Registry};
 use serde_json;
-use AppState;
+use crate::AppState;
 
 lazy_static! {
     static ref HTTP_UPSTREAM_REQS: Counter = Counter::new(

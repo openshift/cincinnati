@@ -3,7 +3,7 @@
 use actix_web::{HttpRequest, HttpResponse};
 use futures::future;
 use futures::prelude::*;
-use graph::State;
+use crate::graph::State;
 use prometheus;
 
 /// Common prefix for graph-builder metrics.
