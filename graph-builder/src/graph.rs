@@ -156,6 +156,8 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
             })),
             Box::new(InternalPluginWrapper(EdgeAddRemovePlugin {
                 key_prefix: internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER.to_string(),
+                remove_all_edges_value: internal::edge_add_remove::DEFAULT_REMOVE_ALL_EDGES_VALUE
+                    .to_string(),
             })),
         ]
     };
