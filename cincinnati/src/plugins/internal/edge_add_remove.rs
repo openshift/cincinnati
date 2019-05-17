@@ -34,7 +34,7 @@ impl PluginSettings for EdgeAddRemovePlugin {
     }
 }
 
-/// Adds and removes next and previous releases to/from quay labels
+/// Adds and removes next and previous releases specified by metadata.
 ///
 /// The labels are assumed to have the syntax `<prefix>.(previous|next).(remove|add)=(<Version>,)*<Version>`
 impl EdgeAddRemovePlugin {
@@ -50,7 +50,7 @@ impl EdgeAddRemovePlugin {
         Ok(Box::new(plugin))
     }
 
-    /// Remove next and previous releases from quay labels
+    /// Remove next and previous releases specified by metadata.
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).remove=(<Version>,)*<Version>`
     fn remove_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
@@ -97,7 +97,7 @@ impl EdgeAddRemovePlugin {
         Ok(())
     }
 
-    /// Add next and previous releases from quay labels
+    /// Add next and previous releases specified by metadata
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).add=(<Version>,)*<Version>`
     fn add_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
