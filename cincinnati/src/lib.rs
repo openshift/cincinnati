@@ -111,6 +111,30 @@ impl<'a> Iterator for NextReleases<'a> {
     }
 }
 
+/// Can be used to iterate over all direct parents of the given release.
+///
+/// See the `previous_releases` method for more information.
+pub struct PreviousReleases<'a> {
+    parents: daggy::Parents<Release, Empty, daggy::petgraph::graph::DefaultIx>,
+    dag: &'a Dag<Release, Empty>,
+}
+
+impl<'a> Iterator for PreviousReleases<'a> {
+    type Item = (daggy::EdgeIndex, daggy::NodeIndex, &'a Release);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.parents
+            .walk_next(self.dag)
+            .map(|(edge_index, node_index)| {
+                (
+                    edge_index,
+                    node_index,
+                    self.dag.node_weight(node_index).expect(EXPECT_NODE_WEIGHT),
+                )
+            })
+    }
+}
+
 /// Dummy type used as edge-weights inside `Graph`.
 #[derive(Debug, Clone)]
 pub struct Empty;
@@ -182,6 +206,25 @@ impl Graph {
         indices
             .iter()
             .try_for_each(|(from, to)| self.remove_edge(from, to))
+    }
+
+    /// Remove the edge with the given index.
+    ///
+    /// Fails if the edge wasn't found and thus couldn't be removed.
+    pub fn remove_edge_by_index(&mut self, index: daggy::EdgeIndex) -> Result<(), Error> {
+        match self.dag.remove_edge(index) {
+            Some(_) => Ok(()),
+            None => bail!("could not remove edge with index {:?}", index),
+        }
+    }
+
+    /// Remove the edges with the given indices.
+    ///
+    /// Stops and fails at the first edge which couldn't be removed.
+    pub fn remove_edges_by_index(&mut self, indices: &[daggy::EdgeIndex]) -> Result<(), Error> {
+        indices
+            .iter()
+            .try_for_each(|ei| self.remove_edge_by_index(*ei))
     }
 
     /// Returns tuples of ReleaseId and its version String for releases for which
@@ -262,6 +305,16 @@ impl Graph {
     pub fn next_releases(&self, source: &ReleaseId) -> NextReleases {
         NextReleases {
             children: self.dag.children(source.0),
+            dag: &self.dag,
+        }
+    }
+
+    /// Returns `PreviousReleases` for the given release.
+    ///
+    /// `PreviousReleases` can be used to iterate over all direct parents of the given release.
+    pub fn previous_releases(&self, source: &ReleaseId) -> PreviousReleases {
+        PreviousReleases {
+            parents: self.dag.parents(source.0),
             dag: &self.dag,
         }
     }
