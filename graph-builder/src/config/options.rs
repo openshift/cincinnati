@@ -77,7 +77,7 @@ pub struct DockerRegistryOptions {
 }
 
 impl MergeOptions<Option<ServiceOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<ServiceOptions>) -> () {
+    fn merge(&mut self, opts: Option<ServiceOptions>) {
         if let Some(service) = opts {
             assign_if_some!(self.address, service.address);
             assign_if_some!(self.port, service.port);
@@ -90,7 +90,7 @@ impl MergeOptions<Option<ServiceOptions>> for AppSettings {
 }
 
 impl MergeOptions<Option<StatusOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<StatusOptions>) -> () {
+    fn merge(&mut self, opts: Option<StatusOptions>) {
         if let Some(status) = opts {
             assign_if_some!(self.status_address, status.address);
             assign_if_some!(self.status_port, status.port);
@@ -99,7 +99,7 @@ impl MergeOptions<Option<StatusOptions>> for AppSettings {
 }
 
 impl MergeOptions<Option<DockerRegistryOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<DockerRegistryOptions>) -> () {
+    fn merge(&mut self, opts: Option<DockerRegistryOptions>) {
         if let Some(registry) = opts {
             assign_if_some!(self.pause_secs, registry.pause_secs);
             assign_if_some!(self.registry, registry.url);

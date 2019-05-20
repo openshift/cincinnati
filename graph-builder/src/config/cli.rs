@@ -34,7 +34,7 @@ pub struct CliOptions {
 }
 
 impl MergeOptions<CliOptions> for AppSettings {
-    fn merge(&mut self, opts: CliOptions) -> () {
+    fn merge(&mut self, opts: CliOptions) {
         self.verbosity = match opts.verbosity {
             0 => self.verbosity,
             1 => log::LevelFilter::Info,

@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::config;
+use crate::registry::{self, Registry};
 use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use cincinnati::{plugins, AbstractRelease, Graph, Release, CONTENT_TYPE};
 use commons::GraphError;
-use crate::config;
 use failure::{Error, Fallible};
-use prometheus::{self, Counter, IntGauge};
 pub use parking_lot::RwLock;
-use crate::registry::{self, Registry};
+use prometheus::{self, Counter, IntGauge};
 use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -117,12 +117,13 @@ impl State {
     }
 }
 
+#[allow(clippy::useless_let_if_seq)]
 pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
     // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
     let mut cache = HashMap::new();
 
     let registry = Registry::try_from_str(&settings.registry)
-        .expect(&format!("failed to parse '{}' as Url", &settings.registry));
+        .unwrap_or_else(|_| panic!("failed to parse '{}' as Url", &settings.registry));
 
     // Read the credentials outside the loop to avoid re-reading the file
     let (username, password) =
@@ -275,7 +276,7 @@ pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
                         version: version.to_string(),
                     }))?,
                 };
-                graph.add_transition(&previous, &current)
+                graph.add_edge(&previous, &current)
             })?;
 
             next.iter().try_for_each(|version| {
@@ -285,7 +286,7 @@ pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
                         version: version.to_string(),
                     }))?,
                 };
-                graph.add_transition(&current, &next)
+                graph.add_edge(&current, &next)
             })
         })?;
 

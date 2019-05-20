@@ -46,12 +46,14 @@ pub use daggy::WouldCycle;
 pub const CONTENT_TYPE: &str = "application/json";
 const EXPECT_NODE_WEIGHT: &str = "all exisitng nodes to have a weight (release)";
 
+/// Graph type which stores `Release` as node-weights and `Empty` as edge-weights.
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(Clone))]
 pub struct Graph {
     dag: Dag<Release, Empty>,
 }
 
+/// Wrapper enum for the concrete and abstract release types.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Release {
@@ -60,6 +62,7 @@ pub enum Release {
 }
 
 impl Release {
+    /// Return the version string of a given `Release`.
     pub fn version(&self) -> &str {
         match self {
             Release::Abstract(release) => &release.version,
@@ -68,6 +71,7 @@ impl Release {
     }
 }
 
+/// Type to represent a Release with all its information.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct ConcreteRelease {
     pub version: String,
@@ -75,14 +79,23 @@ pub struct ConcreteRelease {
     pub metadata: HashMap<String, String>,
 }
 
+/// Abtract release only storing a version.
+///
+/// It can be used for adding an edge between an existing and a non-existing
+/// release, and is expected to later be filled up with a `ConcreteRelease` once
+/// the graph is completed.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct AbstractRelease {
     pub version: String,
 }
 
+/// Abstraction over a node in the graph representing a `Release`
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct ReleaseId(daggy::NodeIndex);
 
+/// Can be used to iterate over all direct children of the given release.
+///
+/// See the `next_releases` method for more information.
 pub struct NextReleases<'a> {
     children: daggy::Children<Release, Empty, daggy::petgraph::graph::DefaultIx>,
     dag: &'a Dag<Release, Empty>,
@@ -98,10 +111,14 @@ impl<'a> Iterator for NextReleases<'a> {
     }
 }
 
+/// Dummy type used as edge-weights inside `Graph`.
 #[derive(Debug, Clone)]
 pub struct Empty;
 
 impl Graph {
+    /// Add a release to the graph.
+    ///
+    /// Fails if the version already exists.
     pub fn add_release<R>(&mut self, release: R) -> Result<ReleaseId, Error>
     where
         R: Into<Release>,
@@ -123,11 +140,24 @@ impl Graph {
         }
     }
 
-    pub fn add_transition(&mut self, source: &ReleaseId, target: &ReleaseId) -> Result<(), Error> {
-        self.dag.add_edge(source.0, target.0, Empty {})?;
-        Ok(())
+    /// Add a transition (edge) from `source` to `target`.
+    ///
+    /// Fails with the `WoulcCycle` error if the new edge would lead to a cycle.
+    pub fn add_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
+        self.dag
+            .add_edge(from.0, to.0, Empty {})
+            .map(|_| ())
+            .map_err(Into::into)
     }
 
+    /// Add edges for all given key/value pairs of releases.
+    pub fn add_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
+        indices
+            .iter()
+            .try_fold((), |_, (from, to)| self.add_edge(&from, &to))
+    }
+
+    /// Returns a Some(ReleaseId) if the version exists in the graph, None otherwise.
     pub fn find_by_version(&self, version: &str) -> Option<ReleaseId> {
         self.dag
             .node_references()
@@ -135,6 +165,7 @@ impl Graph {
             .map(|nr| ReleaseId(nr.id()))
     }
 
+    /// Removes the directed edge between the given releases.
     pub fn remove_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
         if let Some(edge) = self.dag.find_edge(from.0, to.0) {
             self.dag
@@ -146,23 +177,11 @@ impl Graph {
         }
     }
 
+    /// Remove the directed edges given by the key/value pairs of releases.
     pub fn remove_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
         indices
             .iter()
             .try_for_each(|(from, to)| self.remove_edge(from, to))
-    }
-
-    pub fn add_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
-        self.dag
-            .add_edge(from.0, to.0, Empty {})
-            .map(|_| ())
-            .map_err(Into::into)
-    }
-
-    pub fn add_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
-        indices
-            .iter()
-            .try_fold((), |_, (from, to)| self.add_edge(&from, &to))
     }
 
     /// Returns tuples of ReleaseId and its version String for releases for which
@@ -226,7 +245,7 @@ impl Graph {
             .collect()
     }
 
-    // Returns a mutable reference to the metadata for the given release
+    /// Returns a mutable reference to the metadata for the given release.
     pub fn get_metadata_as_ref_mut(
         &mut self,
         release_id: &ReleaseId,
@@ -237,6 +256,9 @@ impl Graph {
         }
     }
 
+    /// Returns `NextReleases` for the given release.
+    ///
+    /// `NextReleases` can be used to iterate over all direct children of the given release.
     pub fn next_releases(&self, source: &ReleaseId) -> NextReleases {
         NextReleases {
             children: self.dag.children(source.0),
@@ -268,10 +290,16 @@ impl Graph {
             }
         });
 
+        self.remove_nodes(to_remove.into_iter().map(|ri| ri.0).collect())
+    }
+
+    /// Removes the nodes with the given NodeIndex and returns the number of
+    /// removed nodes.
+    pub fn remove_nodes(&mut self, to_remove: Vec<daggy::NodeIndex>) -> usize {
         to_remove
-            .iter()
+            .into_iter()
             .rev()
-            .filter(|ri| self.dag.remove_node(ri.0).is_some())
+            .filter(|ni| self.dag.remove_node(*ni).is_some())
             .count()
     }
 
@@ -523,9 +551,9 @@ impl From<plugins::interface::Graph> for Graph {
 
 impl From<Graph> for plugins::interface::Graph {
     fn from(graph: Graph) -> Self {
+        use crate::Release::{Abstract, Concrete};
         use daggy::petgraph::visit::IntoNeighborsDirected;
         use daggy::petgraph::Direction;
-        use crate::Release::{Abstract, Concrete};
 
         let mut nodes_converted: Vec<plugins::interface::Graph_Node> =
             std::vec::Vec::with_capacity(graph.dag.node_count());
@@ -609,7 +637,7 @@ mod tests {
 
         let nodes: Vec<daggy::NodeIndex> = (start..(start + count))
             .map(|i| {
-                let metadata = metadata.remove(&i).unwrap_or(HashMap::new());
+                let metadata = metadata.remove(&i).unwrap_or_default();
 
                 let release = Release::Concrete(ConcreteRelease {
                     version: format!("{}.0.0", i),

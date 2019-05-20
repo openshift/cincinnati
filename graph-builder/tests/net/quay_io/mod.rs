@@ -5,15 +5,15 @@ extern crate quay;
 extern crate semver;
 extern crate url;
 
-use self::graph_builder::registry::{self, fetch_releases, Release};
-use self::graph_builder::release::{Metadata, MetadataKind::V0};
-use self::semver::Version;
-use failure::Fallible;
 use self::cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY;
 use self::cincinnati::Empty;
 use self::cincinnati::WouldCycle;
 use self::graph_builder::graph::create_graph;
 use self::graph_builder::registry::Registry;
+use self::graph_builder::registry::{self, fetch_releases, Release};
+use self::graph_builder::release::{Metadata, MetadataKind::V0};
+use self::semver::Version;
+use failure::Fallible;
 use std::collections::HashMap;
 
 #[cfg(feature = "test-net-private")]
@@ -88,7 +88,7 @@ fn expected_releases(
 }
 
 fn remove_metadata_by_key(releases: &mut Vec<Release>, key: &str) {
-    for ref mut release in releases.iter_mut() {
+    for release in releases.iter_mut() {
         release.metadata.metadata.remove(key).unwrap();
     }
 }
@@ -105,7 +105,7 @@ fn fetch_release_private_with_credentials_must_succeed() {
     let mut cache = HashMap::new();
     let credentials_path = match std::env::var("CINCINNATI_TEST_CREDENTIALS_PATH") {
         Ok(value) => Some(PathBuf::from(value)),
-        Err(_) => {
+        _ => {
             panic!("CINCINNATI_TEST_CREDENTIALS_PATH unset, skipping...");
         }
     };
@@ -248,14 +248,14 @@ fn fetch_and_annotate_releases_with_quay_labels() {
     init_logger();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
-    let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+    let _runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
     let repo = "redhat/openshift-cincinnati-test-labels-public-manual";
 
     let mut cache = HashMap::new();
     let (username, password) = (None, None);
     // let (label_filter, api_token, api_base) = (DEFAULT_QUAY_LABEL_FILTER, None, DEFAULT_API_BASE);
 
-    let mut releases = fetch_releases(
+    let releases = fetch_releases(
         &registry,
         &repo,
         username,

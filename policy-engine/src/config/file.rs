@@ -49,7 +49,7 @@ impl FileOptions {
 }
 
 impl MergeOptions<Option<FileOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<FileOptions>) -> () {
+    fn merge(&mut self, opts: Option<FileOptions>) {
         if let Some(file) = opts {
             assign_if_some!(self.verbosity, file.verbosity);
             self.merge(file.service);
@@ -70,7 +70,7 @@ pub struct UpstreamOptions {
 }
 
 impl MergeOptions<Option<UpstreamOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<UpstreamOptions>) -> () {
+    fn merge(&mut self, opts: Option<UpstreamOptions>) {
         if let Some(upstream) = opts {
             self.merge(upstream.cincinnati);
         }
