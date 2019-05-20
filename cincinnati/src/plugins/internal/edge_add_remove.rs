@@ -97,7 +97,7 @@ impl EdgeAddRemovePlugin {
         Ok(())
     }
 
-    /// Add next and previous releases specified by metadata
+    /// Add next and previous releases specified by metadata.
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).add=(<Version>,)*<Version>`
     fn add_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
