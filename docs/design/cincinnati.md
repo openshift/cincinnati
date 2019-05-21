@@ -49,14 +49,24 @@ An example of this metadata document can be seen here:
 }
 ```
 
-A simple example of this directed acyclic graph can be seen in Figure 1. In this example, four versions were released (`1.0.0`, `1.1.0`, `1.2.0`, and `1.3.0`). After releasing `1.1.0`, it is discovered that there is a critical bug and this version is subsequently removed from the graph. Because of this, it will not be possible for clients who are currently running `1.0.0` to update to `1.2.0`.
+A simple example of this directed acyclic graph can be seen in Figure 1. In this example, four versions were released (`1.0.0`, `1.1.0`, `1.2.0`, and `1.3.0`).
 
 <figure align="center">
-  <img src="figures/cincinnati-1.svg" alt="Figure 1: A visualized DAG with three groups and a broken release" />
-  <figcaption>Figure 1: A visualized DAG with three groups and a broken release</figcaption>
+  <img src="figures/cincinnati-initial.svg" alt="Figure 1: A visualized DAG with four releases" />
+  <figcaption>Figure 2: A visualized DAG with four releases</figcaption>
 </figure>
 
-In order to allow the transition mentioned above, a new version, `1.1.1`, needs to be released. In order to insert itself into the graph, it will need to make use of both the previous and next fields in its metadata:
+After releasing `1.1.0`, it is discovered that there is a critical bug and this version is subsequently flagged as degraded.
+Update paths which lead into the degraded release are removed to prevent clients from upgrading to the degraded release.
+Because of this, it will not be possible for clients who are currently running `1.0.0` to update to `1.2.0`.
+
+<figure align="center">
+  <img src="figures/cincinnati-bad-node.svg" alt="Figure 2: A visualized DAG with four releases, one of which is degraded" />
+  <figcaption>Figure 2: A visualized DAG with four releases, one of which is degraded</figcaption>
+</figure>
+
+In order to allow the transition mentioned above, a new version, `1.1.1`, can be released (an alternative approach would be to add an edge directly from `1.0.0` to `1.2.0`, which you could do by updating the metadata for either of those nodes, next or previous, respectively).
+In order to insert itself into the graph, it will need to make use of both the previous and next fields in its metadata:
 
 ```json
 {
@@ -67,21 +77,20 @@ In order to allow the transition mentioned above, a new version, `1.1.1`, needs 
 }
 ```
 
-The result of these changes can be seen in Figure 2. The `1.1.1` release has been inserted into the graph, allowing clients running `1.0.0` to transition to `1.2.0` through `1.1.1`. Because `1.2.0` declares that transitions from `1.1.0` are valid, clients that are running `1.1.0` will still be able to transition to `1.2.0` despite `1.1.0` being removed from the graph.
+The result of these changes can be seen in Figure 3. The `1.1.1` release has been inserted into the graph, allowing clients running `1.0.0` to transition to `1.2.0` through `1.1.1`. Because `1.2.0` declares that transitions from `1.1.0` are valid, clients that are running `1.1.0` will still be able to transition to `1.2.0` despite `1.1.0` being removed from the graph.
 
 <figure align="center">
-  <img src="figures/cincinnati-2.svg" alt="Figure 2: A visualized DAG with three groups and a broken release and a patch" />
-  <figcaption>Figure 2: A visualized DAG with three groups and a broken release and a patch</figcaption>
+  <img src="figures/cincinnati-patch-node.svg" alt="Figure 3: A visualized DAG with three groups and a broken release and a patch" />
+  <figcaption>Figure 3: A visualized DAG with five releases, including a degraded release and a patch release</figcaption>
 </figure>
-
 
 ## Components ##
 
-There are a number of components that make up the Cincinnati update system. Most of these components implement a specified interface, allowing alternate implementations of each component. An overview of each of the components is shown below in Figure 3.
+There are a number of components that make up the Cincinnati update system. Most of these components implement a specified interface, allowing alternate implementations of each component. An overview of each of the components is shown below in Figure 4.
 
 <figure align="center">
-  <img src="figures/cincinnati-3.svg" alt="Figure 3: An overview of the relationships between the components within Cincinnati" />
-  <figcaption>Figure 3: An overview of the relationships between the components within Cincinnati</figcaption>
+  <img src="figures/cincinnati-components.svg" alt="Figure 4: An overview of the relationships between the components within Cincinnati" />
+  <figcaption>Figure 4: An overview of the relationships between the components within Cincinnati</figcaption>
 </figure>
 
 
