@@ -8,12 +8,16 @@ use crate::ReleaseId;
 use failure::Fallible;
 
 static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
+pub static DEFAULT_REMOVE_ALL_EDGES_VALUE: &str = "*";
 
 #[derive(Clone, Debug, Deserialize, SmartDefault)]
 #[serde(default)]
 pub struct EdgeAddRemovePlugin {
     #[default(DEFAULT_KEY_FILTER.to_string())]
     pub key_prefix: String,
+
+    #[default(DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string())]
+    pub remove_all_edges_value: String,
 }
 
 impl InternalPlugin for EdgeAddRemovePlugin {
@@ -46,6 +50,10 @@ impl EdgeAddRemovePlugin {
         let plugin: Self = cfg.try_into()?;
 
         ensure!(!plugin.key_prefix.is_empty(), "empty prefix");
+        ensure!(
+            !plugin.remove_all_edges_value.is_empty(),
+            "empty value for removing all edges"
+        );
 
         Ok(Box::new(plugin))
     }
@@ -53,12 +61,23 @@ impl EdgeAddRemovePlugin {
     /// Remove next and previous releases specified by metadata.
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).remove=(<Version>,)*<Version>`
+    /// If the value equals a single `REMOVE_ALL_EDGES_VALUE` all edges at the given direction are removed.
     fn remove_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
         graph
             .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "previous.remove"))
             .into_iter()
             .try_for_each(
                 |(to, to_version, from_csv): (ReleaseId, String, String)| -> Fallible<()> {
+                    if from_csv.trim() == self.remove_all_edges_value {
+                        let parents: Vec<daggy::EdgeIndex> = graph
+                            .previous_releases(&to)
+                            .map(|(edge_index, _, _)| edge_index)
+                            .collect();
+
+                        trace!("removing parents for '{}': {:?}", to_version, parents);
+                        return graph.remove_edges_by_index(&parents);
+                    }
+
                     for from_version in from_csv.split(',').map(str::trim) {
                         if let Some(from) = graph.find_by_version(&from_version) {
                             info!("[{}]: removing previous {}", from_version, to_version,);
@@ -184,13 +203,68 @@ mod tests {
             Some([(0, 1)].to_vec()),
         );
 
-        let processed_graph = EdgeAddRemovePlugin { key_prefix }
-            .run_internal(InternalIO {
-                graph: input_graph.clone(),
-                parameters: Default::default(),
-            })
-            .expect("plugin run failed")
-            .graph;
+        let processed_graph = EdgeAddRemovePlugin {
+            key_prefix,
+            remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+        }
+        .run_internal(InternalIO {
+            graph: input_graph.clone(),
+            parameters: Default::default(),
+        })
+        .expect("plugin run failed")
+        .graph;
+
+        assert_eq!(expected_graph, processed_graph);
+    }
+
+    #[test]
+    fn ensure_previous_remove_all() {
+        let key_prefix = "test_prefix".to_string();
+        let key_suffix = "previous.remove".to_string();
+
+        let metadata: HashMap<usize, HashMap<String, String>> = [
+            (0, [].iter().cloned().collect()),
+            (1, [].iter().cloned().collect()),
+            (
+                2,
+                [(
+                    format!("{}.{}", key_prefix, key_suffix),
+                    DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+                )]
+                .iter()
+                .cloned()
+                .collect(),
+            ),
+            (3, [].iter().cloned().collect()),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
+        let input_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
+            0,
+            metadata.len(),
+            metadata.clone(),
+            Some(vec![(0, 1), (0, 2), (1, 2), (2, 3)]),
+        );
+
+        let expected_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
+            0,
+            metadata.len(),
+            metadata,
+            Some([(0, 1), (2, 3)].to_vec()),
+        );
+
+        let processed_graph = EdgeAddRemovePlugin {
+            key_prefix,
+            remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+        }
+        .run_internal(InternalIO {
+            graph: input_graph.clone(),
+            parameters: Default::default(),
+        })
+        .expect("plugin run failed")
+        .graph;
 
         assert_eq!(expected_graph, processed_graph);
     }
@@ -237,13 +311,16 @@ mod tests {
         let expected_graph: cincinnati::Graph =
             crate::tests::generate_custom_graph(0, metadata.len(), metadata, Some(vec![]));
 
-        let processed_graph = EdgeAddRemovePlugin { key_prefix }
-            .run_internal(InternalIO {
-                graph: input_graph.clone(),
-                parameters: Default::default(),
-            })
-            .expect("plugin run failed")
-            .graph;
+        let processed_graph = EdgeAddRemovePlugin {
+            key_prefix,
+            remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+        }
+        .run_internal(InternalIO {
+            graph: input_graph.clone(),
+            parameters: Default::default(),
+        })
+        .expect("plugin run failed")
+        .graph;
 
         assert_eq!(expected_graph, processed_graph);
     }
@@ -285,13 +362,16 @@ mod tests {
             Some(vec![(0, 1), (0, 2), (1, 2)]),
         );
 
-        let processed_graph = EdgeAddRemovePlugin { key_prefix }
-            .run_internal(InternalIO {
-                graph: input_graph.clone(),
-                parameters: Default::default(),
-            })
-            .expect("plugin run failed")
-            .graph;
+        let processed_graph = EdgeAddRemovePlugin {
+            key_prefix,
+            remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+        }
+        .run_internal(InternalIO {
+            graph: input_graph.clone(),
+            parameters: Default::default(),
+        })
+        .expect("plugin run failed")
+        .graph;
 
         assert_eq!(expected_graph, processed_graph);
     }
@@ -330,13 +410,16 @@ mod tests {
             Some(vec![(0, 1), (0, 2), (0, 3), (1, 2), (2, 3)]),
         );
 
-        let processed_graph = EdgeAddRemovePlugin { key_prefix }
-            .run_internal(InternalIO {
-                graph: input_graph,
-                parameters: Default::default(),
-            })
-            .expect("plugin run failed")
-            .graph;
+        let processed_graph = EdgeAddRemovePlugin {
+            key_prefix,
+            remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+        }
+        .run_internal(InternalIO {
+            graph: input_graph,
+            parameters: Default::default(),
+        })
+        .expect("plugin run failed")
+        .graph;
 
         assert_eq!(expected_graph, processed_graph);
     }

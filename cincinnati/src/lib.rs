@@ -102,12 +102,42 @@ pub struct NextReleases<'a> {
 }
 
 impl<'a> Iterator for NextReleases<'a> {
-    type Item = &'a Release;
+    type Item = (daggy::EdgeIndex, daggy::NodeIndex, &'a Release);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.children
             .walk_next(self.dag)
-            .map(|(_, i)| self.dag.node_weight(i).expect(EXPECT_NODE_WEIGHT))
+            .map(|(edge_index, node_index)| {
+                (
+                    edge_index,
+                    node_index,
+                    self.dag.node_weight(node_index).expect(EXPECT_NODE_WEIGHT),
+                )
+            })
+    }
+}
+
+/// Can be used to iterate over all direct parents of the given release.
+///
+/// See the `previous_releases` method for more information.
+pub struct PreviousReleases<'a> {
+    parents: daggy::Parents<Release, Empty, daggy::petgraph::graph::DefaultIx>,
+    dag: &'a Dag<Release, Empty>,
+}
+
+impl<'a> Iterator for PreviousReleases<'a> {
+    type Item = (daggy::EdgeIndex, daggy::NodeIndex, &'a Release);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.parents
+            .walk_next(self.dag)
+            .map(|(edge_index, node_index)| {
+                (
+                    edge_index,
+                    node_index,
+                    self.dag.node_weight(node_index).expect(EXPECT_NODE_WEIGHT),
+                )
+            })
     }
 }
 
@@ -182,6 +212,25 @@ impl Graph {
         indices
             .iter()
             .try_for_each(|(from, to)| self.remove_edge(from, to))
+    }
+
+    /// Remove the edge with the given index.
+    ///
+    /// Fails if the edge wasn't found and thus couldn't be removed.
+    pub fn remove_edge_by_index(&mut self, index: daggy::EdgeIndex) -> Result<(), Error> {
+        match self.dag.remove_edge(index) {
+            Some(_) => Ok(()),
+            None => bail!("could not remove edge with index {:?}", index),
+        }
+    }
+
+    /// Remove the edges with the given indices.
+    ///
+    /// Stops and fails at the first edge which couldn't be removed.
+    pub fn remove_edges_by_index(&mut self, indices: &[daggy::EdgeIndex]) -> Result<(), Error> {
+        indices
+            .iter()
+            .try_for_each(|ei| self.remove_edge_by_index(*ei))
     }
 
     /// Returns tuples of ReleaseId and its version String for releases for which
@@ -262,6 +311,16 @@ impl Graph {
     pub fn next_releases(&self, source: &ReleaseId) -> NextReleases {
         NextReleases {
             children: self.dag.children(source.0),
+            dag: &self.dag,
+        }
+    }
+
+    /// Returns `PreviousReleases` for the given release.
+    ///
+    /// `PreviousReleases` can be used to iterate over all direct parents of the given release.
+    pub fn previous_releases(&self, source: &ReleaseId) -> PreviousReleases {
+        PreviousReleases {
+            parents: self.dag.parents(source.0),
             dag: &self.dag,
         }
     }
@@ -603,6 +662,8 @@ mod tests {
 
     use super::*;
 
+    type TestResult<T> = Result<T, Box<std::error::Error>>;
+
     pub(crate) fn generate_graph() -> Graph {
         let mut graph = Graph::default();
         let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
@@ -889,5 +950,75 @@ mod tests {
                 expected_metadata_value
             )
         });
+    }
+
+    #[test]
+    fn next_releases_yields_all_direct_children() -> TestResult<()> {
+        use std::collections::HashSet;
+        let n = 6;
+        let graph = generate_custom_graph(
+            0,
+            n,
+            Default::default(),
+            Some(vec![(0, 1), (1, 2), (1, 3), (1, 4), (2, 5), (3, 5), (4, 5)]),
+        );
+
+        let expected: HashSet<String> = generate_custom_graph(2, 3, Default::default(), None)
+            .find_by_fn_mut(|_| true)
+            .into_iter()
+            .map(|(_, version)| version)
+            .collect();
+
+        let anchor_version = "1.0.0";
+
+        let v3 = graph
+            .find_by_version(anchor_version)
+            .ok_or_else(|| format!("couldn't find version {}", anchor_version))?;
+
+        let result: HashSet<String> = graph
+            .next_releases(&v3)
+            .map(|(_, _, r)| r.version())
+            .map(ToString::to_string)
+            .collect();
+
+        assert_eq!(expected, result);
+        assert_eq!(result.len(), 3, "expected 3 results");
+
+        Ok(())
+    }
+
+    #[test]
+    fn previous_releases_yields_all_direct_parents() -> TestResult<()> {
+        use std::collections::HashSet;
+        let n = 6;
+        let graph = generate_custom_graph(
+            0,
+            n,
+            Default::default(),
+            Some(vec![(0, 1), (1, 4), (2, 4), (3, 4), (4, 5)]),
+        );
+
+        let expected: HashSet<String> = generate_custom_graph(1, 3, Default::default(), None)
+            .find_by_fn_mut(|_| true)
+            .into_iter()
+            .map(|(_, version)| version)
+            .collect();
+
+        let anchor_version = "4.0.0";
+
+        let v3 = graph
+            .find_by_version(anchor_version)
+            .ok_or_else(|| format!("couldn't find version {}", anchor_version))?;
+
+        let result: HashSet<String> = graph
+            .previous_releases(&v3)
+            .map(|(_, _, r)| r.version())
+            .map(ToString::to_string)
+            .collect();
+
+        assert_eq!(expected, result);
+        assert_eq!(result.len(), 3, "expected 3 results");
+
+        Ok(())
     }
 }
