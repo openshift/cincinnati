@@ -2,11 +2,11 @@
 #
 # Usage:
 #
-#   cat cincinnati.json | graph.sh [URI] >graph.dot
+#   cat cincinnati.json | graph.sh >graph.dot
 #
 # For example:
 #
-#   curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel=prerelease-4.1' | graph.sh https://cincinnati.example.org/your/graph | dot -Tsvg >graph.svg
+#   curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel=prerelease-4.1' | graph.sh | dot -Tsvg >graph.svg
 set -e
 
 JQ_SCRIPT="$(cat <<EOF
