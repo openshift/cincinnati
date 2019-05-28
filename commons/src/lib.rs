@@ -99,6 +99,7 @@ pub fn ensure_content_type(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use actix_web::client::head;
 
     #[test]
     fn test_parse_path_prefix() {
@@ -136,5 +137,13 @@ mod tests {
         ensure_query_params(&simple, "a=b&a=c").unwrap();
         ensure_query_params(&simple, "").unwrap_err();
         ensure_query_params(&simple, "c=d").unwrap_err();
+    }
+
+    #[test]
+    fn test_ensure_content_type() {
+        let mut headers = actix_web::http::HeaderMap::new();
+        headers.insert(header::ACCEPT, "application/json".parse().unwrap());
+        ensure_content_type(&headers, "application/json").unwrap();
+        ensure_content_type(&headers, "text/html").unwrap_err();
     }
 }
