@@ -49,11 +49,11 @@ An example of this metadata document can be seen here:
 }
 ```
 
-A simple example of this directed acyclic graph can be seen in Figure 1. In this example, four versions were released (`1.0.0`, `1.1.0`, `1.2.0`, and `1.3.0`).
+A simple example of this directed acyclic graph can be seen in Figure 1 (see [this script](../../hack/graph.sh) for generating a [Graphviz DOT][dot] rendering from Cincinnati JSON). In this example, four versions were released (`1.0.0`, `1.1.0`, `1.2.0`, and `1.3.0`).
 
 <figure align="center">
   <img src="figures/cincinnati-initial.svg" alt="Figure 1: A visualized DAG with four releases" />
-  <figcaption>Figure 2: A visualized DAG with four releases</figcaption>
+  <figcaption>Figure 1: A visualized DAG with four releases</figcaption>
 </figure>
 
 After releasing `1.1.0`, it is discovered that there is a critical bug and this version is subsequently flagged as degraded.
@@ -252,3 +252,5 @@ $ curl --silent --header 'Accept:application/json' https://cincinnati.example.co
 
 * **Continue using Omaha** - Tectonic used an augmented Omaha flow. It made use of the Omaha mechanism for discovering updates, but then instead of following the server's instruction, it fetched a list of all packages from the server and then chose from this list. Other than the initial discover and reporting events, Tectonic did not use any other aspects of the Omaha protocol.
 * **No central server** - From a point of correctness, the Cincinnati components are not required for updates. This is because the update payloads include the Cincinnati metadata, which defines the valid transitions. The cluster can validate the update payload before attempting to apply it. Without the policy engine, though, it would be difficult to impose rate-limits on updates (which allows those in charge of rolling out updates to stop updates if a problem is discovered). It would also be difficult to make changes to the policies that govern update paths since each cluster would have to make the decisions themselves if there was no central server.
+
+[dot]: https://www.graphviz.org/doc/info/lang.html
