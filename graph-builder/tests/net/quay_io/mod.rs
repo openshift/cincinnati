@@ -140,7 +140,7 @@ fn fetch_release_private_with_credentials_must_succeed() {
 }
 
 #[test]
-fn fetch_release_public_without_credentials_must_fail() {
+fn fetch_release_private_without_credentials_must_fail() {
     init_logger();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
