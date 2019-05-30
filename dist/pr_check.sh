@@ -1,1 +1,0 @@
-cargo_test.sh

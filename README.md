@@ -59,14 +59,14 @@ The *dist/* directory contains various CI/CD related files.
 
 #### Openshift Dev
 * Uses *dist/openshift-release/Dockerfile.builder* as the build container
-* Runs `dist/pr_check.sh` for PRs
-* Runs `dist/pr_check.sh` for successful merges to the *master* branch
+* Runs `dist/cargo_test.sh` for PRs
+* Runs `dist/cargo_test.sh` for successful merges to the *master* branch
 
 For details please see [github.com/openshift/release/(...)/openshift-cincinnati-master.yaml][1].
 
 #### App-SRE
 * Uses *dist/build/Dockerfile* as a build container
-* Runs `dist/pr_check.sh` for PRs
+* Runs `dist/cargo_test.sh` for PRs
 * Runs `dist/build_deploy.sh` for successful merges to the *master* branch and pushes the result to the staging environment *(URL is not yet publicly available)*
 
 [1]: https://github.com/openshift/release/blob/master/ci-operator/config/openshift/cincinnati/openshift-cincinnati-master.yaml
