@@ -30,3 +30,5 @@ protoc-rust = "2.0"
 
 [features]
 codegen-protoc = []
+test-net = []
+test-net-private = []
