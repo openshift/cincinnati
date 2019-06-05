@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -e
 
 declare -A cargo_test_flags
 cargo_test_flags["cincinnati"]=""
