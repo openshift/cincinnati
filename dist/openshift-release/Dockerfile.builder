@@ -1,4 +1,4 @@
-FROM centos:7 as builder
+FROM centos:7
 
 # base: EPEL repo for extra tools
 RUN yum -y install epel-release
