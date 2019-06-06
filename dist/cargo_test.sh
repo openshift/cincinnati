@@ -3,11 +3,20 @@
 set -e
 
 declare -A cargo_test_flags
-cargo_test_flags["cincinnati"]=""
+cargo_test_flags["cincinnati"]="--features test-net"
 cargo_test_flags["commons"]=""
 cargo_test_flags["graph-builder"]="--features test-net"
 cargo_test_flags["policy-engine"]=""
 cargo_test_flags["quay"]="--features test-net"
+
+if [[ -n "${CINCINNATI_TEST_CREDENTIALS_PATH}" && -n "${CINCINNATI_TEST_QUAY_API_TOKEN_PATH}" ]]; then
+    echo Secrets available, enabling private tests...
+    cargo_test_flags["cincinnati"]+=",test-net-private"
+    cargo_test_flags["graph-builder"]+=",test-net-private"
+    cargo_test_flags["quay"]+=",test-net-private"
+
+    export CINCINNATI_TEST_QUAY_API_TOKEN="$(cat ${CINCINNATI_TEST_QUAY_API_TOKEN_PATH})"
+fi
 
 declare -A executors
 executors["cargo"]="execute_native"
