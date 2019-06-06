@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 IMAGE_BUILD="${IMAGE_BUILD:-local/cincinnati-build:latest}"
-PROJECT_PARENT_DIR="${ABSOLUTE_PATH:?need ABSOLUTE_PATH set}/../"
+PROJECT_PARENT_DIR="${ABSOLUTE_PATH:?need ABSOLUTE_PATH set}/.."
 GIT_REV="$(git rev-parse --short=7 HEAD)"
 BUILD_VOLUME_CARGO_GIT="build_cargo_git_${GIT_REV}"
 BUILD_VOLUME_CARGO_REGISTRY="build_cargo_registry_${GIT_REV}"
