@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 
-set -e
+set -ex
 
 ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${ABSOLUTE_PATH}/commons.sh"
 
-ensure_build_container
+DOCKERFILE_BUILD="$ABSOLUTE_PATH/Dockerfile.build/"
+ensure_build_container "${DOCKERFILE_BUILD}"
 
-DOCKERFILE_DEPLOY="$ABSOLUTE_PATH/Dockerfile"
-RELEASE_DIR="${PROJECT_PARENT_DIR}/target/x86_64-unknown-linux-musl/release"
+DOCKERFILE_DEPLOY="$ABSOLUTE_PATH/Dockerfile.deploy/Dockerfile"
+RELEASE_DIR="${PROJECT_PARENT_DIR}/target/release"
 RELEASE_OUTPUT_DIR="${PROJECT_PARENT_DIR}/release-$(date +'%Y%m%d.%H%M%S')"
 
 function cleanup() {

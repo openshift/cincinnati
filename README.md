@@ -42,6 +42,9 @@ cd graph-builder/tests/images
 ./build-n-push.sh test-*
 ```
 
+### Run CI testsuite locally
+The script `dist/pr_check.sh` can be used to run the CI tests locally before submitting a pull-request.
+
 #### Language-Level
 The graph-builder package currently has network dependent tests which gated behind the feature `test-net` and `test-net-private`.
 The latter requires setting the environment variable `CINCINNATI_TEST_CREDENTIALS_PATH` which is equivalent to *graph-builder's* `--credentials-path`.
@@ -59,14 +62,12 @@ The *dist/* directory contains various CI/CD related files.
 
 #### Openshift Dev
 * Uses *dist/openshift-release/Dockerfile.builder* as the build container
-* Runs `dist/pr_check.sh` for PRs
-* Runs `dist/pr_check.sh` for successful merges to the *master* branch
+* Runs `dist/cargo_test.sh` and `dist/prow_yaml_lint.sh` for PRs
 
 For details please see [github.com/openshift/release/(...)/openshift-cincinnati-master.yaml][1].
 
 #### App-SRE
 * Uses *dist/build/Dockerfile* as a build container
-* Runs `dist/pr_check.sh` for PRs
 * Runs `dist/build_deploy.sh` for successful merges to the *master* branch and pushes the result to the staging environment *(URL is not yet publicly available)*
 
 [1]: https://github.com/openshift/release/blob/master/ci-operator/config/openshift/cincinnati/openshift-cincinnati-master.yaml
