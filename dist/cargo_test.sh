@@ -40,8 +40,9 @@ function execute_native() {
 function execute_docker() {
   ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   source "${ABSOLUTE_PATH}/commons.sh"
+  DOCKERFILE_BUILD="$ABSOLUTE_PATH/Dockerfile.build/"
 
-  ensure_build_container
+  ensure_build_container "${DOCKERFILE_BUILD}"
 
   function cleanup() {
       set +e
