@@ -43,7 +43,7 @@ cd graph-builder/tests/images
 ```
 
 ### Run CI testsuite locally
-The script `dist/pr_check.sh` can be used to run the CI tests locally before submitting a pull-request.
+The script `hack/run-all-tests.sh` can be used to run the CI tests locally before submitting a pull-request.
 
 #### Language-Level
 The graph-builder package currently has network dependent tests which gated behind the feature `test-net` and `test-net-private`.
@@ -61,16 +61,17 @@ cargo test --features test-net,test-net-private
 The *dist/* directory contains various CI/CD related files.
 
 #### Openshift Dev
-* Uses *dist/openshift-release/Dockerfile.builder* as the build container
-* Runs `dist/cargo_test.sh` and `dist/prow_yaml_lint.sh` for PRs
+* Uses *dist/Dockerfile.build/Dockerfile* as the build container image
+* Run the following scripts on PR
+    * `dist/cargo_test.sh`
+    * `dist/prow_yaml_lint.sh`
 
 For details please see [github.com/openshift/release/(...)/openshift-cincinnati-master.yaml][1].
 
 #### App-SRE
-* Uses *dist/build/Dockerfile* as a build container
+* Uses *dist/Dockerfile.build/Dockerfile* as the build container image
 * Runs `dist/build_deploy.sh` for successful merges to the *master* branch and pushes the result to the staging environment *(URL is not yet publicly available)*
 
-[1]: https://github.com/openshift/release/blob/master/ci-operator/config/openshift/cincinnati/openshift-cincinnati-master.yaml
 
 ## Development
 
@@ -84,3 +85,5 @@ cargo build --features=codegen-protoc
 ```
 
 The CI/CD system doesn't do this and it relies on the generated code being committed to the repository; please do so after generating new code!
+
+[1]: https://github.com/openshift/release/blob/master/ci-operator/config/openshift/cincinnati/openshift-cincinnati-master.yaml
