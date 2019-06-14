@@ -126,6 +126,15 @@ pub(crate) fn index(
         })
         .then(move |r| {
             timer.observe_duration();
+
+            if let Err(e) = &r {
+                error!(
+                    "Error serving request with parameters '{:?}': {}",
+                    req.query(),
+                    e
+                );
+            }
+
             r
         });
     Box::new(serve)
