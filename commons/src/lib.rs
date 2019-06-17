@@ -101,7 +101,6 @@ pub fn ensure_content_type(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use actix_web::client::head;
 
     #[test]
     fn test_parse_path_prefix() {

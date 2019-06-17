@@ -34,7 +34,7 @@ mod graph;
 mod metrics;
 mod openapi;
 
-use actix_web::{http::Method, middleware::Logger, server, App};
+use actix_web::{App, HttpServer};
 use failure::Error;
 use std::collections::HashSet;
 
@@ -50,10 +50,10 @@ fn main() -> Result<(), Error> {
 
     // Metrics service.
     graph::register_metrics(&metrics::PROM_REGISTRY)?;
-    server::new(|| {
-        App::new()
-            .middleware(Logger::default())
-            .route("/metrics", Method::GET, metrics::serve)
+    HttpServer::new(|| {
+        App::new().service(
+            actix_web::web::resource("/metrics").route(actix_web::web::get().to(metrics::serve)),
+        )
     })
     .bind((settings.status_address, settings.status_port))?
     .start();
@@ -65,18 +65,23 @@ fn main() -> Result<(), Error> {
         path_prefix: settings.path_prefix.clone(),
     };
 
-    server::new(move || {
+    HttpServer::new(move || {
         let app_prefix = state.path_prefix.clone();
-        App::with_state(state.clone())
-            .middleware(Logger::default())
-            .prefix(app_prefix)
-            .route("/v1/graph", Method::GET, graph::index)
-            .route("/v1/openapi", Method::GET, openapi::index)
+        App::new()
+            .register_data(actix_web::web::Data::new(state.clone()))
+            .service(
+                actix_web::web::resource(&format!("{}/v1/graph", app_prefix))
+                    .route(actix_web::web::get().to(graph::index)),
+            )
+            .service(
+                actix_web::web::resource(&format!("{}/v1/openapi", app_prefix))
+                    .route(actix_web::web::get().to(openapi::index)),
+            )
     })
     .bind((settings.address, settings.port))?
     .start();
 
-    sys.run();
+    let _ = sys.run();
     Ok(())
 }
 

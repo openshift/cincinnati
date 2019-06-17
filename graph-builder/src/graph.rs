@@ -14,7 +14,7 @@
 
 use crate::config;
 use crate::registry::{self, Registry};
-use actix_web::{HttpMessage, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::{plugins, AbstractRelease, Graph, Release, CONTENT_TYPE};
 use commons::GraphError;
 use failure::{Error, Fallible};
@@ -65,19 +65,26 @@ pub fn register_metrics(registry: &prometheus::Registry) -> Fallible<()> {
 }
 
 /// Serve Cincinnati graph requests.
-pub fn index(req: HttpRequest<State>) -> Result<HttpResponse, GraphError> {
+pub fn index(req: HttpRequest) -> Result<HttpResponse, GraphError> {
     V1_GRAPH_INCOMING_REQS.inc();
 
     // Check that the client can accept JSON media type.
     commons::ensure_content_type(req.headers(), CONTENT_TYPE)?;
 
     // Check for required client parameters.
-    let mandatory_params = &req.state().mandatory_params;
+    let mandatory_params = &req
+        .app_data::<State>()
+        .expect("the request has no app_data attached. this is a bug.")
+        .mandatory_params;
     commons::ensure_query_params(mandatory_params, req.query_string())?;
 
-    let resp = HttpResponse::Ok()
-        .content_type(CONTENT_TYPE)
-        .body(req.state().json.read().clone());
+    let resp = HttpResponse::Ok().content_type(CONTENT_TYPE).body(
+        req.app_data::<State>()
+            .expect("the request has no app_data attached. this is a bug.")
+            .json
+            .read()
+            .clone(),
+    );
     Ok(resp)
 }
 

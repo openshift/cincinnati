@@ -18,7 +18,7 @@ lazy_static! {
 
 /// Expose metrics (Prometheus textual format).
 pub fn serve_metrics(
-    _req: HttpRequest<State>,
+    _req: HttpRequest,
 ) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
     use prometheus::Encoder;
 
@@ -39,9 +39,13 @@ pub fn serve_metrics(
 ///  * Live (200 code): The upstream scrape loop thread is running
 ///  * Not Live (500 code): everything else.
 pub fn serve_liveness(
-    req: HttpRequest<State>,
+    req: HttpRequest,
 ) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
-    let resp = if req.state().is_live() {
+    let resp = if req
+        .app_data::<State>()
+        .expect("the request has no app_data attached. this is a bug.")
+        .is_live()
+    {
         HttpResponse::Ok().finish()
     } else {
         HttpResponse::InternalServerError().finish()
@@ -55,9 +59,13 @@ pub fn serve_liveness(
 ///  * Ready (200 code): a JSON graph as the result of a successful scrape is available.
 ///  * Not Ready (500 code): no JSON graph available yet.
 pub fn serve_readiness(
-    req: HttpRequest<State>,
+    req: HttpRequest,
 ) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
-    let resp = if req.state().is_ready() {
+    let resp = if req
+        .app_data::<State>()
+        .expect("the request has no app_data attached. this is a bug.")
+        .is_ready()
+    {
         HttpResponse::Ok().finish()
     } else {
         HttpResponse::InternalServerError().finish()
@@ -94,17 +102,25 @@ mod tests {
         let mut rt = testing::init_runtime()?;
         testing::dummy_gauge(&status::PROM_REGISTRY, 42.0)?;
 
-        let http_req = TestRequest::with_state(mock_state()).finish();
+        let http_req = TestRequest::default().data(mock_state()).to_http_request();
         let metrics_call = status::serve_metrics(http_req);
         let resp = rt.block_on(metrics_call)?;
 
-        assert_eq!(resp.status().as_u16(), 200);
-        assert!(resp.body().is_binary());
+        assert_eq!(resp.status(), 200);
+        if let actix_web::body::ResponseBody::Body(body) = resp.body() {
+            if let actix_web::body::Body::Bytes(bytes) = body {
+                assert!(!bytes.is_empty());
+                println!("{:?}", std::str::from_utf8(bytes.as_ref()));
+                assert!(
+                    twoway::find_bytes(bytes.as_ref(), b"cincinnati_gb_dummy_gauge 42\n").is_some()
+                );
+            } else {
+                bail!("expected Body")
+            }
+        } else {
+            bail!("expected bytes in body")
+        };
 
-        if let actix_web::Body::Binary(body) = resp.body() {
-            assert!(!body.is_empty());
-            assert!(twoway::find_bytes(body.as_ref(), b"cincinnati_gb_dummy_gauge 42\n").is_some());
-        }
         Ok(())
     }
 }

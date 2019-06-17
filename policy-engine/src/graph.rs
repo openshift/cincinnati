@@ -2,7 +2,7 @@
 
 use crate::AppState;
 use actix_web::http::header::{self, HeaderValue};
-use actix_web::{HttpMessage, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
 use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER;
 use cincinnati::plugins::InternalPluginWrapper;
@@ -48,9 +48,7 @@ pub(crate) fn register_metrics(registry: &Registry) -> Fallible<()> {
 }
 
 /// Serve Cincinnati graph requests.
-pub(crate) fn index(
-    req: HttpRequest<AppState>,
-) -> Box<Future<Item = HttpResponse, Error = GraphError>> {
+pub(crate) fn index(req: HttpRequest) -> Box<Future<Item = HttpResponse, Error = GraphError>> {
     V1_GRAPH_INCOMING_REQS.inc();
 
     // Check that the client can accept JSON media type.
@@ -59,7 +57,10 @@ pub(crate) fn index(
     }
 
     // Check for required client parameters.
-    let mandatory_params = &req.state().mandatory_params;
+    let mandatory_params = &req
+        .app_data::<AppState>()
+        .expect("the request has no app_data attached. this is a bug.")
+        .mandatory_params;
     if let Err(e) = commons::ensure_query_params(mandatory_params, req.query_string()) {
         return Box::new(future::err(e));
     }
@@ -73,12 +74,38 @@ pub(crate) fn index(
         }))]
     };
 
-    let plugin_params = req.query().to_owned();
+    // TODO(steveeJ): take another look at the actix-web docs for a method that
+    // provides this parameters split.
+    let plugin_params = req
+        .query_string()
+        .to_owned()
+        .split('&')
+        .map(|pair| {
+            let kv_split: Vec<&str> = pair.split('=').collect();
+
+            let value = kv_split
+                .get(1)
+                .unwrap_or_else(|| {
+                    trace!(
+                        "query parameter '{}' is not a k=v pair. assuming an empty value.",
+                        pair
+                    );
+                    &""
+                })
+                .to_string();
+
+            (kv_split[0].to_string(), value)
+        })
+        .collect();
 
     // Assemble a request for the upstream Cincinnati service.
-    let ups_req = match Request::get(&req.state().upstream)
-        .header(header::ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
-        .body(Body::empty())
+    let ups_req = match Request::get(
+        &req.app_data::<AppState>()
+            .expect("the request has no app_data attached. this is a bug.")
+            .upstream,
+    )
+    .header(header::ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
+    .body(Body::empty())
     {
         Ok(req) => req,
         Err(_) => return Box::new(future::err(GraphError::FailedUpstreamRequest)),
@@ -130,7 +157,7 @@ pub(crate) fn index(
             if let Err(e) = &r {
                 error!(
                     "Error serving request with parameters '{:?}': {}",
-                    req.query(),
+                    req.query_string(),
                     e
                 );
             }
@@ -159,7 +186,9 @@ mod tests {
         let mut rt = common_init();
         let state = AppState::default();
 
-        let http_req = actix_web::test::TestRequest::with_state(state).finish();
+        let http_req = actix_web::test::TestRequest::get()
+            .data(actix_web::web::Data::new(state))
+            .to_http_request();
         let graph_call = graph::index(http_req);
         let resp = rt.block_on(graph_call).unwrap_err();
 
@@ -175,12 +204,13 @@ mod tests {
             ..Default::default()
         };
 
-        let http_req = actix_web::test::TestRequest::with_state(state)
+        let http_req = actix_web::test::TestRequest::get()
+            .data(state)
             .header(
                 http::header::ACCEPT,
                 http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
             )
-            .finish();
+            .to_http_request();
         let graph_call = graph::index(http_req);
         let resp = rt.block_on(graph_call).unwrap_err();
 
