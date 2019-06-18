@@ -31,8 +31,6 @@ fn expected_releases(
     metadata: Option<HashMap<usize, HashMap<String, String>>>,
     payload_shas: Option<Vec<&str>>,
 ) -> Vec<Release> {
-    use std::collections::HashMap;
-
     let source_base = &format!("{}/{}", registry.host_port_string(), repo);
 
     let mut releases = Vec::new();

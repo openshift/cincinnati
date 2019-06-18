@@ -95,6 +95,5 @@ fn main() -> Result<(), Error> {
 
     let _ = sys.run();
 
-
     Ok(())
 }
