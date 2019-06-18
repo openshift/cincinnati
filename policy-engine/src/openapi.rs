@@ -9,7 +9,7 @@ const SPEC: &str = include_str!("openapiv3.json");
 pub(crate) fn index(req: HttpRequest) -> HttpResponse {
     let path_prefix = &req
         .app_data::<AppState>()
-        .expect("the request has no app_data attached. this is a bug.")
+        .expect(commons::MISSING_APPSTATE_PANIC_MSG)
         .path_prefix;
 
     let mut spec_object: OpenAPI = match serde_json::from_str(SPEC) {
@@ -29,7 +29,7 @@ pub(crate) fn index(req: HttpRequest) -> HttpResponse {
         add_mandatory_params(
             path,
             &req.app_data::<AppState>()
-                .expect("the request has no app_data attached. this is a bug.")
+                .expect(commons::MISSING_APPSTATE_PANIC_MSG)
                 .mandatory_params,
         );
     }

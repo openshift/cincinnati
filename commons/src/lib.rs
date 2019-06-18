@@ -19,7 +19,7 @@ pub use crate::config::MergeOptions;
 pub mod de;
 
 mod errors;
-pub use crate::errors::{register_metrics, GraphError};
+pub use crate::errors::{register_metrics, GraphError, MISSING_APPSTATE_PANIC_MSG};
 
 pub mod testing;
 

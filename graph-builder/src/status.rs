@@ -43,7 +43,7 @@ pub fn serve_liveness(
 ) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
     let resp = if req
         .app_data::<State>()
-        .expect("the request has no app_data attached. this is a bug.")
+        .expect(commons::MISSING_APPSTATE_PANIC_MSG)
         .is_live()
     {
         HttpResponse::Ok().finish()
@@ -63,7 +63,7 @@ pub fn serve_readiness(
 ) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
     let resp = if req
         .app_data::<State>()
-        .expect("the request has no app_data attached. this is a bug.")
+        .expect(commons::MISSING_APPSTATE_PANIC_MSG)
         .is_ready()
     {
         HttpResponse::Ok().finish()

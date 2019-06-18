@@ -14,6 +14,11 @@ lazy_static! {
     .unwrap();
 }
 
+/// Panic message for a request with a missing appstate.
+/// This panic is used to guarantee internal consistency.
+pub static MISSING_APPSTATE_PANIC_MSG: &str =
+    "the request has no app_data attached. this is a bug.";
+
 /// Register relevant metrics to a prometheus registry.
 pub fn register_metrics(registry: &Registry) -> Fallible<()> {
     registry.register(Box::new(V1_GRAPH_ERRORS.clone()))?;

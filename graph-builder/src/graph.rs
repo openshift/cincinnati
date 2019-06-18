@@ -74,13 +74,13 @@ pub fn index(req: HttpRequest) -> Result<HttpResponse, GraphError> {
     // Check for required client parameters.
     let mandatory_params = &req
         .app_data::<State>()
-        .expect("the request has no app_data attached. this is a bug.")
+        .expect(commons::MISSING_APPSTATE_PANIC_MSG)
         .mandatory_params;
     commons::ensure_query_params(mandatory_params, req.query_string())?;
 
     let resp = HttpResponse::Ok().content_type(CONTENT_TYPE).body(
         req.app_data::<State>()
-            .expect("the request has no app_data attached. this is a bug.")
+            .expect(commons::MISSING_APPSTATE_PANIC_MSG)
             .json
             .read()
             .clone(),
