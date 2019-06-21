@@ -28,3 +28,4 @@ url = "1.7.2"
 
 [dev-dependencies]
 tokio = "^0.1"
+twoway = "^0.2"
