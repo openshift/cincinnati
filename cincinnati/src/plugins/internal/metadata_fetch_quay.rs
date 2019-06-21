@@ -41,6 +41,7 @@ struct QuayMetadataSettings {
 }
 
 /// Metadata fetcher for quay.io API.
+#[derive(Debug)]
 pub struct QuayMetadataFetchPlugin {
     client: quay::v1::Client,
     repo: String,
