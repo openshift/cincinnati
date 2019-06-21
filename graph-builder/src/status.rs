@@ -64,3 +64,47 @@ pub fn serve_readiness(
     };
     Box::new(future::ok(resp))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::graph::State;
+    use crate::status;
+    use actix_web::test::TestRequest;
+    use commons::testing;
+    use failure::Fallible;
+    use parking_lot::RwLock;
+    use std::collections::HashSet;
+    use std::sync::Arc;
+
+    fn mock_state() -> State {
+        let json_graph = Arc::new(RwLock::new(String::new()));
+        let live = Arc::new(RwLock::new(false));
+        let ready = Arc::new(RwLock::new(false));
+
+        State::new(
+            json_graph.clone(),
+            HashSet::new(),
+            live.clone(),
+            ready.clone(),
+        )
+    }
+
+    #[test]
+    fn serve_metrics_basic() -> Fallible<()> {
+        let mut rt = testing::init_runtime()?;
+        testing::dummy_gauge(&status::PROM_REGISTRY, 42.0)?;
+
+        let http_req = TestRequest::with_state(mock_state()).finish();
+        let metrics_call = status::serve_metrics(http_req);
+        let resp = rt.block_on(metrics_call)?;
+
+        assert_eq!(resp.status().as_u16(), 200);
+        assert!(resp.body().is_binary());
+
+        if let actix_web::Body::Binary(body) = resp.body() {
+            assert!(!body.is_empty());
+            assert!(twoway::find_bytes(body.as_ref(), b"cincinnati_gb_dummy_gauge 42\n").is_some());
+        }
+        Ok(())
+    }
+}
