@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use url::Url;
 
 /// Struct for implementing the client side of a web plugin
+#[derive(Debug)]
 pub struct _WebPluginClient {
     pub url: Url,
     pub timeout: std::time::Duration,
@@ -22,6 +23,12 @@ mod tests {
 
     struct DummyWebClient {
         callback: Box<Fn(interface::PluginExchange) -> PluginResult>,
+    }
+
+    impl std::fmt::Debug for DummyWebClient {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "DummyWebClient")
+        }
     }
 
     impl ExternalPlugin for DummyWebClient {

@@ -14,9 +14,11 @@ use crate as cincinnati;
 use crate::plugins::interface::{PluginError, PluginExchange};
 use failure::{Error, Fallible, ResultExt};
 use std::collections::HashMap;
+use std::fmt::Debug;
 use try_from::{TryFrom, TryInto};
 
 /// Enum for the two IO variants used by InternalPlugin and ExternalPlugin respectively
+#[derive(Debug)]
 pub enum PluginIO {
     InternalIO(InternalIO),
     ExternalIO(ExternalIO),
@@ -54,13 +56,17 @@ pub struct ExternalIO {
 /// Trait which fronts InternalPlugin and ExternalPlugin, allowing their trait objects to live in the same collection
 pub trait Plugin<T>
 where
+    Self: Debug,
     T: TryInto<PluginIO> + TryFrom<PluginIO>,
 {
     fn run(&self, t: T) -> Fallible<T>;
 }
 
 /// Trait to be implemented by internal plugins with their native IO type
-pub trait InternalPlugin {
+pub trait InternalPlugin
+where
+    Self: Debug,
+{
     fn run_internal(&self, input: InternalIO) -> Fallible<InternalIO>;
 }
 
@@ -68,7 +74,10 @@ pub trait InternalPlugin {
 ///
 /// There's a gotcha in that this type can't be used to access the information
 /// directly as it's merely bytes.
-pub trait ExternalPlugin {
+pub trait ExternalPlugin
+where
+    Self: Debug,
+{
     fn run_external(&self, input: ExternalIO) -> Fallible<ExternalIO>;
 }
 
@@ -262,9 +271,11 @@ impl TryFrom<PluginIO> for ExternalIO {
 }
 
 /// Wrapper struct for a universal implementation of Plugin<PluginIO> for all InternalPlugin implementors
+#[derive(Debug)]
 pub struct InternalPluginWrapper<T>(pub T);
 
 /// Wrapper struct for a universal implementation of Plugin<PluginIO> for all ExternalPlugin implementors
+#[derive(Debug)]
 pub struct ExternalPluginWrapper<T>(pub T);
 
 /// This implementation allows the process function to run ipmlementors of
@@ -359,6 +370,7 @@ mod tests {
         assert_eq!(input_internal, output_internal);
     }
 
+    #[derive(Debug)]
     struct TestInternalPlugin {}
     impl InternalPlugin for TestInternalPlugin {
         fn run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
@@ -366,6 +378,7 @@ mod tests {
         }
     }
 
+    #[derive(Debug)]
     struct TestExternalPlugin {}
     impl ExternalPlugin for TestExternalPlugin {
         fn run_external(&self, io: ExternalIO) -> Fallible<ExternalIO> {
