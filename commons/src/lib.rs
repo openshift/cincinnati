@@ -21,6 +21,8 @@ pub mod de;
 mod errors;
 pub use crate::errors::{register_metrics, GraphError};
 
+pub mod testing;
+
 use actix_web::http::header;
 use std::collections::HashSet;
 use url::form_urlencoded;

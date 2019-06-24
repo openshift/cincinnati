@@ -31,3 +31,30 @@ pub(crate) fn serve(
         .map(|content| HttpResponse::Ok().body(content));
     Box::new(resp)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::metrics;
+    use actix_web::test::TestRequest;
+    use commons::testing;
+    use failure::Fallible;
+
+    #[test]
+    fn serve_metrics_basic() -> Fallible<()> {
+        let mut rt = testing::init_runtime()?;
+        testing::dummy_gauge(&metrics::PROM_REGISTRY, 42.0)?;
+
+        let http_req = TestRequest::with_state(()).finish();
+        let metrics_call = metrics::serve(http_req);
+        let resp = rt.block_on(metrics_call)?;
+
+        assert_eq!(resp.status().as_u16(), 200);
+        assert!(resp.body().is_binary());
+
+        if let actix_web::Body::Binary(body) = resp.body() {
+            assert!(!body.is_empty());
+            assert!(twoway::find_bytes(body.as_ref(), b"cincinnati_pe_dummy_gauge 42\n").is_some());
+        };
+        Ok(())
+    }
+}

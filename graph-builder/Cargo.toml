@@ -18,7 +18,7 @@ futures = "0.1"
 itertools = "^0.7.8"
 lazy_static = "^1.2.0"
 log = "^0.4.3"
-prometheus = "^0.6.0"
+prometheus = "^0.7.0"
 quay = { path = "../quay" }
 regex = "^1.1.0"
 reqwest = "^0.9.0"
@@ -33,6 +33,9 @@ tokio = "0.1"
 toml = "^0.4.10"
 url = "^1.7.2"
 parking_lot = "^0.8.0"
+
+[dev-dependencies]
+twoway = "^0.2"
 
 [features]
 test-net = []
