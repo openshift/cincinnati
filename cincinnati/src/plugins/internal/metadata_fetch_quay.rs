@@ -181,7 +181,8 @@ impl InternalPlugin for QuayMetadataFetchPlugin {
 }
 
 #[cfg(test)]
-mod tests {
+#[cfg(feature = "test-net")]
+mod tests_net {
     use super::*;
     use std::collections::HashMap;
 
@@ -258,7 +259,6 @@ mod tests {
         .collect()
     }
 
-    #[cfg(feature = "test-net")]
     #[test]
     fn metadata_fetch_from_public_quay_succeeds() {
         init_logger();

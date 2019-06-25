@@ -5,8 +5,8 @@ authors = ["Alex Crawford <crawford@redhat.com>"]
 edition = "2018"
 
 [dependencies]
-actix = "^0.7.6"
-actix-web = "^0.7.8"
+actix = "^0.8.3"
+actix-web = "^1.0.2"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
 dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "eb6349f2b99cd3dbd681d18d692a8c69e2e7b339" }

@@ -2,7 +2,7 @@
 
 use crate::AppState;
 use actix_web::http::header::{self, HeaderValue};
-use actix_web::{HttpMessage, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
 use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER;
 use cincinnati::plugins::InternalPluginWrapper;
@@ -48,9 +48,7 @@ pub(crate) fn register_metrics(registry: &Registry) -> Fallible<()> {
 }
 
 /// Serve Cincinnati graph requests.
-pub(crate) fn index(
-    req: HttpRequest<AppState>,
-) -> Box<Future<Item = HttpResponse, Error = GraphError>> {
+pub(crate) fn index(req: HttpRequest) -> Box<Future<Item = HttpResponse, Error = GraphError>> {
     V1_GRAPH_INCOMING_REQS.inc();
 
     // Check that the client can accept JSON media type.
@@ -59,7 +57,10 @@ pub(crate) fn index(
     }
 
     // Check for required client parameters.
-    let mandatory_params = &req.state().mandatory_params;
+    let mandatory_params = &req
+        .app_data::<AppState>()
+        .expect(commons::MISSING_APPSTATE_PANIC_MSG)
+        .mandatory_params;
     if let Err(e) = commons::ensure_query_params(mandatory_params, req.query_string()) {
         return Box::new(future::err(e));
     }
@@ -73,12 +74,38 @@ pub(crate) fn index(
         }))]
     };
 
-    let plugin_params = req.query().to_owned();
+    // TODO(steveeJ): take another look at the actix-web docs for a method that
+    // provides this parameters split.
+    let plugin_params = req
+        .query_string()
+        .to_owned()
+        .split('&')
+        .map(|pair| {
+            let kv_split: Vec<&str> = pair.split('=').collect();
+
+            let value = kv_split
+                .get(1)
+                .unwrap_or_else(|| {
+                    trace!(
+                        "query parameter '{}' is not a k=v pair. assuming an empty value.",
+                        pair
+                    );
+                    &""
+                })
+                .to_string();
+
+            (kv_split[0].to_string(), value)
+        })
+        .collect();
 
     // Assemble a request for the upstream Cincinnati service.
-    let ups_req = match Request::get(&req.state().upstream)
-        .header(header::ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
-        .body(Body::empty())
+    let ups_req = match Request::get(
+        &req.app_data::<AppState>()
+            .expect(commons::MISSING_APPSTATE_PANIC_MSG)
+            .upstream,
+    )
+    .header(header::ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
+    .body(Body::empty())
     {
         Ok(req) => req,
         Err(_) => return Box::new(future::err(GraphError::FailedUpstreamRequest)),
@@ -130,7 +157,7 @@ pub(crate) fn index(
             if let Err(e) = &r {
                 error!(
                     "Error serving request with parameters '{:?}': {}",
-                    req.query(),
+                    req.query_string(),
                     e
                 );
             }
@@ -148,7 +175,8 @@ mod tests {
     use crate::graph;
     use crate::AppState;
     use actix_web::http;
-
+    use mockito;
+    use std::error::Error;
     fn common_init() -> Runtime {
         let _ = env_logger::try_init_from_env(env_logger::Env::default());
         Runtime::new().unwrap()
@@ -159,7 +187,9 @@ mod tests {
         let mut rt = common_init();
         let state = AppState::default();
 
-        let http_req = actix_web::test::TestRequest::with_state(state).finish();
+        let http_req = actix_web::test::TestRequest::get()
+            .data(actix_web::web::Data::new(state))
+            .to_http_request();
         let graph_call = graph::index(http_req);
         let resp = rt.block_on(graph_call).unwrap_err();
 
@@ -175,12 +205,13 @@ mod tests {
             ..Default::default()
         };
 
-        let http_req = actix_web::test::TestRequest::with_state(state)
+        let http_req = actix_web::test::TestRequest::get()
+            .data(state)
             .header(
                 http::header::ACCEPT,
                 http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
             )
-            .finish();
+            .to_http_request();
         let graph_call = graph::index(http_req);
         let resp = rt.block_on(graph_call).unwrap_err();
 
@@ -188,5 +219,204 @@ mod tests {
             resp,
             graph::GraphError::MissingParams(vec!["id".to_string()])
         );
+    }
+
+    #[test]
+    #[should_panic(expected = "the request has no app_data attached. this is a bug.")]
+    fn index_with_missing_appstate_must_panic() {
+        let mut rt = common_init();
+
+        let http_req = actix_web::test::TestRequest::get()
+            .header(
+                http::header::ACCEPT,
+                http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
+            )
+            .to_http_request();
+        let graph_call = graph::index(http_req);
+        let resp = rt.block_on(graph_call).unwrap_err();
+
+        assert_eq!(
+            resp,
+            graph::GraphError::MissingParams(vec!["id".to_string()])
+        );
+    }
+
+    #[test]
+    fn failed_plugin_execution() -> Result<(), Box<Error>> {
+        use std::str::FromStr;
+
+        let mut rt = common_init();
+        let mandatory_params = vec!["channel".to_string()].into_iter().collect();
+        let state = AppState {
+            mandatory_params,
+            upstream: hyper::Uri::from_str(&mockito::server_url())?,
+            ..Default::default()
+        };
+
+        let http_req = actix_web::test::TestRequest::get()
+            .data(state)
+            .uri(&format!("{}?channel=':'", "http://unused.test"))
+            .header(
+                http::header::ACCEPT,
+                http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
+            )
+            .to_http_request();
+
+        let graph_call = graph::index(http_req);
+
+        let _m = mockito::mock("GET", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"nodes":[],"edges":[]}"#)
+            .create();
+
+        match rt.block_on(graph_call) {
+            Err(graph::GraphError::FailedPluginExecution(ref msg))
+                if msg.contains("does not match regex") =>
+            {
+                Ok(())
+            }
+            res => Err(format!("expected FailedPluginExecution error, got: {:?}", res).into()),
+        }
+    }
+
+    #[test]
+    fn webservice_graph_json_error_response() -> Result<(), Box<Error>> {
+        let _ = common_init();
+
+        struct TestParams<'a> {
+            name: &'a str,
+            mandatory_params: &'a [&'a str],
+            passed_params: &'a [(&'a str, &'a str)],
+            expected_error: commons::GraphError,
+        }
+
+        fn run_test(
+            mandatory_params: &[&str],
+            passed_params: &[(&str, &str)],
+            expected_error: &commons::GraphError,
+        ) -> Result<(), Box<Error>> {
+            use std::str::FromStr;
+
+            let service_uri_base = "/graph";
+            let service_uri = format!(
+                "{}{}",
+                service_uri_base,
+                if passed_params.is_empty() {
+                    String::new()
+                } else {
+                    passed_params
+                        .iter()
+                        .fold(std::string::String::from("?"), |existing, current| {
+                            format!("{}{}={}", existing, current.0, current.1)
+                        })
+                }
+            );
+
+            // run mock graph-builder
+            let _m = mockito::mock("GET", "/")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"nodes":[],"edges":[]}"#)
+                .create();
+
+            // prepare and run the policy-engine test-service
+            let app = actix_web::App::new()
+                .register_data(actix_web::web::Data::new(AppState {
+                    mandatory_params: mandatory_params.iter().map(|s| s.to_string()).collect(),
+                    upstream: hyper::Uri::from_str(&mockito::server_url())?,
+                    ..Default::default()
+                }))
+                .service(
+                    actix_web::web::resource(&service_uri_base)
+                        .route(actix_web::web::get().to(graph::index)),
+                );
+
+            let mut pe_svc = actix_web::test::init_service(app);
+
+            let body = {
+                let mut response = actix_web::test::call_service(
+                    &mut pe_svc,
+                    actix_web::test::TestRequest::with_uri(&service_uri)
+                        .header("Accept", "application/json")
+                        .to_request(),
+                );
+
+                if response.status() != expected_error.status_code() {
+                    return Err(format!("unexpected statuscode:{}", response.status()).into());
+                };
+
+                let body = match response.take_body() {
+                    actix_web::dev::ResponseBody::Body(b) => match b {
+                        actix_web::dev::Body::Bytes(bytes) => bytes,
+                        unknown => {
+                            return Err(format!("expected byte body, got '{:?}'", unknown).into())
+                        }
+                    },
+                    _ => return Err("expected body response".into()),
+                };
+
+                std::str::from_utf8(&body)?.to_owned()
+            };
+
+            let mut json: serde_json::Value = serde_json::from_str(&body)?;
+
+            let toplevel = if let Some(obj) = json.as_object_mut() {
+                obj
+            } else {
+                return Err("not a JSON object".into());
+            };
+
+            if let Some(kind) = toplevel.remove("kind") {
+                assert_eq!(kind, expected_error.kind())
+            } else {
+                return Err("expected 'kind' in JSON object".into());
+            }
+
+            if let Some(value) = toplevel.remove("value") {
+                if let Some(result_value) = value.as_str() {
+                    if !result_value.contains(&expected_error.value()) {
+                        return Err(format!(
+                            "value '{}' doesn't contain: \'{}\'",
+                            result_value,
+                            expected_error.value(),
+                        )
+                        .into());
+                    }
+                } else {
+                    return Err(format!("couldn't parse '{}' as string", value).into());
+                }
+            } else {
+                return Err("expected 'value' in JSON object".into());
+            }
+
+            Ok(())
+        }
+
+        [
+            TestParams {
+                name: "missing channel parameter",
+                mandatory_params: &["channel"],
+                passed_params: &[],
+                expected_error: commons::GraphError::MissingParams(vec!["channel".to_string()]),
+            },
+            TestParams {
+                name: "invalid channel name",
+                mandatory_params: &["channel"],
+                passed_params: &[("channel", "invalid:channel")],
+                expected_error: commons::GraphError::FailedPluginExecution(
+                    "channel 'invalid:channel'".to_string(),
+                ),
+            },
+        ]
+        .iter()
+        .try_for_each(|test_param| {
+            run_test(
+                &test_param.mandatory_params,
+                &test_param.passed_params,
+                &test_param.expected_error,
+            )
+            .map_err(|e| format!("test '{}' failed: {}", test_param.name, e).into())
+        })
     }
 }

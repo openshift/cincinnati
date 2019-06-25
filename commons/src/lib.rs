@@ -19,7 +19,7 @@ pub use crate::config::MergeOptions;
 pub mod de;
 
 mod errors;
-pub use crate::errors::{register_metrics, GraphError};
+pub use crate::errors::{register_metrics, GraphError, MISSING_APPSTATE_PANIC_MSG};
 
 pub mod testing;
 
@@ -101,7 +101,6 @@ pub fn ensure_content_type(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use actix_web::client::head;
 
     #[test]
     fn test_parse_path_prefix() {

@@ -6,8 +6,11 @@ use std::collections::HashSet;
 /// Template for policy-engine OpenAPIv3 document.
 const SPEC: &str = include_str!("openapiv3.json");
 
-pub(crate) fn index(req: HttpRequest<AppState>) -> HttpResponse {
-    let path_prefix = &req.state().path_prefix;
+pub(crate) fn index(req: HttpRequest) -> HttpResponse {
+    let path_prefix = &req
+        .app_data::<AppState>()
+        .expect(commons::MISSING_APPSTATE_PANIC_MSG)
+        .path_prefix;
 
     let mut spec_object: OpenAPI = match serde_json::from_str(SPEC) {
         Ok(o) => o,
@@ -23,7 +26,12 @@ pub(crate) fn index(req: HttpRequest<AppState>) -> HttpResponse {
 
     // Add mandatory parameters to the `graph` endpoint.
     if let Some(path) = spec_object.paths.get_mut("/v1/graph") {
-        add_mandatory_params(path, &req.state().mandatory_params);
+        add_mandatory_params(
+            path,
+            &req.app_data::<AppState>()
+                .expect(commons::MISSING_APPSTATE_PANIC_MSG)
+                .mandatory_params,
+        );
     }
 
     match serde_json::to_string(&spec_object) {

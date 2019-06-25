@@ -1,3 +1,4 @@
+#[cfg(feature = "test-net")]
 #[macro_use]
 extern crate failure;
 

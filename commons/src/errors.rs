@@ -14,6 +14,11 @@ lazy_static! {
     .unwrap();
 }
 
+/// Panic message for a request with a missing appstate.
+/// This panic is used to guarantee internal consistency.
+pub static MISSING_APPSTATE_PANIC_MSG: &str =
+    "the request has no app_data attached. this is a bug.";
+
 /// Register relevant metrics to a prometheus registry.
 pub fn register_metrics(registry: &Registry) -> Fallible<()> {
     registry.register(Box::new(V1_GRAPH_ERRORS.clone()))?;
@@ -53,7 +58,7 @@ pub enum GraphError {
 }
 
 impl actix_web::error::ResponseError for GraphError {
-    fn error_response(&self) -> HttpResponse {
+    fn render_response(&self) -> HttpResponse {
         let kind = self.kind();
         V1_GRAPH_ERRORS.with_label_values(&[&kind]).inc();
         self.as_json_error()
@@ -72,7 +77,7 @@ impl GraphError {
     }
 
     /// Return the HTTP status code for the error.
-    fn status_code(&self) -> http::StatusCode {
+    pub fn status_code(&self) -> http::StatusCode {
         match *self {
             GraphError::FailedJsonIn(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
             GraphError::FailedJsonOut(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -85,7 +90,7 @@ impl GraphError {
     }
 
     /// Return the kind for the error.
-    fn kind(&self) -> String {
+    pub fn kind(&self) -> String {
         let kind = match *self {
             GraphError::FailedJsonIn(_) => "failed_json_in",
             GraphError::FailedJsonOut(_) => "failed_json_out",
@@ -99,7 +104,7 @@ impl GraphError {
     }
 
     /// Return the value for the error.
-    fn value(&self) -> String {
+    pub fn value(&self) -> String {
         let error_msg = format!("{}", self);
         match self {
             GraphError::MissingParams(params) => format!("{}: {}", error_msg, params.join(", ")),

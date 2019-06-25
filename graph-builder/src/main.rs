@@ -22,7 +22,7 @@ extern crate structopt;
 
 use graph_builder::{config, graph, graph::RwLock, status};
 
-use actix_web::{http::Method, middleware::Logger, server, App};
+use actix_web::{App, HttpServer};
 use failure::Error;
 use std::sync::Arc;
 use std::thread;
@@ -61,27 +61,39 @@ fn main() -> Result<(), Error> {
     // Status service.
     graph::register_metrics(&status::PROM_REGISTRY)?;
     let status_state = app_state.clone();
-    server::new(move || {
-        App::with_state(status_state.clone())
-            .middleware(Logger::default())
-            .route("/liveness", Method::GET, status::serve_liveness)
-            .route("/metrics", Method::GET, status::serve_metrics)
-            .route("/readiness", Method::GET, status::serve_readiness)
+    HttpServer::new(move || {
+        App::new()
+            .register_data(actix_web::web::Data::new(status_state.clone()))
+            .service(
+                actix_web::web::resource("/liveness")
+                    .route(actix_web::web::get().to(status::serve_liveness)),
+            )
+            .service(
+                actix_web::web::resource("/metrics")
+                    .route(actix_web::web::get().to(status::serve_metrics)),
+            )
+            .service(
+                actix_web::web::resource("/readiness")
+                    .route(actix_web::web::get().to(status::serve_readiness)),
+            )
     })
     .bind(status_addr)?
     .start();
 
     // Main service.
     let main_state = app_state.clone();
-    server::new(move || {
-        App::with_state(main_state.clone())
-            .middleware(Logger::default())
-            .prefix(app_prefix.clone())
-            .route("/v1/graph", Method::GET, graph::index)
+    HttpServer::new(move || {
+        App::new()
+            .register_data(actix_web::web::Data::new(main_state.clone()))
+            .service(
+                actix_web::web::resource(&format!("{}/v1/graph", app_prefix.clone()))
+                    .route(actix_web::web::get().to(graph::index)),
+            )
     })
     .bind(service_addr)?
     .start();
 
-    sys.run();
+    let _ = sys.run();
+
     Ok(())
 }
