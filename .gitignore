@@ -2,3 +2,5 @@ target/
 **/*.rs.bk
 **/*.swp
 .idea
+
+docs/release
