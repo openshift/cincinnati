@@ -97,7 +97,7 @@ fn add_mandatory_params(path: &mut ReferenceOr<openapiv3::PathItem>, reqs: &Hash
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use super::*;
 
     #[test]
     fn test_rewrite_paths() {
@@ -143,5 +143,85 @@ mod tests {
                 output
             )
         }
+    }
+
+    #[test]
+    fn graph_params_integration() -> Result<(), Box<std::error::Error>> {
+        // prepare and run the test-service
+        let service_uri = "/openapi";
+        let mandatory_params: HashSet<String> = ["MARKER1", "MARKER2"]
+            .iter()
+            .cloned()
+            .map(String::from)
+            .collect();
+        let path_prefix = "test_prefix".to_string();
+
+        let data = actix_web::web::Data::new(AppState {
+            mandatory_params: mandatory_params.clone(),
+            path_prefix: path_prefix.clone(),
+            upstream: Default::default(),
+        });
+        let resource =
+            actix_web::web::resource(service_uri).route(actix_web::web::get().to(super::index));
+        let app = actix_web::App::new().register_data(data).service(resource);
+
+        let mut svc = actix_web::test::init_service(app);
+
+        // call the service and get the response body
+        let body = {
+            let mut response = actix_web::test::call_service(
+                &mut svc,
+                actix_web::test::TestRequest::with_uri(&service_uri)
+                    .header("Accept", "application/json")
+                    .to_request(),
+            );
+
+            if response.status() != actix_web::http::StatusCode::OK {
+                return Err(format!("unexpected statuscode:{}", response.status()).into());
+            };
+
+            let body = match response.take_body() {
+                actix_web::dev::ResponseBody::Body(b) => match b {
+                    actix_web::dev::Body::Bytes(bytes) => bytes,
+                    unknown => {
+                        return Err(format!("expected byte body, got '{:?}'", unknown).into())
+                    }
+                },
+                _ => return Err("expected body response".into()),
+            };
+
+            std::str::from_utf8(&body)?.to_owned()
+        };
+
+        // parse the response and extract the required parameters
+        let spec: openapiv3::OpenAPI = serde_json::from_str(&body)?;
+        let v1_graph: &openapiv3::ReferenceOr<openapiv3::PathItem> = spec
+            .paths
+            .get(&format!("{}/v1/graph", path_prefix))
+            .ok_or("could not find /v1/graph endpoint in openapi spec")?;
+
+        let v1_graph_mandatory_params_result: HashSet<String> = match v1_graph {
+            ReferenceOr::Item(item) => item
+                .parameters
+                .iter()
+                .filter_map(|param| {
+                    if let ReferenceOr::Item(openapiv3::Parameter::Query {
+                        parameter_data, ..
+                    }) = param
+                    {
+                        if parameter_data.required {
+                            return Some(parameter_data.name.clone());
+                        }
+                    };
+
+                    None
+                })
+                .collect(),
+            _ => return Err("reference manipulation for paths not allowed".into()),
+        };
+
+        assert_eq!(mandatory_params, v1_graph_mandatory_params_result,);
+
+        Ok(())
     }
 }
