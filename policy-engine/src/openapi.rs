@@ -21,9 +21,6 @@ pub(crate) fn index(req: HttpRequest) -> HttpResponse {
         }
     };
 
-    // Prefix all paths with `path_prefix`
-    spec_object.paths = rewrite_paths(spec_object.paths, path_prefix);
-
     // Add mandatory parameters to the `graph` endpoint.
     if let Some(path) = spec_object.paths.get_mut("/v1/graph") {
         add_mandatory_params(
@@ -33,6 +30,9 @@ pub(crate) fn index(req: HttpRequest) -> HttpResponse {
                 .mandatory_params,
         );
     }
+
+    // Prefix all paths with `path_prefix`
+    spec_object.paths = rewrite_paths(spec_object.paths, path_prefix);
 
     match serde_json::to_string(&spec_object) {
         Ok(s) => HttpResponse::from(s),
