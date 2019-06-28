@@ -23,8 +23,8 @@ pub struct EdgeAddRemovePlugin {
 impl InternalPlugin for EdgeAddRemovePlugin {
     fn run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
         let mut graph = io.graph;
-        self.remove_edges(&mut graph)?;
         self.add_edges(&mut graph)?;
+        self.remove_edges(&mut graph)?;
         Ok(InternalIO {
             graph,
             parameters: io.parameters,
@@ -41,6 +41,14 @@ impl PluginSettings for EdgeAddRemovePlugin {
 /// Adds and removes next and previous releases specified by metadata.
 ///
 /// The labels are assumed to have the syntax `<prefix>.(previous|next).(remove|add)=(<Version>,)*<Version>`
+///
+/// # Label processing order
+/// The labels are grouped and processed in two separate passes in the following order:
+///
+/// 1. *.add
+/// 2. *.remove
+///
+/// This ordering has implications on the result of semantical contradictions, so that the `*.remove` labels take precedence over `*.add`.
 impl EdgeAddRemovePlugin {
     /// Plugin name, for configuration.
     pub(crate) const PLUGIN_NAME: &'static str = "edge-add-remove";
@@ -165,6 +173,8 @@ mod tests {
     use super::*;
     use crate as cincinnati;
     use std::collections::HashMap;
+
+    static KEY_PREFIX: &str = "test_key";
 
     #[test]
     fn ensure_previous_remove() {
@@ -423,4 +433,152 @@ mod tests {
 
         assert_eq!(expected_graph, processed_graph);
     }
+
+    macro_rules! label_processing_order_test {
+        (
+            name: $name:ident,
+            input_metadata: $input_metadata:expr,
+            input_edges: $input_edges:expr,
+            expected_edges: $expected_edges:expr,
+        ) => {
+            #[test]
+            fn $name() -> Fallible<()> {
+                let input_metadata: HashMap<usize, HashMap<String, String>> = $input_metadata
+                    .iter()
+                    .map(|(n, metadata)| {
+                        (
+                            *n,
+                            metadata
+                                .iter()
+                                .map(|(k, v)| (format!("{}.{}", KEY_PREFIX, k), v.to_string()))
+                                .collect(),
+                        )
+                    })
+                    .collect();
+
+                let input_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
+                    0,
+                    input_metadata.len(),
+                    input_metadata.clone(),
+                    $input_edges.to_owned(),
+                );
+
+                let expected_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
+                    0,
+                    input_metadata.len(),
+                    input_metadata,
+                    $expected_edges.to_owned(),
+                );
+
+                let processed_graph = EdgeAddRemovePlugin {
+                    key_prefix: KEY_PREFIX.to_string(),
+                    remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+                }
+                .run_internal(InternalIO {
+                    graph: input_graph.clone(),
+                    parameters: Default::default(),
+                })?
+                .graph;
+
+                assert_eq!(expected_graph, processed_graph);
+
+                Ok(())
+            }
+        };
+    }
+
+    label_processing_order_test!(
+        name: contradicting_inter_node_labels,
+        input_metadata:
+            vec![
+                (
+                    0,
+                    vec![
+                        // (a)
+                        ("next.add", "1.0.0"),
+                    ],
+                ),
+                (
+                    1,
+                    vec![
+                        // (a)
+                        ("previous.remove", "0.0.0"),
+                        // (b)
+                        ("next.remove", "2.0.0"),
+                    ],
+                ),
+                (
+                    2,
+                    vec![
+                        // (b)
+                        ("previous.add", "1.0.0"),
+                    ],
+                ),
+            ],
+        input_edges: Some(vec![(0, 1), (1, 2)]),
+        expected_edges: Some(vec![(0, 1), (1, 2)]),
+    );
+
+    label_processing_order_test!(
+        name: contradicting_intra_node_labels,
+        input_metadata:
+            vec![
+                (0, vec![("next.add", "1.0.0"), ("next.remove", "1.0.0")]),
+                (1, vec![]),
+                (
+                    2,
+                    vec![
+                        // (b)
+                        ("previous.remove", "1.0.0"),
+                        ("previous.add", "1.0.0"),
+                    ],
+                ),
+            ],
+        input_edges: Some(vec![]),
+        expected_edges: Some(vec![]),
+    );
+
+    label_processing_order_test!(
+        name: contradicting_inter_and_intra_node_labels,
+        input_metadata:
+            vec![
+                (
+                    0,
+                    vec![
+                        // (a)
+                        ("next.add", "1.0.0"),
+                        ("next.remove", "1.0.0"),
+                    ],
+                ),
+                (
+                    1,
+                    vec![
+                        // (a)
+                        ("previous.remove", "0.0.0"),
+                        ("previous.add", "0.0.0"),
+                        // (b)
+                        ("next.add", "2.0.0"),
+                        ("next.remove", "2.0.0"),
+                    ],
+                ),
+                (
+                    2,
+                    vec![
+                        // (b)
+                        ("previous.remove", "1.0.0"),
+                        ("previous.add", "1.0.0"),
+                    ],
+                ),
+                (
+                    3,
+                    vec![
+                        // (b)
+                        ("previous.remove", "2.0.0"),
+                        ("previous.add", "2.0.0"),
+                    ],
+                ),
+            ],
+        input_edges: Some(vec![]),
+        expected_edges: Some(vec![]),
+    );
 }
