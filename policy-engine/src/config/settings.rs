@@ -1,6 +1,7 @@
 //! Application settings for policy-engine.
 
 use super::{cli, file};
+use cincinnati::plugins::{BoxedPlugin, PluginSettings};
 use failure::Fallible;
 use hyper::Uri;
 use std::collections::HashSet;
@@ -40,6 +41,9 @@ pub struct AppSettings {
     /// Endpoints namespace for the main service.
     pub path_prefix: String,
 
+    /// Policy plugins configuration.
+    pub policies: Vec<Box<PluginSettings>>,
+
     /// Required client parameters for the main service.
     pub mandatory_client_parameters: HashSet<String>,
 }
@@ -68,6 +72,22 @@ impl AppSettings {
         Self::try_validate(cfg)
     }
 
+    /// Validate and return policy plugins.
+    pub fn policy_plugins(&self) -> Fallible<Vec<BoxedPlugin>> {
+        let mut configured_plugins = Vec::with_capacity(self.policies.len());
+        for conf in &self.policies {
+            let plugin = conf.build_plugin()?;
+            configured_plugins.push(plugin);
+        }
+
+        // TODO(lucab): drop this as soon as all config-maps are in place (prod & staging).
+        if configured_plugins.is_empty() {
+            configured_plugins = default_openshift_plugins();
+        }
+
+        Ok(configured_plugins)
+    }
+
     /// Validate and build runtime settings.
     fn try_validate(self) -> Fallible<Self> {
         if self.address == self.status_address && self.port == self.status_port {
@@ -76,4 +96,16 @@ impl AppSettings {
 
         Ok(self)
     }
+}
+
+fn default_openshift_plugins() -> Vec<BoxedPlugin> {
+    // TODO(lucab): drop this as soon as all config-maps are in place (prod & staging).
+    use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
+    use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER;
+    use cincinnati::plugins::InternalPluginWrapper;
+
+    vec![Box::new(InternalPluginWrapper(ChannelFilterPlugin {
+        key_prefix: String::from(DEFAULT_QUAY_LABEL_FILTER),
+        key_suffix: String::from("release.channels"),
+    }))]
 }

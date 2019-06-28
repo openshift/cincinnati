@@ -3,10 +3,7 @@
 use crate::AppState;
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpRequest, HttpResponse};
-use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
-use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER;
-use cincinnati::plugins::InternalPluginWrapper;
-use cincinnati::{plugins, Graph, CONTENT_TYPE};
+use cincinnati::{Graph, CONTENT_TYPE};
 use commons::{self, GraphError};
 use failure::Fallible;
 use futures::{future, Future, Stream};
@@ -64,16 +61,6 @@ pub(crate) fn index(req: HttpRequest) -> Box<Future<Item = HttpResponse, Error =
     if let Err(e) = commons::ensure_query_params(mandatory_params, req.query_string()) {
         return Box::new(future::err(e));
     }
-
-    let configured_plugins: Vec<Box<plugins::Plugin<plugins::PluginIO>>> = {
-        // TODO(steveeJ): actually make this vec configurable
-        vec![Box::new(InternalPluginWrapper(ChannelFilterPlugin {
-            // TODO(steveej): make this configurable
-            key_prefix: String::from(DEFAULT_QUAY_LABEL_FILTER),
-            key_suffix: String::from("release.channels"),
-        }))]
-    };
-
     // TODO(steveeJ): take another look at the actix-web docs for a method that
     // provides this parameters split.
     let plugin_params = req
@@ -97,6 +84,12 @@ pub(crate) fn index(req: HttpRequest) -> Box<Future<Item = HttpResponse, Error =
             (kv_split[0].to_string(), value)
         })
         .collect();
+
+    let configured_plugins = req
+        .app_data::<AppState>()
+        .expect(commons::MISSING_APPSTATE_PANIC_MSG)
+        .plugins
+        .clone();
 
     // Assemble a request for the upstream Cincinnati service.
     let ups_req = match Request::get(
@@ -137,7 +130,6 @@ pub(crate) fn index(req: HttpRequest) -> Box<Future<Item = HttpResponse, Error =
                 &configured_plugins,
                 cincinnati::plugins::InternalIO {
                     graph,
-                    // the plugins used in the graph-builder don't expect any parameters yet
                     parameters: plugin_params,
                 },
             ) {
@@ -175,11 +167,41 @@ mod tests {
     use crate::graph;
     use crate::AppState;
     use actix_web::http;
+    use cincinnati::plugins::BoxedPlugin;
+    use failure::Fallible;
     use mockito;
     use std::error::Error;
+
     fn common_init() -> Runtime {
         let _ = env_logger::try_init_from_env(env_logger::Env::default());
         Runtime::new().unwrap()
+    }
+
+    // Source policy plugins from TOML configuration file.
+    fn openshift_policy_plugins() -> Fallible<Vec<BoxedPlugin>> {
+        use commons::MergeOptions;
+
+        let mut settings = crate::config::AppSettings::default();
+        let opts = {
+            use std::io::Write;
+
+            let sample_config = r#"
+                [[policy]]
+                name = "channel-filter"
+                key_prefix = "io.openshift.upgrades.graph"
+                key_suffix = "release.channels"
+            "#;
+
+            let mut config_file = tempfile::NamedTempFile::new().unwrap();
+            config_file
+                .write_fmt(format_args!("{}", sample_config))
+                .unwrap();
+            crate::config::FileOptions::read_filepath(config_file.path()).unwrap()
+        };
+
+        settings.try_merge(Some(opts))?;
+        let plugins = settings.policy_plugins()?;
+        Ok(plugins)
     }
 
     #[test]
@@ -246,9 +268,12 @@ mod tests {
         use std::str::FromStr;
 
         let mut rt = common_init();
+
+        let policies = openshift_policy_plugins()?;
         let mandatory_params = vec!["channel".to_string()].into_iter().collect();
         let state = AppState {
             mandatory_params,
+            plugins: std::sync::Arc::new(policies),
             upstream: hyper::Uri::from_str(&mockito::server_url())?,
             ..Default::default()
         };
@@ -321,9 +346,11 @@ mod tests {
                 .create();
 
             // prepare and run the policy-engine test-service
+            let policies = openshift_policy_plugins()?;
             let app = actix_web::App::new()
                 .register_data(actix_web::web::Data::new(AppState {
                     mandatory_params: mandatory_params.iter().map(|s| s.to_string()).collect(),
+                    plugins: std::sync::Arc::new(policies),
                     upstream: hyper::Uri::from_str(&mockito::server_url())?,
                     ..Default::default()
                 }))
