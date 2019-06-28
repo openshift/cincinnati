@@ -2,6 +2,7 @@
 
 use super::AppSettings;
 use commons::{parse_params_set, parse_path_prefix, MergeOptions};
+use failure::Fallible;
 use std::collections::HashSet;
 use std::net::IpAddr;
 
@@ -18,11 +19,12 @@ pub struct StatusOptions {
 }
 
 impl MergeOptions<Option<StatusOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<StatusOptions>) {
+    fn try_merge(&mut self, opts: Option<StatusOptions>) -> Fallible<()> {
         if let Some(status) = opts {
             assign_if_some!(self.status_address, status.address);
             assign_if_some!(self.status_port, status.port);
         }
+        Ok(())
     }
 }
 
@@ -50,7 +52,7 @@ pub struct ServiceOptions {
 }
 
 impl MergeOptions<Option<ServiceOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<ServiceOptions>) {
+    fn try_merge(&mut self, opts: Option<ServiceOptions>) -> Fallible<()> {
         if let Some(service) = opts {
             assign_if_some!(self.address, service.address);
             assign_if_some!(self.port, service.port);
@@ -59,6 +61,7 @@ impl MergeOptions<Option<ServiceOptions>> for AppSettings {
                 self.mandatory_client_parameters.extend(params);
             }
         }
+        Ok(())
     }
 }
 
@@ -72,10 +75,11 @@ pub struct UpCincinnatiOptions {
 }
 
 impl MergeOptions<Option<UpCincinnatiOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<UpCincinnatiOptions>) {
+    fn try_merge(&mut self, opts: Option<UpCincinnatiOptions>) -> Fallible<()> {
         if let Some(up) = opts {
             assign_if_some!(self.upstream, up.url);
         }
+        Ok(())
     }
 }
 

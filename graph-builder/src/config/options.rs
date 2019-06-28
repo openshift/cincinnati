@@ -2,6 +2,7 @@
 
 use super::AppSettings;
 use commons::{parse_params_set, parse_path_prefix, MergeOptions};
+use failure::Fallible;
 use std::collections::HashSet;
 use std::net::IpAddr;
 use std::path::PathBuf;
@@ -77,7 +78,7 @@ pub struct DockerRegistryOptions {
 }
 
 impl MergeOptions<Option<ServiceOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<ServiceOptions>) {
+    fn try_merge(&mut self, opts: Option<ServiceOptions>) -> Fallible<()> {
         if let Some(service) = opts {
             assign_if_some!(self.address, service.address);
             assign_if_some!(self.port, service.port);
@@ -86,20 +87,22 @@ impl MergeOptions<Option<ServiceOptions>> for AppSettings {
                 self.mandatory_client_parameters.extend(params);
             }
         }
+        Ok(())
     }
 }
 
 impl MergeOptions<Option<StatusOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<StatusOptions>) {
+    fn try_merge(&mut self, opts: Option<StatusOptions>) -> Fallible<()> {
         if let Some(status) = opts {
             assign_if_some!(self.status_address, status.address);
             assign_if_some!(self.status_port, status.port);
         }
+        Ok(())
     }
 }
 
 impl MergeOptions<Option<DockerRegistryOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<DockerRegistryOptions>) {
+    fn try_merge(&mut self, opts: Option<DockerRegistryOptions>) -> Fallible<()> {
         if let Some(registry) = opts {
             assign_if_some!(self.pause_secs, registry.pause_secs);
             assign_if_some!(self.registry, registry.url);
@@ -107,6 +110,7 @@ impl MergeOptions<Option<DockerRegistryOptions>> for AppSettings {
             assign_if_some!(self.credentials_path, registry.credentials_path);
             assign_if_some!(self.manifestref_key, registry.manifestref_key);
         }
+        Ok(())
     }
 }
 

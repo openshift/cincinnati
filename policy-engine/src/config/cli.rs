@@ -3,6 +3,7 @@
 use super::options;
 use super::AppSettings;
 use commons::MergeOptions;
+use failure::Fallible;
 
 /// CLI configuration flags, top-level.
 #[derive(Debug, StructOpt)]
@@ -33,16 +34,19 @@ pub struct CliOptions {
 }
 
 impl MergeOptions<CliOptions> for AppSettings {
-    fn merge(&mut self, opts: CliOptions) {
+    fn try_merge(&mut self, opts: CliOptions) -> Fallible<()> {
         self.verbosity = match opts.verbosity {
             0 => self.verbosity,
             1 => log::LevelFilter::Info,
             2 => log::LevelFilter::Debug,
             _ => log::LevelFilter::Trace,
         };
-        self.merge(Some(opts.service));
-        self.merge(Some(opts.status));
-        self.merge(Some(opts.upstream_cincinnati));
+
+        self.try_merge(Some(opts.service))?;
+        self.try_merge(Some(opts.status))?;
+        self.try_merge(Some(opts.upstream_cincinnati))?;
+
+        Ok(())
     }
 }
 
@@ -84,13 +88,14 @@ mod tests {
         let cli = CliOptions::from_iter_safe(args).unwrap();
         assert_eq!(cli.upstream_cincinnati.url, Some(up_url.clone()));
 
-        settings.merge(cli);
+        settings.try_merge(cli).unwrap();
         assert_eq!(settings.upstream, up_url);
     }
 
     #[test]
     fn cli_override_toml() {
         use crate::config::file::FileOptions;
+        use commons::MergeOptions;
 
         let mut settings = AppSettings::default();
         assert_eq!(settings.verbosity, log::LevelFilter::Warn);
@@ -99,14 +104,14 @@ mod tests {
         let file_opts: FileOptions = toml::from_str(toml_verbosity).unwrap();
         assert_eq!(file_opts.verbosity, Some(log::LevelFilter::Trace));
 
-        settings.merge(Some(file_opts));
+        settings.try_merge(Some(file_opts)).unwrap();
         assert_eq!(settings.verbosity, log::LevelFilter::Trace);
 
         let args = vec!["argv0", "-vv"];
         let cli_opts = CliOptions::from_iter_safe(args).unwrap();
         assert_eq!(cli_opts.verbosity, 2);
 
-        settings.merge(cli_opts);
+        settings.try_merge(cli_opts).unwrap();
         assert_eq!(settings.verbosity, log::LevelFilter::Debug);
     }
 }

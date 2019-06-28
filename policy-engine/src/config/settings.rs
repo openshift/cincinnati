@@ -1,7 +1,6 @@
 //! Application settings for policy-engine.
 
 use super::{cli, file};
-use commons::MergeOptions;
 use failure::Fallible;
 use hyper::Uri;
 use std::collections::HashSet;
@@ -49,6 +48,8 @@ impl AppSettings {
     /// Lookup all optional configs, merge them with defaults, and
     /// transform into valid runtime settings.
     pub fn assemble() -> Fallible<Self> {
+        use commons::MergeOptions;
+
         let defaults = Self::default();
 
         // Source options.
@@ -60,8 +61,8 @@ impl AppSettings {
 
         // Combine options into a single config.
         let mut cfg = defaults;
-        cfg.merge(cli_opts);
-        cfg.merge(file_opts);
+        cfg.try_merge(cli_opts)?;
+        cfg.try_merge(file_opts)?;
 
         // Validate and convert to settings.
         Self::try_validate(cfg)

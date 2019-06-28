@@ -76,8 +76,8 @@ impl AppSettings {
 
         // Combine options into a single config.
         let mut cfg = defaults;
-        cfg.merge(cli_opts);
-        cfg.merge(file_opts);
+        cfg.try_merge(cli_opts)?;
+        cfg.try_merge(file_opts)?;
 
         // Validate and convert to settings.
         Self::try_validate(cfg)

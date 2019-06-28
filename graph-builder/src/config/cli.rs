@@ -3,6 +3,7 @@
 use super::options;
 use super::AppSettings;
 use commons::MergeOptions;
+use failure::Fallible;
 
 /// CLI configuration flags, top-level.
 #[derive(Debug, StructOpt)]
@@ -34,22 +35,24 @@ pub struct CliOptions {
 }
 
 impl MergeOptions<CliOptions> for AppSettings {
-    fn merge(&mut self, opts: CliOptions) {
+    fn try_merge(&mut self, opts: CliOptions) -> Fallible<()> {
         self.verbosity = match opts.verbosity {
             0 => self.verbosity,
             1 => log::LevelFilter::Info,
             2 => log::LevelFilter::Debug,
             _ => log::LevelFilter::Trace,
         };
-        self.merge(Some(opts.service));
-        self.merge(Some(opts.status));
-        self.merge(Some(opts.upstream_registry));
+        self.try_merge(Some(opts.service))?;
+        self.try_merge(Some(opts.status))?;
+        self.try_merge(Some(opts.upstream_registry))?;
 
         // TODO(lucab): drop this when plugins are configurable.
         assign_if_some!(
             self.disable_quay_api_metadata,
             opts.disable_quay_api_metadata
         );
+
+        Ok(())
     }
 }
 
@@ -87,7 +90,7 @@ mod tests {
         let cli = CliOptions::from_iter_safe(args).unwrap();
         assert_eq!(cli.upstream_registry.repository, Some(repo.to_string()));
 
-        settings.merge(cli);
+        settings.try_merge(cli).unwrap();
         assert_eq!(settings.repository, repo.to_string());
     }
 
@@ -102,14 +105,14 @@ mod tests {
         let file_opts: FileOptions = toml::from_str(toml_verbosity).unwrap();
         assert_eq!(file_opts.verbosity, Some(log::LevelFilter::Trace));
 
-        settings.merge(Some(file_opts));
+        settings.try_merge(Some(file_opts)).unwrap();
         assert_eq!(settings.verbosity, log::LevelFilter::Trace);
 
         let args = vec!["argv0", "-vv"];
         let cli_opts = CliOptions::from_iter_safe(args).unwrap();
         assert_eq!(cli_opts.verbosity, 2);
 
-        settings.merge(cli_opts);
+        settings.try_merge(cli_opts).unwrap();
         assert_eq!(settings.verbosity, log::LevelFilter::Debug);
     }
 }
