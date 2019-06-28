@@ -46,7 +46,11 @@ impl PluginSettings for EdgeAddRemovePlugin {
 /// The labels are grouped and processed in two separate passes in the following order:
 ///
 /// 1. *.add
+///     1. previous
+///     2. next
 /// 2. *.remove
+///     1. previous
+///     2. next
 ///
 /// This ordering has implications on the result of semantical contradictions, so that the `*.remove` labels take precedence over `*.add`.
 impl EdgeAddRemovePlugin {
