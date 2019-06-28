@@ -10,7 +10,7 @@ extern crate tokio;
 
 use self::futures::future::Future;
 use crate::plugins::{
-    InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
+    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
 use crate::ReleaseId;
 use failure::{Fallible, ResultExt};
@@ -50,7 +50,7 @@ pub struct QuayMetadataFetchPlugin {
 }
 
 impl PluginSettings for QuayMetadataSettings {
-    fn build_plugin(&self) -> Fallible<Box<Plugin<PluginIO>>> {
+    fn build_plugin(&self) -> Fallible<BoxedPlugin> {
         let cfg = self.clone();
         let plugin = QuayMetadataFetchPlugin::try_new(
             cfg.repository,

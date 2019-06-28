@@ -2,7 +2,7 @@
 
 use crate as cincinnati;
 use crate::plugins::{
-    InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
+    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
 use crate::ReleaseId;
 use failure::Fallible;
@@ -33,7 +33,7 @@ impl InternalPlugin for EdgeAddRemovePlugin {
 }
 
 impl PluginSettings for EdgeAddRemovePlugin {
-    fn build_plugin(&self) -> Fallible<Box<Plugin<PluginIO>>> {
+    fn build_plugin(&self) -> Fallible<BoxedPlugin> {
         Ok(Box::new(InternalPluginWrapper(self.clone())))
     }
 }

@@ -7,7 +7,7 @@ use super::internal::channel_filter::ChannelFilterPlugin;
 use super::internal::edge_add_remove::EdgeAddRemovePlugin;
 use super::internal::metadata_fetch_quay::QuayMetadataFetchPlugin;
 use super::internal::node_remove::NodeRemovePlugin;
-use super::{Plugin, PluginIO};
+use crate::plugins::BoxedPlugin;
 use failure::Fallible;
 use std::fmt::Debug;
 
@@ -17,7 +17,7 @@ static CONFIG_PLUGIN_NAME_KEY: &str = "name";
 /// Settings for a plugin.
 pub trait PluginSettings: Debug + Send {
     /// Build the corresponding plugin for this configuration.
-    fn build_plugin(&self) -> Fallible<Box<Plugin<PluginIO>>>;
+    fn build_plugin(&self) -> Fallible<BoxedPlugin>;
 }
 
 /// Validate configuration for a plugin and fill in defaults.

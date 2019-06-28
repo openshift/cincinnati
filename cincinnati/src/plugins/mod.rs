@@ -17,6 +17,18 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use try_from::{TryFrom, TryInto};
 
+/// Type for storing policy plugins in applications.
+pub type BoxedPlugin = Box<Plugin<PluginIO> + Sync + Send>;
+
+// NOTE(lucab): this abuses `Debug`, because `PartialEq` is not object-safe and
+// thus cannot be required on the underlying trait. It is a crude hack, but
+// only meant to be used by test assertions.
+impl PartialEq<BoxedPlugin> for BoxedPlugin {
+    fn eq(&self, other: &Self) -> bool {
+        format!("{:?}", self) == format!("{:?}", other)
+    }
+}
+
 /// Enum for the two IO variants used by InternalPlugin and ExternalPlugin respectively
 #[derive(Debug)]
 pub enum PluginIO {
