@@ -145,6 +145,25 @@ impl<'a> Iterator for PreviousReleases<'a> {
 #[derive(Debug, Clone)]
 pub struct Empty;
 
+/// Errors that can be returned by the methods in this library
+pub mod errors {
+    /// Edge already exists
+    #[derive(Debug, Fail, Eq, PartialEq)]
+    #[fail(display = "edge from {:?} to {:?} already exists", from, to)]
+    pub struct EdgeAlreadyExists {
+        pub(crate) from: String,
+        pub(crate) to: String,
+    }
+
+    /// Edge doesn't exist
+    #[derive(Debug, Fail, Eq, PartialEq)]
+    #[fail(display = "edge from '{:?}' to '{:?}' doesn't exist", from, to)]
+    pub struct EdgeDoesntExist {
+        pub(crate) from: String,
+        pub(crate) to: String,
+    }
+}
+
 impl Graph {
     /// Add a release to the graph.
     ///
@@ -174,6 +193,13 @@ impl Graph {
     ///
     /// Fails with the `WoulcCycle` error if the new edge would lead to a cycle.
     pub fn add_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
+        if self.dag.find_edge(from.0, to.0).is_some() {
+            return Err(Error::from(errors::EdgeAlreadyExists {
+                from: self.find_by_releaseid(from)?.version().to_string(),
+                to: self.find_by_releaseid(to)?.version().to_string(),
+            }));
+        }
+
         self.dag
             .add_edge(from.0, to.0, Empty {})
             .map(|_| ())
@@ -210,7 +236,10 @@ impl Graph {
                 .map(|_| ())
                 .ok_or_else(|| format_err!("could not remove edge '{:?}'", edge))
         } else {
-            bail!("could not find edge from '{:?}' to '{:?}'", from, to);
+            Err(Error::from(errors::EdgeDoesntExist {
+                from: self.find_by_releaseid(from)?.version().to_string(),
+                to: self.find_by_releaseid(to)?.version().to_string(),
+            }))
         }
     }
 
