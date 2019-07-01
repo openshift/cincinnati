@@ -176,6 +176,7 @@ impl EdgeAddRemovePlugin {
 mod tests {
     use super::*;
     use crate as cincinnati;
+    use commons::testing::init_logger;
     use std::collections::HashMap;
 
     static KEY_PREFIX: &str = "test_key";
@@ -447,6 +448,8 @@ mod tests {
         ) => {
             #[test]
             fn $name() -> Fallible<()> {
+                let _ = init_logger();
+
                 let input_metadata: HashMap<usize, HashMap<String, String>> = $input_metadata
                     .iter()
                     .map(|(n, metadata)| {
