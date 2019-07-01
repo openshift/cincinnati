@@ -132,18 +132,30 @@ impl EdgeAddRemovePlugin {
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).add=(<Version>,)*<Version>`
     fn add_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
+        macro_rules! handle_add_edge {
+            ($direction:expr, $from:ident, $to:ident, $from_string:ident, $to_string:ident) => {
+                if let Err(e) = graph.add_edge(&$from, &$to) {
+                    if let Some(eae) = e.downcast_ref::<crate::errors::EdgeAlreadyExists>() {
+                        warn!("{}", eae);
+                        continue;
+                    };
+                    bail!(e);
+                };
+            };
+        }
+
         graph
             .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "previous.add"))
             .into_iter()
-            .try_for_each(|(to, to_version, from_csv)| -> Fallible<()> {
-                for from_version in from_csv.split(',').map(str::trim) {
-                    if let Some(from) = graph.find_by_version(&from_version) {
-                        info!("[{}]: adding previous {}", &from_version, &to_version);
-                        graph.add_edge(&from, &to)?
+            .try_for_each(|(to, to_string, from_csv)| -> Fallible<()> {
+                for from_string in from_csv.split(',').map(str::trim) {
+                    if let Some(from) = graph.find_by_version(&from_string) {
+                        info!("[{}]: adding {} {}", &to_string, "previous", &from_string);
+                        handle_add_edge!("previous", from, to, from_string, to_string);
                     } else {
                         bail!(
                             "couldn't find version given by 'previous.add={}' in graph",
-                            from_version
+                            from_string
                         )
                     }
                 }
@@ -156,8 +168,8 @@ impl EdgeAddRemovePlugin {
             .try_for_each(|(from, from_string, to_csv)| -> Fallible<()> {
                 for to_string in to_csv.split(',').map(str::trim) {
                     if let Some(to) = graph.find_by_version(&to_string) {
-                        info!("[{}]: adding next {}", &from_string, &to_string);
-                        graph.add_edge(&from, &to)?;
+                        info!("[{}]: adding {} {}", &from_string, "next", &to_string);
+                        handle_add_edge!("next", from, to, from_string, to_string);
                     } else {
                         bail!(
                             "couldn't find version given by 'next.add={}' in graph",
@@ -523,7 +535,7 @@ mod tests {
                 ),
             ],
         input_edges: Some(vec![(0, 1), (1, 2)]),
-        expected_edges: Some(vec![(0, 1), (1, 2)]),
+        expected_edges: Some(vec![]),
     );
 
     label_processing_order_test!(
@@ -561,7 +573,6 @@ mod tests {
                     1,
                     vec![
                         // (a)
-                        ("previous.remove", "0.0.0"),
                         ("previous.add", "0.0.0"),
                         // (b)
                         ("next.add", "2.0.0"),
@@ -572,7 +583,6 @@ mod tests {
                     2,
                     vec![
                         // (b)
-                        ("previous.remove", "1.0.0"),
                         ("previous.add", "1.0.0"),
                     ],
                 ),
@@ -587,5 +597,16 @@ mod tests {
             ],
         input_edges: Some(vec![]),
         expected_edges: Some(vec![]),
+    );
+
+    label_processing_order_test!(
+        name: dont_add_duplicate_edges,
+        input_metadata:
+            vec![
+                (0, vec![("next.add", "1.0.0"),],),
+                (1, vec![("previous.add", "0.0.0"),],),
+            ],
+        input_edges: Some(vec![(0, 1)]),
+        expected_edges: Some(vec![(0, 1)]),
     );
 }
