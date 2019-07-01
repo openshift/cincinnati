@@ -1,5 +1,6 @@
 //! This module implements the internal plugins
 
+pub mod assign_wariness;
 pub mod channel_filter;
 pub mod cincinnati_graph_fetch;
 pub mod edge_add_remove;

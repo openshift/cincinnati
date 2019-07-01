@@ -3,6 +3,7 @@
 //! This catalog relies on a static list of all available plugins,
 //! referenced by name. It is used for configuration purposes.
 
+use super::internal::assign_wariness::AssignWariness;
 use super::internal::channel_filter::ChannelFilterPlugin;
 use super::internal::cincinnati_graph_fetch::CincinnatiGraphFetchPlugin;
 use super::internal::edge_add_remove::EdgeAddRemovePlugin;
@@ -31,6 +32,7 @@ pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>>
         .to_string();
 
     match name.as_str() {
+        AssignWariness::PLUGIN_NAME => AssignWariness::deserialize_config(cfg),
         ChannelFilterPlugin::PLUGIN_NAME => ChannelFilterPlugin::deserialize_config(cfg),
         EdgeAddRemovePlugin::PLUGIN_NAME => EdgeAddRemovePlugin::deserialize_config(cfg),
         NodeRemovePlugin::PLUGIN_NAME => NodeRemovePlugin::deserialize_config(cfg),
