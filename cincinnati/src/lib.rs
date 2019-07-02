@@ -35,7 +35,7 @@ pub mod plugins;
 
 use daggy::petgraph::visit::{IntoNodeReferences, NodeRef};
 use daggy::{Dag, Walker};
-use failure::Error;
+use failure::{Error, Fallible};
 use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::collections::HashMap;
@@ -193,6 +193,13 @@ impl Graph {
             .node_references()
             .find(|nr| nr.weight().version() == version)
             .map(|nr| ReleaseId(nr.id()))
+    }
+
+    /// Returns a Release for the given &ReleaseId
+    pub fn find_by_releaseid(&self, id: &ReleaseId) -> Fallible<&Release> {
+        self.dag
+            .node_weight(id.0)
+            .ok_or_else(move || format_err!("could not find Release with id: {:?}", id))
     }
 
     /// Removes the directed edge between the given releases.
