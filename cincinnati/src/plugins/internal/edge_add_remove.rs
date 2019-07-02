@@ -609,4 +609,11 @@ mod tests {
         input_edges: Some(vec![(0, 1)]),
         expected_edges: Some(vec![(0, 1)]),
     );
+
+    label_processing_order_test!(
+        name: gracefully_handle_nonexistent_edge_removal,
+        input_metadata: vec![(0, vec![("next.remove", "2.0.0"),],), (1, vec![])],
+        input_edges: Some(vec![]),
+        expected_edges: Some(vec![]),
+    );
 }
