@@ -53,6 +53,10 @@ impl PluginSettings for EdgeAddRemovePlugin {
 ///     2. next
 ///
 /// This ordering has implications on the result of semantical contradictions, so that the `*.remove` labels take precedence over `*.add`.
+///
+/// # Strictness
+/// The plugin aims to gracefully handle any inconsistencies to make the operation as robust as possible.
+/// This includes cases where add or remove instructions refer to edges or releases which don't exist in the graph.
 impl EdgeAddRemovePlugin {
     /// Plugin name, for configuration.
     pub(crate) const PLUGIN_NAME: &'static str = "edge-add-remove";
@@ -75,6 +79,18 @@ impl EdgeAddRemovePlugin {
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).remove=(<Version>,)*<Version>`
     /// If the value equals a single `REMOVE_ALL_EDGES_VALUE` all edges at the given direction are removed.
     fn remove_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
+        macro_rules! handle_remove_edge {
+            ($from:ident, $to:ident) => {
+                if let Err(e) = graph.remove_edge(&$from, &$to) {
+                    if let Some(eae) = e.downcast_ref::<crate::errors::EdgeDoesntExist>() {
+                        warn!("{}", eae);
+                        continue;
+                    };
+                    bail!(e)
+                };
+            };
+        }
+
         graph
             .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "previous.remove"))
             .into_iter()
@@ -93,9 +109,9 @@ impl EdgeAddRemovePlugin {
                     for from_version in from_csv.split(',').map(str::trim) {
                         if let Some(from) = graph.find_by_version(&from_version) {
                             info!("[{}]: removing previous {}", from_version, to_version,);
-                            graph.remove_edge(&from, &to)?
+                            handle_remove_edge!(from, to)
                         } else {
-                            bail!(
+                            warn!(
                                 "couldn't find version given by 'previous.remove={}' in graph",
                                 from_version
                             )
@@ -113,9 +129,9 @@ impl EdgeAddRemovePlugin {
                     for to_version in to_csv.split(',').map(str::trim) {
                         if let Some(to) = graph.find_by_version(&to_version) {
                             info!("[{}]: removing next {}", from_version, to_version);
-                            graph.remove_edge(&from, &to)?
+                            handle_remove_edge!(from, to)
                         } else {
-                            info!(
+                            warn!(
                                 "couldn't find version given by 'next.remove={}' in graph",
                                 to_version
                             )
@@ -153,7 +169,7 @@ impl EdgeAddRemovePlugin {
                         info!("[{}]: adding {} {}", &to_string, "previous", &from_string);
                         handle_add_edge!("previous", from, to, from_string, to_string);
                     } else {
-                        bail!(
+                        warn!(
                             "couldn't find version given by 'previous.add={}' in graph",
                             from_string
                         )
@@ -171,7 +187,7 @@ impl EdgeAddRemovePlugin {
                         info!("[{}]: adding {} {}", &from_string, "next", &to_string);
                         handle_add_edge!("next", from, to, from_string, to_string);
                     } else {
-                        bail!(
+                        warn!(
                             "couldn't find version given by 'next.add={}' in graph",
                             to_string
                         )
@@ -612,7 +628,27 @@ mod tests {
 
     label_processing_order_test!(
         name: gracefully_handle_nonexistent_edge_removal,
-        input_metadata: vec![(0, vec![("next.remove", "2.0.0"),],), (1, vec![])],
+        input_metadata:
+            vec![
+                (0, vec![("next.remove", "1.0.0")]),
+                (1, vec![("previous.remove", "1.0.0"),])
+            ],
+        input_edges: Some(vec![]),
+        expected_edges: Some(vec![]),
+    );
+
+    label_processing_order_test!(
+        name: gracefully_handle_nonexistent_release_references,
+        input_metadata:
+            vec![(
+                0,
+                vec![
+                    ("next.add", "1.0.0"),
+                    ("previous.add", "1.0.0"),
+                    ("next.remove", "1.0.0"),
+                    ("previous.remove", "1.0.0"),
+                ]
+            )],
         input_edges: Some(vec![]),
         expected_edges: Some(vec![]),
     );
