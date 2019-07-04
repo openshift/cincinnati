@@ -46,9 +46,17 @@ impl PluginSettings for EdgeAddRemovePlugin {
 /// The labels are grouped and processed in two separate passes in the following order:
 ///
 /// 1. *.add
+///     1. previous
+///     2. next
 /// 2. *.remove
+///     1. previous
+///     2. next
 ///
 /// This ordering has implications on the result of semantical contradictions, so that the `*.remove` labels take precedence over `*.add`.
+///
+/// # Strictness
+/// The plugin aims to gracefully handle any inconsistencies to make the operation as robust as possible.
+/// This includes cases where add or remove instructions refer to edges or releases which don't exist in the graph.
 impl EdgeAddRemovePlugin {
     /// Plugin name, for configuration.
     pub(crate) const PLUGIN_NAME: &'static str = "edge-add-remove";
@@ -71,6 +79,18 @@ impl EdgeAddRemovePlugin {
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).remove=(<Version>,)*<Version>`
     /// If the value equals a single `REMOVE_ALL_EDGES_VALUE` all edges at the given direction are removed.
     fn remove_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
+        macro_rules! handle_remove_edge {
+            ($from:ident, $to:ident) => {
+                if let Err(e) = graph.remove_edge(&$from, &$to) {
+                    if let Some(eae) = e.downcast_ref::<crate::errors::EdgeDoesntExist>() {
+                        warn!("{}", eae);
+                        continue;
+                    };
+                    bail!(e)
+                };
+            };
+        }
+
         graph
             .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "previous.remove"))
             .into_iter()
@@ -89,9 +109,9 @@ impl EdgeAddRemovePlugin {
                     for from_version in from_csv.split(',').map(str::trim) {
                         if let Some(from) = graph.find_by_version(&from_version) {
                             info!("[{}]: removing previous {}", from_version, to_version,);
-                            graph.remove_edge(&from, &to)?
+                            handle_remove_edge!(from, to)
                         } else {
-                            bail!(
+                            warn!(
                                 "couldn't find version given by 'previous.remove={}' in graph",
                                 from_version
                             )
@@ -109,9 +129,9 @@ impl EdgeAddRemovePlugin {
                     for to_version in to_csv.split(',').map(str::trim) {
                         if let Some(to) = graph.find_by_version(&to_version) {
                             info!("[{}]: removing next {}", from_version, to_version);
-                            graph.remove_edge(&from, &to)?
+                            handle_remove_edge!(from, to)
                         } else {
-                            info!(
+                            warn!(
                                 "couldn't find version given by 'next.remove={}' in graph",
                                 to_version
                             )
@@ -128,18 +148,30 @@ impl EdgeAddRemovePlugin {
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).add=(<Version>,)*<Version>`
     fn add_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
+        macro_rules! handle_add_edge {
+            ($direction:expr, $from:ident, $to:ident, $from_string:ident, $to_string:ident) => {
+                if let Err(e) = graph.add_edge(&$from, &$to) {
+                    if let Some(eae) = e.downcast_ref::<crate::errors::EdgeAlreadyExists>() {
+                        warn!("{}", eae);
+                        continue;
+                    };
+                    bail!(e);
+                };
+            };
+        }
+
         graph
             .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "previous.add"))
             .into_iter()
-            .try_for_each(|(to, to_version, from_csv)| -> Fallible<()> {
-                for from_version in from_csv.split(',').map(str::trim) {
-                    if let Some(from) = graph.find_by_version(&from_version) {
-                        info!("[{}]: adding previous {}", &from_version, &to_version);
-                        graph.add_edge(&from, &to)?
+            .try_for_each(|(to, to_string, from_csv)| -> Fallible<()> {
+                for from_string in from_csv.split(',').map(str::trim) {
+                    if let Some(from) = graph.find_by_version(&from_string) {
+                        info!("[{}]: adding {} {}", &to_string, "previous", &from_string);
+                        handle_add_edge!("previous", from, to, from_string, to_string);
                     } else {
-                        bail!(
+                        warn!(
                             "couldn't find version given by 'previous.add={}' in graph",
-                            from_version
+                            from_string
                         )
                     }
                 }
@@ -152,10 +184,10 @@ impl EdgeAddRemovePlugin {
             .try_for_each(|(from, from_string, to_csv)| -> Fallible<()> {
                 for to_string in to_csv.split(',').map(str::trim) {
                     if let Some(to) = graph.find_by_version(&to_string) {
-                        info!("[{}]: adding next {}", &from_string, &to_string);
-                        graph.add_edge(&from, &to)?;
+                        info!("[{}]: adding {} {}", &from_string, "next", &to_string);
+                        handle_add_edge!("next", from, to, from_string, to_string);
                     } else {
-                        bail!(
+                        warn!(
                             "couldn't find version given by 'next.add={}' in graph",
                             to_string
                         )
@@ -172,6 +204,7 @@ impl EdgeAddRemovePlugin {
 mod tests {
     use super::*;
     use crate as cincinnati;
+    use commons::testing::init_logger;
     use std::collections::HashMap;
 
     static KEY_PREFIX: &str = "test_key";
@@ -443,6 +476,8 @@ mod tests {
         ) => {
             #[test]
             fn $name() -> Fallible<()> {
+                let _ = init_logger();
+
                 let input_metadata: HashMap<usize, HashMap<String, String>> = $input_metadata
                     .iter()
                     .map(|(n, metadata)| {
@@ -516,7 +551,7 @@ mod tests {
                 ),
             ],
         input_edges: Some(vec![(0, 1), (1, 2)]),
-        expected_edges: Some(vec![(0, 1), (1, 2)]),
+        expected_edges: Some(vec![]),
     );
 
     label_processing_order_test!(
@@ -554,7 +589,6 @@ mod tests {
                     1,
                     vec![
                         // (a)
-                        ("previous.remove", "0.0.0"),
                         ("previous.add", "0.0.0"),
                         // (b)
                         ("next.add", "2.0.0"),
@@ -565,7 +599,6 @@ mod tests {
                     2,
                     vec![
                         // (b)
-                        ("previous.remove", "1.0.0"),
                         ("previous.add", "1.0.0"),
                     ],
                 ),
@@ -578,6 +611,44 @@ mod tests {
                     ],
                 ),
             ],
+        input_edges: Some(vec![]),
+        expected_edges: Some(vec![]),
+    );
+
+    label_processing_order_test!(
+        name: dont_add_duplicate_edges,
+        input_metadata:
+            vec![
+                (0, vec![("next.add", "1.0.0"),],),
+                (1, vec![("previous.add", "0.0.0"),],),
+            ],
+        input_edges: Some(vec![(0, 1)]),
+        expected_edges: Some(vec![(0, 1)]),
+    );
+
+    label_processing_order_test!(
+        name: gracefully_handle_nonexistent_edge_removal,
+        input_metadata:
+            vec![
+                (0, vec![("next.remove", "1.0.0")]),
+                (1, vec![("previous.remove", "1.0.0"),])
+            ],
+        input_edges: Some(vec![]),
+        expected_edges: Some(vec![]),
+    );
+
+    label_processing_order_test!(
+        name: gracefully_handle_nonexistent_release_references,
+        input_metadata:
+            vec![(
+                0,
+                vec![
+                    ("next.add", "1.0.0"),
+                    ("previous.add", "1.0.0"),
+                    ("next.remove", "1.0.0"),
+                    ("previous.remove", "1.0.0"),
+                ]
+            )],
         input_edges: Some(vec![]),
         expected_edges: Some(vec![]),
     );

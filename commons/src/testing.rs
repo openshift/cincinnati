@@ -3,9 +3,15 @@
 use failure::Fallible;
 use tokio::runtime::current_thread::Runtime;
 
+/// Initialize logging.
+pub fn init_logger() -> Fallible<()> {
+    env_logger::try_init_from_env(env_logger::Env::default())?;
+    Ok(())
+}
+
 /// Initialize a tokio runtime for tests, with logging.
 pub fn init_runtime() -> Fallible<Runtime> {
-    let _ = env_logger::try_init_from_env(env_logger::Env::default());
+    let _ = init_logger();
     Runtime::new().map_err(failure::Error::from)
 }
 
