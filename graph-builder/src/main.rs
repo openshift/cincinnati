@@ -19,6 +19,7 @@ extern crate graph_builder;
 #[macro_use]
 extern crate log;
 extern crate structopt;
+extern crate tempfile;
 
 use graph_builder::{config, graph, graph::RwLock, status};
 
