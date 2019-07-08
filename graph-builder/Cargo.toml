@@ -33,6 +33,7 @@ tokio = "0.1"
 toml = "^0.4.10"
 url = "^1.7.2"
 parking_lot = "^0.8.0"
+tempfile = "^3.1.0"
 
 [dev-dependencies]
 twoway = "^0.2"
