@@ -17,8 +17,20 @@ RUN \
   $HOME/rust/install.sh; \
   rm -rf $HOME/rust
 
+# add cargo binaries to PATH
+ENV PATH="${HOME}/.cargo/bin:${PATH}"
+
 # test: linters
 RUN yum -y install yamllint
+
+# test: code coverage
+RUN yum -y install cmake elfutils-libelf-devel libcurl-devel binutils-devel elfutils-devel
+RUN \
+  mkdir $HOME/kcov && \
+  pushd $HOME/kcov && \
+  curl https://codeload.github.com/SimonKagstrom/kcov/tar.gz/v36 | tar -xz --strip-components=1 && \
+  cmake . && make && make install
+RUN cargo install cargo-kcov
 
 RUN \
   mkdir -p $HOME/.cargo/git/ && \
