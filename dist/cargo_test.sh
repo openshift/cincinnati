@@ -58,7 +58,7 @@ function execute_docker() {
   run_tests "docker_cargo"
 }
 
-for executor in ${!executors[@]}; do
+for executor in "${!executors[@]}"; do
   if type -f $executor; then
     ${executors[${executor}]}
     exit 0
