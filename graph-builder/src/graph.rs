@@ -15,9 +15,12 @@
 use crate::config;
 use crate::registry::{self, Registry};
 use actix_web::{HttpRequest, HttpResponse};
-use cincinnati::{plugins, AbstractRelease, Graph, Release, CONTENT_TYPE};
+use cincinnati::plugins::prelude::*;
+use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
 use commons::GraphError;
 use failure::{Error, Fallible};
+use futures::Future;
+use lazy_static;
 pub use parking_lot::RwLock;
 use prometheus::{self, Counter, IntGauge};
 use serde_json;
@@ -101,6 +104,7 @@ pub struct State {
     mandatory_params: HashSet<String>,
     live: Arc<RwLock<bool>>,
     ready: Arc<RwLock<bool>>,
+    plugins: &'static [BoxedPlugin],
 }
 
 impl State {
@@ -110,12 +114,14 @@ impl State {
         mandatory_params: HashSet<String>,
         live: Arc<RwLock<bool>>,
         ready: Arc<RwLock<bool>>,
+        plugins: &'static [BoxedPlugin],
     ) -> State {
         State {
             json,
             mandatory_params,
             live,
             ready,
+            plugins,
         }
     }
 
@@ -142,43 +148,6 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
     let (username, password) =
         registry::read_credentials(settings.credentials_path.as_ref(), &registry.host)
             .expect("could not read registry credentials");
-
-    let mut configured_plugins: Vec<Box<plugins::Plugin<plugins::PluginIO>>> = {
-        use cincinnati::plugins::internal::{
-            edge_add_remove::EdgeAddRemovePlugin, metadata_fetch_quay::QuayMetadataFetchPlugin,
-            node_remove::NodeRemovePlugin,
-        };
-        use cincinnati::plugins::{internal, InternalPluginWrapper};
-        use quay::v1::DEFAULT_API_BASE;
-
-        // TODO(steveeJ): actually make this vec configurable
-        vec![
-            Box::new(InternalPluginWrapper(
-                // TODO(lucab): source options from plugins config.
-                QuayMetadataFetchPlugin::try_new(
-                    settings.repository.clone(),
-                    internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER.to_string(),
-                    internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY.to_string(),
-                    None,
-                    DEFAULT_API_BASE.to_string(),
-                )
-                .expect("could not initialize the QuayMetadataPlugin"),
-            )),
-            Box::new(InternalPluginWrapper(NodeRemovePlugin {
-                key_prefix: internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER.to_string(),
-            })),
-            Box::new(InternalPluginWrapper(EdgeAddRemovePlugin {
-                key_prefix: internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER.to_string(),
-                remove_all_edges_value: internal::edge_add_remove::DEFAULT_REMOVE_ALL_EDGES_VALUE
-                    .to_string(),
-            })),
-        ]
-    };
-
-    // TODO(lucab): drop this when plugins are configurable.
-    if settings.disable_quay_api_metadata {
-        configured_plugins = vec![];
-    }
 
     // Indicate if a panic happens
     let previous_hook = std::panic::take_hook();
@@ -240,14 +209,20 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
             }
         };
 
-        let graph = match cincinnati::plugins::process(
-            &configured_plugins,
-            cincinnati::plugins::InternalIO {
+        let future_graph = cincinnati::plugins::process(
+            state.plugins.iter(),
+            cincinnati::plugins::PluginIO::InternalIO(cincinnati::plugins::InternalIO {
                 graph,
                 // the plugins used in the graph-builder don't expect any parameters yet
                 parameters: Default::default(),
-            },
-        ) {
+            }),
+        )
+        .map(|internal_io| internal_io.graph);
+
+        let graph = match tokio::runtime::current_thread::Runtime::new()
+            .unwrap()
+            .block_on(future_graph)
+        {
             Ok(graph) => graph,
             Err(err) => {
                 err.iter_chain().for_each(|cause| error!("{}", cause));

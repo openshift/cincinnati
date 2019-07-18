@@ -74,18 +74,18 @@ impl AppSettings {
 
     /// Validate and return policy plugins.
     pub fn policy_plugins(&self) -> Fallible<Vec<BoxedPlugin>> {
-        let mut configured_plugins = Vec::with_capacity(self.policies.len());
+        let mut plugins = Vec::with_capacity(self.policies.len());
         for conf in &self.policies {
             let plugin = conf.build_plugin()?;
-            configured_plugins.push(plugin);
+            plugins.push(plugin);
         }
 
         // TODO(lucab): drop this as soon as all config-maps are in place (prod & staging).
-        if configured_plugins.is_empty() {
-            configured_plugins = default_openshift_plugins();
+        if plugins.is_empty() {
+            plugins = default_openshift_plugins();
         }
 
-        Ok(configured_plugins)
+        Ok(plugins)
     }
 
     /// Validate and build runtime settings.
@@ -102,10 +102,10 @@ fn default_openshift_plugins() -> Vec<BoxedPlugin> {
     // TODO(lucab): drop this as soon as all config-maps are in place (prod & staging).
     use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
     use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER;
-    use cincinnati::plugins::InternalPluginWrapper;
+    use cincinnati::plugins::prelude::*;
 
-    vec![Box::new(InternalPluginWrapper(ChannelFilterPlugin {
+    new_plugins!(InternalPluginWrapper(ChannelFilterPlugin {
         key_prefix: String::from(DEFAULT_QUAY_LABEL_FILTER),
         key_suffix: String::from("release.channels"),
-    }))]
+    }))
 }
