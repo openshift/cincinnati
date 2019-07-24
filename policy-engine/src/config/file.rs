@@ -79,9 +79,7 @@ impl MergeOptions<Option<UpstreamOptions>> for AppSettings {
 
 #[cfg(test)]
 mod tests {
-    use super::FileOptions;
-    use crate::config::AppSettings;
-    use commons::MergeOptions;
+    use super::*;
 
     #[test]
     fn toml_basic() {
@@ -107,9 +105,35 @@ mod tests {
 
     #[test]
     fn toml_sample_config() {
+        use super::FileOptions;
+
         let input_url = hyper::Uri::from_static("https://example.com");
-        let filepath = "tests/fixtures/sample-config.toml";
-        let opts = FileOptions::read_filepath(filepath).unwrap();
+        let opts = {
+            use std::io::Write;
+
+            let sample_config = r#"
+                verbosity = 3
+
+                [upstream]
+                method = "cincinnati"
+
+                [upstream.cincinnati]
+                url = "https://example.com"
+
+                [service]
+                address = "0.0.0.0"
+                port = 8383
+
+                [status]
+                address = "127.0.0.1"
+            "#;
+
+            let mut config_file = tempfile::NamedTempFile::new().unwrap();
+            config_file
+                .write_fmt(format_args!("{}", sample_config))
+                .unwrap();
+            FileOptions::read_filepath(config_file.path()).unwrap()
+        };
 
         assert_eq!(opts.verbosity, Some(log::LevelFilter::Trace));
         assert!(opts.service.is_some());

@@ -111,8 +111,36 @@ mod tests {
 
     #[test]
     fn toml_sample_config() {
-        let filepath = "tests/fixtures/sample-config.toml";
-        let opts = FileOptions::read_filepath(filepath).unwrap();
+        use tempfile;
+
+        let opts = {
+            use std::io::Write;
+
+            let sample_config = r#"
+                verbosity = 3
+
+                [upstream]
+                method = "registry"
+
+                [upstream.registry]
+                pause_secs = 35
+                url = "quay.io"
+                repository = "openshift-release-dev/ocp-release"
+
+                [service]
+                address = "0.0.0.0"
+                port = 8383
+
+                [status]
+                address = "127.0.0.1"
+            "#;
+
+            let mut config_file = tempfile::NamedTempFile::new().unwrap();
+            config_file
+                .write_fmt(format_args!("{}", sample_config))
+                .unwrap();
+            FileOptions::read_filepath(config_file.path()).unwrap()
+        };
 
         assert_eq!(opts.verbosity, Some(log::LevelFilter::Trace));
         assert!(opts.service.is_some());

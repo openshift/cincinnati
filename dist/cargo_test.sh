@@ -24,12 +24,14 @@ executors["docker"]="execute_docker"
 
 function run_tests() {
   for directory in ${!cargo_test_flags[*]}; do
-    (${1} /usr/bin/env bash -c "\
-      cd ${directory} && \
-      export CARGO_TARGET_DIR="../target" && \
-      cargo test --release ${cargo_test_flags[${directory}]} && \
-      :
-    ")
+    (
+      set -x;
+      ${1} /usr/bin/env bash -c "\
+        cd ${directory} && \
+        export CARGO_TARGET_DIR=\"../target\" && \
+        cargo ${CARGO_ARGS:-test --release} ${cargo_test_flags[${directory}]} && \
+      :"
+    )
   done
 }
 
@@ -56,7 +58,7 @@ function execute_docker() {
   run_tests "docker_cargo"
 }
 
-for executor in ${!executors[@]}; do
+for executor in "${!executors[@]}"; do
   if type -f $executor; then
     ${executors[${executor}]}
     exit 0

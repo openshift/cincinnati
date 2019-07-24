@@ -27,8 +27,9 @@ extern crate smart_default;
 #[macro_use]
 extern crate structopt;
 extern crate openapiv3;
-extern crate url;
 
+extern crate tempfile;
+extern crate url;
 mod config;
 mod graph;
 mod metrics;

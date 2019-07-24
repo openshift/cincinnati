@@ -25,6 +25,7 @@ smart-default = "^0.5.1"
 structopt = "^0.2.10"
 toml = "^0.4.10"
 url = "1.7.2"
+tempfile = "^3.1.0"
 
 [dev-dependencies]
 tokio = "^0.1"
