@@ -15,8 +15,8 @@ export CINCINNATI_REPO="redhat/openshift-cincinnati-test-public-manual"
 ### Executables on the build host
 
 ```console
-cargo run --package graph-builder -- --address 0.0.0.0 --registry "${CINCINNATI_REGISTRY}" --repository "${CINCINNATI_REPO}" &
-cargo run --package policy-engine -- --address 0.0.0.0 &
+cargo run --package graph-builder -- --service.address 0.0.0.0 --upstream.registry.url "${CINCINNATI_REGISTRY}" --upstream.registry.repository "${CINCINNATI_REPO}" &
+cargo run --package policy-engine -- --service.address 0.0.0.0 &
 curl --verbose --header 'Accept:application/json' http://localhost:8081/v1/graph
 ```
 
