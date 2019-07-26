@@ -31,6 +31,11 @@ lazy_static! {
         "Number of releases in the final graph, after processing"
     )
     .unwrap();
+    static ref GRAPH_LAST_SUCCESSFUL_REFRESH: IntGauge = IntGauge::new(
+        "graph_last_successful_refresh_timestamp",
+        "UTC timestamp of last successful graph refresh"
+    )
+    .unwrap();
     static ref GRAPH_UPSTREAM_RAW_RELEASES: IntGauge = IntGauge::new(
         "graph_upstream_raw_releases",
         "Number of releases fetched from upstream, before processing"
@@ -57,6 +62,7 @@ lazy_static! {
 pub fn register_metrics(registry: &prometheus::Registry) -> Fallible<()> {
     commons::register_metrics(&registry)?;
     registry.register(Box::new(GRAPH_FINAL_RELEASES.clone()))?;
+    registry.register(Box::new(GRAPH_LAST_SUCCESSFUL_REFRESH.clone()))?;
     registry.register(Box::new(GRAPH_UPSTREAM_RAW_RELEASES.clone()))?;
     registry.register(Box::new(UPSTREAM_ERRORS.clone()))?;
     registry.register(Box::new(UPSTREAM_SCRAPES.clone()))?;
@@ -249,21 +255,26 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
             }
         };
 
-        match serde_json::to_string(&graph) {
-            Ok(json) => {
-                *state.json.write() = json;
-
-                if first_success {
-                    *state.ready.write() = true;
-                    first_success = false;
-                };
-
-                let nodes_count = graph.releases_count();
-                GRAPH_FINAL_RELEASES.set(nodes_count as i64);
-                debug!("graph update completed, {} valid releases", nodes_count);
+        let json_graph = match serde_json::to_string(&graph) {
+            Ok(json) => json,
+            Err(err) => {
+                error!("Failed to serialize graph: {}", err);
+                continue;
             }
-            Err(err) => error!("Failed to serialize graph: {}", err),
         };
+
+        *state.json.write() = json_graph;
+
+        if first_success {
+            *state.ready.write() = true;
+            first_success = false;
+        };
+
+        GRAPH_LAST_SUCCESSFUL_REFRESH.set(chrono::Utc::now().timestamp() as i64);
+
+        let nodes_count = graph.releases_count();
+        GRAPH_FINAL_RELEASES.set(nodes_count as i64);
+        debug!("graph update completed, {} valid releases", nodes_count);
     }
 }
 
