@@ -979,6 +979,7 @@ version = "0.1.0"
 dependencies = [
  "actix 0.8.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-web 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "cincinnati 0.1.0",
  "commons 0.1.0",
  "dkregistry 0.3.0-alpha.0 (git+https://github.com/camallo/dkregistry-rs.git?rev=eb6349f2b99cd3dbd681d18d692a8c69e2e7b339)",
