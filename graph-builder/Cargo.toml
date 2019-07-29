@@ -7,10 +7,10 @@ edition = "2018"
 [dependencies]
 actix = "^0.8.3"
 actix-web = "^1.0.2"
+chrono = "^0.4.7"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
 dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "eb6349f2b99cd3dbd681d18d692a8c69e2e7b339" }
-
 env_logger = "^0.6.0"
 failure = "^0.1.1"
 flate2 = "^1.0.1"
