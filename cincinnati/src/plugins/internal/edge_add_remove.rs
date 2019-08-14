@@ -1,4 +1,4 @@
-//! This plugin adds and removes Edges from Nodes accordingly
+//! This plugin adds and removes Edges from Nodes based on metadata labels.
 
 use crate as cincinnati;
 use crate::plugins::{
