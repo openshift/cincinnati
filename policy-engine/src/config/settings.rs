@@ -1,7 +1,7 @@
 //! Application settings for policy-engine.
 
 use super::{cli, file};
-use cincinnati::plugins::{BoxedPlugin, PluginSettings};
+use cincinnati::plugins::{build_plugins, BoxedPlugin, PluginSettings};
 use failure::Fallible;
 use hyper::Uri;
 use std::collections::HashSet;
@@ -12,7 +12,7 @@ use structopt::StructOpt;
 pub static DEFAULT_UPSTREAM_URL: &str = "http://localhost:8080/v1/graph";
 
 /// Runtime application settings (validated config).
-#[derive(Debug, SmartDefault)]
+#[derive(CustomDebug, SmartDefault)]
 pub struct AppSettings {
     /// Global log level.
     #[default(log::LevelFilter::Warn)]
@@ -73,19 +73,19 @@ impl AppSettings {
     }
 
     /// Validate and return policy plugins.
-    pub fn policy_plugins(&self) -> Fallible<Vec<BoxedPlugin>> {
-        let mut plugins = Vec::with_capacity(self.policies.len());
-        for conf in &self.policies {
-            let plugin = conf.build_plugin()?;
-            plugins.push(plugin);
-        }
+    pub fn policy_plugins(
+        &self,
+        registry: Option<&prometheus::Registry>,
+    ) -> Fallible<Vec<BoxedPlugin>> {
+        let default_policies = self.default_openshift_policies()?;
 
-        // TODO(lucab): drop this as soon as all config-maps are in place (prod & staging).
-        if plugins.is_empty() {
-            plugins = default_openshift_plugins();
-        }
+        let policies: &Vec<Box<dyn PluginSettings>> = if self.policies.is_empty() {
+            &default_policies
+        } else {
+            &self.policies
+        };
 
-        Ok(plugins)
+        build_plugins(policies, registry)
     }
 
     /// Validate and build runtime settings.
@@ -94,18 +94,33 @@ impl AppSettings {
             bail!("main and status service configured with the same address and port");
         }
 
+        // Deprecates options
+        if self.upstream.to_string() != hyper::Uri::default().to_string() {
+            warn!("the 'upstream' setting is deprecated and will eventually be removed.");
+        }
+
         Ok(self)
     }
-}
 
-fn default_openshift_plugins() -> Vec<BoxedPlugin> {
-    // TODO(lucab): drop this as soon as all config-maps are in place (prod & staging).
-    use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
-    use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER;
-    use cincinnati::plugins::prelude::*;
+    fn default_openshift_policies(&self) -> Fallible<Vec<Box<dyn PluginSettings>>> {
+        use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
+        use cincinnati::plugins::internal::cincinnati_graph_fetch::CincinnatiGraphFetchPlugin;
+        use std::iter::FromIterator;
 
-    new_plugins!(InternalPluginWrapper(ChannelFilterPlugin {
-        key_prefix: String::from(DEFAULT_QUAY_LABEL_FILTER),
-        key_suffix: String::from("release.channels"),
-    }))
+        Ok(vec![
+            plugin_config!(
+                ("name", CincinnatiGraphFetchPlugin::PLUGIN_NAME),
+                ("upstream", &self.upstream.to_string())
+            )?,
+            plugin_config!(
+                ("name", ChannelFilterPlugin::PLUGIN_NAME),
+                ("upstream", &self.upstream.to_string()),
+                (
+                    "key_prefix",
+                    cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER
+                ),
+                ("key_suffix", "release.channels")
+            )?,
+        ])
+    }
 }

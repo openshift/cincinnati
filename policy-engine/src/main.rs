@@ -4,6 +4,7 @@
 
 extern crate actix;
 extern crate actix_web;
+#[macro_use]
 extern crate cincinnati;
 #[macro_use]
 extern crate commons;
@@ -27,9 +28,12 @@ extern crate smart_default;
 #[macro_use]
 extern crate structopt;
 extern crate openapiv3;
+#[macro_use]
+extern crate custom_debug_derive;
 
 extern crate tempfile;
 extern crate url;
+
 mod config;
 mod graph;
 mod openapi;
@@ -70,10 +74,9 @@ fn main() -> Result<(), Error> {
     .start();
 
     // Main service.
-    let plugins = settings.policy_plugins()?;
+    let plugins = settings.policy_plugins(Some(registry))?;
     let state = AppState {
         mandatory_params: settings.mandatory_client_parameters.clone(),
-        upstream: settings.upstream.clone(),
         path_prefix: settings.path_prefix.clone(),
         plugins: Box::leak(Box::new(plugins)),
     };
@@ -99,13 +102,11 @@ fn main() -> Result<(), Error> {
 }
 
 /// Shared application configuration (cloned per-thread).
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 struct AppState {
     /// Query parameters that must be present in all client requests.
     pub mandatory_params: HashSet<String>,
     /// Upstream cincinnati service.
-    pub upstream: hyper::Uri,
-    /// Common namespace for API endpoints.
     pub path_prefix: String,
     /// Policy plugins.
     pub plugins: &'static [BoxedPlugin],
@@ -116,7 +117,6 @@ impl Default for AppState {
         Self {
             plugins: Box::leak(Box::new([])),
             mandatory_params: HashSet::new(),
-            upstream: hyper::Uri::from_static(config::DEFAULT_UPSTREAM_URL),
             path_prefix: String::new(),
         }
     }

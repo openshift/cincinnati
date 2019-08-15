@@ -46,7 +46,7 @@ pub enum GraphError {
 
     /// Error while reaching upstream.
     #[fail(display = "failed to assemble upstream request")]
-    FailedUpstreamRequest,
+    FailedUpstreamRequest(String),
 
     /// Requested invalid mediatype.
     #[fail(display = "invalid Content-Type requested")]
@@ -87,7 +87,7 @@ impl GraphError {
             GraphError::FailedJsonOut(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
             GraphError::FailedUpstreamFetch(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
             GraphError::FailedPluginExecution(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
-            GraphError::FailedUpstreamRequest => http::StatusCode::INTERNAL_SERVER_ERROR,
+            GraphError::FailedUpstreamRequest(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
             GraphError::InvalidContentType => http::StatusCode::NOT_ACCEPTABLE,
             GraphError::MissingParams(_) => http::StatusCode::BAD_REQUEST,
             GraphError::InvalidParams(_) => http::StatusCode::BAD_REQUEST,
@@ -101,7 +101,7 @@ impl GraphError {
             GraphError::FailedJsonOut(_) => "failed_json_out",
             GraphError::FailedUpstreamFetch(_) => "failed_upstream_fetch",
             GraphError::FailedPluginExecution(_) => "failed_plugin_execution",
-            GraphError::FailedUpstreamRequest => "failed_upstream_request",
+            GraphError::FailedUpstreamRequest(_) => "failed_upstream_request",
             GraphError::InvalidContentType => "invalid_content_type",
             GraphError::MissingParams(_) => "missing_params",
             GraphError::InvalidParams(_) => "invalid_params",

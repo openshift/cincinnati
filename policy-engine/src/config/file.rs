@@ -194,7 +194,7 @@ mod tests {
         settings.try_merge(Some(opts)).unwrap();
         assert_eq!(settings.policies.len(), 1);
 
-        let policies = settings.policy_plugins().unwrap();
+        let policies = settings.policy_plugins(None).unwrap();
         assert_eq!(policies, expected);
     }
 }

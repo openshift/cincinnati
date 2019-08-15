@@ -1,29 +1,17 @@
 //! Cincinnati graph service.
 
 use crate::AppState;
-use actix_web::http::header::{self, HeaderValue};
 use actix_web::web::Query;
 use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::CONTENT_TYPE;
 use commons::{self, GraphError};
 use failure::Fallible;
-use futures::{future, Future, Stream};
-use hyper::{Body, Client, Request};
+use futures::{future, Future};
 use prometheus::{Counter, Histogram, HistogramOpts, Registry};
 use serde_json;
 use std::collections::HashMap;
 
 lazy_static! {
-    static ref HTTP_UPSTREAM_REQS: Counter = Counter::new(
-        "http_upstream_requests_total",
-        "Total number of HTTP upstream requests"
-    )
-    .unwrap();
-    static ref HTTP_UPSTREAM_UNREACHABLE: Counter = Counter::new(
-        "http_upstream_errors_total",
-        "Total number of HTTP upstream unreachable errors"
-    )
-    .unwrap();
     static ref V1_GRAPH_INCOMING_REQS: Counter = Counter::new(
         "v1_graph_incoming_requests_total",
         "Total number of incoming HTTP client request to /v1/graph"
@@ -40,8 +28,6 @@ lazy_static! {
 pub(crate) fn register_metrics(registry: &Registry) -> Fallible<()> {
     commons::register_metrics(&registry)?;
     registry.register(Box::new(V1_GRAPH_INCOMING_REQS.clone()))?;
-    registry.register(Box::new(HTTP_UPSTREAM_REQS.clone()))?;
-    registry.register(Box::new(HTTP_UPSTREAM_UNREACHABLE.clone()))?;
     registry.register(Box::new(V1_GRAPH_SERVE_HIST.clone()))?;
     Ok(())
 }
@@ -78,49 +64,20 @@ pub(crate) fn index(req: HttpRequest) -> Box<dyn Future<Item = HttpResponse, Err
         .expect(commons::MISSING_APPSTATE_PANIC_MSG)
         .plugins;
 
-    // Assemble a request for the upstream Cincinnati service.
-    let ups_req = match Request::get(
-        &req.app_data::<AppState>()
-            .expect(commons::MISSING_APPSTATE_PANIC_MSG)
-            .upstream,
-    )
-    .header(header::ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
-    .body(Body::empty())
-    {
-        Ok(req) => req,
-        Err(_) => return Box::new(future::err(GraphError::FailedUpstreamRequest)),
-    };
-
-    HTTP_UPSTREAM_REQS.inc();
     let timer = V1_GRAPH_SERVE_HIST.start_timer();
-    let serve = Client::new()
-        .request(ups_req)
-        .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
-        .and_then(|res| {
-            if res.status().is_success() {
-                future::ok(res)
-            } else {
-                HTTP_UPSTREAM_UNREACHABLE.inc();
-                future::err(GraphError::FailedUpstreamFetch(res.status().to_string()))
-            }
-        })
-        .and_then(|res| {
-            res.into_body()
-                .concat2()
-                .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
-        })
-        .and_then(|body| {
-            serde_json::from_slice(&body).map_err(|e| GraphError::FailedJsonIn(e.to_string()))
-        })
-        .and_then(move |graph| {
+    let serve = futures::future::ok(())
+        .and_then(move |_| {
             cincinnati::plugins::process(
                 plugins.iter(),
                 cincinnati::plugins::PluginIO::InternalIO(cincinnati::plugins::InternalIO {
-                    graph,
+                    graph: Default::default(),
                     parameters: plugin_params,
                 }),
             )
-            .map_err(|e| GraphError::FailedPluginExecution(e.to_string()))
+            .map_err(|e| match e.downcast::<GraphError>() {
+                Ok(graph_error) => graph_error,
+                Err(other_error) => GraphError::FailedPluginExecution(other_error.to_string()),
+            })
         })
         .and_then(|internal_io| {
             serde_json::to_string(&internal_io.graph)
@@ -155,41 +112,13 @@ mod tests {
     use crate::graph;
     use crate::AppState;
     use actix_web::http;
-    use cincinnati::plugins::BoxedPlugin;
-    use failure::Fallible;
+    use cincinnati::plugins::prelude::*;
     use mockito;
     use std::error::Error;
 
     fn common_init() -> Runtime {
         let _ = env_logger::try_init_from_env(env_logger::Env::default());
         Runtime::new().unwrap()
-    }
-
-    // Source policy plugins from TOML configuration file.
-    fn openshift_policy_plugins() -> Fallible<Vec<BoxedPlugin>> {
-        use commons::MergeOptions;
-
-        let mut settings = crate::config::AppSettings::default();
-        let opts = {
-            use std::io::Write;
-
-            let sample_config = r#"
-                [[policy]]
-                name = "channel-filter"
-                key_prefix = "io.openshift.upgrades.graph"
-                key_suffix = "release.channels"
-            "#;
-
-            let mut config_file = tempfile::NamedTempFile::new().unwrap();
-            config_file
-                .write_fmt(format_args!("{}", sample_config))
-                .unwrap();
-            crate::config::FileOptions::read_filepath(config_file.path()).unwrap()
-        };
-
-        settings.try_merge(Some(opts))?;
-        let plugins = settings.policy_plugins()?;
-        Ok(plugins)
     }
 
     #[test]
@@ -253,16 +182,22 @@ mod tests {
 
     #[test]
     fn failed_plugin_execution() -> Result<(), Box<dyn Error>> {
-        use std::str::FromStr;
-
         let mut rt = common_init();
 
-        let policies = openshift_policy_plugins()?;
+        let plugins = build_plugins(
+            &[plugin_config!(
+                ("name", "channel-filter"),
+                ("key_prefix", "io.openshift.upgrades.graph"),
+                ("key_suffix", "release.channels")
+            )?],
+            None,
+        )?;
+
         let mandatory_params = vec!["channel".to_string()].into_iter().collect();
+
         let state = AppState {
             mandatory_params,
-            plugins: Box::leak(Box::new(policies)),
-            upstream: hyper::Uri::from_str(&mockito::server_url())?,
+            plugins: Box::leak(Box::new(plugins)),
             ..Default::default()
         };
 
@@ -294,23 +229,39 @@ mod tests {
     }
 
     #[test]
-    fn webservice_graph_json_error_response() -> Result<(), Box<dyn Error>> {
+    fn webservice_graph_json_response() -> Result<(), Box<dyn Error>> {
         let _ = common_init();
+
+        enum TestResult {
+            Success(String),
+            Error(commons::GraphError),
+        }
+
+        impl TestResult {
+            fn status_code(&self) -> http::StatusCode {
+                match self {
+                    TestResult::Success(_) => http::StatusCode::OK,
+                    TestResult::Error(error) => error.status_code(),
+                }
+            }
+        }
 
         struct TestParams<'a> {
             name: &'a str,
             mandatory_params: &'a [&'a str],
             passed_params: &'a [(&'a str, &'a str)],
-            expected_error: commons::GraphError,
+            plugin_config: &'a [Box<dyn PluginSettings>],
+            expected_result: TestResult,
         }
+
+        static SERVED_GRAPH_BODY: &str = r#"{"nodes":[],"edges":[]}"#;
 
         fn run_test(
             mandatory_params: &[&str],
             passed_params: &[(&str, &str)],
-            expected_error: &commons::GraphError,
+            plugin_config: &[Box<dyn PluginSettings>],
+            expected_result: &TestResult,
         ) -> Result<(), Box<dyn Error>> {
-            use std::str::FromStr;
-
             let service_uri_base = "/graph";
             let service_uri = format!(
                 "{}{}",
@@ -330,16 +281,16 @@ mod tests {
             let _m = mockito::mock("GET", "/")
                 .with_status(200)
                 .with_header("content-type", "application/json")
-                .with_body(r#"{"nodes":[],"edges":[]}"#)
+                .with_body(SERVED_GRAPH_BODY.to_string())
                 .create();
 
             // prepare and run the policy-engine test-service
-            let policies = openshift_policy_plugins()?;
+            let plugins = build_plugins(plugin_config, None)?;
+
             let app = actix_web::App::new()
                 .register_data(actix_web::web::Data::new(AppState {
                     mandatory_params: mandatory_params.iter().map(|s| s.to_string()).collect(),
-                    plugins: Box::leak(Box::new(policies)),
-                    upstream: hyper::Uri::from_str(&mockito::server_url())?,
+                    plugins: Box::leak(Box::new(plugins)),
                     ..Default::default()
                 }))
                 .service(
@@ -357,7 +308,7 @@ mod tests {
                         .to_request(),
                 );
 
-                if response.status() != expected_error.status_code() {
+                if response.status() != expected_result.status_code() {
                     return Err(format!("unexpected statuscode:{}", response.status()).into());
                 };
 
@@ -382,54 +333,92 @@ mod tests {
                 return Err("not a JSON object".into());
             };
 
-            if let Some(kind) = toplevel.remove("kind") {
-                assert_eq!(kind, expected_error.kind())
-            } else {
-                return Err("expected 'kind' in JSON object".into());
-            }
-
-            if let Some(value) = toplevel.remove("value") {
-                if let Some(result_value) = value.as_str() {
-                    if !result_value.contains(&expected_error.value()) {
-                        return Err(format!(
-                            "value '{}' doesn't contain: \'{}\'",
-                            result_value,
-                            expected_error.value(),
-                        )
-                        .into());
-                    }
-                } else {
-                    return Err(format!("couldn't parse '{}' as string", value).into());
+            match expected_result {
+                TestResult::Success(expected_body) => {
+                    assert_eq!(expected_body.to_owned(), body);
                 }
-            } else {
-                return Err("expected 'value' in JSON object".into());
-            }
+                TestResult::Error(expected_error) => {
+                    if let Some(kind) = toplevel.remove("kind") {
+                        assert_eq!(kind, expected_error.kind())
+                    } else {
+                        return Err("expected 'kind' in JSON object".into());
+                    }
+
+                    if let Some(value) = toplevel.remove("value") {
+                        if let Some(result_value) = value.as_str() {
+                            if !result_value.contains(&expected_error.value()) {
+                                return Err(format!(
+                                    "value '{}' doesn't contain: \'{}\'",
+                                    result_value,
+                                    expected_error.value(),
+                                )
+                                .into());
+                            }
+                        } else {
+                            return Err(format!("couldn't parse '{}' as string", value).into());
+                        }
+                    } else {
+                        return Err("expected 'value' in JSON object".into());
+                    }
+                }
+            };
 
             Ok(())
         }
 
+        use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
+        use cincinnati::plugins::internal::cincinnati_graph_fetch::CincinnatiGraphFetchPlugin;
+        use std::iter::FromIterator;
+
         [
+            TestParams {
+                name: "successful upstream graph fetch",
+                mandatory_params: &[],
+                passed_params: &[],
+                plugin_config: &[plugin_config!(
+                    ("name", CincinnatiGraphFetchPlugin::PLUGIN_NAME),
+                    ("upstream", &mockito::server_url())
+                )?],
+                expected_result: TestResult::Success(SERVED_GRAPH_BODY.to_string()),
+            },
+            TestParams {
+                name: "offline upstream",
+                mandatory_params: &[],
+                passed_params: &[],
+                plugin_config: &[plugin_config!(
+                    ("name", CincinnatiGraphFetchPlugin::PLUGIN_NAME),
+                    ("upstream", "http://offline.url.test")
+                )?],
+                expected_result: TestResult::Error(commons::GraphError::FailedUpstreamFetch(
+                    "http://offline.url.test/: error trying to connect".to_string(),
+                )),
+            },
             TestParams {
                 name: "missing channel parameter",
                 mandatory_params: &["channel"],
                 passed_params: &[],
-                expected_error: commons::GraphError::MissingParams(vec!["channel".to_string()]),
+                plugin_config: &[plugin_config!(("name", ChannelFilterPlugin::PLUGIN_NAME))?],
+                expected_result: TestResult::Error(commons::GraphError::MissingParams(vec![
+                    "channel".to_string(),
+                ])),
             },
             TestParams {
                 name: "invalid channel name",
                 mandatory_params: &["channel"],
                 passed_params: &[("channel", "invalid:channel")],
-                expected_error: commons::GraphError::FailedPluginExecution(
+                plugin_config: &[plugin_config!(("name", ChannelFilterPlugin::PLUGIN_NAME))?],
+                expected_result: TestResult::Error(commons::GraphError::FailedPluginExecution(
                     "channel 'invalid:channel'".to_string(),
-                ),
+                )),
             },
             TestParams {
                 name: "invalid channel name with equal sign",
                 mandatory_params: &["channel"],
                 passed_params: &[("channel", "invalid=channel")],
-                expected_error: commons::GraphError::FailedPluginExecution(
+                plugin_config: &[plugin_config!(("name", ChannelFilterPlugin::PLUGIN_NAME))?],
+                expected_result: TestResult::Error(commons::GraphError::FailedPluginExecution(
                     "channel 'invalid=channel'".to_string(),
-                ),
+                )),
             },
         ]
         .iter()
@@ -437,7 +426,8 @@ mod tests {
             run_test(
                 &test_param.mandatory_params,
                 &test_param.passed_params,
-                &test_param.expected_error,
+                &test_param.plugin_config,
+                &test_param.expected_result,
             )
             .map_err(|e| format!("test '{}' failed: {}", test_param.name, e).into())
         })

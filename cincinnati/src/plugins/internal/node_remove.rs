@@ -1,5 +1,6 @@
 //! This plugin removes releases according to its metadata
 
+use prometheus::Registry;
 use crate::plugins::{
     AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
@@ -15,7 +16,7 @@ pub struct NodeRemovePlugin {
 }
 
 impl PluginSettings for NodeRemovePlugin {
-    fn build_plugin(&self) -> Fallible<BoxedPlugin> {
+    fn build_plugin(&self, _: Option<&Registry>) -> Fallible<BoxedPlugin> {
         Ok(new_plugin!(InternalPluginWrapper(self.clone())))
     }
 }
