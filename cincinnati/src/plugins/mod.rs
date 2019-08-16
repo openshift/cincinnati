@@ -14,8 +14,8 @@ use crate as cincinnati;
 use crate::plugins::interface::{PluginError, PluginExchange};
 use failure::{Error, Fallible, ResultExt};
 use std::collections::HashMap;
+use std::convert::{TryFrom, TryInto};
 use std::fmt::Debug;
-use try_from::{TryFrom, TryInto};
 
 /// Type for storing policy plugins in applications.
 pub type BoxedPlugin = Box<Plugin<PluginIO> + Sync + Send>;
@@ -93,32 +93,6 @@ where
     fn run_external(&self, input: ExternalIO) -> Fallible<ExternalIO>;
 }
 
-/// Dummy converter to satisfy the Trait
-impl TryFrom<PluginIO> for PluginIO {
-    type Err = Error;
-
-    fn try_from(io: Self) -> Fallible<Self> {
-        Ok(io)
-    }
-}
-
-/// Dummy converter to satisfy the Trait
-impl TryFrom<InternalIO> for PluginIO {
-    type Err = Error;
-
-    fn try_from(internal_io: InternalIO) -> Fallible<Self> {
-        Ok(internal_io.into())
-    }
-}
-
-/// Dummy converter to satisfty the Trait
-impl TryFrom<ExternalIO> for PluginIO {
-    type Err = Error;
-    fn try_from(external_io: ExternalIO) -> Fallible<Self> {
-        Ok(external_io.into())
-    }
-}
-
 /// Convert from InternalIO to PluginIO
 ///
 /// This merely wraps the struct into the enum variant.
@@ -142,7 +116,7 @@ impl From<ExternalIO> for PluginIO {
 /// This can fail because the ExternalIO bytes need to be deserialized into the
 /// PluginExchange type.
 impl TryFrom<ExternalIO> for PluginExchange {
-    type Err = Error;
+    type Error = Error;
 
     fn try_from(external_io: ExternalIO) -> Fallible<Self> {
         protobuf::parse_from_bytes(&external_io.bytes)
@@ -156,7 +130,7 @@ impl TryFrom<ExternalIO> for PluginExchange {
 /// This can fail because the ExternalIO bytes need to be deserialized into the
 /// PluginError type.
 impl TryFrom<ExternalIO> for PluginError {
-    type Err = Error;
+    type Error = Error;
 
     fn try_from(external_io: ExternalIO) -> Fallible<Self> {
         protobuf::parse_from_bytes(&external_io.bytes)
@@ -170,7 +144,7 @@ impl TryFrom<ExternalIO> for PluginError {
 /// This can fail because the bytes of ExternalIO need to be deserialized into
 /// either of PluginExchange or PluginError.
 impl TryFrom<Fallible<ExternalIO>> for PluginResult {
-    type Err = Error;
+    type Error = Error;
 
     fn try_from(external_io: Fallible<ExternalIO>) -> Fallible<Self> {
         match external_io {
@@ -197,7 +171,7 @@ impl From<interface::PluginError> for Fallible<ExternalIO> {
 ///
 /// This can fail because PluginExchange needs to be serialized into the bytes.
 impl TryFrom<PluginExchange> for ExternalIO {
-    type Err = Error;
+    type Error = Error;
 
     fn try_from(exchange: PluginExchange) -> Fallible<Self> {
         use protobuf::Message;
@@ -213,7 +187,7 @@ impl TryFrom<PluginExchange> for ExternalIO {
 /// This can fail because the ExternalIO bytes need to be deserialized into the
 /// InternalIO type.
 impl TryFrom<ExternalIO> for InternalIO {
-    type Err = Error;
+    type Error = Error;
 
     fn try_from(external_io: ExternalIO) -> Fallible<Self> {
         let mut plugin_exchange: PluginExchange = external_io.try_into()?;
@@ -243,7 +217,7 @@ impl From<InternalIO> for interface::PluginExchange {
 ///
 /// The serialization can apparently fail.
 impl TryFrom<InternalIO> for ExternalIO {
-    type Err = Error;
+    type Error = Error;
 
     fn try_from(internal_io: InternalIO) -> Fallible<Self> {
         let exchange: PluginExchange = internal_io.into();
@@ -256,7 +230,7 @@ impl TryFrom<InternalIO> for ExternalIO {
 /// In case of the variant Plugion::ExternalIO this involves deserialization
 /// which might fail.
 impl TryFrom<PluginIO> for InternalIO {
-    type Err = Error;
+    type Error = Error;
 
     fn try_from(plugin_io: PluginIO) -> Fallible<Self> {
         match plugin_io {
@@ -271,7 +245,7 @@ impl TryFrom<PluginIO> for InternalIO {
 ///
 /// This may fail due to the possible failing conversion.
 impl TryFrom<PluginIO> for ExternalIO {
-    type Err = Error;
+    type Error = Error;
 
     fn try_from(plugin_io: PluginIO) -> Fallible<Self> {
         let final_io = match plugin_io {
@@ -298,7 +272,7 @@ where
 {
     fn run(&self, plugin_io: PluginIO) -> Fallible<PluginIO> {
         let internal_io = self.0.run_internal(plugin_io.try_into()?)?;
-        internal_io.try_into()
+        Ok(internal_io.into())
     }
 }
 
@@ -310,7 +284,7 @@ where
 {
     fn run(&self, plugin_io: PluginIO) -> Fallible<PluginIO> {
         let external_io = self.0.run_external(plugin_io.try_into()?)?;
-        external_io.try_into()
+        Ok(external_io.into())
     }
 }
 

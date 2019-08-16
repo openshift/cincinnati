@@ -23,7 +23,6 @@ extern crate commons;
 extern crate log;
 extern crate protobuf;
 extern crate toml;
-extern crate try_from;
 extern crate url;
 #[macro_use]
 extern crate lazy_static;
