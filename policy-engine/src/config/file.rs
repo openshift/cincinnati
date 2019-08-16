@@ -18,6 +18,9 @@ pub struct FileOptions {
     /// Upstream options.
     pub upstream: Option<UpstreamOptions>,
 
+    /// Policy plugins options.
+    pub policy: Option<Vec<toml::Value>>,
+
     /// Web frontend options.
     pub service: Option<options::ServiceOptions>,
 
@@ -49,13 +52,27 @@ impl FileOptions {
 }
 
 impl MergeOptions<Option<FileOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<FileOptions>) {
+    fn try_merge(&mut self, opts: Option<FileOptions>) -> failure::Fallible<()> {
         if let Some(file) = opts {
             assign_if_some!(self.verbosity, file.verbosity);
-            self.merge(file.service);
-            self.merge(file.status);
-            self.merge(file.upstream);
+            self.try_merge(file.policy)?;
+            self.try_merge(file.service)?;
+            self.try_merge(file.status)?;
+            self.try_merge(file.upstream)?;
         }
+        Ok(())
+    }
+}
+
+impl MergeOptions<Option<Vec<toml::Value>>> for AppSettings {
+    fn try_merge(&mut self, opts: Option<Vec<toml::Value>>) -> Fallible<()> {
+        if let Some(policies) = opts {
+            for conf in policies {
+                let plugin = cincinnati::plugins::deserialize_config(conf)?;
+                self.policies.push(plugin);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -70,16 +87,19 @@ pub struct UpstreamOptions {
 }
 
 impl MergeOptions<Option<UpstreamOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<UpstreamOptions>) {
+    fn try_merge(&mut self, opts: Option<UpstreamOptions>) -> Fallible<()> {
         if let Some(upstream) = opts {
-            self.merge(upstream.cincinnati);
+            self.try_merge(upstream.cincinnati)?;
         }
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::FileOptions;
+    use crate::config::AppSettings;
+    use commons::MergeOptions;
 
     #[test]
     fn toml_basic() {
@@ -99,7 +119,7 @@ mod tests {
         let toml_input = "status.port = 2222";
         let file_opts: FileOptions = toml::from_str(toml_input).unwrap();
 
-        settings.merge(Some(file_opts));
+        settings.try_merge(Some(file_opts)).unwrap();
         assert_eq!(settings.status_port, 2222);
     }
 
@@ -141,5 +161,41 @@ mod tests {
         let ups = opts.upstream.unwrap().cincinnati.unwrap();
         let ups_url = ups.url.unwrap();
         assert_eq!(ups_url, input_url);
+    }
+
+    #[test]
+    fn toml_basic_policy() {
+        use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
+        use cincinnati::plugins::{BoxedPlugin, InternalPluginWrapper};
+
+        let expected: Vec<BoxedPlugin> =
+            vec![Box::new(InternalPluginWrapper(ChannelFilterPlugin {
+                key_prefix: String::from("io.openshift.upgrades.graph"),
+                key_suffix: String::from("release.channels"),
+            }))];
+        let mut settings = AppSettings::default();
+
+        let opts = {
+            use std::io::Write;
+
+            let sample_config = r#"
+                [[policy]]
+                name = "channel-filter"
+                key_prefix = "io.openshift.upgrades.graph"
+                key_suffix = "release.channels"
+            "#;
+
+            let mut config_file = tempfile::NamedTempFile::new().unwrap();
+            config_file
+                .write_fmt(format_args!("{}", sample_config))
+                .unwrap();
+            crate::config::FileOptions::read_filepath(config_file.path()).unwrap()
+        };
+        assert!(opts.policy.is_some());
+        settings.try_merge(Some(opts)).unwrap();
+        assert_eq!(settings.policies.len(), 1);
+
+        let policies = settings.policy_plugins().unwrap();
+        assert_eq!(policies, expected);
     }
 }

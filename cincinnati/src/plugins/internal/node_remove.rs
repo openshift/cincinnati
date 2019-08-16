@@ -1,7 +1,7 @@
 //! This plugin removes releases according to its metadata
 
 use crate::plugins::{
-    InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
+    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
 use failure::Fallible;
 
@@ -15,7 +15,7 @@ pub struct NodeRemovePlugin {
 }
 
 impl PluginSettings for NodeRemovePlugin {
-    fn build_plugin(&self) -> Fallible<Box<Plugin<PluginIO>>> {
+    fn build_plugin(&self) -> Fallible<BoxedPlugin> {
         Ok(Box::new(InternalPluginWrapper(self.clone())))
     }
 }

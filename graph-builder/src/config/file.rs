@@ -48,13 +48,14 @@ impl FileOptions {
 }
 
 impl MergeOptions<Option<FileOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<FileOptions>) {
+    fn try_merge(&mut self, opts: Option<FileOptions>) -> Fallible<()>{
         if let Some(file) = opts {
             assign_if_some!(self.verbosity, file.verbosity);
-            self.merge(file.service);
-            self.merge(file.status);
-            self.merge(file.upstream);
+            self.try_merge(file.service)?;
+            self.try_merge(file.status)?;
+            self.try_merge(file.upstream)?;
         }
+        Ok(())
     }
 }
 
@@ -69,10 +70,11 @@ pub struct UpstreamOptions {
 }
 
 impl MergeOptions<Option<UpstreamOptions>> for AppSettings {
-    fn merge(&mut self, opts: Option<UpstreamOptions>) {
+    fn try_merge(&mut self, opts: Option<UpstreamOptions>) -> Fallible<()> {
         if let Some(upstream) = opts {
-            self.merge(upstream.registry);
+            self.try_merge(upstream.registry)?;
         }
+        Ok(())
     }
 }
 
@@ -105,7 +107,7 @@ mod tests {
         let toml_input = "status.port = 2222";
         let file_opts: FileOptions = toml::from_str(toml_input).unwrap();
 
-        settings.merge(Some(file_opts));
+        settings.try_merge(Some(file_opts)).unwrap();
         assert_eq!(settings.status_port, 2222);
     }
 

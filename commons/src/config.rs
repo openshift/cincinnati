@@ -13,12 +13,12 @@ macro_rules! assign_if_some {
     }};
 }
 
-/// Merge configuration options into runtime settings.
+/// Try to merge configuration options into runtime settings.
 ///
-/// This consumes a generic configuration object, merging its options
+/// This consumes a generic configuration object, trying to merge its options
 /// into runtime settings. It only overlays populated values from config,
 /// leaving unset ones preserved as-is from existing settings.
 pub trait MergeOptions<T> {
     /// MergeOptions values from `options` into current settings.
-    fn merge(&mut self, options: T);
+    fn try_merge(&mut self, options: T) -> failure::Fallible<()>;
 }

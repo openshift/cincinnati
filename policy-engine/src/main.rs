@@ -36,13 +36,16 @@ mod metrics;
 mod openapi;
 
 use actix_web::{App, HttpServer};
+use cincinnati::plugins::BoxedPlugin;
 use failure::Error;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 fn main() -> Result<(), Error> {
     let sys = actix::System::new("policy-engine");
 
     let settings = config::AppSettings::assemble()?;
+    let plugins = Arc::new(settings.policy_plugins()?);
 
     env_logger::Builder::from_default_env()
         .filter(Some(module_path!()), settings.verbosity)
@@ -64,6 +67,7 @@ fn main() -> Result<(), Error> {
         mandatory_params: settings.mandatory_client_parameters.clone(),
         upstream: settings.upstream.clone(),
         path_prefix: settings.path_prefix.clone(),
+        plugins: Arc::clone(&plugins),
     };
 
     HttpServer::new(move || {
@@ -95,11 +99,14 @@ struct AppState {
     pub upstream: hyper::Uri,
     /// Common namespace for API endpoints.
     pub path_prefix: String,
+    /// Policy plugins.
+    pub plugins: Arc<Vec<BoxedPlugin>>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
+            plugins: Arc::new(vec![]),
             mandatory_params: HashSet::new(),
             upstream: hyper::Uri::from_static(config::DEFAULT_UPSTREAM_URL),
             path_prefix: String::new(),

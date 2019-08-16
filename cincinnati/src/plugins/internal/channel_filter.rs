@@ -3,7 +3,7 @@
 //! and the value must match the regex specified at CHANNEL_VALIDATION_REGEX_STR
 
 use crate::plugins::{
-    InternalIO, InternalPlugin, InternalPluginWrapper, Plugin, PluginIO, PluginSettings,
+    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
 use failure::Fallible;
 
@@ -21,7 +21,7 @@ pub struct ChannelFilterPlugin {
 }
 
 impl PluginSettings for ChannelFilterPlugin {
-    fn build_plugin(&self) -> Fallible<Box<Plugin<PluginIO>>> {
+    fn build_plugin(&self) -> Fallible<BoxedPlugin> {
         Ok(Box::new(InternalPluginWrapper(self.clone())))
     }
 }
