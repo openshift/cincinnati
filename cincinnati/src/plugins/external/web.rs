@@ -19,7 +19,7 @@ mod tests {
     use crate::plugins::{interface, ExternalIO, ExternalPlugin, InternalIO, PluginResult};
     use crate::tests::generate_graph;
     use failure::Fallible;
-    use try_from::TryInto;
+    use std::convert::TryInto;
 
     struct DummyWebClient {
         callback: Box<Fn(interface::PluginExchange) -> PluginResult>,

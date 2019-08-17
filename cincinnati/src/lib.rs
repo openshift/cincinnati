@@ -23,7 +23,6 @@ extern crate commons;
 extern crate log;
 extern crate protobuf;
 extern crate toml;
-extern crate try_from;
 extern crate url;
 #[macro_use]
 extern crate lazy_static;
@@ -175,7 +174,7 @@ impl Graph {
         let release = release.into();
         match self.find_by_version(&release.version()) {
             Some(id) => {
-                let mut node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
+                let node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
                 if let Release::Concrete(_) = node {
                     bail!(
                         "Concrete release with the same version ({}) already exists",
