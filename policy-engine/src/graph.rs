@@ -2,6 +2,7 @@
 
 use crate::AppState;
 use actix_web::http::header::{self, HeaderValue};
+use actix_web::web::Query;
 use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::CONTENT_TYPE;
 use commons::{self, GraphError};
@@ -10,6 +11,7 @@ use futures::{future, Future, Stream};
 use hyper::{Body, Client, Request};
 use prometheus::{Counter, Histogram, HistogramOpts, Registry};
 use serde_json;
+use std::collections::HashMap;
 
 lazy_static! {
     static ref HTTP_UPSTREAM_REQS: Counter = Counter::new(
@@ -62,29 +64,14 @@ pub(crate) fn index(req: HttpRequest) -> Box<dyn Future<Item = HttpResponse, Err
         return Box::new(future::err(e));
     }
 
-    // TODO(steveeJ): take another look at the actix-web docs for a method that
-    // provides this parameters split.
-    let plugin_params = req
-        .query_string()
-        .to_owned()
-        .split('&')
-        .map(|pair| {
-            let kv_split: Vec<&str> = pair.split('=').collect();
-
-            let value = kv_split
-                .get(1)
-                .unwrap_or_else(|| {
-                    trace!(
-                        "query parameter '{}' is not a k=v pair. assuming an empty value.",
-                        pair
-                    );
-                    &""
-                })
-                .to_string();
-
-            (kv_split[0].to_string(), value)
-        })
-        .collect();
+    let plugin_params = match Query::<HashMap<String, String>>::from_query(req.query_string()) {
+        Ok(query) => query.into_inner(),
+        Err(e) => {
+            return Box::new(futures::future::err(commons::GraphError::InvalidParams(
+                e.to_string(),
+            )))
+        }
+    };
 
     let plugins = req
         .app_data::<AppState>()
@@ -434,6 +421,14 @@ mod tests {
                 passed_params: &[("channel", "invalid:channel")],
                 expected_error: commons::GraphError::FailedPluginExecution(
                     "channel 'invalid:channel'".to_string(),
+                ),
+            },
+            TestParams {
+                name: "invalid channel name with equal sign",
+                mandatory_params: &["channel"],
+                passed_params: &[("channel", "invalid=channel")],
+                expected_error: commons::GraphError::FailedPluginExecution(
+                    "channel 'invalid=channel'".to_string(),
                 ),
             },
         ]

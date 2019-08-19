@@ -55,6 +55,10 @@ pub enum GraphError {
     /// Missing client parameters.
     #[fail(display = "mandatory client parameters missing")]
     MissingParams(Vec<String>),
+
+    /// Invalid client parameters.
+    #[fail(display = "invalid client parameters")]
+    InvalidParams(String),
 }
 
 impl actix_web::error::ResponseError for GraphError {
@@ -86,6 +90,7 @@ impl GraphError {
             GraphError::FailedUpstreamRequest => http::StatusCode::INTERNAL_SERVER_ERROR,
             GraphError::InvalidContentType => http::StatusCode::NOT_ACCEPTABLE,
             GraphError::MissingParams(_) => http::StatusCode::BAD_REQUEST,
+            GraphError::InvalidParams(_) => http::StatusCode::BAD_REQUEST,
         }
     }
 
@@ -99,6 +104,7 @@ impl GraphError {
             GraphError::FailedUpstreamRequest => "failed_upstream_request",
             GraphError::InvalidContentType => "invalid_content_type",
             GraphError::MissingParams(_) => "missing_params",
+            GraphError::InvalidParams(_) => "invalid_params",
         };
         kind.to_string()
     }
