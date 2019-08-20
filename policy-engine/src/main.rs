@@ -32,36 +32,45 @@ extern crate tempfile;
 extern crate url;
 mod config;
 mod graph;
-mod metrics;
 mod openapi;
 
 use actix_web::{App, HttpServer};
 use cincinnati::plugins::BoxedPlugin;
+use commons::metrics::{self, RegistryWrapper};
 use failure::Error;
+use prometheus::Registry;
 use std::collections::HashSet;
+
+/// Common prefix for policy-engine metrics.
+pub static METRICS_PREFIX: &str = "cincinnati_pe";
 
 fn main() -> Result<(), Error> {
     let sys = actix::System::new("policy-engine");
 
     let settings = config::AppSettings::assemble()?;
-    let plugins = settings.policy_plugins()?;
-
     env_logger::Builder::from_default_env()
         .filter(Some(module_path!()), settings.verbosity)
         .init();
     debug!("application settings:\n{:#?}", &settings);
 
     // Metrics service.
-    graph::register_metrics(&metrics::PROM_REGISTRY)?;
-    HttpServer::new(|| {
-        App::new().service(
-            actix_web::web::resource("/metrics").route(actix_web::web::get().to(metrics::serve)),
-        )
+    let registry: &'static Registry = Box::leak(Box::new(metrics::new_registry(Some(
+        METRICS_PREFIX.to_string(),
+    ))?));
+    graph::register_metrics(registry)?;
+    HttpServer::new(move || {
+        App::new()
+            .register_data(actix_web::web::Data::new(RegistryWrapper(registry)))
+            .service(
+                actix_web::web::resource("/metrics")
+                    .route(actix_web::web::get().to(metrics::serve::<RegistryWrapper>)),
+            )
     })
     .bind((settings.status_address, settings.status_port))?
     .start();
 
     // Main service.
+    let plugins = settings.policy_plugins()?;
     let state = AppState {
         mandatory_params: settings.mandatory_client_parameters.clone(),
         upstream: settings.upstream.clone(),

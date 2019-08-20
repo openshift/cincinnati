@@ -17,11 +17,11 @@ mod config;
 pub use crate::config::MergeOptions;
 
 pub mod de;
+pub mod metrics;
+pub mod testing;
 
 mod errors;
-pub use crate::errors::{register_metrics, GraphError, MISSING_APPSTATE_PANIC_MSG};
-
-pub mod testing;
+pub use errors::{register_metrics, GraphError, MISSING_APPSTATE_PANIC_MSG};
 
 use actix_web::http::header;
 use std::collections::HashSet;

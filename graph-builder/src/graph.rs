@@ -17,6 +17,7 @@ use crate::registry::{self, Registry};
 use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::prelude::*;
 use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
+use commons::metrics::HasRegistry;
 use commons::GraphError;
 use failure::{Error, Fallible};
 use futures::Future;
@@ -105,6 +106,7 @@ pub struct State {
     live: Arc<RwLock<bool>>,
     ready: Arc<RwLock<bool>>,
     plugins: &'static [BoxedPlugin],
+    registry: &'static prometheus::Registry,
 }
 
 impl State {
@@ -115,6 +117,7 @@ impl State {
         live: Arc<RwLock<bool>>,
         ready: Arc<RwLock<bool>>,
         plugins: &'static [BoxedPlugin],
+        registry: &'static prometheus::Registry,
     ) -> State {
         State {
             json,
@@ -122,6 +125,7 @@ impl State {
             live,
             ready,
             plugins,
+            registry,
         }
     }
 
@@ -133,6 +137,12 @@ impl State {
     /// Returns the boolean inside self.ready
     pub fn is_ready(&self) -> bool {
         *self.ready.read()
+    }
+}
+
+impl HasRegistry for State {
+    fn registry(&self) -> &'static prometheus::Registry {
+        self.registry
     }
 }
 
