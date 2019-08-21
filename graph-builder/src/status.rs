@@ -94,6 +94,7 @@ mod tests {
             HashSet::new(),
             live.clone(),
             ready.clone(),
+            Box::leak(Box::new([])),
         )
     }
 

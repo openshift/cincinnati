@@ -36,6 +36,18 @@ macro_rules! get_multiple_values {
     }
 }
 
+#[macro_export]
+macro_rules! new_plugin {
+    ($x:expr) => {
+        Box::new($x)
+    };
+}
+
+#[macro_export]
+macro_rules! new_plugins {
+    ($($x:expr),*) => { vec![$(new_plugin!($x)),*] };
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;

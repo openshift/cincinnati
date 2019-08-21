@@ -45,7 +45,7 @@ fn main() -> Result<(), Error> {
     let sys = actix::System::new("policy-engine");
 
     let settings = config::AppSettings::assemble()?;
-    let plugins = Arc::new(settings.policy_plugins()?);
+    let plugins = settings.policy_plugins()?;
 
     env_logger::Builder::from_default_env()
         .filter(Some(module_path!()), settings.verbosity)
@@ -67,7 +67,7 @@ fn main() -> Result<(), Error> {
         mandatory_params: settings.mandatory_client_parameters.clone(),
         upstream: settings.upstream.clone(),
         path_prefix: settings.path_prefix.clone(),
-        plugins: Arc::clone(&plugins),
+        plugins: Box::leak(Box::new(plugins)),
     };
 
     HttpServer::new(move || {
@@ -100,13 +100,13 @@ struct AppState {
     /// Common namespace for API endpoints.
     pub path_prefix: String,
     /// Policy plugins.
-    pub plugins: Arc<Vec<BoxedPlugin>>,
+    pub plugins: &'static [BoxedPlugin],
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            plugins: Arc::new(vec![]),
+            plugins: Box::leak(Box::new([])),
             mandatory_params: HashSet::new(),
             upstream: hyper::Uri::from_static(config::DEFAULT_UPSTREAM_URL),
             path_prefix: String::new(),

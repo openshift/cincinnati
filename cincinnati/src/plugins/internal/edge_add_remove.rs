@@ -1,11 +1,10 @@
 //! This plugin adds and removes Edges from Nodes based on metadata labels.
 
 use crate as cincinnati;
-use crate::plugins::{
-    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
-};
+use crate::plugins::{AsyncIO, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
 use crate::ReleaseId;
 use failure::Fallible;
+use plugins::BoxedPlugin;
 
 static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 pub static DEFAULT_REMOVE_ALL_EDGES_VALUE: &str = "*";
@@ -21,20 +20,25 @@ pub struct EdgeAddRemovePlugin {
 }
 
 impl InternalPlugin for EdgeAddRemovePlugin {
-    fn run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
-        let mut graph = io.graph;
-        self.add_edges(&mut graph)?;
-        self.remove_edges(&mut graph)?;
-        Ok(InternalIO {
-            graph,
-            parameters: io.parameters,
-        })
+    fn run_internal(self: &Self, io: InternalIO) -> AsyncIO<InternalIO> {
+        let closure = || -> Fallible<InternalIO> {
+            let mut graph = io.graph;
+            self.add_edges(&mut graph)?;
+            self.remove_edges(&mut graph)?;
+
+            Ok(InternalIO {
+                graph,
+                parameters: io.parameters,
+            })
+        };
+
+        Box::new(futures::future::result(closure()))
     }
 }
 
 impl PluginSettings for EdgeAddRemovePlugin {
     fn build_plugin(&self) -> Fallible<BoxedPlugin> {
-        Ok(Box::new(InternalPluginWrapper(self.clone())))
+        Ok(new_plugin!(InternalPluginWrapper(self.clone())))
     }
 }
 
@@ -204,13 +208,16 @@ impl EdgeAddRemovePlugin {
 mod tests {
     use super::*;
     use crate as cincinnati;
-    use commons::testing::init_logger;
+    use commons::testing::init_runtime;
+    use failure::ResultExt;
     use std::collections::HashMap;
 
     static KEY_PREFIX: &str = "test_key";
 
     #[test]
-    fn ensure_previous_remove() {
+    fn ensure_previous_remove() -> Fallible<()> {
+        let mut runtime = init_runtime()?;
+
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.remove".to_string();
 
@@ -246,22 +253,28 @@ mod tests {
             Some([(0, 1)].to_vec()),
         );
 
-        let processed_graph = EdgeAddRemovePlugin {
+        let future_processed_graph = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-        }
+        })
         .run_internal(InternalIO {
             graph: input_graph.clone(),
             parameters: Default::default(),
-        })
-        .expect("plugin run failed")
-        .graph;
+        });
+
+        let processed_graph = runtime
+            .block_on(future_processed_graph)
+            .context("plugin run failed")?
+            .graph;
 
         assert_eq!(expected_graph, processed_graph);
+        Ok(())
     }
 
     #[test]
-    fn ensure_previous_remove_all() {
+    fn ensure_previous_remove_all() -> Fallible<()> {
+        let mut runtime = init_runtime()?;
+
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.remove".to_string();
 
@@ -298,22 +311,29 @@ mod tests {
             Some([(0, 1), (2, 3)].to_vec()),
         );
 
-        let processed_graph = EdgeAddRemovePlugin {
+        let future_processed_graph = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-        }
+        })
         .run_internal(InternalIO {
             graph: input_graph.clone(),
             parameters: Default::default(),
-        })
-        .expect("plugin run failed")
-        .graph;
+        });
+
+        let processed_graph = runtime
+            .block_on(future_processed_graph)
+            .context("plugin run failed")?
+            .graph;
 
         assert_eq!(expected_graph, processed_graph);
+
+        Ok(())
     }
 
     #[test]
-    fn ensure_next_remove() {
+    fn ensure_next_remove() -> Fallible<()> {
+        let mut runtime = init_runtime()?;
+
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "next.remove".to_string();
 
@@ -354,22 +374,29 @@ mod tests {
         let expected_graph: cincinnati::Graph =
             crate::tests::generate_custom_graph(0, metadata.len(), metadata, Some(vec![]));
 
-        let processed_graph = EdgeAddRemovePlugin {
+        let future_processed_graph = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-        }
+        })
         .run_internal(InternalIO {
             graph: input_graph.clone(),
             parameters: Default::default(),
-        })
-        .expect("plugin run failed")
-        .graph;
+        });
+
+        let processed_graph = runtime
+            .block_on(future_processed_graph)
+            .context("plugin run failed")?
+            .graph;
 
         assert_eq!(expected_graph, processed_graph);
+
+        Ok(())
     }
 
     #[test]
-    fn ensure_previous_add() {
+    fn ensure_previous_add() -> Fallible<()> {
+        let mut runtime = init_runtime()?;
+
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.add".to_string();
 
@@ -405,22 +432,29 @@ mod tests {
             Some(vec![(0, 1), (0, 2), (1, 2)]),
         );
 
-        let processed_graph = EdgeAddRemovePlugin {
+        let future_processed_graph = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-        }
+        })
         .run_internal(InternalIO {
             graph: input_graph.clone(),
             parameters: Default::default(),
-        })
-        .expect("plugin run failed")
-        .graph;
+        });
+
+        let processed_graph = runtime
+            .block_on(future_processed_graph)
+            .context("plugin run failed")?
+            .graph;
 
         assert_eq!(expected_graph, processed_graph);
+
+        Ok(())
     }
 
     #[test]
-    fn ensure_next_add() {
+    fn ensure_next_add() -> Fallible<()> {
+        let mut runtime = init_runtime()?;
+
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "next.add".to_string();
 
@@ -453,18 +487,23 @@ mod tests {
             Some(vec![(0, 1), (0, 2), (0, 3), (1, 2), (2, 3)]),
         );
 
-        let processed_graph = EdgeAddRemovePlugin {
+        let future_processed_graph = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-        }
+        })
         .run_internal(InternalIO {
             graph: input_graph,
             parameters: Default::default(),
-        })
-        .expect("plugin run failed")
-        .graph;
+        });
+
+        let processed_graph = runtime
+            .block_on(future_processed_graph)
+            .context("plugin run failed")?
+            .graph;
 
         assert_eq!(expected_graph, processed_graph);
+
+        Ok(())
     }
 
     macro_rules! label_processing_order_test {
@@ -476,7 +515,7 @@ mod tests {
         ) => {
             #[test]
             fn $name() -> Fallible<()> {
-                let _ = init_logger();
+                let mut runtime = init_runtime()?;
 
                 let input_metadata: HashMap<usize, HashMap<String, String>> = $input_metadata
                     .iter()
@@ -505,15 +544,16 @@ mod tests {
                     $expected_edges.to_owned(),
                 );
 
-                let processed_graph = EdgeAddRemovePlugin {
+                let future_processed_graph = Box::new(EdgeAddRemovePlugin {
                     key_prefix: KEY_PREFIX.to_string(),
                     remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-                }
+                })
                 .run_internal(InternalIO {
                     graph: input_graph.clone(),
                     parameters: Default::default(),
-                })?
-                .graph;
+                });
+
+                let processed_graph = runtime.block_on(future_processed_graph)?.graph;
 
                 assert_eq!(expected_graph, processed_graph);
 

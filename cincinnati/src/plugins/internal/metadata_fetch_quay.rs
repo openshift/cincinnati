@@ -8,12 +8,12 @@ extern crate futures;
 extern crate quay;
 extern crate tokio;
 
-use self::futures::future::Future;
-use crate::plugins::{
-    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
-};
+use crate::plugins::{InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
 use crate::ReleaseId;
-use failure::{Fallible, ResultExt};
+use failure::{Error, Fallible, ResultExt};
+use futures::future::Future;
+use plugins::AsyncIO;
+use plugins::BoxedPlugin;
 use std::path::PathBuf;
 
 pub static DEFAULT_QUAY_LABEL_FILTER: &str = "io.openshift.upgrades.graph";
@@ -59,7 +59,7 @@ impl PluginSettings for QuayMetadataSettings {
             cfg.api_credentials_path,
             cfg.api_base,
         )?;
-        Ok(Box::new(InternalPluginWrapper(plugin)))
+        Ok(new_plugin!(InternalPluginWrapper(plugin)))
     }
 }
 
@@ -104,7 +104,7 @@ impl QuayMetadataFetchPlugin {
 }
 
 impl InternalPlugin for QuayMetadataFetchPlugin {
-    fn run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
+    fn run_internal(self: &Self, io: InternalIO) -> AsyncIO<InternalIO> {
         let (mut graph, parameters) = (io.graph, io.parameters);
 
         trace!("fetching metadata from quay labels...");
@@ -115,68 +115,73 @@ impl InternalPlugin for QuayMetadataFetchPlugin {
         if release_manifestrefs.is_empty() {
             warn!(
                 "no release has a manifestref at metadata key '{}'",
-                self.manifestref_key
+                &self.manifestref_key
             );
         }
 
-        release_manifestrefs.into_iter().try_for_each(
-            |(release_id, release_version, manifestref): (ReleaseId, String, String)| -> Fallible<()> {
-                let mut rt = self::tokio::runtime::current_thread::Runtime::new()
-                    .context("could not create a Runtime")?;
-                let quay_labels: Vec<(String, String)> = rt
-                    .block_on(
-                        self.client
-                            .get_labels(
-                                self.repo.clone(),
-                                manifestref.clone(),
-                                Some(self.label_filter.clone()),
-                            )
-                            .map(|labels| labels.into_iter().map(Into::into).collect()),
-                    )
-                    .context(format!(
-                        "[{}] could not fetch quay labels",
-                        &release_version
-                    ))?;
-
-                info!(
-                    "[{}] received {} label(s)",
-                    &release_version,
-                    &quay_labels.len()
+        let future_all_labels = release_manifestrefs
+            .into_iter()
+            .map(|(release_id, release_version, manifestref)| {
+                let (client, repo, label_filter) = (
+                    self.client.clone(),
+                    self.repo.clone(),
+                    self.label_filter.clone(),
                 );
 
-                let metadata = graph.get_metadata_as_ref_mut(&release_id)?;
+                client
+                    .get_labels(
+                        repo.clone(),
+                        manifestref.clone(),
+                        Some(label_filter.clone()),
+                    )
+                    .and_then(|quay_labels| {
+                        let labels = quay_labels
+                            .into_iter()
+                            .map(Into::into)
+                            .collect::<Vec<(String, String)>>();
+                        Ok((labels, (release_id, release_version)))
+                    })
+                    .map_err(Error::from)
+            })
+            .collect::<Vec<_>>();
 
-                for (key, value) in quay_labels {
-                    let warn_msg = if metadata.contains_key(&key) {
-                        Some(format!(
-                            "[{}] key '{}' already exists. overwriting with value '{}'. ",
-                            &release_version, &key, &value
-                        ))
-                    } else {
-                        None
-                    };
+        let future_finalio =
+            futures::future::join_all(future_all_labels).and_then(|labels_with_releaseinfo| {
+                for (labels, (release_id, release_version)) in labels_with_releaseinfo {
+                    let metadata = graph
+                        .get_metadata_as_ref_mut(&release_id)
+                        .context("trying to find metadata for release")?;
+                    for (key, value) in labels {
+                        let warn_msg = if metadata.contains_key(&key) {
+                            Some(format!(
+                                "[{}] key '{}' already exists. overwriting with value '{}'. ",
+                                &release_version, &key, &value
+                            ))
+                        } else {
+                            None
+                        };
 
-                    trace!(
-                        "[{}] inserting ('{}', '{}')",
-                        &release_version,
-                        &key,
-                        &value
-                    );
-
-                    if let Some(previous_value) = metadata.insert(key, value) {
-                        warn!(
-                            "{}previous value: '{}'",
-                            warn_msg.unwrap_or_default(),
-                            previous_value
+                        trace!(
+                            "[{}] inserting ('{}', '{}')",
+                            &release_version,
+                            &key,
+                            &value
                         );
-                    };
+
+                        if let Some(previous_value) = metadata.insert(key, value) {
+                            warn!(
+                                "{}previous value: '{}'",
+                                warn_msg.unwrap_or_default(),
+                                previous_value
+                            );
+                        };
+                    }
                 }
 
-                Ok(())
-            },
-        )?;
+                Ok(InternalIO { graph, parameters })
+            });
 
-        Ok(InternalIO { graph, parameters })
+        Box::new(future_finalio)
     }
 }
 
@@ -184,71 +189,110 @@ impl InternalPlugin for QuayMetadataFetchPlugin {
 #[cfg(feature = "test-net")]
 mod tests_net {
     use super::*;
+    use commons::testing::init_runtime;
     use std::collections::HashMap;
 
-    fn init_logger() {
-        let _ = env_logger::try_init_from_env(env_logger::Env::default());
+    fn input_metadata_labels_test_annoated(
+        manifestrefs: HashMap<usize, &str>,
+    ) -> HashMap<usize, HashMap<String, String>> {
+        metadata_labels_test_annoated(manifestrefs, true)
     }
 
     fn expected_metadata_labels_test_annoated(
         manifestrefs: HashMap<usize, &str>,
     ) -> HashMap<usize, HashMap<String, String>> {
+        metadata_labels_test_annoated(manifestrefs, false)
+    }
+
+    fn metadata_labels_test_annoated(
+        manifestrefs: HashMap<usize, &str>,
+        input: bool,
+    ) -> HashMap<usize, HashMap<String, String>> {
         [
             (0, HashMap::new()),
             (
                 1,
-                [
-                    (
+                if input {
+                    vec![(
                         String::from(DEFAULT_QUAY_MANIFESTREF_KEY),
                         manifestrefs
                             .get(&1)
                             .expect("expected manifestref")
                             .to_string(),
-                    ),
-                    (String::from("kind"), String::from("test")),
-                    (
-                        String::from("io.openshift.upgrades.graph.previous.remove"),
-                        String::from("0.0.0"),
-                    ),
-                ]
+                    )]
+                } else {
+                    vec![
+                        (
+                            String::from(DEFAULT_QUAY_MANIFESTREF_KEY),
+                            manifestrefs
+                                .get(&1)
+                                .expect("expected manifestref")
+                                .to_string(),
+                        ),
+                        (
+                            String::from("io.openshift.upgrades.graph.previous.remove"),
+                            String::from("0.0.0"),
+                        ),
+                    ]
+                }
                 .iter()
                 .cloned()
                 .collect(),
             ),
             (
                 2,
-                [
-                    (
+                if input {
+                    vec![(
                         String::from(DEFAULT_QUAY_MANIFESTREF_KEY),
                         manifestrefs
                             .get(&2)
                             .expect("expected manifestref")
                             .to_string(),
-                    ),
-                    (
-                        String::from("io.openshift.upgrades.graph.release.remove"),
-                        String::from("true"),
-                    ),
-                ]
+                    )]
+                } else {
+                    vec![
+                        (
+                            String::from(DEFAULT_QUAY_MANIFESTREF_KEY),
+                            manifestrefs
+                                .get(&2)
+                                .expect("expected manifestref")
+                                .to_string(),
+                        ),
+                        (
+                            String::from("io.openshift.upgrades.graph.release.remove"),
+                            String::from("true"),
+                        ),
+                    ]
+                }
                 .iter()
                 .cloned()
                 .collect(),
             ),
             (
                 3,
-                [
-                    (
+                if input {
+                    vec![(
                         String::from(DEFAULT_QUAY_MANIFESTREF_KEY),
                         manifestrefs
                             .get(&3)
                             .expect("expected manifestref")
                             .to_string(),
-                    ),
-                    (
-                        String::from("io.openshift.upgrades.graph.previous.add"),
-                        String::from("0.0.1,0.0.0"),
-                    ),
-                ]
+                    )]
+                } else {
+                    vec![
+                        (
+                            String::from(DEFAULT_QUAY_MANIFESTREF_KEY),
+                            manifestrefs
+                                .get(&3)
+                                .expect("expected manifestref")
+                                .to_string(),
+                        ),
+                        (
+                            String::from("io.openshift.upgrades.graph.previous.add"),
+                            String::from("0.0.1,0.0.0"),
+                        ),
+                    ]
+                }
                 .iter()
                 .cloned()
                 .collect(),
@@ -260,10 +304,10 @@ mod tests_net {
     }
 
     #[test]
-    fn metadata_fetch_from_public_quay_succeeds() {
-        init_logger();
+    fn metadata_fetch_from_public_quay_succeeds() -> Fallible<()> {
+        let mut runtime = init_runtime()?;
 
-        let manifestrefs = [
+        let manifestrefs: HashMap<usize, &str> = [
             (0, ""),
             (
                 1,
@@ -282,41 +326,54 @@ mod tests_net {
         .cloned()
         .collect();
 
-        let metadata = expected_metadata_labels_test_annoated(manifestrefs);
+        let input_metadata = input_metadata_labels_test_annoated(manifestrefs.clone());
+
+        let expected_metadata = expected_metadata_labels_test_annoated(manifestrefs);
 
         let input_graph: crate::Graph =
-            crate::tests::generate_custom_graph(0, metadata.len(), metadata.clone(), None);
+            crate::tests::generate_custom_graph(0, input_metadata.len(), input_metadata, None);
 
-        let expected_graph: crate::Graph =
-            crate::tests::generate_custom_graph(0, metadata.len(), metadata, None);
-
-        let processed_graph = QuayMetadataFetchPlugin::try_new(
-            "redhat/openshift-cincinnati-test-labels-public-manual".to_string(),
-            DEFAULT_QUAY_LABEL_FILTER.to_string(),
-            DEFAULT_QUAY_MANIFESTREF_KEY.to_string(),
+        let expected_graph: crate::Graph = crate::tests::generate_custom_graph(
+            0,
+            expected_metadata.len(),
+            expected_metadata,
             None,
-            quay::v1::DEFAULT_API_BASE.to_string(),
+        );
+
+        let future_processed_graph = Box::new(
+            QuayMetadataFetchPlugin::try_new(
+                "redhat/openshift-cincinnati-test-labels-public-manual".to_string(),
+                DEFAULT_QUAY_LABEL_FILTER.to_string(),
+                DEFAULT_QUAY_MANIFESTREF_KEY.to_string(),
+                None,
+                quay::v1::DEFAULT_API_BASE.to_string(),
+            )
+            .expect("could not initialize the QuayMetadataPlugin"),
         )
-        .expect("could not initialize the QuayMetadataPlugin")
         .run_internal(InternalIO {
             graph: input_graph,
             parameters: Default::default(),
         })
-        .expect("plugin run failed")
-        .graph;
+        .and_then(|internal_io| Ok(internal_io.graph));
+
+        let processed_graph = runtime
+            .block_on(future_processed_graph)
+            .expect("plugin run failed");
 
         assert_eq!(expected_graph, processed_graph);
+
+        Ok(())
     }
 
     #[cfg(feature = "test-net-private")]
     #[test]
-    fn metadata_fetch_from_private_quay_succeeds() {
-        init_logger();
+    fn metadata_fetch_from_private_quay_succeeds() -> Fallible<()> {
+        let mut runtime = init_runtime()?;
 
         let token_file = std::env::var("CINCINNATI_TEST_QUAY_API_TOKEN_PATH")
             .expect("CINCINNATI_TEST_QUAY_API_TOKEN_PATH missing");
 
-        let manifestrefs = [
+        let manifestrefs: HashMap<usize, &str> = [
             (0, ""),
             (
                 1,
@@ -335,29 +392,39 @@ mod tests_net {
         .cloned()
         .collect();
 
-        let metadata = expected_metadata_labels_test_annoated(manifestrefs);
-
+        let input_metadata = input_metadata_labels_test_annoated(manifestrefs.clone());
         let input_graph: crate::Graph =
-            crate::tests::generate_custom_graph(0, metadata.len(), metadata.clone(), None);
+            crate::tests::generate_custom_graph(0, input_metadata.len(), input_metadata, None);
 
-        let expected_graph: crate::Graph =
-            crate::tests::generate_custom_graph(0, metadata.len(), metadata, None);
+        let expected_metadata = expected_metadata_labels_test_annoated(manifestrefs);
+        let expected_graph: crate::Graph = crate::tests::generate_custom_graph(
+            0,
+            expected_metadata.len(),
+            expected_metadata,
+            None,
+        );
 
-        let processed_graph = QuayMetadataFetchPlugin::try_new(
-            "redhat/openshift-cincinnati-test-labels-private-manual".to_string(),
-            DEFAULT_QUAY_LABEL_FILTER.to_string(),
-            DEFAULT_QUAY_MANIFESTREF_KEY.to_string(),
-            Some(token_file.into()),
-            quay::v1::DEFAULT_API_BASE.to_string(),
+        let future_processed_graph = Box::new(
+            QuayMetadataFetchPlugin::try_new(
+                "redhat/openshift-cincinnati-test-labels-private-manual".to_string(),
+                DEFAULT_QUAY_LABEL_FILTER.to_string(),
+                DEFAULT_QUAY_MANIFESTREF_KEY.to_string(),
+                Some(token_file.into()),
+                quay::v1::DEFAULT_API_BASE.to_string(),
+            )
+            .context("could not initialize the QuayMetadataPlugin")?,
         )
-        .expect("could not initialize the QuayMetadataPlugin")
         .run_internal(InternalIO {
             graph: input_graph,
             parameters: Default::default(),
-        })
-        .expect("plugin run failed")
-        .graph;
+        });
+
+        let processed_graph = runtime
+            .block_on(future_processed_graph)
+            .context("plugin run failed")?
+            .graph;
 
         assert_eq!(expected_graph, processed_graph);
+        Ok(())
     }
 }

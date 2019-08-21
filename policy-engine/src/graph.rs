@@ -3,7 +3,7 @@
 use crate::AppState;
 use actix_web::http::header::{self, HeaderValue};
 use actix_web::{HttpRequest, HttpResponse};
-use cincinnati::{Graph, CONTENT_TYPE};
+use cincinnati::CONTENT_TYPE;
 use commons::{self, GraphError};
 use failure::Fallible;
 use futures::{future, Future, Stream};
@@ -61,6 +61,7 @@ pub(crate) fn index(req: HttpRequest) -> Box<Future<Item = HttpResponse, Error =
     if let Err(e) = commons::ensure_query_params(mandatory_params, req.query_string()) {
         return Box::new(future::err(e));
     }
+
     // TODO(steveeJ): take another look at the actix-web docs for a method that
     // provides this parameters split.
     let plugin_params = req
@@ -85,11 +86,10 @@ pub(crate) fn index(req: HttpRequest) -> Box<Future<Item = HttpResponse, Error =
         })
         .collect();
 
-    let configured_plugins = req
+    let plugins = req
         .app_data::<AppState>()
         .expect(commons::MISSING_APPSTATE_PANIC_MSG)
-        .plugins
-        .clone();
+        .plugins;
 
     // Assemble a request for the upstream Cincinnati service.
     let ups_req = match Request::get(
@@ -122,26 +122,27 @@ pub(crate) fn index(req: HttpRequest) -> Box<Future<Item = HttpResponse, Error =
                 .concat2()
                 .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
         })
-        .and_then(move |body| {
-            let graph: Graph = serde_json::from_slice(&body)
-                .map_err(|e| GraphError::FailedJsonIn(e.to_string()))?;
-
-            let graph = match cincinnati::plugins::process(
-                &configured_plugins,
-                cincinnati::plugins::InternalIO {
+        .and_then(|body| {
+            serde_json::from_slice(&body).map_err(|e| GraphError::FailedJsonIn(e.to_string()))
+        })
+        .and_then(move |graph| {
+            cincinnati::plugins::process(
+                plugins.iter(),
+                cincinnati::plugins::PluginIO::InternalIO(cincinnati::plugins::InternalIO {
                     graph,
                     parameters: plugin_params,
-                },
-            ) {
-                Ok(graph) => graph,
-                Err(e) => return Err(GraphError::FailedPluginExecution(e.to_string())),
-            };
-
-            let resp = HttpResponse::Ok().content_type(CONTENT_TYPE).body(
-                serde_json::to_string(&graph)
-                    .map_err(|e| GraphError::FailedJsonOut(e.to_string()))?,
-            );
-            Ok(resp)
+                }),
+            )
+            .map_err(|e| GraphError::FailedPluginExecution(e.to_string()))
+        })
+        .and_then(|internal_io| {
+            serde_json::to_string(&internal_io.graph)
+                .map_err(|e| GraphError::FailedJsonOut(e.to_string()))
+        })
+        .map(|graph_json| {
+            HttpResponse::Ok()
+                .content_type(CONTENT_TYPE)
+                .body(graph_json)
         })
         .then(move |r| {
             timer.observe_duration();
@@ -273,7 +274,7 @@ mod tests {
         let mandatory_params = vec!["channel".to_string()].into_iter().collect();
         let state = AppState {
             mandatory_params,
-            plugins: std::sync::Arc::new(policies),
+            plugins: Box::leak(Box::new(policies)),
             upstream: hyper::Uri::from_str(&mockito::server_url())?,
             ..Default::default()
         };
@@ -350,7 +351,7 @@ mod tests {
             let app = actix_web::App::new()
                 .register_data(actix_web::web::Data::new(AppState {
                     mandatory_params: mandatory_params.iter().map(|s| s.to_string()).collect(),
-                    plugins: std::sync::Arc::new(policies),
+                    plugins: Box::leak(Box::new(policies)),
                     upstream: hyper::Uri::from_str(&mockito::server_url())?,
                     ..Default::default()
                 }))

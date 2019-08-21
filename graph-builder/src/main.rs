@@ -21,9 +21,11 @@ extern crate log;
 extern crate structopt;
 extern crate tempfile;
 
+use crate::failure::ResultExt;
 use graph_builder::{config, graph, graph::RwLock, status};
 
 use actix_web::{App, HttpServer};
+use cincinnati::plugins::prelude::*;
 use failure::Error;
 use std::sync::Arc;
 use std::thread;
@@ -31,12 +33,47 @@ use std::thread;
 fn main() -> Result<(), Error> {
     let sys = actix::System::new("graph-builder");
 
-    let settings = config::AppSettings::assemble()?;
+    let settings = config::AppSettings::assemble().context("could not assemble AppSettings")?;
+    let plugins: Vec<BoxedPlugin> = if settings.disable_quay_api_metadata {
+        Default::default()
+    } else {
+        // TODO(lucab): drop this when plugins are configurable.
+        use cincinnati::plugins::internal::edge_add_remove::{
+            EdgeAddRemovePlugin, DEFAULT_REMOVE_ALL_EDGES_VALUE,
+        };
+        use cincinnati::plugins::internal::metadata_fetch_quay::{
+            QuayMetadataFetchPlugin, DEFAULT_QUAY_LABEL_FILTER, DEFAULT_QUAY_MANIFESTREF_KEY,
+        };
+        use cincinnati::plugins::internal::node_remove::NodeRemovePlugin;
+        use quay::v1::DEFAULT_API_BASE;
+
+        // TODO(steveeJ): actually make this vec configurable
+        new_plugins!(
+            InternalPluginWrapper(
+                // TODO(lucab): source options from plugins config.
+                QuayMetadataFetchPlugin::try_new(
+                    settings.repository.clone(),
+                    DEFAULT_QUAY_LABEL_FILTER.to_string(),
+                    DEFAULT_QUAY_MANIFESTREF_KEY.to_string(),
+                    None,
+                    DEFAULT_API_BASE.to_string(),
+                )
+                .context("could not initialize the QuayMetadataPlugin")?,
+            ),
+            InternalPluginWrapper(NodeRemovePlugin {
+                key_prefix: DEFAULT_QUAY_LABEL_FILTER.to_string(),
+            }),
+            InternalPluginWrapper(EdgeAddRemovePlugin {
+                key_prefix: DEFAULT_QUAY_LABEL_FILTER.to_string(),
+                remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+            })
+        )
+    };
 
     env_logger::Builder::from_default_env()
         .filter(Some(module_path!()), settings.verbosity)
         .init();
-    debug!("application settings:\n{:#?}", &settings);
+    debug!("application settings:\n{:#?}", settings);
 
     let app_state = {
         let json_graph = Arc::new(RwLock::new(String::new()));
@@ -48,6 +85,7 @@ fn main() -> Result<(), Error> {
             settings.mandatory_client_parameters.clone(),
             live.clone(),
             ready.clone(),
+            Box::leak(Box::new(plugins)),
         )
     };
 

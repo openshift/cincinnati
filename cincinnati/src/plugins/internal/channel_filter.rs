@@ -2,10 +2,10 @@
 //! It reads the requested channel from the parameters value at key "channel",
 //! and the value must match the regex specified at CHANNEL_VALIDATION_REGEX_STR
 
-use crate::plugins::{
-    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
-};
+use crate::plugins::{AsyncIO, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
 use failure::Fallible;
+use futures::Future;
+use plugins::BoxedPlugin;
 
 static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 static DEFAULT_CHANNEL_KEY: &str = "release.channels";
@@ -22,7 +22,7 @@ pub struct ChannelFilterPlugin {
 
 impl PluginSettings for ChannelFilterPlugin {
     fn build_plugin(&self) -> Fallible<BoxedPlugin> {
-        Ok(Box::new(InternalPluginWrapper(self.clone())))
+        Ok(new_plugin!(InternalPluginWrapper(self.clone())))
     }
 }
 
@@ -49,71 +49,81 @@ lazy_static! {
 }
 
 impl InternalPlugin for ChannelFilterPlugin {
-    fn run_internal(&self, internal_io: InternalIO) -> Fallible<InternalIO> {
-        let channel = get_multiple_values!(internal_io.parameters, "channel")?.clone();
+    fn run_internal(self: &Self, internal_io: InternalIO) -> AsyncIO<InternalIO> {
+        let future_result = futures::future::ok((
+            internal_io,
+            self.key_prefix.to_owned(),
+            self.key_suffix.to_owned(),
+        ))
+        .and_then(|(internal_io, key_prefix, key_suffix)| {
+            let channel = get_multiple_values!(internal_io.parameters, "channel")?.clone();
 
-        if !CHANNEL_VALIDATION_REGEX_RE.is_match(&channel) {
-            bail!(
-                "channel '{}' does not match regex '{}'",
-                channel,
-                CHANNEL_VALIDATION_REGEX_STR
-            );
-        };
+            if !CHANNEL_VALIDATION_REGEX_RE.is_match(&channel) {
+                bail!(
+                    "channel '{}' does not match regex '{}'",
+                    channel,
+                    CHANNEL_VALIDATION_REGEX_STR
+                );
+            };
 
-        let mut graph = internal_io.graph;
+            let mut graph = internal_io.graph;
 
-        let to_remove = {
-            graph
-                .find_by_fn_mut(|release| {
-                    match release {
-                        crate::Release::Concrete(concrete_release) => concrete_release
-                            .metadata
-                            .get_mut(&format!("{}.{}", self.key_prefix, self.key_suffix))
-                            .map_or(true, |values| {
-                                if values.split(',').any(|value| value.trim() == channel) {
-                                    *values = channel.clone();
-                                    false
-                                } else {
-                                    true
-                                }
-                            }),
-                        // remove if it's not a ConcreteRelease
-                        _ => true,
-                    }
-                })
-                .into_iter()
-                .map(|(release_id, version)| {
-                    trace!("queuing '{}' for removal", version);
-                    release_id
-                })
-                .collect()
-        };
+            let to_remove = {
+                graph
+                    .find_by_fn_mut(|release| {
+                        match release {
+                            crate::Release::Concrete(concrete_release) => concrete_release
+                                .metadata
+                                .get_mut(&format!("{}.{}", key_prefix, key_suffix))
+                                .map_or(true, |values| {
+                                    if values.split(',').any(|value| value.trim() == channel) {
+                                        *values = channel.clone();
+                                        false
+                                    } else {
+                                        true
+                                    }
+                                }),
+                            // remove if it's not a ConcreteRelease
+                            _ => true,
+                        }
+                    })
+                    .into_iter()
+                    .map(|(release_id, version)| {
+                        trace!("queuing '{}' for removal", version);
+                        release_id
+                    })
+                    .collect()
+            };
 
-        // remove all matches from the Graph
-        let removed = graph.remove_releases(to_remove);
+            // remove all matches from the Graph
+            let removed = graph.remove_releases(to_remove);
 
-        trace!("removed {} releases", removed);
+            trace!("removed {} releases", removed);
 
-        Ok(InternalIO {
-            graph,
-            parameters: internal_io.parameters,
-        })
+            Ok(InternalIO {
+                graph,
+                parameters: internal_io.parameters,
+            })
+        });
+
+        Box::new(future_result)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use commons::testing::init_runtime;
     use std::collections::HashMap;
 
     #[test]
     fn ensure_channel_param_validation() {
-        let _ = env_logger::try_init_from_env(env_logger::Env::default());
+        let mut runtime = init_runtime().unwrap();
 
-        let plugin = ChannelFilterPlugin {
+        let plugin = Box::new(ChannelFilterPlugin {
             key_prefix: "".to_string(),
             key_suffix: "".to_string(),
-        };
+        });
 
         struct Datum {
             channels: std::vec::Vec<&'static str>,
@@ -135,13 +145,14 @@ mod tests {
             },
         ] {
             for channel in &mut datum.channels {
-                let result = plugin.run_internal(InternalIO {
+                let future_result = plugin.clone().run_internal(InternalIO {
                     graph: Default::default(),
                     parameters: [("channel", channel)]
                         .iter()
                         .map(|(a, b)| (a.to_string(), b.to_string()))
                         .collect(),
                 });
+                let result = runtime.block_on(future_result);
                 (datum.assert_fn)(&result);
             }
         }
@@ -149,15 +160,15 @@ mod tests {
 
     #[test]
     fn ensure_channel_filter() {
-        let _ = env_logger::try_init_from_env(env_logger::Env::default());
+        let mut runtime = init_runtime().unwrap();
 
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "channels".to_string();
 
-        let plugin = ChannelFilterPlugin {
+        let plugin = Box::new(ChannelFilterPlugin {
             key_prefix: key_prefix.clone(),
             key_suffix: key_suffix.clone(),
-        };
+        });
 
         fn generate_test_metadata(
             key_prefix: &str,
@@ -381,13 +392,17 @@ mod tests {
 
         for (i, datum) in data.into_iter().enumerate() {
             println!("processing data set #{}: '{}'", i, datum.description);
-            let processed_graph = plugin
+            let future_processed_graph = plugin
+                .clone()
                 .run_internal(InternalIO {
                     graph: datum.input_graph,
                     parameters: datum.parameters,
                 })
-                .expect("plugin run failed")
-                .graph;
+                .and_then(|final_io| Ok(final_io.graph));
+
+            let processed_graph = runtime
+                .block_on(future_processed_graph)
+                .expect("plugin run failed");
 
             assert_eq!(datum.expected_graph, processed_graph);
         }

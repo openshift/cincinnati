@@ -166,13 +166,12 @@ mod tests {
     #[test]
     fn toml_basic_policy() {
         use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
-        use cincinnati::plugins::{BoxedPlugin, InternalPluginWrapper};
+        use cincinnati::plugins::prelude::*;
 
-        let expected: Vec<BoxedPlugin> =
-            vec![Box::new(InternalPluginWrapper(ChannelFilterPlugin {
-                key_prefix: String::from("io.openshift.upgrades.graph"),
-                key_suffix: String::from("release.channels"),
-            }))];
+        let expected: Vec<BoxedPlugin> = new_plugins!(InternalPluginWrapper(ChannelFilterPlugin {
+            key_prefix: String::from("io.openshift.upgrades.graph"),
+            key_suffix: String::from("release.channels"),
+        }));
         let mut settings = AppSettings::default();
 
         let opts = {

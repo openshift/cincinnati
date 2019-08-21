@@ -29,7 +29,13 @@ extern crate lazy_static;
 extern crate regex;
 #[macro_use]
 extern crate smart_default;
+extern crate futures;
+pub extern crate futures_locks;
 
+#[cfg(test)]
+extern crate tokio;
+
+#[macro_use]
 pub mod plugins;
 
 use daggy::petgraph::visit::{IntoNodeReferences, NodeRef};

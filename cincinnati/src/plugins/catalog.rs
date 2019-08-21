@@ -7,8 +7,8 @@ use super::internal::channel_filter::ChannelFilterPlugin;
 use super::internal::edge_add_remove::EdgeAddRemovePlugin;
 use super::internal::metadata_fetch_quay::QuayMetadataFetchPlugin;
 use super::internal::node_remove::NodeRemovePlugin;
-use crate::plugins::BoxedPlugin;
 use failure::Fallible;
+use plugins::BoxedPlugin;
 use std::fmt::Debug;
 
 /// Key used to look up plugin-type in a configuration entry.

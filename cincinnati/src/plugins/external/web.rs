@@ -18,11 +18,13 @@ mod tests {
     use crate as cincinnati;
     use crate::plugins::{interface, ExternalIO, ExternalPlugin, InternalIO, PluginResult};
     use crate::tests::generate_graph;
+    use commons::testing::init_runtime;
     use failure::Fallible;
+    use plugins::AsyncIO;
     use std::convert::TryInto;
 
     struct DummyWebClient {
-        callback: Box<Fn(interface::PluginExchange) -> PluginResult>,
+        callback: Box<Fn(interface::PluginExchange) -> PluginResult + Send + Sync>,
     }
 
     impl std::fmt::Debug for DummyWebClient {
@@ -32,18 +34,24 @@ mod tests {
     }
 
     impl ExternalPlugin for DummyWebClient {
-        fn run_external(&self, io: ExternalIO) -> Fallible<ExternalIO> {
-            let input: interface::PluginExchange = io.try_into()?;
+        fn run_external(self: &Self, io: ExternalIO) -> AsyncIO<ExternalIO> {
+            let closure = || -> Fallible<ExternalIO> {
+                let input: interface::PluginExchange = io.try_into()?;
 
-            match (self.callback)(input) {
-                PluginResult::PluginExchange(exchange) => exchange.try_into(),
-                PluginResult::PluginError(error) => error.into(),
-            }
+                match (self.callback)(input) {
+                    PluginResult::PluginExchange(exchange) => exchange.try_into(),
+                    PluginResult::PluginError(error) => error.into(),
+                }
+            };
+
+            Box::new(futures::future::result(closure()))
         }
     }
 
     #[test]
     fn detect_external_success() {
+        let mut runtime = init_runtime().unwrap();
+
         fn callback(mut input: interface::PluginExchange) -> PluginResult {
             let graph: cincinnati::Graph = input.take_graph().into();
 
@@ -59,9 +67,9 @@ mod tests {
             PluginResult::PluginExchange(exchange)
         }
 
-        let plugin = DummyWebClient {
+        let plugin = Box::new(DummyWebClient {
             callback: Box::new(callback),
-        };
+        });
 
         let input_internal = InternalIO {
             graph: generate_graph(),
@@ -73,7 +81,9 @@ mod tests {
 
         let input: ExternalIO = input_internal.clone().try_into().unwrap();
 
-        let output_external: ExternalIO = plugin.run_external(input).unwrap();
+        let future_output_external = plugin.run_external(input);
+
+        let output_external: ExternalIO = runtime.block_on(future_output_external).unwrap();
         let output_internal: InternalIO = output_external.try_into().unwrap();
 
         assert_eq!(output_internal, input_internal);
@@ -81,6 +91,8 @@ mod tests {
 
     #[test]
     fn detect_external_error() {
+        let mut runtime = init_runtime().unwrap();
+
         fn callback(_: interface::PluginExchange) -> PluginResult {
             let mut given_error = interface::PluginError::new();
             given_error.set_kind(interface::PluginError_Kind::INTERNAL_FAILURE);
@@ -89,9 +101,9 @@ mod tests {
         };
         let expected_result = callback(interface::PluginExchange::new());
 
-        let plugin = DummyWebClient {
+        let plugin = Box::new(DummyWebClient {
             callback: Box::new(callback),
-        };
+        });
 
         let input_internal = InternalIO {
             graph: generate_graph(),
@@ -103,9 +115,11 @@ mod tests {
 
         let input: ExternalIO = input_internal.clone().try_into().unwrap();
 
-        let output_result_external = plugin.run_external(input);
-        let output_result: Fallible<PluginResult> = output_result_external.try_into();
+        let future_output_result_external = plugin.run_external(input);
 
-        assert_eq!(expected_result, output_result.unwrap());
+        let output_result_external = runtime.block_on(future_output_result_external);
+        let output_result: PluginResult = output_result_external.try_into().unwrap();
+
+        assert_eq!(expected_result, output_result);
     }
 }

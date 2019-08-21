@@ -159,7 +159,7 @@ mod tests {
         let data = actix_web::web::Data::new(AppState {
             mandatory_params: mandatory_params.clone(),
             path_prefix: path_prefix.clone(),
-            plugins: std::sync::Arc::new(vec![]),
+            plugins: Box::leak(Box::new([])),
             upstream: Default::default(),
         });
         let resource =

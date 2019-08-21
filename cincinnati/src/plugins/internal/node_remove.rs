@@ -1,7 +1,7 @@
 //! This plugin removes releases according to its metadata
 
 use crate::plugins::{
-    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
+    AsyncIO, InternalIO, InternalPlugin, InternalPluginWrapper, BoxedPlugin, PluginSettings,
 };
 use failure::Fallible;
 
@@ -16,7 +16,7 @@ pub struct NodeRemovePlugin {
 
 impl PluginSettings for NodeRemovePlugin {
     fn build_plugin(&self) -> Fallible<BoxedPlugin> {
-        Ok(Box::new(InternalPluginWrapper(self.clone())))
+        Ok(new_plugin!(InternalPluginWrapper(self.clone())))
     }
 }
 
@@ -35,30 +35,34 @@ impl NodeRemovePlugin {
 }
 
 impl InternalPlugin for NodeRemovePlugin {
-    fn run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
-        let mut graph = io.graph;
-        let key_suffix = "release.remove";
+    fn run_internal(self: &Self, io: InternalIO) -> AsyncIO<InternalIO> {
+        let closure = || -> Fallible<InternalIO> {
+            let mut graph = io.graph;
+            let key_suffix = "release.remove";
 
-        let to_remove = {
-            graph
-                .find_by_metadata_pair(&format!("{}.{}", self.key_prefix, key_suffix), "true")
-                .into_iter()
-                .map(|(release_id, version)| {
-                    trace!("queuing '{}' for removal", version);
-                    release_id
-                })
-                .collect()
+            let to_remove = {
+                graph
+                    .find_by_metadata_pair(&format!("{}.{}", self.key_prefix, key_suffix), "true")
+                    .into_iter()
+                    .map(|(release_id, version)| {
+                        trace!("queuing '{}' for removal", version);
+                        release_id
+                    })
+                    .collect()
+            };
+
+            // remove all matches from the Graph
+            let removed = graph.remove_releases(to_remove);
+
+            trace!("removed {} releases", removed);
+
+            Ok(InternalIO {
+                graph,
+                parameters: io.parameters,
+            })
         };
 
-        // remove all matches from the Graph
-        let removed = graph.remove_releases(to_remove);
-
-        trace!("removed {} releases", removed);
-
-        Ok(InternalIO {
-            graph,
-            parameters: io.parameters,
-        })
+        Box::new(futures::future::result(closure()))
     }
 }
 
@@ -66,11 +70,13 @@ impl InternalPlugin for NodeRemovePlugin {
 mod tests {
     use super::*;
     use crate as cincinnati;
+    use commons::testing::init_runtime;
+    use failure::ResultExt;
     use std::collections::HashMap;
 
     #[test]
-    fn ensure_release_remove() {
-        let _ = env_logger::try_init_from_env(env_logger::Env::default());
+    fn ensure_release_remove() -> Fallible<()> {
+        let mut runtime = init_runtime()?;
 
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "release.remove".to_string();
@@ -113,14 +119,19 @@ mod tests {
             crate::tests::generate_custom_graph(1, metadata.len(), metadata, None)
         };
 
-        let processed_graph = NodeRemovePlugin { key_prefix }
-            .run_internal(InternalIO {
+        let future_processed_graph =
+            Box::new(NodeRemovePlugin { key_prefix }).run_internal(InternalIO {
                 graph: input_graph.clone(),
                 parameters: Default::default(),
-            })
-            .expect("plugin run failed")
+            });
+
+        let processed_graph = runtime
+            .block_on(future_processed_graph)
+            .context("plugin run failed")?
             .graph;
 
         assert_eq!(expected_graph, processed_graph);
+
+        Ok(())
     }
 }
