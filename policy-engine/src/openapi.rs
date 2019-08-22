@@ -146,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn graph_params_integration() -> Result<(), Box<std::error::Error>> {
+    fn graph_params_integration() -> Result<(), Box<dyn std::error::Error>> {
         // prepare and run the test-service
         let service_uri = "/openapi";
         let mandatory_params: HashSet<String> = ["MARKER1", "MARKER2"]

@@ -68,7 +68,7 @@ impl QuayMetadataFetchPlugin {
     pub(crate) const PLUGIN_NAME: &'static str = "quay-metadata";
 
     /// Validate plugin configuration and fill in defaults.
-    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<PluginSettings>> {
+    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>> {
         let settings: QuayMetadataSettings = cfg.try_into()?;
 
         ensure!(!settings.repository.is_empty(), "empty repository");

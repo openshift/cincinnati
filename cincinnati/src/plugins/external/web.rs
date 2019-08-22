@@ -24,7 +24,7 @@ mod tests {
     use std::convert::TryInto;
 
     struct DummyWebClient {
-        callback: Box<Fn(interface::PluginExchange) -> PluginResult + Send + Sync>,
+        callback: Box<dyn Fn(interface::PluginExchange) -> PluginResult + Send + Sync>,
     }
 
     impl std::fmt::Debug for DummyWebClient {

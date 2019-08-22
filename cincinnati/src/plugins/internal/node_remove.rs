@@ -1,7 +1,7 @@
 //! This plugin removes releases according to its metadata
 
 use crate::plugins::{
-    AsyncIO, InternalIO, InternalPlugin, InternalPluginWrapper, BoxedPlugin, PluginSettings,
+    AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
 use failure::Fallible;
 
@@ -25,7 +25,7 @@ impl NodeRemovePlugin {
     pub(crate) const PLUGIN_NAME: &'static str = "node-remove";
 
     /// Validate plugin configuration and fill in defaults.
-    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<PluginSettings>> {
+    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>> {
         let plugin: Self = cfg.try_into()?;
 
         ensure!(!plugin.key_prefix.is_empty(), "empty prefix");

@@ -39,7 +39,6 @@ use actix_web::{App, HttpServer};
 use cincinnati::plugins::BoxedPlugin;
 use failure::Error;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 fn main() -> Result<(), Error> {
     let sys = actix::System::new("policy-engine");
