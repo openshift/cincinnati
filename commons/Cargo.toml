@@ -16,3 +16,8 @@ serde_json = "^1.0.34"
 tokio = "^0.1"
 url = "^1.7.2"
 futures = "^0.1"
+
+[dev-dependencies]
+tokio = "^0.1"
+twoway = "^0.2"
+mockito = "^0.17.1"
