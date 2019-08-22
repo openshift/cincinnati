@@ -42,7 +42,7 @@ pub struct AppSettings {
     pub path_prefix: String,
 
     /// Policy plugins configuration.
-    pub policies: Vec<Box<PluginSettings>>,
+    pub policies: Vec<Box<dyn PluginSettings>>,
 
     /// Required client parameters for the main service.
     pub mandatory_client_parameters: HashSet<String>,

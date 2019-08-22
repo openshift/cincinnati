@@ -21,7 +21,7 @@ pub trait PluginSettings: Debug + Send {
 }
 
 /// Validate configuration for a plugin and fill in defaults.
-pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<PluginSettings>> {
+pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>> {
     let name = cfg
         .get(CONFIG_PLUGIN_NAME_KEY)
         .ok_or_else(|| format_err!("missing plugin name"))?

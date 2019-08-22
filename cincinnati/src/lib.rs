@@ -703,7 +703,7 @@ mod tests {
 
     use super::*;
 
-    type TestResult<T> = Result<T, Box<std::error::Error>>;
+    type TestResult<T> = Result<T, Box<dyn std::error::Error>>;
 
     pub(crate) fn generate_graph() -> Graph {
         let mut graph = Graph::default();

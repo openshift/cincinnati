@@ -19,7 +19,7 @@ lazy_static! {
 /// Expose metrics (Prometheus textual format).
 pub fn serve_metrics(
     _req: HttpRequest,
-) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
+) -> Box<dyn Future<Item = HttpResponse, Error = failure::Error>> {
     use prometheus::Encoder;
 
     let resp = future::ok(PROM_REGISTRY.gather())
@@ -40,7 +40,7 @@ pub fn serve_metrics(
 ///  * Not Live (500 code): everything else.
 pub fn serve_liveness(
     req: HttpRequest,
-) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
+) -> Box<dyn Future<Item = HttpResponse, Error = failure::Error>> {
     let resp = if req
         .app_data::<State>()
         .expect(commons::MISSING_APPSTATE_PANIC_MSG)
@@ -60,7 +60,7 @@ pub fn serve_liveness(
 ///  * Not Ready (500 code): no JSON graph available yet.
 pub fn serve_readiness(
     req: HttpRequest,
-) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
+) -> Box<dyn Future<Item = HttpResponse, Error = failure::Error>> {
     let resp = if req
         .app_data::<State>()
         .expect(commons::MISSING_APPSTATE_PANIC_MSG)

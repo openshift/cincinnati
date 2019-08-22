@@ -45,7 +45,7 @@ pub(crate) fn register_metrics(registry: &Registry) -> Fallible<()> {
 }
 
 /// Serve Cincinnati graph requests.
-pub(crate) fn index(req: HttpRequest) -> Box<Future<Item = HttpResponse, Error = GraphError>> {
+pub(crate) fn index(req: HttpRequest) -> Box<dyn Future<Item = HttpResponse, Error = GraphError>> {
     V1_GRAPH_INCOMING_REQS.inc();
 
     // Check that the client can accept JSON media type.
@@ -265,7 +265,7 @@ mod tests {
     }
 
     #[test]
-    fn failed_plugin_execution() -> Result<(), Box<Error>> {
+    fn failed_plugin_execution() -> Result<(), Box<dyn Error>> {
         use std::str::FromStr;
 
         let mut rt = common_init();
@@ -307,7 +307,7 @@ mod tests {
     }
 
     #[test]
-    fn webservice_graph_json_error_response() -> Result<(), Box<Error>> {
+    fn webservice_graph_json_error_response() -> Result<(), Box<dyn Error>> {
         let _ = common_init();
 
         struct TestParams<'a> {
@@ -321,7 +321,7 @@ mod tests {
             mandatory_params: &[&str],
             passed_params: &[(&str, &str)],
             expected_error: &commons::GraphError,
-        ) -> Result<(), Box<Error>> {
+        ) -> Result<(), Box<dyn Error>> {
             use std::str::FromStr;
 
             let service_uri_base = "/graph";

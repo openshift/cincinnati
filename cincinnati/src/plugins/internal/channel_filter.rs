@@ -30,7 +30,7 @@ impl ChannelFilterPlugin {
     pub(crate) const PLUGIN_NAME: &'static str = "channel-filter";
 
     /// Validate plugin configuration and fill in defaults.
-    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<PluginSettings>> {
+    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>> {
         let plugin: Self = cfg.try_into()?;
 
         ensure!(!plugin.key_prefix.is_empty(), "empty channel-key prefix");
@@ -127,7 +127,7 @@ mod tests {
 
         struct Datum {
             channels: std::vec::Vec<&'static str>,
-            assert_fn: Box<Fn(&Fallible<InternalIO>)>,
+            assert_fn: Box<dyn Fn(&Fallible<InternalIO>)>,
         }
 
         for datum in &mut [

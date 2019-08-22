@@ -16,7 +16,9 @@ lazy_static! {
 }
 
 /// Serve metrics requests (Prometheus textual format).
-pub(crate) fn serve(_req: HttpRequest) -> Box<Future<Item = HttpResponse, Error = failure::Error>> {
+pub(crate) fn serve(
+    _req: HttpRequest,
+) -> Box<dyn Future<Item = HttpResponse, Error = failure::Error>> {
     use prometheus::Encoder;
 
     let resp = future::ok(PROM_REGISTRY.gather())
