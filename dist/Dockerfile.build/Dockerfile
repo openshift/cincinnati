@@ -12,7 +12,7 @@ ENV HOME="/root"
 # build: Rust stable toolchain
 RUN \
   mkdir $HOME/rust && \
-  curl https://static.rust-lang.org/dist/rust-1.34.2-x86_64-unknown-linux-gnu.tar.gz | \
+  curl https://static.rust-lang.org/dist/rust-1.37.0-x86_64-unknown-linux-gnu.tar.gz | \
   tar -xzvf - -C $HOME/rust --strip 1 && \
   $HOME/rust/install.sh; \
   rm -rf $HOME/rust
