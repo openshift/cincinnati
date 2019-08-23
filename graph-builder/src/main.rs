@@ -22,18 +22,26 @@ extern crate structopt;
 extern crate tempfile;
 
 use crate::failure::ResultExt;
-use graph_builder::{config, graph, graph::RwLock, status};
-
 use actix_web::{App, HttpServer};
 use cincinnati::plugins::prelude::*;
+use commons::metrics::{self, HasRegistry};
 use failure::Error;
+use graph_builder::{config, graph, graph::RwLock, status};
 use std::sync::Arc;
 use std::thread;
+
+/// Common prefix for graph-builder metrics.
+pub static METRICS_PREFIX: &str = "cincinnati_gb";
 
 fn main() -> Result<(), Error> {
     let sys = actix::System::new("graph-builder");
 
     let settings = config::AppSettings::assemble().context("could not assemble AppSettings")?;
+    env_logger::Builder::from_default_env()
+        .filter(Some(module_path!()), settings.verbosity)
+        .init();
+    debug!("application settings:\n{:#?}", settings);
+
     let plugins: Vec<BoxedPlugin> = if settings.disable_quay_api_metadata {
         Default::default()
     } else {
@@ -69,13 +77,14 @@ fn main() -> Result<(), Error> {
             })
         )
     };
+    let registry: prometheus::Registry = metrics::new_registry(Some(METRICS_PREFIX.to_string()))?;
 
-    env_logger::Builder::from_default_env()
-        .filter(Some(module_path!()), settings.verbosity)
-        .init();
-    debug!("application settings:\n{:#?}", settings);
+    let service_addr = (settings.address, settings.port);
+    let status_addr = (settings.status_address, settings.status_port);
+    let app_prefix = settings.path_prefix.clone();
 
-    let app_state = {
+    // Shared state.
+    let state = {
         let json_graph = Arc::new(RwLock::new(String::new()));
         let live = Arc::new(RwLock::new(false));
         let ready = Arc::new(RwLock::new(false));
@@ -86,20 +95,18 @@ fn main() -> Result<(), Error> {
             live.clone(),
             ready.clone(),
             Box::leak(Box::new(plugins)),
+            Box::leak(Box::new(registry)),
         )
     };
 
-    let service_addr = (settings.address, settings.port);
-    let status_addr = (settings.status_address, settings.status_port);
-    let app_prefix = settings.path_prefix.clone();
-
     // Graph scraper
-    let graph_state = app_state.clone();
+    let graph_state = state.clone();
     thread::spawn(move || graph::run(&settings, &graph_state));
 
     // Status service.
-    graph::register_metrics(&status::PROM_REGISTRY)?;
-    let status_state = app_state.clone();
+    graph::register_metrics(state.registry())?;
+
+    let status_state = state.clone();
     HttpServer::new(move || {
         App::new()
             .register_data(actix_web::web::Data::new(status_state.clone()))
@@ -109,7 +116,7 @@ fn main() -> Result<(), Error> {
             )
             .service(
                 actix_web::web::resource("/metrics")
-                    .route(actix_web::web::get().to(status::serve_metrics)),
+                    .route(actix_web::web::get().to(metrics::serve::<graph::State>)),
             )
             .service(
                 actix_web::web::resource("/readiness")
@@ -120,7 +127,7 @@ fn main() -> Result<(), Error> {
     .start();
 
     // Main service.
-    let main_state = app_state.clone();
+    let main_state = state.clone();
     HttpServer::new(move || {
         App::new()
             .register_data(actix_web::web::Data::new(main_state.clone()))
@@ -135,4 +142,69 @@ fn main() -> Result<(), Error> {
     let _ = sys.run();
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::graph::State;
+    use actix_web::test::TestRequest;
+    use commons::metrics::HasRegistry;
+    use commons::testing;
+    use failure::{bail, Fallible};
+    use parking_lot::RwLock;
+    use prometheus::Registry;
+    use std::collections::HashSet;
+    use std::sync::Arc;
+
+    fn mock_state() -> State {
+        let json_graph = Arc::new(RwLock::new(String::new()));
+        let live = Arc::new(RwLock::new(false));
+        let ready = Arc::new(RwLock::new(false));
+
+        let plugins = Box::leak(Box::new([]));
+        let registry: &'static Registry = Box::leak(Box::new(
+            metrics::new_registry(Some(METRICS_PREFIX.to_string())).unwrap(),
+        ));
+
+        State::new(
+            json_graph.clone(),
+            HashSet::new(),
+            live.clone(),
+            ready.clone(),
+            plugins,
+            registry,
+        )
+    }
+
+    #[test]
+    fn serve_metrics_basic() -> Fallible<()> {
+        let mut rt = testing::init_runtime()?;
+        let state = mock_state();
+
+        let registry = <dyn HasRegistry>::registry(&state);
+        graph::register_metrics(registry)?;
+        testing::dummy_gauge(registry, 42.0)?;
+
+        let http_req = TestRequest::default().data(state).to_http_request();
+        let metrics_call = metrics::serve::<graph::State>(http_req);
+        let resp = rt.block_on(metrics_call)?;
+
+        assert_eq!(resp.status(), 200);
+        if let actix_web::body::ResponseBody::Body(body) = resp.body() {
+            if let actix_web::body::Body::Bytes(bytes) = body {
+                assert!(!bytes.is_empty());
+                println!("{:?}", std::str::from_utf8(bytes.as_ref()));
+                assert!(
+                    twoway::find_bytes(bytes.as_ref(), b"cincinnati_gb_dummy_gauge 42\n").is_some()
+                );
+            } else {
+                bail!("expected Body")
+            }
+        } else {
+            bail!("expected bytes in body")
+        };
+
+        Ok(())
+    }
 }
