@@ -8,12 +8,12 @@ extern crate futures;
 extern crate quay;
 extern crate tokio;
 
+use crate::plugins::AsyncIO;
+use crate::plugins::BoxedPlugin;
 use crate::plugins::{InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
 use crate::ReleaseId;
 use failure::{Error, Fallible, ResultExt};
 use futures::future::Future;
-use plugins::AsyncIO;
-use plugins::BoxedPlugin;
 use std::path::PathBuf;
 
 pub static DEFAULT_QUAY_LABEL_FILTER: &str = "io.openshift.upgrades.graph";
