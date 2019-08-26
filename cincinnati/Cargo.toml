@@ -2,6 +2,7 @@
 name = "cincinnati"
 version = "0.1.0"
 authors = ["Alex Crawford <crawford@redhat.com>"]
+edition = "2018"
 
 [dependencies]
 daggy = { version = "^0.6.0", features = [ "serde-1" ] }
