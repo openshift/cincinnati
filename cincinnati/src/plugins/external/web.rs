@@ -16,11 +16,11 @@ pub struct _WebPluginClient {
 #[cfg(test)]
 mod tests {
     use crate as cincinnati;
+    use crate::plugins::AsyncIO;
     use crate::plugins::{interface, ExternalIO, ExternalPlugin, InternalIO, PluginResult};
     use crate::tests::generate_graph;
     use commons::testing::init_runtime;
     use failure::Fallible;
-    use plugins::AsyncIO;
     use std::convert::TryInto;
 
     struct DummyWebClient {

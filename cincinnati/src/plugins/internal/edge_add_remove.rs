@@ -1,10 +1,10 @@
 //! This plugin adds and removes Edges from Nodes based on metadata labels.
 
 use crate as cincinnati;
+use crate::plugins::BoxedPlugin;
 use crate::plugins::{AsyncIO, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
 use crate::ReleaseId;
 use failure::Fallible;
-use plugins::BoxedPlugin;
 
 static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 pub static DEFAULT_REMOVE_ALL_EDGES_VALUE: &str = "*";
