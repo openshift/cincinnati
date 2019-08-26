@@ -30,4 +30,4 @@ tempfile = "^3.1.0"
 [dev-dependencies]
 tokio = "^0.1"
 twoway = "^0.2"
-mockito = "^0.17.1"
+mockito = "^0.20.0"
