@@ -4,6 +4,7 @@
 //! referenced by name. It is used for configuration purposes.
 
 use super::internal::channel_filter::ChannelFilterPlugin;
+use super::internal::cincinnati_graph_fetch::CincinnatiGraphFetchPlugin;
 use super::internal::edge_add_remove::EdgeAddRemovePlugin;
 use super::internal::metadata_fetch_quay::QuayMetadataFetchPlugin;
 use super::internal::node_remove::NodeRemovePlugin;
@@ -17,7 +18,7 @@ static CONFIG_PLUGIN_NAME_KEY: &str = "name";
 /// Settings for a plugin.
 pub trait PluginSettings: Debug + Send {
     /// Build the corresponding plugin for this configuration.
-    fn build_plugin(&self) -> Fallible<BoxedPlugin>;
+    fn build_plugin(&self, registry: Option<&prometheus::Registry>) -> Fallible<BoxedPlugin>;
 }
 
 /// Validate configuration for a plugin and fill in defaults.
@@ -34,8 +35,25 @@ pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>>
         EdgeAddRemovePlugin::PLUGIN_NAME => EdgeAddRemovePlugin::deserialize_config(cfg),
         NodeRemovePlugin::PLUGIN_NAME => NodeRemovePlugin::deserialize_config(cfg),
         QuayMetadataFetchPlugin::PLUGIN_NAME => QuayMetadataFetchPlugin::deserialize_config(cfg),
+        CincinnatiGraphFetchPlugin::PLUGIN_NAME => {
+            CincinnatiGraphFetchPlugin::deserialize_config(cfg)
+        }
         x => bail!("unknown plugin '{}'", x),
     }
+}
+
+/// Bulid a vector of plugins from PluginSettings
+pub fn build_plugins(
+    policies: &[Box<dyn PluginSettings>],
+    registry: Option<&prometheus::Registry>,
+) -> Fallible<Vec<BoxedPlugin>> {
+    let mut plugins = Vec::with_capacity(policies.len());
+    for conf in policies {
+        let plugin = conf.build_plugin(registry)?;
+        plugins.push(plugin);
+    }
+
+    Ok(plugins)
 }
 
 #[cfg(test)]
@@ -52,7 +70,7 @@ mod tests {
 
         let node_remove_default: toml::Value = toml::from_str("name = 'node-remove'").unwrap();
         let nr_settings = deserialize_config(node_remove_default).unwrap();
-        nr_settings.build_plugin().unwrap();
+        nr_settings.build_plugin(None).unwrap();
 
         let cfg = r#"
             name = "quay-metadata"
@@ -60,6 +78,6 @@ mod tests {
         "#;
         let quay_metadata_repo: toml::Value = toml::from_str(cfg).unwrap();
         let qm_settings = deserialize_config(quay_metadata_repo).unwrap();
-        qm_settings.build_plugin().unwrap();
+        qm_settings.build_plugin(None).unwrap();
     }
 }

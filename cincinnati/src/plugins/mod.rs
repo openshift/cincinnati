@@ -9,7 +9,7 @@ pub mod external;
 pub mod interface;
 pub mod internal;
 
-pub use self::catalog::{deserialize_config, PluginSettings};
+pub use self::catalog::{build_plugins, deserialize_config, PluginSettings};
 use crate as cincinnati;
 use crate::plugins::interface::{PluginError, PluginExchange};
 use failure::{Error, Fallible, ResultExt};
@@ -24,8 +24,10 @@ pub mod prelude {
     pub use super::BoxedPlugin;
     pub use super::ExternalPluginWrapper;
     pub use super::InternalPluginWrapper;
+    pub use super::{build_plugins, deserialize_config, PluginSettings};
     pub use crate::{new_plugin, new_plugins};
     pub use futures_locks;
+    pub use std::iter::FromIterator;
 }
 
 /// Convenience type to wrap other types in a Future

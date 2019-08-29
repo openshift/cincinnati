@@ -8,9 +8,8 @@ extern crate futures;
 extern crate quay;
 extern crate tokio;
 
-use crate::plugins::AsyncIO;
-use crate::plugins::BoxedPlugin;
-use crate::plugins::{InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
+use prometheus::Registry;
+use crate::plugins::{AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
 use crate::ReleaseId;
 use failure::{Error, Fallible, ResultExt};
 use futures::future::Future;
@@ -50,7 +49,7 @@ pub struct QuayMetadataFetchPlugin {
 }
 
 impl PluginSettings for QuayMetadataSettings {
-    fn build_plugin(&self) -> Fallible<BoxedPlugin> {
+    fn build_plugin(&self, _: Option<&Registry>) -> Fallible<BoxedPlugin> {
         let cfg = self.clone();
         let plugin = QuayMetadataFetchPlugin::try_new(
             cfg.repository,

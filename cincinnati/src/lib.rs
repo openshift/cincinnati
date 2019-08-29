@@ -29,7 +29,12 @@ extern crate lazy_static;
 extern crate regex;
 #[macro_use]
 extern crate smart_default;
+extern crate actix_web;
 extern crate futures;
+extern crate prometheus;
+extern crate serde_json;
+#[macro_use]
+extern crate custom_debug_derive;
 pub extern crate futures_locks;
 
 #[cfg(test)]

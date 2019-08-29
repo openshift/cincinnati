@@ -48,6 +48,17 @@ macro_rules! new_plugins {
     ($($x:expr),*) => { vec![$(new_plugin!($x)),*] };
 }
 
+#[macro_export]
+macro_rules! plugin_config {
+    ($( $tuple:expr ),*) => {
+        cincinnati::plugins::deserialize_config(toml::value::Value::Table(toml::value::Table::from_iter(
+            [ $(($tuple)),* ]
+            .iter()
+            .map(|(k, v)| (k.to_string(), toml::value::Value::String(v.to_string()))),
+        )))
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;

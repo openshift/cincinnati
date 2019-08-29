@@ -2,8 +2,8 @@
 //! It reads the requested channel from the parameters value at key "channel",
 //! and the value must match the regex specified at CHANNEL_VALIDATION_REGEX_STR
 
-use crate::plugins::BoxedPlugin;
-use crate::plugins::{AsyncIO, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
+use prometheus::Registry;
+use crate::plugins::{BoxedPlugin, AsyncIO, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
 use failure::Fallible;
 use futures::Future;
 
@@ -21,13 +21,13 @@ pub struct ChannelFilterPlugin {
 }
 
 impl PluginSettings for ChannelFilterPlugin {
-    fn build_plugin(&self) -> Fallible<BoxedPlugin> {
+    fn build_plugin(&self, _: Option<&Registry>) -> Fallible<BoxedPlugin> {
         Ok(new_plugin!(InternalPluginWrapper(self.clone())))
     }
 }
 
 impl ChannelFilterPlugin {
-    pub(crate) const PLUGIN_NAME: &'static str = "channel-filter";
+    pub const PLUGIN_NAME: &'static str = "channel-filter";
 
     /// Validate plugin configuration and fill in defaults.
     pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>> {

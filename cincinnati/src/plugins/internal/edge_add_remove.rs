@@ -1,5 +1,6 @@
 //! This plugin adds and removes Edges from Nodes based on metadata labels.
 
+use prometheus::Registry;
 use crate as cincinnati;
 use crate::plugins::BoxedPlugin;
 use crate::plugins::{AsyncIO, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
@@ -37,7 +38,7 @@ impl InternalPlugin for EdgeAddRemovePlugin {
 }
 
 impl PluginSettings for EdgeAddRemovePlugin {
-    fn build_plugin(&self) -> Fallible<BoxedPlugin> {
+    fn build_plugin(&self, _: Option<&Registry>) -> Fallible<BoxedPlugin> {
         Ok(new_plugin!(InternalPluginWrapper(self.clone())))
     }
 }
