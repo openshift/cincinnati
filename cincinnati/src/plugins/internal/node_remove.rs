@@ -1,10 +1,10 @@
 //! This plugin removes releases according to its metadata
 
-use prometheus::Registry;
 use crate::plugins::{
     AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
 use failure::Fallible;
+use prometheus::Registry;
 
 static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 
@@ -73,7 +73,10 @@ mod tests {
     use crate as cincinnati;
     use commons::testing::init_runtime;
     use failure::ResultExt;
+    use maplit::hashmap;
     use std::collections::HashMap;
+
+    type MetadataMap = HashMap<usize, HashMap<String, String>>;
 
     #[test]
     fn ensure_release_remove() -> Fallible<()> {
@@ -83,39 +86,18 @@ mod tests {
         let key_suffix = "release.remove".to_string();
 
         let input_graph: cincinnati::Graph = {
-            let metadata: HashMap<usize, HashMap<String, String>> = [
-                (
-                    0,
-                    [(
-                        format!("{}.{}", key_prefix, key_suffix),
-                        String::from("true"),
-                    )]
-                    .iter()
-                    .cloned()
-                    .collect(),
-                ),
-                (1, HashMap::new()),
-                (
-                    2,
-                    [(
-                        format!("{}.{}", key_prefix, key_suffix),
-                        String::from("true"),
-                    )]
-                    .iter()
-                    .cloned()
-                    .collect(),
-                ),
-            ]
-            .iter()
-            .cloned()
-            .collect();
-
+            let metadata: MetadataMap = hashmap! {
+                0 => hashmap!{ format!("{}.{}", key_prefix, key_suffix) => String::from("true") },
+                1 => hashmap!{},
+                2 => hashmap!{ format!("{}.{}", key_prefix, key_suffix) => String::from("true") },
+            };
             crate::tests::generate_custom_graph(0, metadata.len(), metadata, None)
         };
 
         let expected_graph: cincinnati::Graph = {
-            let metadata: HashMap<usize, HashMap<String, String>> =
-                [(1, HashMap::new())].iter().cloned().collect();
+            let metadata: MetadataMap = hashmap! {
+                1 => hashmap!{},
+            };
 
             crate::tests::generate_custom_graph(1, metadata.len(), metadata, None)
         };
