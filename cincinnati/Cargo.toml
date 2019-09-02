@@ -5,32 +5,32 @@ authors = ["Alex Crawford <crawford@redhat.com>"]
 edition = "2018"
 
 [dependencies]
-daggy = { version = "^0.6.0", features = [ "serde-1" ] }
-failure = "^0.1.1"
-serde = "1.0.70"
-serde_derive = "1.0.70"
+actix-web = "^1.0.2"
 commons = { path = "../commons" }
-quay = { path = "../quay" }
-protobuf = "2.0"
-url = "^1.7.2"
-log = "^0.4.3"
+custom_debug_derive = "^0.1.7"
+daggy = { version = "^0.6.0", features = [ "serde-1" ] }
+env_logger = "^0.6.0"
+failure = "^0.1.1"
 futures = "0.1"
 futures-locks = "0.3.3"
+lazy_static = "^1.2.0"
+log = "^0.4.3"
+prometheus = "^0.7.0"
+protobuf = "2.0"
+quay = { path = "../quay" }
+regex = "^1.1.0"
+reqwest = "^0.9.19"
+serde = "1.0.70"
+serde_derive = "1.0.70"
+serde_json = "^1.0.22"
+smart-default = "^0.5.2"
 tokio = "0.1"
 toml = "^0.4.10"
-env_logger = "^0.6.0"
-lazy_static = "^1.2.0"
-regex = "^1.1.0"
-smart-default = "^0.5.2"
-reqwest = "^0.9.19"
-actix-web = "^1.0.2"
-serde_json = "^1.0.22"
-prometheus = "^0.7.0"
-custom_debug_derive = "^0.1.7"
+url = "^1.7.2"
 
 [dev-dependencies]
-serde_json = "1.0.22"
 mockito = "^0.20.0"
+serde_json = "1.0.22"
 twoway = "^0.2"
 
 [build-dependencies]
