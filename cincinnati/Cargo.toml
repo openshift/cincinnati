@@ -29,6 +29,7 @@ toml = "^0.4.10"
 url = "^1.7.2"
 
 [dev-dependencies]
+maplit = "^1.0.2"
 mockito = "^0.20.0"
 serde_json = "1.0.22"
 twoway = "^0.2"
