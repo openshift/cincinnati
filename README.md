@@ -17,7 +17,7 @@ export CINCINNATI_REPO="redhat/openshift-cincinnati-test-public-manual"
 ```console
 cargo run --package graph-builder -- --service.address 0.0.0.0 --upstream.registry.url "${CINCINNATI_REGISTRY}" --upstream.registry.repository "${CINCINNATI_REPO}" &
 cargo run --package policy-engine -- --service.address 0.0.0.0 &
-curl --verbose --header 'Accept:application/json' http://localhost:8081/v1/graph
+ curl --verbose --header 'Accept:application/json' http://localhost:8081/v1/graph\?channel=a
 {
     "nodes":
     [{
@@ -41,7 +41,7 @@ curl --verbose --header 'Accept:application/json' http://localhost:8081/v1/graph
 }
 ```
 
-Note, that although Cincinnati protocol doesn't require additional params, current build from master requires `?channel` to be set (use `a` or `b` for test images)
+***Note:*** the default configuration of the policy-engine requires the `channel` parameter to be present in each request.
 
 ## Tests
 There are several ways of testing various parts of the Cincinnati stack.
