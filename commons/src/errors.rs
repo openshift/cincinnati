@@ -57,7 +57,7 @@ pub enum GraphError {
     MissingParams(Vec<String>),
 
     /// Invalid client parameters.
-    #[fail(display = "invalid client parameters")]
+    #[fail(display = "invalid client parameters: {}", _0)]
     InvalidParams(String),
 }
 

@@ -9,7 +9,7 @@ macro_rules! get_multiple_values {
                     if let Some(value) = $map.get($key) {
                         value
                     } else {
-                        bail!("could not find key '{}'", $key)
+                        bail!("{}", $key)
                     },
                 )
             };
@@ -25,7 +25,7 @@ macro_rules! get_multiple_values {
                             if let Some(value) = $map.get($key) {
                                 value
                             } else {
-                                bail!("could not find key '{}'", $key)
+                                bail!("{}", $key)
                             },
                         )*
                     )
