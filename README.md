@@ -17,8 +17,31 @@ export CINCINNATI_REPO="redhat/openshift-cincinnati-test-public-manual"
 ```console
 cargo run --package graph-builder -- --service.address 0.0.0.0 --upstream.registry.url "${CINCINNATI_REGISTRY}" --upstream.registry.repository "${CINCINNATI_REPO}" &
 cargo run --package policy-engine -- --service.address 0.0.0.0 &
-curl --verbose --header 'Accept:application/json' http://localhost:8081/v1/graph
+ curl --verbose --header 'Accept:application/json' http://localhost:8081/v1/graph\?channel=a
+{
+    "nodes":
+    [{
+        "version":"0.0.0",
+        "payload":"quay.io/redhat/openshift-cincinnati-test-public-manual@sha256:a264db3ac5288c9903dc3db269fca03a0b122fe4af80b57fc5087b329995013d",
+        "metadata":{
+            "io.openshift.upgrades.graph.release.channels":"a",
+            "io.openshift.upgrades.graph.release.manifestref":"sha256:a264db3ac5288c9903dc3db269fca03a0b122fe4af80b57fc5087b329995013d"
+        }
+    },
+    {
+        "version":"0.0.1",
+        "payload":"quay.io/redhat/openshift-cincinnati-test-public-manual@sha256:73df5efa869eaf57d4125f7655e05e1a72b59d05e55fea06d3701ea5b59234ff",
+        "metadata":{
+            "io.openshift.upgrades.graph.release.manifestref":"sha256:73df5efa869eaf57d4125f7655e05e1a72b59d05e55fea06d3701ea5b59234ff",
+            "io.openshift.upgrades.graph.release.channels":"a",
+            "kind":"test"
+        }
+    }],
+    "edges":[[0,1]]
+}
 ```
+
+***Note:*** the default configuration of the policy-engine requires the `channel` parameter to be present in each request.
 
 ## Tests
 There are several ways of testing various parts of the Cincinnati stack.
