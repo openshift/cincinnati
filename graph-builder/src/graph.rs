@@ -23,11 +23,15 @@ use failure::{Error, Fallible};
 use futures::Future;
 use lazy_static;
 pub use parking_lot::RwLock;
-use prometheus::{self, Counter, IntGauge};
+use prometheus::{self, histogram_opts, Counter, Gauge, Histogram, IntGauge};
 use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::thread;
+
+/// Custom bucket values for upstream scraping duration in seconds
+pub const UPSTREAM_SCRAPE_BUCKETS: &[f64] =
+    &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0];
 
 lazy_static! {
     static ref GRAPH_FINAL_RELEASES: IntGauge = IntGauge::new(
@@ -55,6 +59,17 @@ lazy_static! {
         "Total number of upstream scrapes"
     )
     .unwrap();
+    static ref GRAPH_UPSTREAM_INITIAL_SCRAPE: Gauge = Gauge::new(
+        "graph_initial_upstream_scrape_duration",
+        "Duration of initial upstream scrape"
+    )
+    .unwrap();
+    static ref UPSTREAM_SCRAPES_DURATION: Histogram = Histogram::with_opts(histogram_opts!(
+        "graph_upstream_scrapes_duration",
+        "Upstream scrape duration in seconds",
+        UPSTREAM_SCRAPE_BUCKETS.to_vec()
+    ))
+    .unwrap();
     static ref V1_GRAPH_INCOMING_REQS: Counter = Counter::new(
         "v1_graph_incoming_requests_total",
         "Total number of incoming HTTP client request to /v1/graph"
@@ -70,6 +85,8 @@ pub fn register_metrics(registry: &prometheus::Registry) -> Fallible<()> {
     registry.register(Box::new(GRAPH_UPSTREAM_RAW_RELEASES.clone()))?;
     registry.register(Box::new(UPSTREAM_ERRORS.clone()))?;
     registry.register(Box::new(UPSTREAM_SCRAPES.clone()))?;
+    registry.register(Box::new(GRAPH_UPSTREAM_INITIAL_SCRAPE.clone()))?;
+    registry.register(Box::new(UPSTREAM_SCRAPES_DURATION.clone()))?;
     registry.register(Box::new(V1_GRAPH_INCOMING_REQS.clone()))?;
     Ok(())
 }
@@ -169,6 +186,8 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
 
     // Don't wait on the first iteration
     let mut first_iteration = true;
+    // Don't collect upstream scrape duration on cold start
+    let mut first_scrape = true;
     let mut first_success = true;
 
     loop {
@@ -180,7 +199,7 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
         }
 
         debug!("graph update triggered");
-
+        let scrape_timer = UPSTREAM_SCRAPES_DURATION.start_timer();
         let scrape = registry::fetch_releases(
             &registry,
             &settings.repository,
@@ -200,6 +219,17 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
                         &settings.repository
                     );
                 };
+
+                // Record scrape duration if it succeeded
+                // First iteration is slower due to a cold cache,
+                // so it is being stored in graph_initial_upstream_scrape_duration gauge instead
+
+                if first_scrape {
+                    first_scrape = false;
+                    GRAPH_UPSTREAM_INITIAL_SCRAPE.set(scrape_timer.stop_and_discard());
+                } else {
+                    scrape_timer.observe_duration();
+                }
                 releases
             }
             Err(err) => {
