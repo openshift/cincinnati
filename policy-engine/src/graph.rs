@@ -7,9 +7,10 @@ use cincinnati::CONTENT_TYPE;
 use commons::{self, GraphError};
 use failure::Fallible;
 use futures::{future, Future};
-use prometheus::{Counter, Histogram, HistogramOpts, Registry};
+use prometheus::{histogram_opts, Counter, Histogram, Registry};
 use serde_json;
 use std::collections::HashMap;
+
 
 lazy_static! {
     static ref V1_GRAPH_INCOMING_REQS: Counter = Counter::new(
@@ -17,9 +18,11 @@ lazy_static! {
         "Total number of incoming HTTP client request to /v1/graph"
     )
     .unwrap();
-    static ref V1_GRAPH_SERVE_HIST: Histogram = Histogram::with_opts(HistogramOpts::new(
+    // Histogram with custom bucket values for serving latency metric (in seconds), values are picked based on monthly data
+    static ref V1_GRAPH_SERVE_HIST: Histogram = Histogram::with_opts(histogram_opts!(
         "v1_graph_serve_duration_seconds",
-        "HTTP graph serving latency in seconds"
+        "HTTP graph serving latency in seconds",
+        vec![0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 5.0]
     ))
     .unwrap();
 }
