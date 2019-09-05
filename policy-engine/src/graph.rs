@@ -219,12 +219,12 @@ mod tests {
             .create();
 
         match rt.block_on(graph_call) {
-            Err(graph::GraphError::FailedPluginExecution(ref msg))
+            Err(graph::GraphError::InvalidParams(ref msg))
                 if msg.contains("does not match regex") =>
             {
                 Ok(())
             }
-            res => Err(format!("expected FailedPluginExecution error, got: {:?}", res).into()),
+            res => Err(format!("expected InvalidParams error, got: {:?}", res).into()),
         }
     }
 
@@ -407,7 +407,7 @@ mod tests {
                 mandatory_params: &["channel"],
                 passed_params: &[("channel", "invalid:channel")],
                 plugin_config: &[plugin_config!(("name", ChannelFilterPlugin::PLUGIN_NAME))?],
-                expected_result: TestResult::Error(commons::GraphError::FailedPluginExecution(
+                expected_result: TestResult::Error(commons::GraphError::InvalidParams(
                     "channel 'invalid:channel'".to_string(),
                 )),
             },
@@ -416,7 +416,7 @@ mod tests {
                 mandatory_params: &["channel"],
                 passed_params: &[("channel", "invalid=channel")],
                 plugin_config: &[plugin_config!(("name", ChannelFilterPlugin::PLUGIN_NAME))?],
-                expected_result: TestResult::Error(commons::GraphError::FailedPluginExecution(
+                expected_result: TestResult::Error(commons::GraphError::InvalidParams(
                     "channel 'invalid=channel'".to_string(),
                 )),
             },

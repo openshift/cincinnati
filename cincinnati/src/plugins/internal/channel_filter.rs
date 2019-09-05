@@ -5,6 +5,7 @@
 use crate::plugins::{
     AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
+use commons::GraphError;
 use failure::Fallible;
 use futures::Future;
 use prometheus::Registry;
@@ -58,14 +59,15 @@ impl InternalPlugin for ChannelFilterPlugin {
             self.key_suffix.to_owned(),
         ))
         .and_then(|(internal_io, key_prefix, key_suffix)| {
-            let channel = get_multiple_values!(internal_io.parameters, "channel")?.clone();
+            let channel = get_multiple_values!(internal_io.parameters, "channel")
+                .map_err(|e| GraphError::MissingParams(vec![e.to_string()]))?
+                .clone();
 
             if !CHANNEL_VALIDATION_REGEX_RE.is_match(&channel) {
-                bail!(
+                return Err(GraphError::InvalidParams(format!(
                     "channel '{}' does not match regex '{}'",
-                    channel,
-                    CHANNEL_VALIDATION_REGEX_STR
-                );
+                    channel, CHANNEL_VALIDATION_REGEX_STR
+                )));
             };
 
             let mut graph = internal_io.graph;
@@ -106,7 +108,8 @@ impl InternalPlugin for ChannelFilterPlugin {
                 graph,
                 parameters: internal_io.parameters,
             })
-        });
+        })
+        .map_err(move |e| failure::Error::from(e));
 
         Box::new(future_result)
     }
