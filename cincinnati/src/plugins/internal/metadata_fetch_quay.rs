@@ -8,11 +8,13 @@ extern crate futures;
 extern crate quay;
 extern crate tokio;
 
-use prometheus::Registry;
-use crate::plugins::{AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
+use crate::plugins::{
+    AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
+};
 use crate::ReleaseId;
 use failure::{Error, Fallible, ResultExt};
 use futures::future::Future;
+use prometheus::Registry;
 use std::path::PathBuf;
 
 pub static DEFAULT_QUAY_LABEL_FILTER: &str = "io.openshift.upgrades.graph";

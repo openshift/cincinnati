@@ -2,10 +2,12 @@
 //! It reads the requested channel from the parameters value at key "channel",
 //! and the value must match the regex specified at CHANNEL_VALIDATION_REGEX_STR
 
-use prometheus::Registry;
-use crate::plugins::{BoxedPlugin, AsyncIO, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
+use crate::plugins::{
+    AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
+};
 use failure::Fallible;
 use futures::Future;
+use prometheus::Registry;
 
 static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 static DEFAULT_CHANNEL_KEY: &str = "release.channels";
