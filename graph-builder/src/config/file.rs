@@ -48,7 +48,7 @@ impl FileOptions {
 }
 
 impl MergeOptions<Option<FileOptions>> for AppSettings {
-    fn try_merge(&mut self, opts: Option<FileOptions>) -> Fallible<()>{
+    fn try_merge(&mut self, opts: Option<FileOptions>) -> Fallible<()> {
         if let Some(file) = opts {
             assign_if_some!(self.verbosity, file.verbosity);
             self.try_merge(file.service)?;
