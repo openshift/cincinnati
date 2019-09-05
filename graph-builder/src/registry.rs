@@ -416,7 +416,7 @@ fn get_layer_digests(
     manifest_kind: &Option<dkregistry::mediatypes::MediaTypes>,
     manifest: &[u8],
 ) -> Result<Vec<String>, failure::Error> {
-    use dkregistry::mediatypes::MediaTypes::{ManifestV2S1Signed, ManifestV2S2};
+    use dkregistry::mediatypes::MediaTypes::{ApplicationJson, ManifestV2S1Signed, ManifestV2S2};
     use dkregistry::v2::manifest::{ManifestSchema1Signed, ManifestSchema2};
 
     match manifest_kind {
@@ -431,6 +431,34 @@ fn get_layer_digests(
             l.reverse();
             Ok(l)
         }),
+
+        // This case is necessary due to a bug in the Satellite registry:
+        // https://bugzilla.redhat.com/show_bug.cgi?id=1749317
+        // We can still attempt to parse it to both known manifest schemas and bail out if that fails.
+        Some(ApplicationJson) => serde_json::from_slice::<ManifestSchema1Signed>(manifest)
+            .map(|m| m.get_layers())
+            .map_err(|e| {
+                error!(
+                    "Could not parse ApplicationJson manifest as ManifestSchema1Signed: {}",
+                    e
+                );
+                e
+            })
+            .or_else(|_| {
+                serde_json::from_slice::<ManifestSchema2>(manifest)
+                    .map(|m| m.get_layers())
+                    .map_err(|e| {
+                        error!(
+                            "Could not parse ApplicationJson manifest as ManifestSchema2: {}",
+                            e
+                        );
+                        e
+                    })
+            })
+            .and_then(|mut l| {
+                l.reverse();
+                Ok(l)
+            }),
         _ => bail!("unknown manifest_kind '{:?}'", manifest_kind),
     }
     .map_err(Into::into)
