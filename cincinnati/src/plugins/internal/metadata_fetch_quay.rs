@@ -1,6 +1,6 @@
 //! This plugin implements the fetching of dynamic metadata from quay.io.
 //!
-//! The fetch process is all or nohting, i.e. it fails in these cases:
+//! The fetch process is all or nothing, i.e. it fails in these cases:
 //! * a Release doesn't contain the manifestref in its metadata
 //! * the dynamic metadata can't be fetched for a single manifestref
 
