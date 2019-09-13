@@ -10,7 +10,7 @@ env_logger = "^0.6.0"
 failure = "^0.1.5"
 lazy_static = "^1.2.0"
 log = "^0.4.6"
-prometheus = "^0.7.0"
+prometheus = { git = "https://github.com/pingcap/rust-prometheus.git", rev = "6a02b0d2943f8fffce672e236e22c6f925184d93"}
 serde = "^1.0.70"
 serde_json = "^1.0.34"
 tokio = "^0.1"

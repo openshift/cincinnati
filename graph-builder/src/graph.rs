@@ -23,7 +23,7 @@ use failure::{Error, Fallible};
 use futures::Future;
 use lazy_static;
 pub use parking_lot::RwLock;
-use prometheus::{self, Counter, IntGauge};
+use prometheus::{self, histogram_opts, Counter, Gauge, Histogram, IntGauge};
 use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -55,6 +55,18 @@ lazy_static! {
         "Total number of upstream scrapes"
     )
     .unwrap();
+    static ref GRAPH_UPSTREAM_INITIAL_SCRAPE: Gauge = Gauge::new(
+        "graph_initial_upstream_scrape_duration",
+        "Duration of initial upstream scrape"
+    )
+    .unwrap();
+    /// Histogram with custom bucket values for upstream scraping duration in seconds
+    static ref UPSTREAM_SCRAPES_DURATION: Histogram = Histogram::with_opts(histogram_opts!(
+        "graph_upstream_scrapes_duration",
+        "Upstream scrape duration in seconds",
+        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0]
+    ))
+    .unwrap();
     static ref V1_GRAPH_INCOMING_REQS: Counter = Counter::new(
         "v1_graph_incoming_requests_total",
         "Total number of incoming HTTP client request to /v1/graph"
@@ -70,6 +82,8 @@ pub fn register_metrics(registry: &prometheus::Registry) -> Fallible<()> {
     registry.register(Box::new(GRAPH_UPSTREAM_RAW_RELEASES.clone()))?;
     registry.register(Box::new(UPSTREAM_ERRORS.clone()))?;
     registry.register(Box::new(UPSTREAM_SCRAPES.clone()))?;
+    registry.register(Box::new(GRAPH_UPSTREAM_INITIAL_SCRAPE.clone()))?;
+    registry.register(Box::new(UPSTREAM_SCRAPES_DURATION.clone()))?;
     registry.register(Box::new(V1_GRAPH_INCOMING_REQS.clone()))?;
     Ok(())
 }
@@ -172,6 +186,9 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
     let mut first_success = true;
 
     loop {
+        // Store scrape duration value. It would be used for initial scrape gauge or scrape histogram
+        let scrape_value: f64;
+
         if first_iteration {
             *state.live.write() = true;
             first_iteration = false;
@@ -180,7 +197,7 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
         }
 
         debug!("graph update triggered");
-
+        let scrape_timer = UPSTREAM_SCRAPES_DURATION.start_timer();
         let scrape = registry::fetch_releases(
             &registry,
             &settings.repository,
@@ -200,6 +217,9 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
                         &settings.repository
                     );
                 };
+
+                // Record scrape duration
+                scrape_value = scrape_timer.stop_and_discard();
                 releases
             }
             Err(err) => {
@@ -253,7 +273,10 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
         if first_success {
             *state.ready.write() = true;
             first_success = false;
-        };
+            GRAPH_UPSTREAM_INITIAL_SCRAPE.set(scrape_value);
+        } else {
+            UPSTREAM_SCRAPES_DURATION.observe(scrape_value);
+        }
 
         GRAPH_LAST_SUCCESSFUL_REFRESH.set(chrono::Utc::now().timestamp() as i64);
 
