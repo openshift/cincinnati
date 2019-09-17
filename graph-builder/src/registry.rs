@@ -248,21 +248,19 @@ pub fn fetch_releases<S: ::std::hash::BuildHasher>(
             Err(e) => bail!(e),
         };
 
-        if let Some(manifestref) = manifestref {
-            // Replace the tag specifier with the manifestref
-            release.source = {
-                let mut source_split: Vec<&str> = release.source.split(':').collect();
-                let _ = source_split.pop();
+        // Replace the tag specifier with the manifestref
+        release.source = {
+            let mut source_split: Vec<&str> = release.source.split(':').collect();
+            let _ = source_split.pop();
 
-                format!("{}@{}", source_split.join(":"), manifestref)
-            };
+            format!("{}@{}", source_split.join(":"), manifestref)
+        };
 
-            // Attach the manifestref this release was found in for further processing
-            release
-                .metadata
-                .metadata
-                .insert(manifestref_key.to_owned(), manifestref);
-        }
+        // Attach the manifestref this release was found in for further processing
+        release
+            .metadata
+            .metadata
+            .insert(manifestref_key.to_owned(), manifestref);
 
         releases.push(release);
     }
@@ -339,18 +337,21 @@ fn get_manifest_and_layers(
     tag: String,
     repo: String,
     authenticated_client: &dkregistry::v2::Client,
-) -> impl Future<Item = (String, Option<String>, Vec<String>), Error = failure::Error> {
+) -> impl Future<Item = (String, String, Vec<String>), Error = failure::Error> {
     trace!("processing: {}:{}", &repo, &tag);
     authenticated_client
         .has_manifest(&repo, &tag, None)
         .join(authenticated_client.get_manifest_and_ref(&repo, &tag))
         .map_err(|e| format_err!("{}", e))
         .and_then(|(manifest_kind, (manifest, manifestref))| {
-            Ok((
-                tag,
-                manifestref,
-                get_layer_digests(&manifest_kind, &manifest)?,
-            ))
+            let manifestref = {
+                let tag = tag.clone();
+                manifestref
+                    .ok_or_else(move || format_err!("no manifestref found for {}:{}", repo, tag))?
+            };
+            let layer_digests = get_layer_digests(&manifest_kind, &manifest)?;
+
+            Ok((tag, manifestref, layer_digests))
         })
 }
 
