@@ -11,7 +11,6 @@ use prometheus::{histogram_opts, Counter, Histogram, Registry};
 use serde_json;
 use std::collections::HashMap;
 
-
 lazy_static! {
     static ref V1_GRAPH_INCOMING_REQS: Counter = Counter::new(
         "v1_graph_incoming_requests_total",
