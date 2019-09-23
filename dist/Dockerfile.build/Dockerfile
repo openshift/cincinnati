@@ -8,17 +8,13 @@ RUN yum -y groupinstall 'Development Tools'
 RUN yum -y install openssl-devel
 
 ENV HOME="/root"
-
-# build: Rust stable toolchain
-RUN \
-  mkdir $HOME/rust && \
-  curl https://static.rust-lang.org/dist/rust-1.37.0-x86_64-unknown-linux-gnu.tar.gz | \
-  tar -xzvf - -C $HOME/rust --strip 1 && \
-  $HOME/rust/install.sh; \
-  rm -rf $HOME/rust
-
-# add cargo binaries to PATH
 ENV PATH="${HOME}/.cargo/bin:${PATH}"
+
+# build: Rust stable toolchain + 2 previous versions
+RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.37.0 -y && \
+    rustup install 1.36.0 && \
+    rustup install 1.35.0 && \
+    rustup default 1.37.0
 
 # test: linters
 RUN yum -y install yamllint
