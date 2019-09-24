@@ -90,7 +90,11 @@ objects:
                 timeoutSeconds: 3
               resources:
                 limits:
-                  memory: ${MEMORY_LIMIT}
+                  cpu: ${GB_CPU_LIMIT}
+                  memory: ${GB_MEMORY_LIMIT}
+                requests:
+                  cpu: ${GB_CPU_REQUEST}
+                  memory: ${GB_MEMORY_REQUEST}
               volumeMounts:
                 - name: secrets
                   mountPath: /etc/secrets
@@ -148,7 +152,11 @@ objects:
                 timeoutSeconds: 3
               resources:
                 limits:
-                  memory: ${MEMORY_LIMIT}
+                  cpu: ${PE_CPU_LIMIT}
+                  memory: ${PE_MEMORY_LIMIT}
+                requests:
+                  cpu: ${PE_CPU_REQUEST}
+                  memory: ${PE_MEMORY_REQUEST}
           volumes:
             - name: secrets
               secret:
@@ -200,10 +208,38 @@ parameters:
     value: "latest"
     displayName: cincinnati version
     description: cincinnati version which defaults to latest
-  - name: MEMORY_LIMIT
+  - name: GB_MEMORY_LIMIT
     value: "256Mi"
-    displayName: Memory Limit
-    description: Maximum amount of memory the container can use. Defaults 256Mi
+    displayName: "Graph-builder memory limit"
+    description: "Maximum amount of memory (bytes) allowed for graph-builder (default: 256Mi)"
+  - name: GB_CPU_LIMIT
+    value: "750m"
+    displayName: "Graph-builder CPU limit"
+    description: "Maximum amount of CPU (millicores) allowed for graph-builder (default: 750m)"
+  - name: PE_MEMORY_LIMIT
+    value: "256Mi"
+    displayName: "Policy-engine memory limit"
+    description: "Maximum amount of memory (bytes) allowed for policy-engine (default: 256Mi)"
+  - name: PE_CPU_LIMIT
+    value: "750m"
+    displayName: "Policy-engine CPU limit"
+    description: "Maximum amount of CPU (millicores) allowed for policy-engine (default: 750m)"
+  - name: GB_MEMORY_REQUEST
+    value: "128Mi"
+    displayName: "Graph-builder memory request"
+    description: "Requested amount of memory (bytes) allowed for graph-builder (default: 128Mi)"
+  - name: GB_CPU_REQUEST
+    value: "350m"
+    displayName: "Graph-builder CPU request"
+    description: "Requested amount of CPU (millicores) allowed for graph-builder (default: 350m)"
+  - name: PE_MEMORY_REQUEST
+    value: "128Mi"
+    displayName: "Policy-engine memory request"
+    description: "Requested amount of memory (bytes) allowed for policy-engine (default: 128Mi)"
+  - name: PE_CPU_REQUEST
+    value: "350m"
+    displayName: "Policy-engine CPU request"
+    description: "Requested amount of CPU (millicores) allowed for policy-engine (default: 350m)"
   - name: GB_PORT
     value: "8080"
     displayName: Graph builder port
