@@ -100,5 +100,4 @@ mod tests {
         let a: &String = get_multiple_values!(params, "a").unwrap();
         assert_eq!(&"a".to_string(), a);
     }
-
 }
