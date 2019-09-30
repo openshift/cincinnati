@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::built_info;
 use crate::config;
 use crate::registry::{self, Registry};
 use actix_web::{HttpRequest, HttpResponse};
@@ -23,7 +24,7 @@ use failure::{Error, Fallible};
 use futures::Future;
 use lazy_static;
 pub use parking_lot::RwLock;
-use prometheus::{self, histogram_opts, Counter, Gauge, Histogram, IntGauge};
+use prometheus::{self, histogram_opts, labels, opts, Counter, Gauge, Histogram, IntGauge};
 use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -72,6 +73,12 @@ lazy_static! {
         "Total number of incoming HTTP client request to /v1/graph"
     )
     .unwrap();
+    static ref BUILD_INFO: Counter = Counter::with_opts(opts!(
+        "build_info",
+        "Build information",
+        labels!{"git_commit" => built_info::GIT_VERSION.unwrap(),}
+    ))
+    .unwrap();
 }
 
 /// Register relevant metrics to a prometheus registry.
@@ -85,6 +92,7 @@ pub fn register_metrics(registry: &prometheus::Registry) -> Fallible<()> {
     registry.register(Box::new(GRAPH_UPSTREAM_INITIAL_SCRAPE.clone()))?;
     registry.register(Box::new(UPSTREAM_SCRAPES_DURATION.clone()))?;
     registry.register(Box::new(V1_GRAPH_INCOMING_REQS.clone()))?;
+    registry.register(Box::new(BUILD_INFO.clone()))?;
     Ok(())
 }
 
@@ -184,6 +192,8 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
     // Don't wait on the first iteration
     let mut first_iteration = true;
     let mut first_success = true;
+
+    BUILD_INFO.inc();
 
     loop {
         // Store scrape duration value. It would be used for initial scrape gauge or scrape histogram

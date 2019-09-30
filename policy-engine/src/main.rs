@@ -42,11 +42,26 @@ use actix_web::{App, HttpServer};
 use cincinnati::plugins::BoxedPlugin;
 use commons::metrics::{self, RegistryWrapper};
 use failure::Error;
-use prometheus::Registry;
+use prometheus::{labels, opts, Counter, Registry};
 use std::collections::HashSet;
+
+#[allow(dead_code)]
+/// Build info
+mod built_info {
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
 
 /// Common prefix for policy-engine metrics.
 pub static METRICS_PREFIX: &str = "cincinnati_pe";
+
+lazy_static! {
+    static ref BUILD_INFO: Counter = Counter::with_opts(opts!(
+        "build_info",
+        "Build information",
+        labels! {"git_commit" => built_info::GIT_VERSION.unwrap(),}
+    ))
+    .unwrap();
+}
 
 fn main() -> Result<(), Error> {
     let sys = actix::System::new("policy-engine");
@@ -62,6 +77,7 @@ fn main() -> Result<(), Error> {
         METRICS_PREFIX.to_string(),
     ))?));
     graph::register_metrics(registry)?;
+    registry.register(Box::new(BUILD_INFO.clone()))?;
     HttpServer::new(move || {
         App::new()
             .register_data(actix_web::web::Data::new(RegistryWrapper(registry)))
@@ -96,6 +112,7 @@ fn main() -> Result<(), Error> {
     })
     .bind((settings.address, settings.port))?
     .start();
+    BUILD_INFO.inc();
 
     let _ = sys.run();
     Ok(())
