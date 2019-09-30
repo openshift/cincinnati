@@ -3,6 +3,7 @@ name = "graph-builder"
 version = "0.1.0"
 authors = ["Alex Crawford <crawford@redhat.com>"]
 edition = "2018"
+build = "src/build.rs"
 
 [dependencies]
 actix = "^0.8.3"
@@ -34,6 +35,9 @@ toml = "^0.4.10"
 url = "^1.7.2"
 parking_lot = "^0.8.0"
 tempfile = "^3.1.0"
+
+[build-dependencies]
+built = "^0.3.2"
 
 [dev-dependencies]
 twoway = "^0.2"
