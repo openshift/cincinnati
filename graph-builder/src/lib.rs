@@ -36,3 +36,9 @@ pub mod graph;
 pub mod registry;
 pub mod release;
 pub mod status;
+
+#[allow(dead_code)]
+/// Build info
+mod built_info {
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
