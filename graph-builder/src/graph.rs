@@ -65,7 +65,7 @@ lazy_static! {
     static ref UPSTREAM_SCRAPES_DURATION: Histogram = Histogram::with_opts(histogram_opts!(
         "graph_upstream_scrapes_duration",
         "Upstream scrape duration in seconds",
-        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0]
+        vec![5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 15.0, 20.0, 30.0 ]
     ))
     .unwrap();
     static ref V1_GRAPH_INCOMING_REQS: Counter = Counter::new(
