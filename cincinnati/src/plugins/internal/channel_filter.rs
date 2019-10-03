@@ -80,12 +80,7 @@ impl InternalPlugin for ChannelFilterPlugin {
                                 .metadata
                                 .get_mut(&format!("{}.{}", key_prefix, key_suffix))
                                 .map_or(true, |values| {
-                                    if values.split(',').any(|value| value.trim() == channel) {
-                                        *values = channel.clone();
-                                        false
-                                    } else {
-                                        true
-                                    }
+                                    !values.split(',').any(|value| value.trim() == channel)
                                 }),
                             // remove if it's not a ConcreteRelease
                             _ => true,
@@ -257,7 +252,7 @@ mod tests {
                             0,
                             [(
                                 format!("{}.{}", &key_prefix, &key_suffix),
-                                String::from("a"),
+                                String::from("a, c"),
                             )]
                             .iter()
                             .cloned()
@@ -267,7 +262,7 @@ mod tests {
                             1,
                             [(
                                 format!("{}.{}", &key_prefix, &key_suffix),
-                                String::from("a"),
+                                String::from("a, c"),
                             )]
                             .iter()
                             .cloned()
@@ -303,7 +298,7 @@ mod tests {
                             2,
                             [(
                                 format!("{}.{}", &key_prefix, &key_suffix),
-                                String::from("b"),
+                                String::from("b, c"),
                             )]
                             .iter()
                             .cloned()
@@ -313,7 +308,7 @@ mod tests {
                             3,
                             [(
                                 format!("{}.{}", &key_prefix, &key_suffix),
-                                String::from("b"),
+                                String::from("b, c"),
                             )]
                             .iter()
                             .cloned()
@@ -349,7 +344,7 @@ mod tests {
                             0,
                             [(
                                 format!("{}.{}", &key_prefix, &key_suffix),
-                                String::from("c"),
+                                String::from("a, c"),
                             )]
                             .iter()
                             .cloned()
@@ -359,7 +354,7 @@ mod tests {
                             1,
                             [(
                                 format!("{}.{}", &key_prefix, &key_suffix),
-                                String::from("c"),
+                                String::from("a, c"),
                             )]
                             .iter()
                             .cloned()
@@ -369,7 +364,7 @@ mod tests {
                             2,
                             [(
                                 format!("{}.{}", &key_prefix, &key_suffix),
-                                String::from("c"),
+                                String::from("b, c"),
                             )]
                             .iter()
                             .cloned()
@@ -379,7 +374,7 @@ mod tests {
                             3,
                             [(
                                 format!("{}.{}", &key_prefix, &key_suffix),
-                                String::from("c"),
+                                String::from("b, c"),
                             )]
                             .iter()
                             .cloned()
