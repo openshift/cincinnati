@@ -86,8 +86,9 @@ The *dist/* directory contains various CI/CD related files.
 #### Openshift Dev
 * Uses *dist/Dockerfile.build/Dockerfile* as the build container image
 * Run the following scripts on PR
-    * `dist/cargo_test.sh`
     * `dist/prow_yaml_lint.sh`
+    * `dist/prow_rustfmt.sh`
+    * `dist/cargo_test.sh`
 
 For details please see [github.com/openshift/release/(...)/openshift-cincinnati-master.yaml][1].
 
