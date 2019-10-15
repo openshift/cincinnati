@@ -9,7 +9,7 @@ lazy_static! {
             "v1_graph_response_errors_total",
             "Error responses on /v1/graph"
         ),
-        &["kind"]
+        &["code", "kind"]
     )
     .unwrap();
 }
@@ -63,8 +63,11 @@ pub enum GraphError {
 
 impl actix_web::error::ResponseError for GraphError {
     fn render_response(&self) -> HttpResponse {
+        let code = self.status_code();
         let kind = self.kind();
-        V1_GRAPH_ERRORS.with_label_values(&[&kind]).inc();
+        V1_GRAPH_ERRORS
+            .with_label_values(&[code.as_str(), &kind])
+            .inc();
         self.as_json_error()
     }
 }
