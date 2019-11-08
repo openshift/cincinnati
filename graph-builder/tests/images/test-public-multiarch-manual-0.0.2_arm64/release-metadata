@@ -1,0 +1,7 @@
+{
+	"kind": "cincinnati-metadata-v0",
+	"version": "0.0.2",
+	"metadata": {
+		"io.openshift.upgrades.graph.release.channels": "test"
+	}
+}
