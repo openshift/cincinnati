@@ -296,6 +296,10 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
     }
 }
 
+/// Turns a collection of Releases into a Cincinnati Graph
+///
+/// When processing previous/next release metadata it is assumed that the edge
+/// destination has the same build type as the origin.
 pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
     let mut graph = Graph::default();
 
@@ -303,8 +307,27 @@ pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
         .into_iter()
         .inspect(|release| trace!("Adding a release to the graph '{:?}'", release))
         .try_for_each(|release| {
-            let previous = release.metadata.previous.clone();
-            let next = release.metadata.next.clone();
+            let previous = release
+                .metadata
+                .previous
+                .iter()
+                .cloned()
+                .map(|mut previous| {
+                    previous.build = release.metadata.version.build.clone();
+                    previous
+                })
+                .collect::<Vec<_>>();
+
+            let next = release
+                .metadata
+                .next
+                .iter()
+                .cloned()
+                .map(|mut next| {
+                    next.build = release.metadata.version.build.clone();
+                    next
+                })
+                .collect::<Vec<_>>();
             let current = graph.add_release(release)?;
 
             previous.iter().try_for_each(|version| {
