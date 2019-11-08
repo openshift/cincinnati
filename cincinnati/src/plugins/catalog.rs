@@ -3,6 +3,7 @@
 //! This catalog relies on a static list of all available plugins,
 //! referenced by name. It is used for configuration purposes.
 
+use super::internal::arch_filter::ArchFilterPlugin;
 use super::internal::channel_filter::ChannelFilterPlugin;
 use super::internal::cincinnati_graph_fetch::CincinnatiGraphFetchPlugin;
 use super::internal::edge_add_remove::EdgeAddRemovePlugin;
@@ -38,6 +39,7 @@ pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>>
         CincinnatiGraphFetchPlugin::PLUGIN_NAME => {
             CincinnatiGraphFetchPlugin::deserialize_config(cfg)
         }
+        ArchFilterPlugin::PLUGIN_NAME => ArchFilterPlugin::deserialize_config(cfg),
         x => bail!("unknown plugin '{}'", x),
     }
 }
