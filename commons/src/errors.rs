@@ -59,6 +59,10 @@ pub enum GraphError {
     /// Invalid client parameters.
     #[fail(display = "invalid client parameters: {}", _0)]
     InvalidParams(String),
+
+    /// Failed to parse as Semantic Version
+    #[fail(display = "failed to process version: {}", _0)]
+    ArchVersionError(String),
 }
 
 impl actix_web::error::ResponseError for GraphError {
@@ -94,6 +98,7 @@ impl GraphError {
             GraphError::InvalidContentType => http::StatusCode::NOT_ACCEPTABLE,
             GraphError::MissingParams(_) => http::StatusCode::BAD_REQUEST,
             GraphError::InvalidParams(_) => http::StatusCode::BAD_REQUEST,
+            GraphError::ArchVersionError(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
@@ -108,6 +113,7 @@ impl GraphError {
             GraphError::InvalidContentType => "invalid_content_type",
             GraphError::MissingParams(_) => "missing_params",
             GraphError::InvalidParams(_) => "invalid_params",
+            GraphError::ArchVersionError(_) => "arch_version_error",
         };
         kind.to_string()
     }
