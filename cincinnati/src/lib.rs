@@ -702,15 +702,10 @@ impl From<Graph> for plugins::interface::Graph {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    extern crate serde_json;
-
+pub mod testing {
     use super::*;
 
-    type TestResult<T> = Result<T, Box<dyn std::error::Error>>;
-
-    pub(crate) fn generate_graph() -> Graph {
+    pub fn generate_graph() -> Graph {
         let mut graph = Graph::default();
         let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("1.0.0"),
@@ -734,46 +729,133 @@ mod tests {
         graph
     }
 
-    pub(crate) fn generate_custom_graph(
-        start: usize,
-        count: usize,
-        mut metadata: HashMap<usize, HashMap<String, String>>,
-        edges: Option<Vec<(usize, usize)>>,
-    ) -> Graph {
-        let mut graph = Graph::default();
+    pub type TestMetadata = Vec<(usize, HashMap<String, String>)>;
+    pub type TestEdges = Vec<(usize, usize)>;
 
-        let nodes: Vec<daggy::NodeIndex> = (start..(start + count))
-            .map(|i| {
-                let metadata = metadata.remove(&i).unwrap_or_default();
-
-                let release = Release::Concrete(ConcreteRelease {
-                    version: format!("{}.0.0", i),
-                    payload: format!("image/{}.0.0", i),
-                    metadata,
-                });
-                graph.dag.add_node(release)
-            })
-            .collect();
-
-        assert_eq!(count as u64, graph.releases_count());
-
-        if let Some(edges) = edges {
-            for (key, value) in &edges {
-                let one = nodes[*key];
-                let two = nodes[*value];
-                graph.dag.add_edge(one, two, Empty {}).unwrap();
-            }
-            assert_eq!(edges.len(), graph.dag.edge_count());
-        } else {
-            for i in 0..(nodes.len() - 1) {
-                let one = nodes[i];
-                let two = nodes[i + 1];
-                graph.dag.add_edge(one, two, Empty {}).unwrap();
-            }
-        };
-
-        graph
+    #[derive(Debug, Clone)]
+    pub struct TestGraphBuilder {
+        image: String,
+        metadata: TestMetadata,
+        edges: Option<TestEdges>,
+        version_template: String,
+        enable_payload_suffix: bool,
     }
+
+    impl Default for TestGraphBuilder {
+        fn default() -> Self {
+            TestGraphBuilder {
+                image: "image".to_string(),
+                metadata: Default::default(),
+                edges: None,
+                version_template: "{{i}}.0.0".to_string(),
+                enable_payload_suffix: false,
+            }
+        }
+    }
+
+    impl TestGraphBuilder {
+        pub fn new() -> Self {
+            Default::default()
+        }
+
+        pub fn with_image(mut self, image: &str) -> Self {
+            self.image = image.to_string();
+            self
+        }
+
+        pub fn with_metadata(mut self, metadata: TestMetadata) -> Self {
+            self.metadata = metadata;
+            self
+        }
+
+        pub fn with_edges(mut self, edges: Option<TestEdges>) -> Self {
+            self.edges = edges;
+            self
+        }
+
+        pub fn with_version_template(mut self, version_template: &str) -> Self {
+            self.version_template = version_template.to_string();
+            self
+        }
+
+        pub fn enable_payload_suffix(mut self, enable: bool) -> Self {
+            self.enable_payload_suffix = enable;
+            self
+        }
+
+        pub fn build(self) -> Graph {
+            let mut graph = Graph::default();
+
+            let nodes: Vec<daggy::NodeIndex> = self
+                .clone()
+                .metadata
+                .into_iter()
+                .map(|(i, mut metadata)| {
+                    let version_unsuffixed = self.version_template.replace("{{i}}", &i.to_string());
+                    let version_suffix = metadata.remove("version_suffix").unwrap_or_default();
+
+                    let version = format!("{}{}", version_unsuffixed, version_suffix);
+                    let payload = format!(
+                        "{}:{}",
+                        &self.image,
+                        if self.enable_payload_suffix {
+                            &version
+                        } else {
+                            &version_unsuffixed
+                        }
+                    );
+
+                    let release = Release::Concrete(ConcreteRelease {
+                        version,
+                        payload,
+                        metadata,
+                    });
+                    graph.dag.add_node(release)
+                })
+                .collect();
+
+            assert_eq!(nodes.len() as u64, graph.releases_count());
+
+            if let Some(edges) = self.edges {
+                for (key, value) in &edges {
+                    let one = nodes[*key];
+                    let two = nodes[*value];
+                    graph.dag.add_edge(one, two, Empty {}).unwrap();
+                }
+                assert_eq!(edges.len(), graph.dag.edge_count());
+            } else {
+                for i in 0..(nodes.len() - 1) {
+                    let one = nodes[i];
+                    let two = nodes[i + 1];
+                    graph.dag.add_edge(one, two, Empty {}).unwrap();
+                }
+            };
+
+            graph
+        }
+    }
+
+    pub fn generate_custom_graph(
+        image: &str,
+        metadata: TestMetadata,
+        edges: Option<TestEdges>,
+    ) -> Graph {
+        TestGraphBuilder::new()
+            .with_image(image)
+            .with_metadata(metadata)
+            .with_edges(edges)
+            .build()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    extern crate serde_json;
+
+    use super::testing::*;
+    use super::*;
+
+    type TestResult<T> = Result<T, Box<dyn std::error::Error>>;
 
     #[test]
     fn serialize_graph() {
@@ -886,11 +968,8 @@ mod tests {
         assert_eq!(generate_graph(), graph_native_converted);
     }
 
-    fn get_test_metadata_fn_mut(
-        key_prefix: &str,
-        key_suffix: &str,
-    ) -> HashMap<usize, HashMap<String, String>> {
-        [
+    fn get_test_metadata_fn_mut(key_prefix: &str, key_suffix: &str) -> TestMetadata {
+        vec![
             (
                 0,
                 [(
@@ -931,17 +1010,13 @@ mod tests {
                 .cloned()
                 .collect(),
             ),
-            (4, [].iter().cloned().collect()),
         ]
-        .iter()
-        .cloned()
-        .collect()
     }
 
     #[test]
     fn find_by_fn_mut_ensure_find_all() {
         let metadata = get_test_metadata_fn_mut("prefix", "suffix");
-        let mut graph = generate_custom_graph(0, 4, metadata, Some(vec![]));
+        let mut graph = generate_custom_graph("image", metadata, Some(vec![]));
 
         let expected = vec![(0, "0.0.0"), (1, "1.0.0"), (2, "2.0.0"), (3, "3.0.0")]
             .into_iter()
@@ -960,7 +1035,7 @@ mod tests {
     fn find_by_fn_mut_ensure_mutate_metadata() {
         let (prefix, suffix) = ("prefix", "suffix");
         let metadata = get_test_metadata_fn_mut(&prefix, &suffix);
-        let mut graph = generate_custom_graph(0, 4, metadata, Some(vec![]));
+        let mut graph = generate_custom_graph("image", metadata, Some(vec![]));
 
         let expected = vec![(0, "0.0.0"), (1, "1.0.0"), (2, "2.0.0"), (3, "3.0.0")]
             .into_iter()
@@ -1003,17 +1078,20 @@ mod tests {
         use std::collections::HashSet;
         let n = 6;
         let graph = generate_custom_graph(
-            0,
-            n,
-            Default::default(),
+            "image",
+            (0..n).map(|i| (i, Default::default())).collect(),
             Some(vec![(0, 1), (1, 2), (1, 3), (1, 4), (2, 5), (3, 5), (4, 5)]),
         );
 
-        let expected: HashSet<String> = generate_custom_graph(2, 3, Default::default(), None)
-            .find_by_fn_mut(|_| true)
-            .into_iter()
-            .map(|(_, version)| version)
-            .collect();
+        let expected: HashSet<String> = generate_custom_graph(
+            "image",
+            (2..=4).map(|i| (i, Default::default())).collect(),
+            None,
+        )
+        .find_by_fn_mut(|_| true)
+        .into_iter()
+        .map(|(_, version)| version)
+        .collect();
 
         let anchor_version = "1.0.0";
 
@@ -1038,17 +1116,20 @@ mod tests {
         use std::collections::HashSet;
         let n = 6;
         let graph = generate_custom_graph(
-            0,
-            n,
-            Default::default(),
+            "image",
+            (0..n).map(|i| (i, Default::default())).collect(),
             Some(vec![(0, 1), (1, 4), (2, 4), (3, 4), (4, 5)]),
         );
 
-        let expected: HashSet<String> = generate_custom_graph(1, 3, Default::default(), None)
-            .find_by_fn_mut(|_| true)
-            .into_iter()
-            .map(|(_, version)| version)
-            .collect();
+        let expected: HashSet<String> = generate_custom_graph(
+            "image",
+            (1..=3).map(|i| (i, Default::default())).collect(),
+            None,
+        )
+        .find_by_fn_mut(|_| true)
+        .into_iter()
+        .map(|(_, version)| version)
+        .collect();
 
         let anchor_version = "4.0.0";
 

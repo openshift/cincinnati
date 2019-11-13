@@ -190,25 +190,22 @@ impl InternalPlugin for QuayMetadataFetchPlugin {
 #[cfg(feature = "test-net")]
 mod tests_net {
     use super::*;
+    use crate::testing::{generate_custom_graph, TestMetadata};
     use commons::testing::init_runtime;
     use std::collections::HashMap;
 
-    fn input_metadata_labels_test_annoated(
-        manifestrefs: HashMap<usize, &str>,
-    ) -> HashMap<usize, HashMap<String, String>> {
+    fn input_metadata_labels_test_annoated(manifestrefs: HashMap<usize, &str>) -> TestMetadata {
         metadata_labels_test_annoated(manifestrefs, true)
     }
 
-    fn expected_metadata_labels_test_annoated(
-        manifestrefs: HashMap<usize, &str>,
-    ) -> HashMap<usize, HashMap<String, String>> {
+    fn expected_metadata_labels_test_annoated(manifestrefs: HashMap<usize, &str>) -> TestMetadata {
         metadata_labels_test_annoated(manifestrefs, false)
     }
 
     fn metadata_labels_test_annoated(
         manifestrefs: HashMap<usize, &str>,
         input: bool,
-    ) -> HashMap<usize, HashMap<String, String>> {
+    ) -> TestMetadata {
         [
             (0, HashMap::new()),
             (
@@ -331,15 +328,9 @@ mod tests_net {
 
         let expected_metadata = expected_metadata_labels_test_annoated(manifestrefs);
 
-        let input_graph: crate::Graph =
-            crate::tests::generate_custom_graph(0, input_metadata.len(), input_metadata, None);
+        let input_graph: crate::Graph = generate_custom_graph("image", input_metadata, None);
 
-        let expected_graph: crate::Graph = crate::tests::generate_custom_graph(
-            0,
-            expected_metadata.len(),
-            expected_metadata,
-            None,
-        );
+        let expected_graph: crate::Graph = generate_custom_graph("image", expected_metadata, None);
 
         let future_processed_graph = Box::new(
             QuayMetadataFetchPlugin::try_new(
@@ -394,16 +385,10 @@ mod tests_net {
         .collect();
 
         let input_metadata = input_metadata_labels_test_annoated(manifestrefs.clone());
-        let input_graph: crate::Graph =
-            crate::tests::generate_custom_graph(0, input_metadata.len(), input_metadata, None);
+        let input_graph: crate::Graph = generate_custom_graph("image", input_metadata, None);
 
         let expected_metadata = expected_metadata_labels_test_annoated(manifestrefs);
-        let expected_graph: crate::Graph = crate::tests::generate_custom_graph(
-            0,
-            expected_metadata.len(),
-            expected_metadata,
-            None,
-        );
+        let expected_graph: crate::Graph = generate_custom_graph("image", expected_metadata, None);
 
         let future_processed_graph = Box::new(
             QuayMetadataFetchPlugin::try_new(
