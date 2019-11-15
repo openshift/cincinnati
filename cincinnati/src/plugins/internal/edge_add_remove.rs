@@ -209,6 +209,7 @@ impl EdgeAddRemovePlugin {
 mod tests {
     use super::*;
     use crate as cincinnati;
+    use crate::testing::generate_custom_graph;
     use commons::testing::init_runtime;
     use failure::ResultExt;
     use std::collections::HashMap;
@@ -222,7 +223,7 @@ mod tests {
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.remove".to_string();
 
-        let metadata: HashMap<usize, HashMap<String, String>> = [
+        let metadata: Vec<(usize, HashMap<String, String>)> = [
             (0, [].iter().cloned().collect()),
             (1, [].iter().cloned().collect()),
             (
@@ -240,19 +241,14 @@ mod tests {
         .cloned()
         .collect();
 
-        let input_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
-            0,
-            metadata.len(),
+        let input_graph: cincinnati::Graph = generate_custom_graph(
+            "image",
             metadata.clone(),
             Some(vec![(0, 1), (0, 2), (1, 2)]),
         );
 
-        let expected_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
-            0,
-            metadata.len(),
-            metadata,
-            Some([(0, 1)].to_vec()),
-        );
+        let expected_graph: cincinnati::Graph =
+            generate_custom_graph("image", metadata, Some([(0, 1)].to_vec()));
 
         let future_processed_graph = Box::new(EdgeAddRemovePlugin {
             key_prefix,
@@ -279,7 +275,7 @@ mod tests {
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.remove".to_string();
 
-        let metadata: HashMap<usize, HashMap<String, String>> = [
+        let metadata: Vec<(usize, HashMap<String, String>)> = [
             (0, [].iter().cloned().collect()),
             (1, [].iter().cloned().collect()),
             (
@@ -298,19 +294,14 @@ mod tests {
         .cloned()
         .collect();
 
-        let input_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
-            0,
-            metadata.len(),
+        let input_graph: cincinnati::Graph = generate_custom_graph(
+            "image",
             metadata.clone(),
             Some(vec![(0, 1), (0, 2), (1, 2), (2, 3)]),
         );
 
-        let expected_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
-            0,
-            metadata.len(),
-            metadata,
-            Some([(0, 1), (2, 3)].to_vec()),
-        );
+        let expected_graph: cincinnati::Graph =
+            generate_custom_graph("image", metadata, Some([(0, 1), (2, 3)].to_vec()));
 
         let future_processed_graph = Box::new(EdgeAddRemovePlugin {
             key_prefix,
@@ -338,7 +329,7 @@ mod tests {
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "next.remove".to_string();
 
-        let metadata: HashMap<usize, HashMap<String, String>> = [
+        let metadata: Vec<(usize, HashMap<String, String>)> = [
             (
                 0,
                 [(
@@ -365,15 +356,14 @@ mod tests {
         .cloned()
         .collect();
 
-        let input_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
-            0,
-            metadata.len(),
+        let input_graph: cincinnati::Graph = generate_custom_graph(
+            "image",
             metadata.clone(),
             Some(vec![(0, 1), (0, 2), (1, 2)]),
         );
 
         let expected_graph: cincinnati::Graph =
-            crate::tests::generate_custom_graph(0, metadata.len(), metadata, Some(vec![]));
+            generate_custom_graph("image", metadata, Some(vec![]));
 
         let future_processed_graph = Box::new(EdgeAddRemovePlugin {
             key_prefix,
@@ -401,7 +391,7 @@ mod tests {
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.add".to_string();
 
-        let metadata: HashMap<usize, HashMap<String, String>> = [
+        let metadata: Vec<(usize, HashMap<String, String>)> = [
             (0, [].iter().cloned().collect()),
             (1, [].iter().cloned().collect()),
             (
@@ -419,19 +409,11 @@ mod tests {
         .cloned()
         .collect();
 
-        let input_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
-            0,
-            metadata.len(),
-            metadata.clone(),
-            Some(vec![(0, 1)]),
-        );
+        let input_graph: cincinnati::Graph =
+            generate_custom_graph("image", metadata.clone(), Some(vec![(0, 1)]));
 
-        let expected_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
-            0,
-            metadata.len(),
-            metadata,
-            Some(vec![(0, 1), (0, 2), (1, 2)]),
-        );
+        let expected_graph: cincinnati::Graph =
+            generate_custom_graph("image", metadata, Some(vec![(0, 1), (0, 2), (1, 2)]));
 
         let future_processed_graph = Box::new(EdgeAddRemovePlugin {
             key_prefix,
@@ -459,7 +441,7 @@ mod tests {
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "next.add".to_string();
 
-        let metadata: HashMap<usize, HashMap<String, String>> = [
+        let metadata: Vec<(usize, HashMap<String, String>)> = [
             (
                 0,
                 [(
@@ -478,12 +460,10 @@ mod tests {
         .cloned()
         .collect();
 
-        let input_graph: cincinnati::Graph =
-            crate::tests::generate_custom_graph(0, metadata.len(), metadata.clone(), None);
+        let input_graph: cincinnati::Graph = generate_custom_graph("image", metadata.clone(), None);
 
-        let expected_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
-            0,
-            metadata.len(),
+        let expected_graph: cincinnati::Graph = generate_custom_graph(
+            "image",
             metadata,
             Some(vec![(0, 1), (0, 2), (0, 3), (1, 2), (2, 3)]),
         );
@@ -518,7 +498,7 @@ mod tests {
             fn $name() -> Fallible<()> {
                 let mut runtime = init_runtime()?;
 
-                let input_metadata: HashMap<usize, HashMap<String, String>> = $input_metadata
+                let input_metadata: Vec<(usize, HashMap<String, String>)> = $input_metadata
                     .iter()
                     .map(|(n, metadata)| {
                         (
@@ -531,19 +511,11 @@ mod tests {
                     })
                     .collect();
 
-                let input_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
-                    0,
-                    input_metadata.len(),
-                    input_metadata.clone(),
-                    $input_edges.to_owned(),
-                );
+                let input_graph: cincinnati::Graph =
+                    generate_custom_graph("image", input_metadata.clone(), $input_edges.to_owned());
 
-                let expected_graph: cincinnati::Graph = crate::tests::generate_custom_graph(
-                    0,
-                    input_metadata.len(),
-                    input_metadata,
-                    $expected_edges.to_owned(),
-                );
+                let expected_graph: cincinnati::Graph =
+                    generate_custom_graph("image", input_metadata, $expected_edges.to_owned());
 
                 let future_processed_graph = Box::new(EdgeAddRemovePlugin {
                     key_prefix: KEY_PREFIX.to_string(),

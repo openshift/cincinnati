@@ -343,7 +343,7 @@ where
 mod tests {
     use super::*;
     use crate::plugins::Plugin;
-    use crate::tests::generate_graph;
+    use crate::testing::generate_graph;
     use futures_locks::Mutex as FuturesMutex;
     use std::collections::HashMap;
     use std::sync::atomic::{AtomicUsize, Ordering};

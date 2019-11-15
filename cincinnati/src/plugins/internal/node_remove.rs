@@ -71,12 +71,10 @@ impl InternalPlugin for NodeRemovePlugin {
 mod tests {
     use super::*;
     use crate as cincinnati;
+    use crate::testing::{generate_custom_graph, TestMetadata};
     use commons::testing::init_runtime;
     use failure::ResultExt;
     use maplit::hashmap;
-    use std::collections::HashMap;
-
-    type MetadataMap = HashMap<usize, HashMap<String, String>>;
 
     #[test]
     fn ensure_release_remove() -> Fallible<()> {
@@ -86,20 +84,24 @@ mod tests {
         let key_suffix = "release.remove".to_string();
 
         let input_graph: cincinnati::Graph = {
-            let metadata: MetadataMap = hashmap! {
-                0 => hashmap!{ format!("{}.{}", key_prefix, key_suffix) => String::from("true") },
-                1 => hashmap!{},
-                2 => hashmap!{ format!("{}.{}", key_prefix, key_suffix) => String::from("true") },
-            };
-            crate::tests::generate_custom_graph(0, metadata.len(), metadata, None)
+            let metadata: TestMetadata = vec![
+                (
+                    0,
+                    hashmap! { format!("{}.{}", key_prefix, key_suffix) => String::from("true") },
+                ),
+                (1, hashmap! {}),
+                (
+                    2,
+                    hashmap! { format!("{}.{}", key_prefix, key_suffix) => String::from("true") },
+                ),
+            ];
+            generate_custom_graph("image", metadata, None)
         };
 
         let expected_graph: cincinnati::Graph = {
-            let metadata: MetadataMap = hashmap! {
-                1 => hashmap!{},
-            };
+            let metadata: TestMetadata = vec![(1, hashmap! {})];
 
-            crate::tests::generate_custom_graph(1, metadata.len(), metadata, None)
+            generate_custom_graph("image", metadata, None)
         };
 
         let future_processed_graph =

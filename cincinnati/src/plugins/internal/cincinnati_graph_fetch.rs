@@ -141,7 +141,7 @@ impl InternalPlugin for CincinnatiGraphFetchPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::generate_custom_graph;
+    use crate::testing::generate_custom_graph;
     use actix_web::test::TestRequest;
     use commons::metrics::{self, RegistryWrapper};
     use commons::testing::{self, init_runtime};
@@ -204,15 +204,13 @@ mod tests {
     fetch_upstream_success_test!(
         name: fetch_success_simple_graph_fetch,
         mock_body: &serde_json::to_string(&generate_custom_graph(
-            0,
-            3,
-            Default::default(),
+            "image",
+            (0..3).into_iter().map(|i|(i, Default::default())).collect(),
             Some(vec![(0, 1), (1, 2)]),
         ))?,
         expected_graph: generate_custom_graph(
-            0,
-            3,
-            Default::default(),
+            "image",
+            (0..3).into_iter().map(|i|(i, Default::default())).collect(),
             Some(vec![(0, 1), (1, 2)]),
         ),
     );

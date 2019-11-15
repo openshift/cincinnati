@@ -113,6 +113,7 @@ impl InternalPlugin for ChannelFilterPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::generate_custom_graph;
     use commons::testing::init_runtime;
     use std::collections::HashMap;
 
@@ -173,7 +174,7 @@ mod tests {
         fn generate_test_metadata(
             key_prefix: &str,
             key_suffix: &str,
-        ) -> HashMap<usize, HashMap<String, String>> {
+        ) -> Vec<(usize, HashMap<String, String>)> {
             [
                 (
                     0,
@@ -239,15 +240,10 @@ mod tests {
                     .collect(),
                 input_graph: {
                     let metadata = generate_test_metadata(&key_prefix, &key_suffix);
-                    crate::tests::generate_custom_graph(
-                        0,
-                        metadata.len(),
-                        metadata,
-                        Some(vec![(0, 1), (1, 2), (2, 3)]),
-                    )
+                    generate_custom_graph("image", metadata, Some(vec![(0, 1), (1, 2), (2, 3)]))
                 },
                 expected_graph: {
-                    let metadata: HashMap<usize, HashMap<String, String>> = [
+                    let metadata: Vec<(usize, HashMap<String, String>)> = [
                         (
                             0,
                             [(
@@ -273,7 +269,7 @@ mod tests {
                     .cloned()
                     .collect();
 
-                    crate::tests::generate_custom_graph(0, metadata.len(), metadata, None)
+                    generate_custom_graph("image", metadata, None)
                 },
             },
             Datum {
@@ -285,15 +281,10 @@ mod tests {
                     .collect(),
                 input_graph: {
                     let metadata = generate_test_metadata(&key_prefix, &key_suffix);
-                    crate::tests::generate_custom_graph(
-                        0,
-                        metadata.len(),
-                        metadata,
-                        Some(vec![(0, 1), (1, 2), (2, 3)]),
-                    )
+                    generate_custom_graph("image", metadata, Some(vec![(0, 1), (1, 2), (2, 3)]))
                 },
                 expected_graph: {
-                    let metadata: HashMap<usize, HashMap<String, String>> = [
+                    let metadata: Vec<(usize, HashMap<String, String>)> = [
                         (
                             2,
                             [(
@@ -319,7 +310,7 @@ mod tests {
                     .cloned()
                     .collect();
 
-                    crate::tests::generate_custom_graph(2, metadata.len(), metadata, None)
+                    generate_custom_graph("image", metadata, None)
                 },
             },
             Datum {
@@ -331,15 +322,10 @@ mod tests {
                     .collect(),
                 input_graph: {
                     let metadata = generate_test_metadata(&key_prefix, &key_suffix);
-                    crate::tests::generate_custom_graph(
-                        0,
-                        metadata.len(),
-                        metadata,
-                        Some(vec![(0, 1), (1, 2), (2, 3)]),
-                    )
+                    generate_custom_graph("image", metadata, Some(vec![(0, 1), (1, 2), (2, 3)]))
                 },
                 expected_graph: {
-                    let metadata: HashMap<usize, HashMap<String, String>> = [
+                    let metadata: Vec<(usize, HashMap<String, String>)> = [
                         (
                             0,
                             [(
@@ -385,7 +371,7 @@ mod tests {
                     .cloned()
                     .collect();
 
-                    crate::tests::generate_custom_graph(0, metadata.len(), metadata, None)
+                    generate_custom_graph("image", metadata, None)
                 },
             },
         ];
