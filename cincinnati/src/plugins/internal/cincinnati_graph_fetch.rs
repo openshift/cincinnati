@@ -1,6 +1,6 @@
 //! Plugin which implements fetching a Cincinnati graph via HTTP from a `/v1/graph`-compliant endpoint.
 //!
-//! Instead of processing the input graph, ghis plugin fetches a graph from a
+//! Instead of processing the input graph, this plugin fetches a graph from a
 //! remote endpoint, which makes it effectively discard any given input graph.
 
 use crate::plugins::{
