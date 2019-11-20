@@ -16,8 +16,9 @@ use crate as cincinnati;
 
 use self::cincinnati::MapImpl;
 
+use failure::Fallible;
 use itertools::Itertools;
-use log::trace;
+use log::{trace, warn};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -80,70 +81,89 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, failure
     releases
         .into_iter()
         .inspect(|release| trace!("Adding a release to the graph '{:?}'", release))
-        .try_for_each(|release| {
-            let previous = release
-                .metadata
-                .previous
-                .iter()
-                .cloned()
+        .map(|release| {
+            Ok((
+                release.metadata.next.clone(),
+                release.metadata.previous.clone(),
+                release.metadata.version.build.clone(),
+                graph.add_release(release)?,
+            ))
+        })
+        .collect::<Vec<Fallible<_>>>()
+        .into_iter()
+        .try_for_each(|result| {
+            let (next, previous, current_build, current) = result?;
+
+            previous
+                .into_iter()
                 .map(|mut previous| {
-                    previous.build = release.metadata.version.build.clone();
+                    previous.build = current_build.clone();
                     previous
                 })
-                .collect::<Vec<_>>();
+                .try_for_each(|version| -> Fallible<()> {
+                    let previous = match graph.find_by_version(&version.to_string()) {
+                        Some(id) => id,
+                        None => {
+                            warn!("Adding abstract release for {}", version.to_string());
+                            graph.add_release(cincinnati::Release::Abstract(
+                                cincinnati::AbstractRelease {
+                                    version: version.to_string(),
+                                },
+                            ))?
+                        }
+                    };
+                    graph.add_edge(&previous, &current)?;
 
-            let next = release
-                .metadata
-                .next
-                .iter()
-                .cloned()
+                    Ok(())
+                })?;
+
+            next.into_iter()
                 .map(|mut next| {
-                    next.build = release.metadata.version.build.clone();
+                    next.build = current_build.clone();
                     next
                 })
-                .collect::<Vec<_>>();
-            let current = graph.add_release(release)?;
+                .try_for_each(|version| -> Fallible<()> {
+                    let next = match graph.find_by_version(&version.to_string()) {
+                        Some(id) => id,
+                        None => {
+                            warn!("Adding abstract release for {}", version.to_string());
+                            graph.add_release(cincinnati::Release::Abstract(
+                                cincinnati::AbstractRelease {
+                                    version: version.to_string(),
+                                },
+                            ))?
+                        }
+                    };
+                    graph.add_edge(&current, &next)?;
 
-            previous.iter().try_for_each(|version| {
-                let previous = match graph.find_by_version(&version.to_string()) {
-                    Some(id) => id,
-                    None => graph.add_release(cincinnati::Release::Abstract(
-                        cincinnati::AbstractRelease {
-                            version: version.to_string(),
-                        },
-                    ))?,
-                };
-                graph.add_edge(&previous, &current).and_then(|edge| {
-                    trace!(
-                        "Adding EdgeIndex({}): from {} to {:?}",
-                        edge.index(),
-                        &version.to_string(),
-                        current
-                    );
                     Ok(())
                 })
-            })?;
-
-            next.iter().try_for_each(|version| {
-                let next = match graph.find_by_version(&version.to_string()) {
-                    Some(id) => id,
-                    None => graph.add_release(cincinnati::Release::Abstract(
-                        cincinnati::AbstractRelease {
-                            version: version.to_string(),
-                        },
-                    ))?,
-                };
-                graph.add_edge(&current, &next).and_then(|edge| {
-                    trace!(
-                        "Adding EdgeIndex({}): from {:?} to {}",
-                        edge.index(),
-                        current,
-                        &version.to_string(),
-                    );
-                    Ok(())
-                })
-            })
         })?;
 
     Ok(graph)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_graph_tolerates_nonexistent_edges() -> Fallible<()> {
+        let releases = vec![Release {
+            source: "test-0.0.1".to_string(),
+            metadata: Metadata {
+                kind: MetadataKind::V0,
+                version: semver::Version::from((0, 0, 1)),
+                next: Default::default(),
+                previous: vec![semver::Version::from((0, 0, 0))],
+                metadata: Default::default(),
+            },
+        }];
+
+        let mut graph = create_graph(releases).unwrap();
+
+        assert_eq!(graph.prune_abstract(), 1);
+
+        Ok(())
+    }
 }

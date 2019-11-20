@@ -157,8 +157,7 @@ impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
         self.graph_upstream_raw_releases
             .set(releases.len().try_into()?);
 
-        let graph =
-            cincinnati::plugins::internal::graph_builder::release::create_graph(releases).unwrap();
+        let graph = cincinnati::plugins::internal::graph_builder::release::create_graph(releases)?;
 
         Ok(InternalIO {
             graph,
