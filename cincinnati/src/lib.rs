@@ -429,6 +429,18 @@ impl Graph {
             .filter(|ni| self.dag.remove_node(**ni).is_some())
             .count()
     }
+
+    /// Iterates over all releases mutably
+    ///
+    /// f is able to mutate the release as it receives a mutable borrow.
+    pub fn iter_releases_mut<F>(&mut self, mut f: F) -> Result<(), Error>
+    where
+        F: FnMut(&mut Release) -> Result<(), Error>,
+    {
+        self.dag
+            .node_weights_mut()
+            .try_for_each(|mut nw| f(&mut nw))
+    }
 }
 
 impl<'a> Deserialize<'a> for Graph {

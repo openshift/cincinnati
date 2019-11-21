@@ -37,6 +37,34 @@ macro_rules! get_multiple_values {
 }
 
 #[macro_export]
+macro_rules! try_get_multiple_values {
+    ($map:expr, $key:expr ) => {
+        {
+            let closure = || {
+                (
+                    $map.get($key)
+                )
+            };
+            closure()
+        }
+    };
+    ($map:expr, $( $key:expr ),* ) => {
+        {
+            let closure = || {
+                (
+                    (
+                        $(
+                            $map.get($key),
+                        )*
+                    )
+                )
+            };
+            closure()
+        }
+    }
+}
+
+#[macro_export]
 macro_rules! new_plugin {
     ($x:expr) => {
         Box::new($x)
@@ -99,5 +127,39 @@ mod tests {
 
         let a: &String = get_multiple_values!(params, "a").unwrap();
         assert_eq!(&"a".to_string(), a);
+    }
+
+    #[test]
+    fn ensure_try_get_multiple_values() {
+        let params = [
+            ("a".to_string(), "a".to_string()),
+            ("b".to_string(), "b".to_string()),
+        ]
+        .iter()
+        .cloned()
+        .collect::<HashMap<String, String>>();
+
+        let (a, b, c) = try_get_multiple_values!(params, "a", "b", "c");
+        assert_eq!(
+            (Some(&"a".to_string()), Some(&"b".to_string()), None),
+            (a, b, c)
+        );
+    }
+
+    #[test]
+    fn get_try_multiple_values_single() {
+        let params = [
+            ("a".to_string(), "a".to_string()),
+            ("b".to_string(), "b".to_string()),
+        ]
+        .iter()
+        .cloned()
+        .collect::<HashMap<String, String>>();
+
+        let a = try_get_multiple_values!(params, "a");
+        assert_eq!(Some(&"a".to_string()), a);
+
+        let c = try_get_multiple_values!(params, "c");
+        assert!(c.is_none());
     }
 }

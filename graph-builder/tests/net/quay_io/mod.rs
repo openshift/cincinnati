@@ -6,6 +6,7 @@ extern crate semver;
 extern crate url;
 
 use self::cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY;
+use self::cincinnati::testing::{TestGraphBuilder, TestMetadata};
 use self::cincinnati::Empty;
 use self::cincinnati::WouldCycle;
 use self::graph_builder::graph::create_graph;
@@ -13,7 +14,7 @@ use self::graph_builder::registry::Registry;
 use self::graph_builder::registry::{self, fetch_releases, Release};
 use self::graph_builder::release::{Metadata, MetadataKind::V0};
 use self::semver::Version;
-use failure::Fallible;
+use failure::{Fallible, ResultExt};
 use std::collections::HashMap;
 
 #[cfg(feature = "test-net-private")]
@@ -87,7 +88,15 @@ fn expected_releases(
 
 fn remove_metadata_by_key(releases: &mut Vec<Release>, key: &str) {
     for release in releases.iter_mut() {
-        release.metadata.metadata.remove(key).unwrap();
+        release.metadata.metadata.remove(key);
+    }
+}
+
+fn replace_sha_by_version_in_source(releases: &mut Vec<Release>) {
+    for release in releases.iter_mut() {
+        let version = release.metadata.version.to_string();
+        let source_front = release.source.split("@").nth(0).unwrap();
+        release.source = format!("{}:{}", source_front, version);
     }
 }
 
@@ -121,6 +130,14 @@ fn fetch_release_private_with_credentials_must_succeed() {
     assert_eq!(2, releases.len());
 
     remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
+    remove_metadata_by_key(
+        &mut releases,
+        &format!(
+            "{}.{}",
+            cincinnati::plugins::internal::arch_filter::DEFAULT_KEY_FILTER,
+            cincinnati::plugins::internal::arch_filter::DEFAULT_ARCH_KEY
+        ),
+    );
     assert_eq!(
         expected_releases(
             &registry,
@@ -179,6 +196,14 @@ fn fetch_release_public_with_first_empty_tag_must_succeed() {
         .expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
     remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
+    remove_metadata_by_key(
+        &mut releases,
+        &format!(
+            "{}.{}",
+            cincinnati::plugins::internal::arch_filter::DEFAULT_KEY_FILTER,
+            cincinnati::plugins::internal::arch_filter::DEFAULT_ARCH_KEY
+        ),
+    );
     assert_eq!(
         expected_releases(
             &registry,
@@ -214,6 +239,14 @@ fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
         .expect("fetch_releases failed: ");
         assert_eq!(2, releases.len());
         remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
+        remove_metadata_by_key(
+            &mut releases,
+            &format!(
+                "{}.{}",
+                cincinnati::plugins::internal::arch_filter::DEFAULT_KEY_FILTER,
+                cincinnati::plugins::internal::arch_filter::DEFAULT_ARCH_KEY
+            ),
+        );
         assert_eq!(
             expected_releases(
                 &registry,
@@ -272,4 +305,132 @@ fn fetch_release_with_cyclic_metadata_fails() -> Fallible<()> {
             Ok(())
         }
     }
+}
+
+#[test]
+fn fetch_releases_public_multiarch_manual_succeeds() -> Fallible<()> {
+    init_logger();
+
+    let registry = registry::Registry::try_from_str("https://quay.io")?;
+    let repo = "redhat/openshift-cincinnati-test-public-multiarch-manual";
+    let mut cache = HashMap::new();
+    let (username, password) = (None, None);
+    let releases = fetch_releases(
+        &registry,
+        &repo,
+        username.as_ref().map(String::as_ref),
+        password.as_ref().map(String::as_ref),
+        &mut cache,
+        MANIFESTREF_KEY,
+    )
+    .expect("fetch_releases failed: ");
+
+    assert_eq!(7, releases.len());
+
+    Ok(())
+}
+
+#[test]
+fn create_graph_public_multiarch_manual_succeeds() -> Fallible<()> {
+    init_logger();
+    let registry = registry::Registry::try_from_str("https://quay.io")?;
+    let repo = "redhat/openshift-cincinnati-test-public-multiarch-manual";
+    let mut cache = HashMap::new();
+    let (username, password) = (None, None);
+
+    let releases = {
+        let mut fetched_releases = fetch_releases(
+            &registry,
+            &repo,
+            username.as_ref().map(String::as_ref),
+            password.as_ref().map(String::as_ref),
+            &mut cache,
+            MANIFESTREF_KEY,
+        )
+        .context("fetch_releases failed: ")?;
+
+        replace_sha_by_version_in_source(&mut fetched_releases);
+
+        // remove unwanted metadata
+        [
+            MANIFESTREF_KEY,
+            "io.openshift.upgrades.graph.release.channels",
+            "io.openshift.upgrades.graph.previous.add",
+            "io.openshift.upgrades.graph.previous.remove",
+            "io.openshift.upgrades.graph.release.arch",
+        ]
+        .iter()
+        .for_each(|key| remove_metadata_by_key(&mut fetched_releases, key));
+
+        fetched_releases
+    };
+
+    let graph = create_graph(releases).expect("create_graph failed");
+
+    let expected_graph: cincinnati::Graph = {
+        let input_edges = Some(vec![(0, 1), (1, 2), (2, 3), (3, 4), (5, 6)]);
+        let input_metadata: TestMetadata = vec![
+            (
+                0,
+                [(String::from("version_suffix"), String::from("+amd64"))]
+                    .iter()
+                    .cloned()
+                    .collect(),
+            ),
+            (
+                1,
+                [(String::from("version_suffix"), String::from("+amd64"))]
+                    .iter()
+                    .cloned()
+                    .collect(),
+            ),
+            (
+                2,
+                [(String::from("version_suffix"), String::from("+amd64"))]
+                    .iter()
+                    .cloned()
+                    .collect(),
+            ),
+            (
+                3,
+                [(String::from("version_suffix"), String::from("+amd64"))]
+                    .iter()
+                    .cloned()
+                    .collect(),
+            ),
+            (
+                4,
+                [(String::from("version_suffix"), String::from("+amd64"))]
+                    .iter()
+                    .cloned()
+                    .collect(),
+            ),
+            (
+                2,
+                [(String::from("version_suffix"), String::from("+arm64"))]
+                    .iter()
+                    .cloned()
+                    .collect(),
+            ),
+            (
+                3,
+                [(String::from("version_suffix"), String::from("+arm64"))]
+                    .iter()
+                    .cloned()
+                    .collect(),
+            ),
+        ];
+
+        TestGraphBuilder::new()
+            .with_image(&format!("quay.io/{}", repo))
+            .with_metadata(input_metadata.clone())
+            .with_edges(input_edges.clone())
+            .with_version_template("0.0.{{i}}")
+            .enable_payload_suffix(true)
+            .build()
+    };
+
+    assert_eq!(expected_graph, graph);
+
+    Ok(())
 }

@@ -224,15 +224,49 @@ pub fn fetch_releases<S: ::std::hash::BuildHasher>(
     };
 
     let tags = get_tags(repo.to_owned(), authenticated_client)
-        .and_then(|tag| get_manifest_and_layers(tag, repo.to_owned(), authenticated_client))
+        .and_then(|tag| get_manifest_and_ref(tag, repo.to_owned(), authenticated_client))
         .collect();
-    let tagged_layers = thread_runtime.block_on(tags)?;
+    let manifest_and_ref_by_tag = thread_runtime.block_on(tags)?;
 
-    let mut releases = Vec::with_capacity(tagged_layers.len());
+    let mut releases = Vec::with_capacity(manifest_and_ref_by_tag.len());
 
-    for (tag, manifestref, layer_digests) in tagged_layers {
+    for (tag, manifest, manifestref) in manifest_and_ref_by_tag {
+        // Try to read the architecture from the manifest
+        let arch = match manifest.architectures() {
+            Ok(archs) => {
+                // We don't support ManifestLists now, so we expect only 1
+                // architecture for the given manifest
+                ensure!(
+                    archs.len() == 1,
+                    "[{}] broke assumption of exactly one architecture per tag: {:?}",
+                    tag,
+                    archs
+                );
+                archs.first().map(std::string::ToString::to_string)
+            }
+            Err(e) => {
+                error!(
+                    "could not get architecture from manifest for tag {}: {}",
+                    tag, e
+                );
+                None
+            }
+        };
+
+        let layers_digests = manifest
+            .layers_digests(arch.as_ref().map(String::as_str))
+            .map_err(|e| format_err!("{}", e))
+            .context(format!(
+                "[{}] could not get layers_digests from manifest",
+                tag
+            ))?
+            // Reverse the order to start with the top-most layer
+            .into_iter()
+            .rev()
+            .collect();
+
         let mut release = match cache_release(
-            layer_digests,
+            layers_digests,
             authenticated_client.to_owned(),
             registry.host.to_owned().to_string(),
             repo.to_owned(),
@@ -261,6 +295,19 @@ pub fn fetch_releases<S: ::std::hash::BuildHasher>(
             .metadata
             .metadata
             .insert(manifestref_key.to_owned(), manifestref);
+
+        // Process the manifest architecture if given
+        if let Some(arch) = arch {
+            // Encode the architecture as SemVer information
+            release.metadata.version.build =
+                vec![semver::Identifier::AlphaNumeric(arch.to_string())];
+
+            // Attach the architecture for later processing
+            release.metadata.metadata.insert(
+                "io.openshift.upgrades.graph.release.arch".to_owned(),
+                arch.to_string(),
+            );
+        };
 
         releases.push(release);
     }
@@ -333,25 +380,23 @@ fn get_tags(
         .map_err(|e| format_err!("{}", e))
 }
 
-fn get_manifest_and_layers(
+fn get_manifest_and_ref(
     tag: String,
     repo: String,
     authenticated_client: &dkregistry::v2::Client,
-) -> impl Future<Item = (String, String, Vec<String>), Error = failure::Error> {
+) -> impl Future<Item = (String, dkregistry::v2::manifest::Manifest, String), Error = failure::Error>
+{
     trace!("processing: {}:{}", &repo, &tag);
     authenticated_client
-        .has_manifest(&repo, &tag, None)
-        .join(authenticated_client.get_manifest_and_ref(&repo, &tag))
+        .get_manifest_and_ref(&repo, &tag)
         .map_err(|e| format_err!("{}", e))
-        .and_then(|(manifest_kind, (manifest, manifestref))| {
+        .and_then(|(manifest, manifestref)| {
             let manifestref = {
                 let tag = tag.clone();
                 manifestref
                     .ok_or_else(move || format_err!("no manifestref found for {}:{}", repo, tag))?
             };
-            let layer_digests = get_layer_digests(&manifest_kind, &manifest)?;
-
-            Ok((tag, manifestref, layer_digests))
+            Ok((tag, manifest, manifestref))
         })
 }
 
@@ -411,58 +456,6 @@ fn find_first_release(
                 (tag, Some(releases.remove(0)))
             }
         })
-}
-
-fn get_layer_digests(
-    manifest_kind: &Option<dkregistry::mediatypes::MediaTypes>,
-    manifest: &[u8],
-) -> Result<Vec<String>, failure::Error> {
-    use dkregistry::mediatypes::MediaTypes::{ApplicationJson, ManifestV2S1Signed, ManifestV2S2};
-    use dkregistry::v2::manifest::{ManifestSchema1Signed, ManifestSchema2};
-
-    match manifest_kind {
-        Some(ManifestV2S1Signed) => serde_json::from_slice::<ManifestSchema1Signed>(manifest)
-            .and_then(|m| {
-                let mut l = m.get_layers();
-                l.reverse();
-                Ok(l)
-            }),
-        Some(ManifestV2S2) => serde_json::from_slice::<ManifestSchema2>(manifest).and_then(|m| {
-            let mut l = m.get_layers();
-            l.reverse();
-            Ok(l)
-        }),
-
-        // This case is necessary due to a bug in the Satellite registry:
-        // https://bugzilla.redhat.com/show_bug.cgi?id=1749317
-        // We can still attempt to parse it to both known manifest schemas and bail out if that fails.
-        Some(ApplicationJson) => serde_json::from_slice::<ManifestSchema1Signed>(manifest)
-            .map(|m| m.get_layers())
-            .map_err(|e| {
-                error!(
-                    "Could not parse ApplicationJson manifest as ManifestSchema1Signed: {}",
-                    e
-                );
-                e
-            })
-            .or_else(|_| {
-                serde_json::from_slice::<ManifestSchema2>(manifest)
-                    .map(|m| m.get_layers())
-                    .map_err(|e| {
-                        error!(
-                            "Could not parse ApplicationJson manifest as ManifestSchema2: {}",
-                            e
-                        );
-                        e
-                    })
-            })
-            .and_then(|mut l| {
-                l.reverse();
-                Ok(l)
-            }),
-        _ => bail!("unknown manifest_kind '{:?}'", manifest_kind),
-    }
-    .map_err(Into::into)
 }
 
 #[derive(Debug, Deserialize)]

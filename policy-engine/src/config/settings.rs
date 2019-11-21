@@ -103,6 +103,7 @@ impl AppSettings {
     }
 
     fn default_openshift_policies(&self) -> Fallible<Vec<Box<dyn PluginSettings>>> {
+        use cincinnati::plugins::internal::arch_filter::ArchFilterPlugin;
         use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
         use cincinnati::plugins::internal::cincinnati_graph_fetch::CincinnatiGraphFetchPlugin;
         use std::iter::FromIterator;
@@ -120,6 +121,25 @@ impl AppSettings {
                     cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_LABEL_FILTER
                 ),
                 ("key_suffix", "release.channels")
+            )?,
+            plugin_config!(
+                ("name", ArchFilterPlugin::PLUGIN_NAME),
+                (
+                    "key_prefix",
+                    cincinnati::plugins::internal::arch_filter::DEFAULT_KEY_FILTER
+                ),
+                (
+                    "key_suffix",
+                    cincinnati::plugins::internal::arch_filter::DEFAULT_ARCH_KEY
+                ),
+                (
+                    "default_arch",
+                    cincinnati::plugins::internal::arch_filter::DEFAULT_DEFAULT_ARCH
+                ),
+                (
+                    "default_arch_threshold_version",
+                    cincinnati::plugins::internal::arch_filter::DEFAULT_DEFAULT_ARCH_THRESHOLD_VERSION
+                )
             )?,
         ])
     }

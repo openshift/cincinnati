@@ -83,7 +83,7 @@ impl EdgeAddRemovePlugin {
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).remove=(<Version>,)*<Version>`
     /// If the value equals a single `REMOVE_ALL_EDGES_VALUE` all edges at the given direction are removed.
-    fn remove_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
+    fn remove_edges(&self, mut graph: &mut cincinnati::Graph) -> Fallible<()> {
         macro_rules! handle_remove_edge {
             ($from:ident, $to:ident) => {
                 if let Err(e) = graph.remove_edge(&$from, &$to) {
@@ -112,6 +112,9 @@ impl EdgeAddRemovePlugin {
                     }
 
                     for from_version in from_csv.split(',').map(str::trim) {
+                        let from_version =
+                            try_annotate_semver_build(&mut graph, from_version, &to)?;
+
                         if let Some(from) = graph.find_by_version(&from_version) {
                             info!("[{}]: removing previous {}", from_version, to_version,);
                             handle_remove_edge!(from, to)
@@ -132,6 +135,7 @@ impl EdgeAddRemovePlugin {
             .try_for_each(
                 |(from, from_version, to_csv): (ReleaseId, String, String)| -> Fallible<()> {
                     for to_version in to_csv.split(',').map(str::trim) {
+                        let to_version = try_annotate_semver_build(&mut graph, to_version, &from)?;
                         if let Some(to) = graph.find_by_version(&to_version) {
                             info!("[{}]: removing next {}", from_version, to_version);
                             handle_remove_edge!(from, to)
@@ -152,7 +156,7 @@ impl EdgeAddRemovePlugin {
     /// Add next and previous releases specified by metadata.
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).add=(<Version>,)*<Version>`
-    fn add_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
+    fn add_edges(&self, mut graph: &mut cincinnati::Graph) -> Fallible<()> {
         macro_rules! handle_add_edge {
             ($direction:expr, $from:ident, $to:ident, $from_string:ident, $to_string:ident) => {
                 if let Err(e) = graph.add_edge(&$from, &$to) {
@@ -168,15 +172,21 @@ impl EdgeAddRemovePlugin {
         graph
             .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "previous.add"))
             .into_iter()
-            .try_for_each(|(to, to_string, from_csv)| -> Fallible<()> {
-                for from_string in from_csv.split(',').map(str::trim) {
-                    if let Some(from) = graph.find_by_version(&from_string) {
-                        info!("[{}]: adding {} {}", &to_string, "previous", &from_string);
+            .try_for_each(|(to, to_version, from_csv)| -> Fallible<()> {
+                for from_version in from_csv.split(',').map(str::trim) {
+                    let from_version_annotated =
+                        try_annotate_semver_build(&mut graph, from_version, &to)?;
+
+                    if let Some(from) = graph.find_by_version(&from_version_annotated) {
+                        info!(
+                            "[{}]: adding {} {}",
+                            &to_version, "previous", &from_version_annotated
+                        );
                         handle_add_edge!("previous", from, to, from_string, to_string);
                     } else {
                         warn!(
                             "couldn't find version given by 'previous.add={}' in graph",
-                            from_string
+                            from_version_annotated
                         )
                     }
                 }
@@ -186,15 +196,21 @@ impl EdgeAddRemovePlugin {
         graph
             .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "next.add"))
             .into_iter()
-            .try_for_each(|(from, from_string, to_csv)| -> Fallible<()> {
-                for to_string in to_csv.split(',').map(str::trim) {
-                    if let Some(to) = graph.find_by_version(&to_string) {
-                        info!("[{}]: adding {} {}", &from_string, "next", &to_string);
-                        handle_add_edge!("next", from, to, from_string, to_string);
+            .try_for_each(|(from, from_version, to_csv)| -> Fallible<()> {
+                for to_version in to_csv.split(',').map(str::trim) {
+                    let to_version_annotated =
+                        try_annotate_semver_build(&mut graph, to_version, &from)?;
+
+                    if let Some(to) = graph.find_by_version(&to_version_annotated) {
+                        info!(
+                            "[{}]: adding {} {}",
+                            &from_version, "next", &to_version_annotated
+                        );
+                        handle_add_edge!("next", from, to, from_version, to_version_annotated);
                     } else {
                         warn!(
                             "couldn't find version given by 'next.add={}' in graph",
-                            to_string
+                            to_version_annotated
                         )
                     }
                 }
@@ -203,6 +219,29 @@ impl EdgeAddRemovePlugin {
 
         Ok(())
     }
+}
+
+/// Try to find the architecture metadata and add it to the version String assuming SemVer.
+///
+/// If the referenced ReleaseId doesn't have the arch metadata, the version
+/// string will be passed through unchanged.
+fn try_annotate_semver_build(
+    graph: &mut cincinnati::Graph,
+    version: &str,
+    arch_reference: &ReleaseId,
+) -> Fallible<String> {
+    let version = if let Some(arch) = graph
+        .get_metadata_as_ref_mut(arch_reference)?
+        .get("io.openshift.upgrades.graph.release.arch")
+    {
+        let mut version = semver::Version::parse(version)?;
+        version.build = vec![semver::Identifier::AlphaNumeric(arch.to_string())];
+        version.to_string()
+    } else {
+        version.to_string()
+    };
+
+    Ok(version)
 }
 
 #[cfg(test)]
@@ -665,4 +704,6 @@ mod tests {
         input_edges: Some(vec![]),
         expected_edges: Some(vec![]),
     );
+
+    // TODO(steveeJ): add multiarch tests once design is settled
 }
