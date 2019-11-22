@@ -29,9 +29,6 @@ pub struct ArchFilterPlugin {
 
     #[default(DEFAULT_DEFAULT_ARCH.to_string())]
     pub default_arch: String,
-
-    #[default(DEFAULT_DEFAULT_ARCH_THRESHOLD_VERSION.to_string())]
-    pub default_arch_threshold_version: String,
 }
 
 impl PluginSettings for ArchFilterPlugin {
@@ -54,18 +51,10 @@ impl ArchFilterPlugin {
     }
 }
 
-/// Evaluate an architecture from the combination of "arch" and "version" parameters.
-///
-/// Assuming that version has been sent since the beginning of all versions,
-/// this function fails if `arch.is_none() && version > default_arch_threshold_version`.
-fn infer_version(
-    arch: Option<String>,
-    version: Option<String>,
-    default_arch: String,
-    default_arch_threshold_version: String,
-) -> Result<String, GraphError> {
-    match (arch, version) {
-        (Some(arch), _) => {
+/// Evaluate an architecture from the given "arch" parameters.
+fn infer_arch(arch: Option<String>, default_arch: String) -> Result<String, GraphError> {
+    match arch {
+        Some(arch) => {
             if !ARCH_VALIDATION_REGEX_RE.is_match(&arch) {
                 return Err(GraphError::InvalidParams(format!(
                     "arch '{}' does not match regex '{}'",
@@ -74,36 +63,14 @@ fn infer_version(
             };
             Ok(arch.to_string())
         }
-        (None, Some(version)) => {
-            let (semantic_version, threshold_semantic_version) = {
-                use std::str::FromStr;
-                (
-                    semver::Version::from_str(&version)
-                        .map_err(|e| GraphError::ArchVersionError(e.to_string()))?,
-                    semver::Version::from_str(&default_arch_threshold_version)
-                        .map_err(|e| GraphError::ArchVersionError(e.to_string()))?,
-                )
-            };
-
-            if semantic_version > threshold_semantic_version {
-                return Err(GraphError::MissingParams(
-                    vec!["arch"].into_iter().map(String::from).collect(),
-                ));
-            }
-
+        None => {
             debug!(
-                "no architecture given. inferring {} by version {} <= {}",
-                default_arch, version, default_arch_threshold_version
+                "no architecture given. assuming the default {}",
+                default_arch
             );
 
             Ok(default_arch)
         }
-        (None, None) => Err(GraphError::MissingParams(
-            vec!["arch", "version"]
-                .into_iter()
-                .map(String::from)
-                .collect(),
-        )),
     }
 }
 
@@ -117,17 +84,10 @@ lazy_static! {
 
 impl InternalPlugin for ArchFilterPlugin {
     fn run_internal(self: &Self, internal_io: InternalIO) -> AsyncIO<InternalIO> {
-        let arch = {
-            let interesting_params =
-                try_get_multiple_values!(internal_io.parameters, "arch", "version");
-
-            infer_version(
-                interesting_params.0.map(std::string::ToString::to_string),
-                interesting_params.1.map(std::string::ToString::to_string),
-                self.default_arch.clone(),
-                self.default_arch_threshold_version.clone(),
-            )
-        }
+        let arch = infer_arch(
+            internal_io.parameters.get("arch").map(|s| s.to_string()),
+            self.default_arch.clone(),
+        )
         .map_err(failure::Error::from);
 
         let future_result = futures::future::result(arch)
@@ -276,7 +236,6 @@ mod tests {
             key_prefix: "release".to_string(),
             key_suffix: "arch".to_string(),
             default_arch: "amd64".to_string(),
-            default_arch_threshold_version: "1.0.0".to_string(),
         })
         .run_internal(InternalIO {
             graph: input_graph.clone(),
@@ -294,26 +253,18 @@ mod tests {
     }
 
     #[test]
-    fn ensure_infer_version() -> Fallible<()> {
-        // (arch, version, default_arch, default_arch_threshold), expecteded_arch
+    fn ensure_infer_arch() -> Fallible<()> {
+        // (arch, default_arch), expecteded_arch
         [
-            ((None, Some("1.0.0"), "amd64", "2.0.0"), "amd64"),
-            ((Some("arm64"), Some("1.0.0"), "amd64", "2.0.0"), "arm64"),
-            ((None, Some("2.0.0-rc.0"), "amd64", "2.0.0"), "amd64"),
-            (
-                (Some("arm64"), Some("2.0.0-rc.0"), "amd64", "2.0.0"),
-                "arm64",
-            ),
+            ((None, "amd64"), "amd64"),
+            ((Some("arm64"), "amd64"), "arm64"),
+            ((None, "amd64"), "amd64"),
+            ((Some("arm64"), "amd64"), "arm64"),
         ]
         .iter()
         .try_for_each(|(params, expected_arch)| -> Fallible<()> {
             assert_eq!(
-                infer_version(
-                    params.0.map(str::to_string),
-                    params.1.map(str::to_string),
-                    params.2.to_string(),
-                    params.3.to_string()
-                )?,
+                infer_arch(params.0.map(str::to_string), params.1.to_string(),)?,
                 expected_arch.to_string()
             );
 
