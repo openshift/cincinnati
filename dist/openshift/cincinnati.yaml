@@ -199,6 +199,23 @@ objects:
           targetPort: ${{PE_STATUS_PORT}}
       selector:
         deploymentconfig: cincinnati
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: cincinnati
+    type: Opaque
+    data:
+      gb.address: "0.0.0.0"
+      gb.status.address: "0.0.0.0"
+      gb.registry: "quay.io"
+      gb.repository: "openshift-release-dev/ocp-release"
+      gb.log.verbosity: ${{GB_LOG_VERBOSITY}}
+      pe.address: "0.0.0.0"
+      pe.status.address: "0.0.0.0"
+      pe.upstream: "http://localhost:8080/v1/graph"
+      pe.log.verbosity: ${{PE_LOG_VERBOSITY}}
+      pe.mandatory_client_parameters: "channel"
+
 parameters:
   - name: IMAGE
     value: "quay.io/app-sre/cincinnati"
@@ -255,3 +272,9 @@ parameters:
   - name: PE_PATH_PREFIX
     value: "/api/upgrades_info"
     displayName: Policy engine path prefix
+  - name: GB_LOG_VERBOSITY
+    value: "vvv"
+    displayName: Graph builder log verbosity
+  - name: PE_LOG_VERBOSITY
+    value: "vv"
+    displayName: Policy engine log verbosity
