@@ -95,8 +95,11 @@ pub(crate) fn index(req: HttpRequest) -> Box<dyn Future<Item = HttpResponse, Err
 
             if let Err(e) = &r {
                 error!(
-                    "Error serving request with parameters '{:?}': {}",
-                    req.query_string(),
+                    "Error serving request '{}' from '{}': {:?}",
+                    format!("{:?}", &req).replace("\n", " ").replace("\t", " "),
+                    &req.peer_addr()
+                        .map(|addr| addr.to_string())
+                        .unwrap_or("<not available>".into()),
                     e
                 );
             }
