@@ -80,6 +80,7 @@ fn main() -> Result<(), Error> {
     registry.register(Box::new(BUILD_INFO.clone()))?;
     HttpServer::new(move || {
         App::new()
+            .wrap(actix_web::middleware::Logger::default())
             .register_data(actix_web::web::Data::new(RegistryWrapper(registry)))
             .service(
                 actix_web::web::resource("/metrics")
