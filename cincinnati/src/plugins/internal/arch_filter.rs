@@ -139,9 +139,8 @@ impl InternalPlugin for ArchFilterPlugin {
             .and_then(|(arch, (internal_io, key_prefix, key_suffix))| {
                 let mut graph = internal_io.graph;
 
-                // iterate over all releases which have the arch metadata set and
-                // 1. for every release which matches the given `arch`, rewrite the
-                //    arch metadata to only contain `arch`
+                // iterate over all releases attempt to remove the arch metadata key
+                // 1. if it exists, keep every release which matches the given `arch`
                 // 2. collect all other releases to be removed
                 let to_remove = {
                     graph
@@ -149,14 +148,9 @@ impl InternalPlugin for ArchFilterPlugin {
                             match release {
                                 crate::Release::Concrete(concrete_release) => concrete_release
                                     .metadata
-                                    .get_mut(&format!("{}.{}", key_prefix, key_suffix))
+                                    .remove(&format!("{}.{}", key_prefix, key_suffix))
                                     .map_or(true, |values| {
-                                        if values.split(',').any(|value| value.trim() == arch) {
-                                            *values = arch.clone();
-                                            false
-                                        } else {
-                                            true
-                                        }
+                                        !values.split(',').any(|value| value.trim() == arch)
                                     }),
                                 // remove if it's not a ConcreteRelease
                                 _ => true,
@@ -270,20 +264,8 @@ mod tests {
 
         // filter by arm64
         let expected_metadata: TestMetadata = vec![
-            (
-                2,
-                [(String::from("release.arch"), String::from("arm64"))]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ),
-            (
-                3,
-                [(String::from("release.arch"), String::from("arm64"))]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ),
+            (2, [].iter().cloned().collect()),
+            (3, [].iter().cloned().collect()),
         ];
         let expected_edges = Some(vec![(0, 1)]);
 
