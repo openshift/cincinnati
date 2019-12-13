@@ -216,31 +216,35 @@ Determining valid graph traversals can be tricky to do by hand. The following [`
 
 #### Example ####
 
-The following will fetch the graph from a remote endpoint and determine the set of versions to which "1.0.0" can transition:
+The following will fetch the graph from the remote endpoint and determine the set of versions to which OpenShift version 4.2.13 can transition in the stable-4.2 channel:
 
+```console
+$ curl --silent --header 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?arch=amd64&channel=stable-4.2' | jq '. as $graph | $graph.nodes | map(.version == "4.2.13") | index(true) as $orig | $graph.edges | map(select(.[0] == $orig)[1]) | map($graph.nodes[.])'
 ```
-$ curl --silent --header 'Accept:application/json' https://cincinnati.example.com/graph | jq '. as $graph | $graph.nodes | map(.version == "1.0.0") | index(true) as $orig | $graph.edges | map(select(.[0] == $orig)[1]) | map($graph.nodes[.])'
+
+Sample output:
+
+```json
 [
   {
-    "version": "1.1.0",
+    "version": "4.2.16",
+    "payload": "quay.io/openshift-release-dev/ocp-release@sha256:e5a6e348721c38a78d9299284fbb5c60fb340135a86b674b038500bf190ad514",
     "metadata": {
-      "kind": "security"
-    },
-    "payload": "quay.io/openshift/manifest:v1.1.0"
+      "description": "",
+      "io.openshift.upgrades.graph.release.manifestref": "sha256:e5a6e348721c38a78d9299284fbb5c60fb340135a86b674b038500bf190ad514",
+      "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,fast-4.3",
+      "url": "https://access.redhat.com/errata/RHBA-2020:0107"
+    }
   },
   {
-    "version": "1.1.1",
+    "version": "4.2.14",
+    "payload": "quay.io/openshift-release-dev/ocp-release@sha256:3fabe939da31f9a31f509251b9f73d321e367aba2d09ff392c2f452f6433a95a",
     "metadata": {
-      "kind": "security"
-    },
-    "payload": "quay.io/openshift/manifest:v1.1.1"
-  },
-  {
-    "version": "1.3.0",
-    "metadata": {
-      "kind": "feature"
-    },
-    "payload": "quay.io/openshift/manifest:v1.3.0"
+      "url": "https://access.redhat.com/errata/RHBA-2020:0066",
+      "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
+      "description": "",
+      "io.openshift.upgrades.graph.release.manifestref": "sha256:3fabe939da31f9a31f509251b9f73d321e367aba2d09ff392c2f452f6433a95a"
+    }
   }
 ]
 ```
