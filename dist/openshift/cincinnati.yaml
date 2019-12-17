@@ -203,7 +203,6 @@ objects:
     kind: ConfigMap
     metadata:
       name: cincinnati
-    type: Opaque
     data:
       gb.address: "0.0.0.0"
       gb.status.address: "0.0.0.0"
