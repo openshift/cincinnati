@@ -207,7 +207,7 @@ objects:
       gb.address: "0.0.0.0"
       gb.status.address: "0.0.0.0"
       gb.registry: "quay.io"
-      gb.repository: "openshift-release-dev/ocp-release"
+      gb.repository: ${{GB_CINCINNATI_REPO}}
       gb.log.verbosity: ${{GB_LOG_VERBOSITY}}
       pe.address: "0.0.0.0"
       pe.status.address: "0.0.0.0"
@@ -264,10 +264,10 @@ parameters:
     displayName: Graph builder status port
   - name: PE_PORT
     value: "8081"
-    displayName: Policy enigine port
+    displayName: Policy engine port
   - name: PE_STATUS_PORT
     value: "9081"
-    displayName: Policy enigine status port
+    displayName: Policy engine status port
   - name: PE_PATH_PREFIX
     value: "/api/upgrades_info"
     displayName: Policy engine path prefix
@@ -277,3 +277,6 @@ parameters:
   - name: PE_LOG_VERBOSITY
     value: "vv"
     displayName: Policy engine log verbosity
+  - name: GB_CINCINNATI_REPO
+    value: "openshift-release-dev/ocp-release"
+    displayName: Graph builder quay repo
