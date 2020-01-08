@@ -265,10 +265,10 @@ parameters:
     displayName: Graph builder status port
   - name: PE_PORT
     value: "8081"
-    displayName: Policy enigine port
+    displayName: Policy engine port
   - name: PE_STATUS_PORT
     value: "9081"
-    displayName: Policy enigine status port
+    displayName: Policy engine status port
   - name: PE_PATH_PREFIX
     value: "/api/upgrades_info"
     displayName: Policy engine path prefix
