@@ -208,7 +208,7 @@ objects:
       gb.address: "0.0.0.0"
       gb.status.address: "0.0.0.0"
       gb.registry: "quay.io"
-      gb.repository: "openshift-release-dev/ocp-release"
+      gb.repository: ${{GB_CINCINNATI_REPO}}
       gb.log.verbosity: ${{GB_LOG_VERBOSITY}}
       pe.address: "0.0.0.0"
       pe.status.address: "0.0.0.0"
@@ -278,3 +278,6 @@ parameters:
   - name: PE_LOG_VERBOSITY
     value: "vv"
     displayName: Policy engine log verbosity
+  - name: GB_CINCINNATI_REPO
+    value: "openshift-release-dev/ocp-release"
+    displayName: Graph builder quay repo
