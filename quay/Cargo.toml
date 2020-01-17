@@ -3,6 +3,7 @@ name = "quay"
 version = "0.0.0-dev"
 authors = ["Luca Bruno <luca.bruno@coreos.com>"]
 publish = false
+edition = "2018"
 
 [dependencies]
 failure = "^0.1.5"
