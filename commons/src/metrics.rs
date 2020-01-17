@@ -2,8 +2,6 @@
 
 use actix_web::{HttpRequest, HttpResponse};
 use failure::Fallible;
-use futures::future;
-use futures::prelude::*;
 use prometheus::{self, Registry};
 
 /// For types that store a static Registry reference
@@ -22,7 +20,7 @@ impl HasRegistry for RegistryWrapper {
 }
 
 /// Serve metrics requests (Prometheus textual format).
-pub fn serve<T>(req: HttpRequest) -> Box<dyn Future<Item = HttpResponse, Error = failure::Error>>
+pub async fn serve<T>(req: HttpRequest) -> Fallible<HttpResponse>
 where
     T: 'static + HasRegistry,
 {
@@ -30,22 +28,17 @@ where
 
     let registry: &Registry = match req.app_data::<T>() {
         Some(t) => t.registry(),
-        None => {
-            return Box::new(futures::future::err(failure::err_msg(
-                "could not get registry from app_data",
-            )))
-        }
+        None => bail!("could not get registry from app_data"),
     };
 
-    let resp = future::ok(registry.gather())
-        .and_then(|metrics| {
-            let tenc = prometheus::TextEncoder::new();
-            let mut buf = vec![];
-            tenc.encode(&metrics, &mut buf).and(Ok(buf))
-        })
-        .from_err()
-        .map(|content| HttpResponse::Ok().body(content));
-    Box::new(resp)
+    let metrics = registry.gather();
+    let content = {
+        let tenc = prometheus::TextEncoder::new();
+        let mut buf = vec![];
+        tenc.encode(&metrics, &mut buf).and(Ok(buf))?
+    };
+
+    Ok(HttpResponse::Ok().body(content))
 }
 
 /// Create a custom Prometheus registry.
