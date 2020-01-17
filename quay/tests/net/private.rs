@@ -1,8 +1,5 @@
-extern crate futures;
-extern crate tokio;
-
-use self::futures::prelude::*;
-use self::tokio::runtime::Runtime;
+use futures::StreamExt;
+use tokio::runtime::Runtime;
 
 fn common_init() -> (Runtime, Option<String>) {
     let _ = env_logger::try_init_from_env(env_logger::Env::default());
@@ -21,8 +18,15 @@ fn test_wrong_auth() {
         .access_token(Some("CLEARLY_WRONG".to_string()))
         .build()
         .unwrap();
-    let fetch_tags = client.stream_tags(repo, true).collect();
-    rt.block_on(fetch_tags).unwrap_err();
+    let fetch_tags = async {
+        client
+            .stream_tags(repo, true)
+            .await
+            .map(Result::unwrap_err)
+            .collect::<Vec<failure::Error>>()
+            .await
+    };
+    rt.block_on(fetch_tags);
 }
 
 #[test]
@@ -35,9 +39,15 @@ fn test_stream_active_tags() {
         .access_token(token)
         .build()
         .unwrap();
-    let fetch_tags = client.stream_tags(repo, true).collect();
-    let tags = rt.block_on(fetch_tags).unwrap();
-
+    let fetch_tags = async {
+        client
+            .stream_tags(repo, true)
+            .await
+            .map(Result::unwrap)
+            .collect::<Vec<quay::v1::Tag>>()
+            .await
+    };
+    let tags = rt.block_on(fetch_tags);
     let tag_names: Vec<String> = tags.into_iter().map(|tag| tag.name).collect();
     assert_eq!(tag_names, expected);
 }
@@ -52,9 +62,15 @@ fn test_get_labels() {
         .access_token(token)
         .build()
         .unwrap();
-    let fetch_tags = client.stream_tags(repo, true).collect();
-    let tags = rt.block_on(fetch_tags).unwrap();
-
+    let fetch_tags = async {
+        client
+            .stream_tags(repo, true)
+            .await
+            .map(Result::unwrap)
+            .collect::<Vec<quay::v1::Tag>>()
+            .await
+    };
+    let tags = rt.block_on(fetch_tags);
     let filtered_tags: Vec<quay::v1::Tag> = tags
         .into_iter()
         .filter(|tag| tag.name == tag_name)

@@ -1,9 +1,9 @@
 //! Tag API.
 
 use super::Client;
-use failure::Error;
-use futures::prelude::*;
-use futures::{future, stream};
+use async_stream::stream;
+use failure::Fallible;
+use futures::Stream;
 use reqwest::Method;
 
 /// API result with paginated repository tags.
@@ -30,11 +30,11 @@ pub struct Tag {
 
 impl Client {
     /// Fetch tags in a repository, in a streaming way.
-    pub fn stream_tags<S>(
-        &self,
+    pub async fn stream_tags<'a, 'b: 'a, S>(
+        &'b self,
         repository: S,
         only_active_tags: bool,
-    ) -> impl Stream<Item = Tag, Error = Error>
+    ) -> impl Stream<Item = Fallible<Tag>> + 'a
     where
         S: AsRef<str>,
     {
@@ -42,13 +42,16 @@ impl Client {
         let endpoint = format!("repository/{}/tag", repository.as_ref());
         let actives_only = format!("{}", only_active_tags);
 
-        let req = self.new_request(Method::GET, endpoint);
-        future::result(req)
-            .map(|req| req.query(&[("onlyActiveTags", actives_only)]))
-            .and_then(|req| req.send().from_err())
-            .and_then(|resp| resp.error_for_status().map_err(Error::from))
-            .and_then(|mut resp| resp.json::<PaginatedTags>().from_err())
-            .map(|page| stream::iter_ok(page.tags))
-            .flatten_stream()
+        stream! {
+            let req = self
+                .new_request(Method::GET, endpoint)?
+                .query(&[("onlyActiveTags", actives_only)]);
+
+            let resp = req.send().await?;
+            let paginated_tags = resp.json::<PaginatedTags>().await?.tags;
+            for tag in paginated_tags {
+                yield Ok(tag);
+            }
+        }
     }
 }
