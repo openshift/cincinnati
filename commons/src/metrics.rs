@@ -70,7 +70,7 @@ mod tests {
         testing::dummy_gauge(&registry_wrapped.0, 42.0)?;
 
         let http_req = TestRequest::default()
-            .data(registry_wrapped)
+            .app_data(registry_wrapped)
             .to_http_request();
 
         let metrics_call = serve::<RegistryWrapper>(http_req);

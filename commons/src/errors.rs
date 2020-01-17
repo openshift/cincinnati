@@ -66,7 +66,7 @@ pub enum GraphError {
 }
 
 impl actix_web::error::ResponseError for GraphError {
-    fn render_response(&self) -> HttpResponse {
+    fn error_response(&self) -> HttpResponse {
         let code = self.status_code();
         let kind = self.kind();
         V1_GRAPH_ERRORS
