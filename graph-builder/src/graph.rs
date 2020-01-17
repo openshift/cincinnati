@@ -21,7 +21,7 @@ use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
 use commons::metrics::HasRegistry;
 use commons::GraphError;
 use failure::{Error, Fallible};
-use futures::Future;
+use futures::future::Future;
 use lazy_static;
 pub use parking_lot::RwLock;
 use prometheus::{self, histogram_opts, labels, opts, Counter, Gauge, Histogram, IntGauge};
@@ -169,7 +169,7 @@ impl HasRegistry for State {
 }
 
 #[allow(clippy::useless_let_if_seq)]
-pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
+pub async fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
     // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
     let mut cache = HashMap::new();
 

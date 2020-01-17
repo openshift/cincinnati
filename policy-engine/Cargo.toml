@@ -6,14 +6,14 @@ edition = "2018"
 build = "src/build.rs"
 
 [dependencies]
-actix = "^0.8.3"
-actix-web = "^1.0.2"
+actix = "^0.9"
+actix-web = "^2.0"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
 env_logger = "^0.6.0"
 failure = "^0.1.1"
-futures = "^0.1.23"
-hyper = "^0.12.6"
+futures = "^0.3"
+hyper = "^0.13"
 lazy_static = "^1.2.0"
 log = "^0.4.3"
 openapiv3 = "0.1"
@@ -33,6 +33,6 @@ custom_debug_derive = "^0.1.7"
 built = "^0.3.2"
 
 [dev-dependencies]
-tokio = "^0.1"
+tokio = "^0.2"
 twoway = "^0.2"
 mockito = "^0.20.0"
