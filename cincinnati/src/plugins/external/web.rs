@@ -16,9 +16,9 @@ pub struct _WebPluginClient {
 #[cfg(test)]
 mod tests {
     use crate as cincinnati;
-    use crate::plugins::AsyncIO;
     use crate::plugins::{interface, ExternalIO, ExternalPlugin, InternalIO, PluginResult};
     use crate::testing::generate_graph;
+    use async_trait::async_trait;
     use commons::testing::init_runtime;
     use failure::Fallible;
     use std::convert::TryInto;
@@ -33,18 +33,15 @@ mod tests {
         }
     }
 
+    #[async_trait]
     impl ExternalPlugin for DummyWebClient {
-        fn run_external(self: &Self, io: ExternalIO) -> AsyncIO<ExternalIO> {
-            let closure = || -> Fallible<ExternalIO> {
-                let input: interface::PluginExchange = io.try_into()?;
+        async fn run_external(self: &Self, io: ExternalIO) -> Fallible<ExternalIO> {
+            let input: interface::PluginExchange = io.try_into()?;
 
-                match (self.callback)(input) {
-                    PluginResult::PluginExchange(exchange) => exchange.try_into(),
-                    PluginResult::PluginError(error) => error.into(),
-                }
-            };
-
-            Box::new(futures::future::result(closure()))
+            match (self.callback)(input) {
+                PluginResult::PluginExchange(exchange) => exchange.try_into(),
+                PluginResult::PluginError(error) => error.into(),
+            }
         }
     }
 

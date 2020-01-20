@@ -4,16 +4,12 @@
 //! * a Release doesn't contain the manifestref in its metadata
 //! * the dynamic metadata can't be fetched for a single manifestref
 
-extern crate futures;
-extern crate quay;
-extern crate tokio;
-
 use crate::plugins::{
-    AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
+    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
 use crate::ReleaseId;
-use failure::{Error, Fallible, ResultExt};
-use futures::future::Future;
+use async_trait::async_trait;
+use failure::{Fallible, ResultExt};
 use prometheus::Registry;
 use std::path::PathBuf;
 
@@ -104,8 +100,9 @@ impl QuayMetadataFetchPlugin {
     }
 }
 
+#[async_trait]
 impl InternalPlugin for QuayMetadataFetchPlugin {
-    fn run_internal(self: &Self, io: InternalIO) -> AsyncIO<InternalIO> {
+    async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
         let (mut graph, parameters) = (io.graph, io.parameters);
 
         trace!("fetching metadata from quay labels...");
@@ -120,69 +117,60 @@ impl InternalPlugin for QuayMetadataFetchPlugin {
             );
         }
 
-        let future_all_labels = release_manifestrefs
-            .into_iter()
-            .map(|(release_id, release_version, manifestref)| {
-                let (client, repo, label_filter) = (
-                    self.client.clone(),
-                    self.repo.clone(),
-                    self.label_filter.clone(),
+        let mut labels_with_releaseinfo = Vec::with_capacity(release_manifestrefs.len());
+        for (release_id, release_version, manifestref) in release_manifestrefs {
+            let (client, repo, label_filter) = (
+                self.client.clone(),
+                self.repo.clone(),
+                self.label_filter.clone(),
+            );
+
+            let quay_labels = client
+                .get_labels(
+                    repo.clone(),
+                    manifestref.clone(),
+                    Some(label_filter.clone()),
+                )
+                .await?
+                .into_iter()
+                .map(Into::into)
+                .collect::<Vec<(String, String)>>();
+
+            labels_with_releaseinfo.push((quay_labels, (release_id, release_version)));
+        }
+
+        for (labels, (release_id, release_version)) in labels_with_releaseinfo {
+            let metadata = graph
+                .get_metadata_as_ref_mut(&release_id)
+                .context("trying to find metadata for release")?;
+            for (key, value) in labels {
+                let warn_msg = if metadata.contains_key(&key) {
+                    Some(format!(
+                        "[{}] key '{}' already exists. overwriting with value '{}'. ",
+                        &release_version, &key, &value
+                    ))
+                } else {
+                    None
+                };
+
+                trace!(
+                    "[{}] inserting ('{}', '{}')",
+                    &release_version,
+                    &key,
+                    &value
                 );
 
-                client
-                    .get_labels(
-                        repo.clone(),
-                        manifestref.clone(),
-                        Some(label_filter.clone()),
-                    )
-                    .and_then(|quay_labels| {
-                        let labels = quay_labels
-                            .into_iter()
-                            .map(Into::into)
-                            .collect::<Vec<(String, String)>>();
-                        Ok((labels, (release_id, release_version)))
-                    })
-                    .map_err(Error::from)
-            })
-            .collect::<Vec<_>>();
+                if let Some(previous_value) = metadata.insert(key, value) {
+                    warn!(
+                        "{}previous value: '{}'",
+                        warn_msg.unwrap_or_default(),
+                        previous_value
+                    );
+                };
+            }
+        }
 
-        let future_finalio =
-            futures::future::join_all(future_all_labels).and_then(|labels_with_releaseinfo| {
-                for (labels, (release_id, release_version)) in labels_with_releaseinfo {
-                    let metadata = graph
-                        .get_metadata_as_ref_mut(&release_id)
-                        .context("trying to find metadata for release")?;
-                    for (key, value) in labels {
-                        let warn_msg = if metadata.contains_key(&key) {
-                            Some(format!(
-                                "[{}] key '{}' already exists. overwriting with value '{}'. ",
-                                &release_version, &key, &value
-                            ))
-                        } else {
-                            None
-                        };
-
-                        trace!(
-                            "[{}] inserting ('{}', '{}')",
-                            &release_version,
-                            &key,
-                            &value
-                        );
-
-                        if let Some(previous_value) = metadata.insert(key, value) {
-                            warn!(
-                                "{}previous value: '{}'",
-                                warn_msg.unwrap_or_default(),
-                                previous_value
-                            );
-                        };
-                    }
-                }
-
-                Ok(InternalIO { graph, parameters })
-            });
-
-        Box::new(future_finalio)
+        Ok(InternalIO { graph, parameters })
     }
 }
 
@@ -332,7 +320,7 @@ mod tests_net {
 
         let expected_graph: crate::Graph = generate_custom_graph("image", expected_metadata, None);
 
-        let future_processed_graph = Box::new(
+        let plugin = Box::new(
             QuayMetadataFetchPlugin::try_new(
                 "redhat/openshift-cincinnati-test-labels-public-manual".to_string(),
                 DEFAULT_QUAY_LABEL_FILTER.to_string(),
@@ -341,16 +329,16 @@ mod tests_net {
                 quay::v1::DEFAULT_API_BASE.to_string(),
             )
             .expect("could not initialize the QuayMetadataPlugin"),
-        )
-        .run_internal(InternalIO {
+        );
+        let future_processed_graph = plugin.run_internal(InternalIO {
             graph: input_graph,
             parameters: Default::default(),
-        })
-        .and_then(|internal_io| Ok(internal_io.graph));
+        });
 
         let processed_graph = runtime
             .block_on(future_processed_graph)
-            .expect("plugin run failed");
+            .expect("plugin run failed")
+            .graph;
 
         assert_eq!(expected_graph, processed_graph);
 
@@ -390,7 +378,7 @@ mod tests_net {
         let expected_metadata = expected_metadata_labels_test_annoated(manifestrefs);
         let expected_graph: crate::Graph = generate_custom_graph("image", expected_metadata, None);
 
-        let future_processed_graph = Box::new(
+        let plugin = Box::new(
             QuayMetadataFetchPlugin::try_new(
                 "redhat/openshift-cincinnati-test-labels-private-manual".to_string(),
                 DEFAULT_QUAY_LABEL_FILTER.to_string(),
@@ -399,8 +387,8 @@ mod tests_net {
                 quay::v1::DEFAULT_API_BASE.to_string(),
             )
             .context("could not initialize the QuayMetadataPlugin")?,
-        )
-        .run_internal(InternalIO {
+        );
+        let future_processed_graph = plugin.run_internal(InternalIO {
             graph: input_graph,
             parameters: Default::default(),
         });
