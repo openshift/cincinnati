@@ -142,7 +142,6 @@ impl InternalPlugin for CincinnatiGraphFetchPlugin {
 mod tests {
     use super::*;
     use crate::testing::generate_custom_graph;
-    use actix_web::test::TestRequest;
     use commons::metrics::{self, RegistryWrapper};
     use commons::testing::{self, init_runtime};
     use failure::{bail, Fallible};
@@ -300,10 +299,9 @@ mod tests {
 
         let _ = CincinnatiGraphFetchPlugin::try_new(mockito::server_url(), Some(registry))?;
 
-        let http_req = TestRequest::default()
-            .data(RegistryWrapper(registry))
-            .to_http_request();
-        let metrics_call = metrics::serve::<metrics::RegistryWrapper>(http_req);
+        let metrics_call = metrics::serve::<metrics::RegistryWrapper>(actix_web::web::Data::new(
+            RegistryWrapper(registry),
+        ));
         let resp = rt.block_on(metrics_call)?;
 
         assert_eq!(resp.status(), 200);
