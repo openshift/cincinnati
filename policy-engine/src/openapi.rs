@@ -1,16 +1,13 @@
 use crate::AppState;
-use actix_web::{HttpRequest, HttpResponse};
+use actix_web::HttpResponse;
 use openapiv3::{OpenAPI, ReferenceOr};
 use std::collections::HashSet;
 
 /// Template for policy-engine OpenAPIv3 document.
 const SPEC: &str = include_str!("openapiv3.json");
 
-pub(crate) fn index(req: HttpRequest) -> HttpResponse {
-    let path_prefix = &req
-        .app_data::<AppState>()
-        .expect(commons::MISSING_APPSTATE_PANIC_MSG)
-        .path_prefix;
+pub(crate) fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
+    let path_prefix = &app_data.path_prefix;
 
     let mut spec_object: OpenAPI = match serde_json::from_str(SPEC) {
         Ok(o) => o,
@@ -23,12 +20,7 @@ pub(crate) fn index(req: HttpRequest) -> HttpResponse {
 
     // Add mandatory parameters to the `graph` endpoint.
     if let Some(path) = spec_object.paths.get_mut("/v1/graph") {
-        add_mandatory_params(
-            path,
-            &req.app_data::<AppState>()
-                .expect(commons::MISSING_APPSTATE_PANIC_MSG)
-                .mandatory_params,
-        );
+        add_mandatory_params(path, &app_data.mandatory_params);
     }
 
     // Prefix all paths with `path_prefix`
@@ -98,6 +90,9 @@ fn add_mandatory_params(path: &mut ReferenceOr<openapiv3::PathItem>, reqs: &Hash
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::graph::tests::common_init;
+    use core::future::Future;
+    use std::error::Error;
 
     #[test]
     fn test_rewrite_paths() {
@@ -147,6 +142,8 @@ mod tests {
 
     #[test]
     fn graph_params_integration() -> Result<(), Box<dyn std::error::Error>> {
+        let mut runtime = common_init();
+
         // prepare and run the test-service
         let service_uri = "/openapi";
         let mandatory_params: HashSet<String> = ["MARKER1", "MARKER2"]
@@ -163,35 +160,37 @@ mod tests {
         });
         let resource =
             actix_web::web::resource(service_uri).route(actix_web::web::get().to(super::index));
-        let app = actix_web::App::new().register_data(data).service(resource);
-
-        let mut svc = actix_web::test::init_service(app);
+        let app = actix_web::App::new().service(resource);
 
         // call the service and get the response body
-        let body = {
-            let mut response = actix_web::test::call_service(
-                &mut svc,
-                actix_web::test::TestRequest::with_uri(&service_uri)
-                    .header("Accept", "application/json")
-                    .to_request(),
-            );
+        let body_future: Box<dyn Future<Output = Result<_, Box<dyn Error>>> + Unpin> =
+            Box::new(Box::pin(async {
+                let mut svc = actix_web::test::init_service(app.app_data(data)).await;
+                let mut response = actix_web::test::call_service(
+                    &mut svc,
+                    actix_web::test::TestRequest::with_uri(&service_uri)
+                        .header("Accept", "application/json")
+                        .to_request(),
+                )
+                .await;
 
-            if response.status() != actix_web::http::StatusCode::OK {
-                return Err(format!("unexpected statuscode:{}", response.status()).into());
-            };
+                if response.status() != actix_web::http::StatusCode::OK {
+                    return Err(format!("unexpected statuscode:{}", response.status()).into());
+                };
 
-            let body = match response.take_body() {
-                actix_web::dev::ResponseBody::Body(b) => match b {
-                    actix_web::dev::Body::Bytes(bytes) => bytes,
-                    unknown => {
-                        return Err(format!("expected byte body, got '{:?}'", unknown).into())
-                    }
-                },
-                _ => return Err("expected body response".into()),
-            };
+                let body = match response.take_body() {
+                    actix_web::dev::ResponseBody::Body(b) => match b {
+                        actix_web::dev::Body::Bytes(bytes) => bytes,
+                        unknown => {
+                            return Err(format!("expected byte body, got '{:?}'", unknown).into())
+                        }
+                    },
+                    _ => return Err("expected body response".into()),
+                };
+                Ok(std::str::from_utf8(&body)?.to_owned())
+            }));
 
-            std::str::from_utf8(&body)?.to_owned()
-        };
+        let body = runtime.block_on(body_future)?;
 
         // parse the response and extract the required parameters
         let spec: openapiv3::OpenAPI = serde_json::from_str(&body)?;

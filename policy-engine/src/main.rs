@@ -80,14 +80,14 @@ fn main() -> Result<(), Error> {
     registry.register(Box::new(BUILD_INFO.clone()))?;
     HttpServer::new(move || {
         App::new()
-            .register_data(actix_web::web::Data::new(RegistryWrapper(registry)))
+            .app_data(actix_web::web::Data::new(RegistryWrapper(registry)))
             .service(
                 actix_web::web::resource("/metrics")
                     .route(actix_web::web::get().to(metrics::serve::<RegistryWrapper>)),
             )
     })
     .bind((settings.status_address, settings.status_port))?
-    .start();
+    .run();
 
     // Main service.
     let plugins = settings.policy_plugins(Some(registry))?;
@@ -100,7 +100,7 @@ fn main() -> Result<(), Error> {
     HttpServer::new(move || {
         let app_prefix = state.path_prefix.clone();
         App::new()
-            .register_data(actix_web::web::Data::new(state.clone()))
+            .app_data(actix_web::web::Data::<AppState>::new(state.clone()))
             .service(
                 actix_web::web::resource(&format!("{}/v1/graph", app_prefix))
                     .route(actix_web::web::get().to(graph::index)),
@@ -111,7 +111,8 @@ fn main() -> Result<(), Error> {
             )
     })
     .bind((settings.address, settings.port))?
-    .start();
+    .run();
+
     BUILD_INFO.inc();
 
     let _ = sys.run();
