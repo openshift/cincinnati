@@ -547,6 +547,7 @@ name = "cincinnati"
 version = "0.1.0"
 dependencies = [
  "actix-web 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-trait 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "commons 0.1.0",
  "custom_debug_derive 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "daggy 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
