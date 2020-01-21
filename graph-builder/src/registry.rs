@@ -17,6 +17,7 @@ use cincinnati;
 use failure::{Error, Fallible, ResultExt};
 use flate2::read::GzDecoder;
 use futures::prelude::*;
+use futures::TryStreamExt;
 use serde_json;
 use std::collections::HashMap;
 use std::fs::File;
@@ -170,28 +171,9 @@ pub fn read_credentials(
     })
 }
 
-pub fn authenticate_client(
-    dclient: &mut dkregistry::v2::Client,
-    login_scope: String,
-) -> impl Future<Item = &dkregistry::v2::Client, Error = dkregistry::errors::Error> {
-    dclient.clone().ensure_v2_registry().and_then(move |_| {
-        dclient.login(&[&login_scope]).and_then(move |token| {
-            dclient
-                .is_auth(Some(token.token()))
-                .and_then(move |is_auth| {
-                    if !is_auth {
-                        Err("login failed".into())
-                    } else {
-                        Ok(dclient.set_token(Some(token.token())))
-                    }
-                })
-        })
-    })
-}
-
 /// Fetches a vector of all release metadata from the given repository, hosted on the given
 /// registry.
-pub fn fetch_releases<S: ::std::hash::BuildHasher>(
+pub async fn fetch_releases<S: ::std::hash::BuildHasher>(
     registry: &Registry,
     repo: &str,
     username: Option<&str>,
@@ -199,34 +181,32 @@ pub fn fetch_releases<S: ::std::hash::BuildHasher>(
     cache: &mut HashMap<u64, Option<Release>, S>,
     manifestref_key: &str,
 ) -> Result<Vec<Release>, Error> {
-    let mut thread_runtime = tokio::runtime::current_thread::Runtime::new()?;
-
-    let mut client = dkregistry::v2::Client::configure()
+    let authenticated_client = dkregistry::v2::Client::configure()
         .registry(&registry.host_port_string())
         .insecure_registry(registry.insecure)
         .username(username.map(ToString::to_string))
         .password(password.map(ToString::to_string))
         .build()
+        .map_err(|e| format_err!("{}", e))?
+        .authenticate(format!("repository:{}:pull", &repo))
+        .await
         .map_err(|e| format_err!("{}", e))?;
 
-    let authenticated_client = {
-        let is_auth =
-            thread_runtime.block_on(client.is_auth(None).map_err(|e| format_err!("{}", e)))?;
+    let manifest_and_ref_by_tag = {
+        let tags: Vec<String> = get_tags(repo, &authenticated_client)
+            .await
+            .try_collect()
+            .await?;
 
-        if is_auth {
-            &client
-        } else {
-            thread_runtime.block_on(
-                authenticate_client(&mut client, format!("repository:{}:pull", &repo))
-                    .map_err(|e| format_err!("{}", e)),
-            )?
+        let mut manifest_and_ref_by_tag = Vec::with_capacity(tags.len());
+
+        for tag in tags {
+            manifest_and_ref_by_tag
+                .push(get_manifest_and_ref(tag, repo.to_owned(), &authenticated_client).await?);
         }
-    };
 
-    let tags = get_tags(repo.to_owned(), authenticated_client)
-        .and_then(|tag| get_manifest_and_ref(tag, repo.to_owned(), authenticated_client))
-        .collect();
-    let manifest_and_ref_by_tag = thread_runtime.block_on(tags)?;
+        manifest_and_ref_by_tag
+    };
 
     let mut releases = Vec::with_capacity(manifest_and_ref_by_tag.len());
 
@@ -272,14 +252,15 @@ pub fn fetch_releases<S: ::std::hash::BuildHasher>(
             repo.to_owned(),
             tag.to_owned(),
             cache,
-        ) {
-            Ok(Some(release)) => release,
-            Ok(None) => {
+        )
+        .await?
+        {
+            Some(release) => release,
+            None => {
                 // Reminder: this means the layer_digests point to layers
                 // without any release and we've cached this before
                 continue;
             }
-            Err(e) => bail!(e),
         };
 
         // Replace the tag specifier with the manifestref
@@ -325,7 +306,7 @@ pub fn fetch_releases<S: ::std::hash::BuildHasher>(
 /// Update Images with release metadata should be immutable, but
 /// tags on registry can be mutated at any time. Thus, the cache
 /// is keyed on the hash of tag layers.
-fn cache_release<S: ::std::hash::BuildHasher>(
+async fn cache_release<S: ::std::hash::BuildHasher>(
     layer_digests: Vec<String>,
     authenticated_client: dkregistry::v2::Client,
     registry_host: String,
@@ -335,11 +316,6 @@ fn cache_release<S: ::std::hash::BuildHasher>(
 ) -> Fallible<Option<Release>> {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
-
-    // TODO(lucab): get rid of this synchronous lookup, by
-    // introducing a dedicated actor which owns the cache
-    // and handles queries and insertions.
-    let mut thread_runtime = tokio::runtime::current_thread::Runtime::new()?;
 
     let hashed_tag_layers = {
         let mut hasher = DefaultHasher::new();
@@ -352,16 +328,15 @@ fn cache_release<S: ::std::hash::BuildHasher>(
         return Ok(release.clone());
     }
 
-    let tagged_release = find_first_release(
+    let (tag, release) = find_first_release(
         layer_digests,
         authenticated_client,
         registry_host,
         repo,
         tag,
-    );
-    let (tag, release) = thread_runtime
-        .block_on(tagged_release)
-        .context("failed to find first release")?;
+    )
+    .await
+    .context("failed to find first release")?;
 
     trace!("Caching release metadata for new tag {}", &tag);
     cache.insert(hashed_tag_layers, release.clone());
@@ -369,93 +344,83 @@ fn cache_release<S: ::std::hash::BuildHasher>(
 }
 
 // Get a stream of tags
-fn get_tags(
-    repo: String,
-    authenticated_client: &dkregistry::v2::Client,
-) -> impl Stream<Item = String, Error = Error> {
+async fn get_tags<'a, 'b: 'a>(
+    repo: &'b str,
+    authenticated_client: &'b dkregistry::v2::Client,
+) -> impl Stream<Item = Fallible<String>> + 'a {
     authenticated_client
         // According to https://docs.docker.com/registry/spec/api/#listing-image-tags
         // the tags should be ordered lexically but they aren't
-        .get_tags(&repo, Some(20))
+        .get_tags(repo, Some(20))
         .map_err(|e| format_err!("{}", e))
 }
 
-fn get_manifest_and_ref(
+async fn get_manifest_and_ref(
     tag: String,
     repo: String,
     authenticated_client: &dkregistry::v2::Client,
-) -> impl Future<Item = (String, dkregistry::v2::manifest::Manifest, String), Error = failure::Error>
-{
+) -> Result<(String, dkregistry::v2::manifest::Manifest, String), failure::Error> {
     trace!("processing: {}:{}", &repo, &tag);
-    authenticated_client
+    let (manifest, manifestref) = authenticated_client
         .get_manifest_and_ref(&repo, &tag)
         .map_err(|e| format_err!("{}", e))
-        .and_then(|(manifest, manifestref)| {
-            let manifestref = {
-                let tag = tag.clone();
-                manifestref
-                    .ok_or_else(move || format_err!("no manifestref found for {}:{}", repo, tag))?
-            };
-            Ok((tag, manifest, manifestref))
-        })
+        .await?;
+
+    let manifestref =
+        manifestref.ok_or_else(|| format_err!("no manifestref found for {}:{}", &repo, &tag))?;
+
+    Ok((tag, manifest, manifestref))
 }
 
-fn find_first_release(
+async fn find_first_release(
     layer_digests: Vec<String>,
     authenticated_client: dkregistry::v2::Client,
     registry_host: String,
     repo: String,
     repo_tag: String,
-) -> impl Future<Item = (String, Option<Release>), Error = Error> {
+) -> Fallible<(String, Option<Release>)> {
     let tag = repo_tag.clone();
 
-    let releases = layer_digests.into_iter().map(move |layer_digest| {
+    for layer_digest in layer_digests {
         trace!("Downloading layer {}...", &layer_digest);
         let (registry_host, repo, tag) = (registry_host.clone(), repo.clone(), repo_tag.clone());
 
-        authenticated_client
+        let blob = authenticated_client
             .get_blob(&repo, &layer_digest)
             .map_err(|e| format_err!("{}", e))
-            .into_stream()
-            .filter_map(move |blob| {
-                let metadata_filename = "release-manifests/release-metadata";
+            .await?;
 
-                trace!(
-                    "{}: Looking for {} in archive {} with {} bytes",
-                    &tag,
-                    &metadata_filename,
-                    &layer_digest,
-                    &blob.len(),
-                );
+        let metadata_filename = "release-manifests/release-metadata";
 
-                match assemble_metadata(&blob, metadata_filename) {
-                    Ok(metadata) => Some(Release {
+        trace!(
+            "{}: Looking for {} in archive {} with {} bytes",
+            &tag,
+            &metadata_filename,
+            &layer_digest,
+            &blob.len(),
+        );
+
+        match assemble_metadata(&blob, metadata_filename) {
+            Ok(metadata) => {
+                return Ok((
+                    tag.clone(),
+                    Some(Release {
                         source: format!("{}/{}:{}", registry_host, repo, &tag),
                         metadata,
                     }),
-                    Err(e) => {
-                        debug!(
-                            "could not assemble metadata from layer ({}) of tag '{}': {}",
-                            &layer_digest, &tag, e,
-                        );
-                        None
-                    }
-                }
-            })
-    });
-
-    futures::stream::iter_ok::<_, Error>(releases)
-        .flatten()
-        .take(1)
-        .collect()
-        .map(move |mut releases| {
-            if releases.is_empty() {
-                warn!("could not find any release in tag {}", tag);
-                (tag, None)
-            } else {
-                (tag, Some(releases.remove(0)))
+                ))
             }
-        })
+            Err(e) => {
+                debug!(
+                    "could not assemble metadata from layer ({}) of tag '{}': {}",
+                    &layer_digest, &tag, e,
+                );
+            }
+        }
+    }
+
+    warn!("could not find any release in tag {}", tag);
+    Ok((tag, None))
 }
 
 #[derive(Debug, Deserialize)]

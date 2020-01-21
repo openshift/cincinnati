@@ -24,6 +24,11 @@ fn init_logger() {
     let _ = env_logger::try_init_from_env(env_logger::Env::default());
 }
 
+fn common_init() -> tokio::runtime::Runtime {
+    init_logger();
+    tokio::runtime::Runtime::new().unwrap()
+}
+
 fn expected_releases(
     registry: &Registry,
     repo: &str,
@@ -105,7 +110,7 @@ fn replace_sha_by_version_in_source(releases: &mut Vec<Release>) {
 fn fetch_release_private_with_credentials_must_succeed() {
     use std::path::PathBuf;
 
-    init_logger();
+    let mut runtime = common_init();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
@@ -118,15 +123,16 @@ fn fetch_release_private_with_credentials_must_succeed() {
     };
     let (username, password) =
         read_credentials(credentials_path.as_ref(), &registry.host_port_string()).unwrap();
-    let mut releases = fetch_releases(
-        &registry,
-        &repo,
-        username.as_ref().map(String::as_ref),
-        password.as_ref().map(String::as_ref),
-        &mut cache,
-        MANIFESTREF_KEY,
-    )
-    .expect("fetch_releases failed: ");
+    let mut releases = runtime
+        .block_on(fetch_releases(
+            &registry,
+            &repo,
+            username.as_ref().map(String::as_ref),
+            password.as_ref().map(String::as_ref),
+            &mut cache,
+            MANIFESTREF_KEY,
+        ))
+        .expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
 
     remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
@@ -156,12 +162,19 @@ fn fetch_release_private_with_credentials_must_succeed() {
 
 #[test]
 fn fetch_release_private_without_credentials_must_fail() {
-    init_logger();
+    let mut runtime = common_init();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
     let mut cache = HashMap::new();
-    let releases = fetch_releases(&registry, &repo, None, None, &mut cache, MANIFESTREF_KEY);
+    let releases = runtime.block_on(fetch_releases(
+        &registry,
+        &repo,
+        None,
+        None,
+        &mut cache,
+        MANIFESTREF_KEY,
+    ));
     assert_eq!(true, releases.is_err());
     assert_eq!(
         true,
@@ -175,24 +188,40 @@ fn fetch_release_private_without_credentials_must_fail() {
 
 #[test]
 fn fetch_release_public_with_no_release_metadata_must_not_error() {
-    init_logger();
+    let mut runtime = common_init();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-nojson-public-manual";
     let mut cache = HashMap::new();
-    let releases = fetch_releases(&registry, &repo, None, None, &mut cache, MANIFESTREF_KEY)
+    let releases = runtime
+        .block_on(fetch_releases(
+            &registry,
+            &repo,
+            None,
+            None,
+            &mut cache,
+            MANIFESTREF_KEY,
+        ))
         .expect("should not error on emtpy repo");
     assert!(releases.is_empty())
 }
 
 #[test]
 fn fetch_release_public_with_first_empty_tag_must_succeed() {
-    init_logger();
+    let mut runtime = common_init();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-emptyfirsttag-public-manual";
     let mut cache = HashMap::new();
-    let mut releases = fetch_releases(&registry, &repo, None, None, &mut cache, MANIFESTREF_KEY)
+    let mut releases = runtime
+        .block_on(fetch_releases(
+            &registry,
+            &repo,
+            None,
+            None,
+            &mut cache,
+            MANIFESTREF_KEY,
+        ))
         .expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
     remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
@@ -222,21 +251,22 @@ fn fetch_release_public_with_first_empty_tag_must_succeed() {
 
 #[test]
 fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
-    init_logger();
+    let mut runtime = common_init();
 
     let test = |registry: Registry| {
         let repo = "redhat/openshift-cincinnati-test-public-manual";
         let mut cache = HashMap::new();
         let (username, password) = (None, None);
-        let mut releases = fetch_releases(
-            &registry,
-            &repo,
-            username.as_ref().map(String::as_ref),
-            password.as_ref().map(String::as_ref),
-            &mut cache,
-            MANIFESTREF_KEY,
-        )
-        .expect("fetch_releases failed: ");
+        let mut releases = runtime
+            .block_on(fetch_releases(
+                &registry,
+                &repo,
+                username.as_ref().map(String::as_ref),
+                password.as_ref().map(String::as_ref),
+                &mut cache,
+                MANIFESTREF_KEY,
+            ))
+            .expect("fetch_releases failed: ");
         assert_eq!(2, releases.len());
         remove_metadata_by_key(&mut releases, MANIFESTREF_KEY);
         remove_metadata_by_key(
@@ -276,7 +306,7 @@ fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
 
 #[test]
 fn fetch_release_with_cyclic_metadata_fails() -> Fallible<()> {
-    init_logger();
+    let mut runtime = common_init();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-cyclic-public-manual";
@@ -284,15 +314,16 @@ fn fetch_release_with_cyclic_metadata_fails() -> Fallible<()> {
     let mut cache = HashMap::new();
     let (username, password) = (None, None);
 
-    let releases = fetch_releases(
-        &registry,
-        &repo,
-        username,
-        password,
-        &mut cache,
-        MANIFESTREF_KEY,
-    )
-    .expect("fetch_releases failed: ");
+    let releases = runtime
+        .block_on(fetch_releases(
+            &registry,
+            &repo,
+            username,
+            password,
+            &mut cache,
+            MANIFESTREF_KEY,
+        ))
+        .expect("fetch_releases failed: ");
 
     match create_graph(releases) {
         Ok(_) => bail!("create_graph succeeded despite cyclic metadata"),
@@ -309,21 +340,22 @@ fn fetch_release_with_cyclic_metadata_fails() -> Fallible<()> {
 
 #[test]
 fn fetch_releases_public_multiarch_manual_succeeds() -> Fallible<()> {
-    init_logger();
+    let mut runtime = common_init();
 
     let registry = registry::Registry::try_from_str("https://quay.io")?;
     let repo = "redhat/openshift-cincinnati-test-public-multiarch-manual";
     let mut cache = HashMap::new();
     let (username, password) = (None, None);
-    let releases = fetch_releases(
-        &registry,
-        &repo,
-        username.as_ref().map(String::as_ref),
-        password.as_ref().map(String::as_ref),
-        &mut cache,
-        MANIFESTREF_KEY,
-    )
-    .expect("fetch_releases failed: ");
+    let releases = runtime
+        .block_on(fetch_releases(
+            &registry,
+            &repo,
+            username.as_ref().map(String::as_ref),
+            password.as_ref().map(String::as_ref),
+            &mut cache,
+            MANIFESTREF_KEY,
+        ))
+        .expect("fetch_releases failed: ");
 
     assert_eq!(7, releases.len());
 
@@ -332,22 +364,24 @@ fn fetch_releases_public_multiarch_manual_succeeds() -> Fallible<()> {
 
 #[test]
 fn create_graph_public_multiarch_manual_succeeds() -> Fallible<()> {
-    init_logger();
+    let mut runtime = common_init();
+
     let registry = registry::Registry::try_from_str("https://quay.io")?;
     let repo = "redhat/openshift-cincinnati-test-public-multiarch-manual";
     let mut cache = HashMap::new();
     let (username, password) = (None, None);
 
     let releases = {
-        let mut fetched_releases = fetch_releases(
-            &registry,
-            &repo,
-            username.as_ref().map(String::as_ref),
-            password.as_ref().map(String::as_ref),
-            &mut cache,
-            MANIFESTREF_KEY,
-        )
-        .context("fetch_releases failed: ")?;
+        let mut fetched_releases = runtime
+            .block_on(fetch_releases(
+                &registry,
+                &repo,
+                username.as_ref().map(String::as_ref),
+                password.as_ref().map(String::as_ref),
+                &mut cache,
+                MANIFESTREF_KEY,
+            ))
+            .context("fetch_releases failed: ")?;
 
         replace_sha_by_version_in_source(&mut fetched_releases);
 
