@@ -1,6 +1,6 @@
 //! Metrics service.
 
-use actix_web::{HttpRequest, HttpResponse};
+use actix_web::HttpResponse;
 use failure::Fallible;
 use prometheus::{self, Registry};
 
@@ -20,18 +20,13 @@ impl HasRegistry for RegistryWrapper {
 }
 
 /// Serve metrics requests (Prometheus textual format).
-pub async fn serve<T>(req: HttpRequest) -> Fallible<HttpResponse>
+pub async fn serve<T>(app_data: actix_web::web::Data<T>) -> Fallible<HttpResponse>
 where
     T: 'static + HasRegistry,
 {
     use prometheus::Encoder;
 
-    let registry: &Registry = match req.app_data::<T>() {
-        Some(t) => t.registry(),
-        None => bail!("could not get registry from app_data"),
-    };
-
-    let metrics = registry.gather();
+    let metrics = app_data.registry().gather();
     let content = {
         let tenc = prometheus::TextEncoder::new();
         let mut buf = vec![];
@@ -56,7 +51,6 @@ pub fn new_registry(prefix: Option<String>) -> Fallible<Registry> {
 mod tests {
     use super::*;
     use crate::testing;
-    use actix_web::test::TestRequest;
 
     #[test]
     fn serve_metrics_basic() -> Fallible<()> {
@@ -69,11 +63,7 @@ mod tests {
 
         testing::dummy_gauge(&registry_wrapped.0, 42.0)?;
 
-        let http_req = TestRequest::default()
-            .app_data(registry_wrapped)
-            .to_http_request();
-
-        let metrics_call = serve::<RegistryWrapper>(http_req);
+        let metrics_call = serve::<RegistryWrapper>(actix_web::web::Data::new(registry_wrapped));
         let resp = rt.block_on(metrics_call)?;
 
         assert_eq!(resp.status(), 200);
