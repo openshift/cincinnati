@@ -23,6 +23,7 @@ mod config;
 mod graph;
 mod openapi;
 
+use actix_cors::Cors;
 use actix_service::Service;
 use actix_web::{middleware, App, HttpServer};
 use cincinnati::plugins::BoxedPlugin;
@@ -75,6 +76,11 @@ fn main() -> Result<(), Error> {
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allowed_methods(vec!["HEAD", "GET"]),
+            )
             .app_data(actix_web::web::Data::new(RegistryWrapper(registry)))
             .service(
                 actix_web::web::resource("/metrics")
