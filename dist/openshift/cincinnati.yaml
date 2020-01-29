@@ -60,7 +60,7 @@ objects:
                       key: gb.log.verbosity
                       name: cincinnati
               command:
-                - /go/src/github.com/openshift/cincinnati/target/release/graph-builder
+                - ${GB_BINARY}
               args: [
                 "-$(GB_LOG_VERBOSITY)",
                 "--service.address", "$(ADDRESS)",
@@ -131,7 +131,7 @@ objects:
                       key: pe.mandatory_client_parameters
                       name: cincinnati
               command:
-                - /go/src/github.com/openshift/cincinnati/target/release/policy-engine
+                - ${PE_BINARY}
               args: [
                 "-$(PE_LOG_VERBOSITY)",
                 "--service.address", "$(ADDRESS)",
@@ -163,7 +163,7 @@ objects:
           volumes:
             - name: secrets
               secret:
-                secretName: cincinnati-registry-credetials
+                secretName: cincinnati-registry-credentials
       triggers:
         - type: ConfigChange
   - apiVersion: v1
@@ -283,3 +283,9 @@ parameters:
   - name: GB_CINCINNATI_REPO
     value: "openshift-release-dev/ocp-release"
     displayName: Graph builder quay repo
+  - name: GB_BINARY
+    value: /usr/bin/graph-binary
+    displayName: Path to graph-builder binary
+  - name: PE_BINARY
+    value: /usr/bin/policy-engine
+    displayName: Path to policy-engine binary
