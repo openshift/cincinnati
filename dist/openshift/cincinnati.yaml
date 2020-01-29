@@ -59,6 +59,8 @@ objects:
                     configMapKeyRef:
                       key: gb.log.verbosity
                       name: cincinnati
+              command:
+                - /go/src/github.com/openshift/cincinnati/target/release/graph-builder
               args: [
                 "-$(GB_LOG_VERBOSITY)",
                 "--service.address", "$(ADDRESS)",
@@ -128,7 +130,8 @@ objects:
                     configMapKeyRef:
                       key: pe.mandatory_client_parameters
                       name: cincinnati
-              command: ["/usr/bin/policy-engine"]
+              command:
+                - /go/src/github.com/openshift/cincinnati/target/release/policy-engine
               args: [
                 "-$(PE_LOG_VERBOSITY)",
                 "--service.address", "$(ADDRESS)",
