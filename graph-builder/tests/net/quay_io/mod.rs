@@ -15,6 +15,7 @@ use self::graph_builder::registry::{self, fetch_releases, Release};
 use self::graph_builder::release::{Metadata, MetadataKind::V0};
 use self::semver::Version;
 use failure::{Fallible, ResultExt};
+use itertools::Itertools;
 use std::collections::HashMap;
 
 #[cfg(feature = "test-net-private")]
@@ -24,9 +25,15 @@ fn init_logger() {
     let _ = env_logger::try_init_from_env(env_logger::Env::default());
 }
 
-fn common_init() -> tokio::runtime::Runtime {
+fn common_init() -> (
+    tokio::runtime::Runtime,
+    graph_builder::registry::cache::Cache,
+) {
     init_logger();
-    tokio::runtime::Runtime::new().unwrap()
+    (
+        tokio::runtime::Runtime::new().unwrap(),
+        graph_builder::registry::cache::new(),
+    )
 }
 
 fn expected_releases(
@@ -91,6 +98,21 @@ fn expected_releases(
     releases
 }
 
+macro_rules! assert_permutation_results {
+    ($release_count:expr, $expected_releases:expr, $releases:expr) => {
+        assert!(
+            $expected_releases
+                .clone()
+                .into_iter()
+                .permutations($release_count)
+                .any(|expected_releases| { expected_releases == $releases }),
+            "mismatch: \n{:?} didn't match any iteration of \n{:?}",
+            $releases,
+            $expected_releases,
+        );
+    };
+}
+
 fn remove_metadata_by_key(releases: &mut Vec<Release>, key: &str) {
     for release in releases.iter_mut() {
         release.metadata.metadata.remove(key);
@@ -110,11 +132,10 @@ fn replace_sha_by_version_in_source(releases: &mut Vec<Release>) {
 fn fetch_release_private_with_credentials_must_succeed() {
     use std::path::PathBuf;
 
-    let mut runtime = common_init();
+    let (mut runtime, mut cache) = common_init();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
-    let mut cache = HashMap::new();
     let credentials_path = match std::env::var("CINCINNATI_TEST_CREDENTIALS_PATH") {
         Ok(value) => Some(PathBuf::from(value)),
         _ => {
@@ -144,29 +165,29 @@ fn fetch_release_private_with_credentials_must_succeed() {
             cincinnati::plugins::internal::arch_filter::DEFAULT_ARCH_KEY
         ),
     );
-    assert_eq!(
-        expected_releases(
-            &registry,
-            repo,
-            2,
-            0,
-            None,
-            Some(vec![
-                "sha256:4a17dfe4b891de1edf7604bb51246924cb1caf93a46474603501812074665cd9",
-                "sha256:a01f4b9f291c0a687b9ff4bf904bf5f5ce57d25c2536ec5afc92393481023313",
-            ])
-        ),
-        releases
-    )
+
+    let release_count = 2;
+    let expected_releases = expected_releases(
+        &registry,
+        repo,
+        release_count,
+        0,
+        None,
+        Some(vec![
+            "sha256:4a17dfe4b891de1edf7604bb51246924cb1caf93a46474603501812074665cd9",
+            "sha256:a01f4b9f291c0a687b9ff4bf904bf5f5ce57d25c2536ec5afc92393481023313",
+        ]),
+    );
+
+    assert_permutation_results!(release_count, expected_releases, releases);
 }
 
 #[test]
 fn fetch_release_private_without_credentials_must_fail() {
-    let mut runtime = common_init();
+    let (mut runtime, mut cache) = common_init();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
-    let mut cache = HashMap::new();
     let releases = runtime.block_on(fetch_releases(
         &registry,
         &repo,
@@ -188,11 +209,10 @@ fn fetch_release_private_without_credentials_must_fail() {
 
 #[test]
 fn fetch_release_public_with_no_release_metadata_must_not_error() {
-    let mut runtime = common_init();
+    let (mut runtime, mut cache) = common_init();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-nojson-public-manual";
-    let mut cache = HashMap::new();
     let releases = runtime
         .block_on(fetch_releases(
             &registry,
@@ -208,11 +228,10 @@ fn fetch_release_public_with_no_release_metadata_must_not_error() {
 
 #[test]
 fn fetch_release_public_with_first_empty_tag_must_succeed() {
-    let mut runtime = common_init();
+    let (mut runtime, mut cache) = common_init();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-emptyfirsttag-public-manual";
-    let mut cache = HashMap::new();
     let mut releases = runtime
         .block_on(fetch_releases(
             &registry,
@@ -233,29 +252,28 @@ fn fetch_release_public_with_first_empty_tag_must_succeed() {
             cincinnati::plugins::internal::arch_filter::DEFAULT_ARCH_KEY
         ),
     );
-    assert_eq!(
-        expected_releases(
-            &registry,
-            repo,
-            2,
-            1,
-            None,
-            Some(vec![
-                "sha256:e1f04336e1c78ae92c54a799bf6705bfe1f7edbda2f8f9c206ac1bb8f6019eb8",
-                "sha256:b5e7677333bdbfd69d749cb3a7045dd5f0ef891adb91f1f675c65ef4e8515442"
-            ])
-        ),
-        releases
-    )
+
+    let release_count = 2;
+    let expected_releases = expected_releases(
+        &registry,
+        repo,
+        release_count,
+        1,
+        None,
+        Some(vec![
+            "sha256:e1f04336e1c78ae92c54a799bf6705bfe1f7edbda2f8f9c206ac1bb8f6019eb8",
+            "sha256:b5e7677333bdbfd69d749cb3a7045dd5f0ef891adb91f1f675c65ef4e8515442",
+        ]),
+    );
+    assert_permutation_results!(release_count, expected_releases, releases);
 }
 
 #[test]
 fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
-    let mut runtime = common_init();
+    let (mut runtime, mut cache) = common_init();
 
     let test = |registry: Registry| {
         let repo = "redhat/openshift-cincinnati-test-public-manual";
-        let mut cache = HashMap::new();
         let (username, password) = (None, None);
         let mut releases = runtime
             .block_on(fetch_releases(
@@ -277,20 +295,21 @@ fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
                 cincinnati::plugins::internal::arch_filter::DEFAULT_ARCH_KEY
             ),
         );
-        assert_eq!(
-            expected_releases(
-                &registry,
-                repo,
-                2,
-                0,
-                None,
-                Some(vec![
-                    "sha256:a264db3ac5288c9903dc3db269fca03a0b122fe4af80b57fc5087b329995013d",
-                    "sha256:73df5efa869eaf57d4125f7655e05e1a72b59d05e55fea06d3701ea5b59234ff"
-                ])
-            ),
-            releases
+
+        let release_count = 2;
+        let expected_releases = expected_releases(
+            &registry,
+            repo,
+            release_count,
+            0,
+            None,
+            Some(vec![
+                "sha256:a264db3ac5288c9903dc3db269fca03a0b122fe4af80b57fc5087b329995013d",
+                "sha256:73df5efa869eaf57d4125f7655e05e1a72b59d05e55fea06d3701ea5b59234ff",
+            ]),
         );
+
+        assert_permutation_results!(release_count, expected_releases, releases);
     };
 
     [
@@ -306,12 +325,11 @@ fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
 
 #[test]
 fn fetch_release_with_cyclic_metadata_fails() -> Fallible<()> {
-    let mut runtime = common_init();
+    let (mut runtime, mut cache) = common_init();
 
     let registry = Registry::try_from_str("quay.io").unwrap();
     let repo = "redhat/openshift-cincinnati-test-cyclic-public-manual";
 
-    let mut cache = HashMap::new();
     let (username, password) = (None, None);
 
     let releases = runtime
@@ -340,11 +358,10 @@ fn fetch_release_with_cyclic_metadata_fails() -> Fallible<()> {
 
 #[test]
 fn fetch_releases_public_multiarch_manual_succeeds() -> Fallible<()> {
-    let mut runtime = common_init();
+    let (mut runtime, mut cache) = common_init();
 
     let registry = registry::Registry::try_from_str("https://quay.io")?;
     let repo = "redhat/openshift-cincinnati-test-public-multiarch-manual";
-    let mut cache = HashMap::new();
     let (username, password) = (None, None);
     let releases = runtime
         .block_on(fetch_releases(
@@ -364,11 +381,10 @@ fn fetch_releases_public_multiarch_manual_succeeds() -> Fallible<()> {
 
 #[test]
 fn create_graph_public_multiarch_manual_succeeds() -> Fallible<()> {
-    let mut runtime = common_init();
+    let (mut runtime, mut cache) = common_init();
 
     let registry = registry::Registry::try_from_str("https://quay.io")?;
     let repo = "redhat/openshift-cincinnati-test-public-multiarch-manual";
-    let mut cache = HashMap::new();
     let (username, password) = (None, None);
 
     let releases = {

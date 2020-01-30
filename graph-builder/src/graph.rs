@@ -25,7 +25,7 @@ use lazy_static;
 pub use parking_lot::RwLock;
 use prometheus::{self, histogram_opts, labels, opts, Counter, Gauge, Histogram, IntGauge};
 use serde_json;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::thread;
 
@@ -166,7 +166,7 @@ impl HasRegistry for State {
 #[allow(clippy::useless_let_if_seq)]
 pub async fn run(settings: &config::AppSettings, state: &State) -> ! {
     // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
-    let mut cache = HashMap::new();
+    let mut cache = registry::cache::new();
 
     let registry = Registry::try_from_str(&settings.registry)
         .unwrap_or_else(|_| panic!("failed to parse '{}' as Url", &settings.registry));
