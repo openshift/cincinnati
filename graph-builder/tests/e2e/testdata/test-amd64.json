@@ -1,0 +1,27 @@
+{
+    "nodes": [
+        {
+            "version": "0.0.0",
+            "payload": "quay.io/redhat/openshift-cincinnati-test-public-manual@sha256:a264db3ac5288c9903dc3db269fca03a0b122fe4af80b57fc5087b329995013d",
+            "metadata": {
+                "io.openshift.upgrades.graph.release.channels": "a, test",
+                "io.openshift.upgrades.graph.release.manifestref": "sha256:a264db3ac5288c9903dc3db269fca03a0b122fe4af80b57fc5087b329995013d"
+            }
+        },
+        {
+            "version": "0.0.1",
+            "payload": "quay.io/redhat/openshift-cincinnati-test-public-manual@sha256:73df5efa869eaf57d4125f7655e05e1a72b59d05e55fea06d3701ea5b59234ff",
+            "metadata": {
+                "io.openshift.upgrades.graph.release.channels": "a,b, test",
+                "io.openshift.upgrades.graph.release.manifestref": "sha256:73df5efa869eaf57d4125f7655e05e1a72b59d05e55fea06d3701ea5b59234ff",
+                "kind": "test"
+            }
+        }
+    ],
+    "edges": [
+        [
+            0,
+            1
+        ]
+    ]
+}
