@@ -164,7 +164,7 @@ impl HasRegistry for State {
 }
 
 #[allow(clippy::useless_let_if_seq)]
-pub async fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
+pub async fn run(settings: &config::AppSettings, state: &State) -> ! {
     // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
     let mut cache = HashMap::new();
 
