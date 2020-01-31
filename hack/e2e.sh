@@ -38,14 +38,14 @@ oc wait --for=condition=available --timeout=5m deploymentconfig/cincinnati
 # Expose services
 oc expose service cincinnati-policy-engine --port=policy-engine
 PE_URL=$(oc get route cincinnati-policy-engine -o jsonpath='{.spec.host}')
-GRAPH_URL="http://${PE_URL}/api/upgrades_info/v1/graph?channel=a"
+export GRAPH_URL="http://${PE_URL}/api/upgrades_info/v1/graph"
 
 # Wait for route to become available
 ATTEMPTS=10
 DELAY=10
 
 while [ $ATTEMPTS -ge 0 ]; do
-  CODE=$(curl -s -o /dev/null -w "%{http_code}" --header 'Accept:application/json' "${GRAPH_URL}")
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" --header 'Accept:application/json' "${GRAPH_URL}?channel=a")
   if [ "${CODE}" == "200" ]; then
     break
   else
@@ -54,5 +54,8 @@ while [ $ATTEMPTS -ge 0 ]; do
   fi
 done
 
-# Check that policy engine returns channel data respond
-curl --header 'Accept:application/json' "${GRAPH_URL}"
+# Run e2e tests
+pushd graph-builder
+  curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.40.0 -y
+  cargo test --features test-e2e e2e --no-default-features  -- --nocapture
+popd
