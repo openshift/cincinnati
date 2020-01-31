@@ -41,7 +41,10 @@ built = "^0.3.2"
 
 [dev-dependencies]
 twoway = "^0.2"
+assert-json-diff = "1.0.0"
+test-case = "1.0.0"
 
 [features]
 test-net = []
 test-net-private = []
+test-e2e = []

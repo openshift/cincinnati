@@ -4,3 +4,6 @@ extern crate failure;
 
 #[cfg(feature = "test-net")]
 mod net;
+
+#[cfg(feature = "test-e2e")]
+mod e2e;
