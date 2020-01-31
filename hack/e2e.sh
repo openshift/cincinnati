@@ -28,7 +28,9 @@ oc new-app -f dist/openshift/cincinnati.yaml \
   -p IMAGE_TAG=deploy \
   -p GB_CINCINNATI_REPO="redhat/openshift-cincinnati-test-public-manual" \
   -p GB_BINARY="/go/src/github.com/openshift/cincinnati/target/release/graph-builder" \
-  -p PE_BINARY="/go/src/github.com/openshift/cincinnati/target/release/policy-engine"
+  -p PE_BINARY="/go/src/github.com/openshift/cincinnati/target/release/policy-engine" \
+  -p GB_CPU_REQUEST=50m \
+  -p PE_CPU_REQUEST=50m
 
 # Wait for dc to rollout
 oc wait --for=condition=available --timeout=5m deploymentconfig/cincinnati
