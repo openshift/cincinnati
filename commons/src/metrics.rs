@@ -1,9 +1,7 @@
 //! Metrics service.
 
-use actix_web::{HttpRequest, HttpResponse};
+use actix_web::HttpResponse;
 use failure::Fallible;
-use futures::future;
-use futures::prelude::*;
 use prometheus::{self, Registry};
 
 /// For types that store a static Registry reference
@@ -22,30 +20,20 @@ impl HasRegistry for RegistryWrapper {
 }
 
 /// Serve metrics requests (Prometheus textual format).
-pub fn serve<T>(req: HttpRequest) -> Box<dyn Future<Item = HttpResponse, Error = failure::Error>>
+pub async fn serve<T>(app_data: actix_web::web::Data<T>) -> Fallible<HttpResponse>
 where
     T: 'static + HasRegistry,
 {
     use prometheus::Encoder;
 
-    let registry: &Registry = match req.app_data::<T>() {
-        Some(t) => t.registry(),
-        None => {
-            return Box::new(futures::future::err(failure::err_msg(
-                "could not get registry from app_data",
-            )))
-        }
+    let metrics = app_data.registry().gather();
+    let content = {
+        let tenc = prometheus::TextEncoder::new();
+        let mut buf = vec![];
+        tenc.encode(&metrics, &mut buf).and(Ok(buf))?
     };
 
-    let resp = future::ok(registry.gather())
-        .and_then(|metrics| {
-            let tenc = prometheus::TextEncoder::new();
-            let mut buf = vec![];
-            tenc.encode(&metrics, &mut buf).and(Ok(buf))
-        })
-        .from_err()
-        .map(|content| HttpResponse::Ok().body(content));
-    Box::new(resp)
+    Ok(HttpResponse::Ok().body(content))
 }
 
 /// Create a custom Prometheus registry.
@@ -63,7 +51,6 @@ pub fn new_registry(prefix: Option<String>) -> Fallible<Registry> {
 mod tests {
     use super::*;
     use crate::testing;
-    use actix_web::test::TestRequest;
 
     #[test]
     fn serve_metrics_basic() -> Fallible<()> {
@@ -76,11 +63,7 @@ mod tests {
 
         testing::dummy_gauge(&registry_wrapped.0, 42.0)?;
 
-        let http_req = TestRequest::default()
-            .data(registry_wrapped)
-            .to_http_request();
-
-        let metrics_call = serve::<RegistryWrapper>(http_req);
+        let metrics_call = serve::<RegistryWrapper>(actix_web::web::Data::new(registry_wrapped));
         let resp = rt.block_on(metrics_call)?;
 
         assert_eq!(resp.status(), 200);

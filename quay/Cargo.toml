@@ -3,18 +3,20 @@ name = "quay"
 version = "0.0.0-dev"
 authors = ["Luca Bruno <luca.bruno@coreos.com>"]
 publish = false
+edition = "2018"
 
 [dependencies]
 failure = "^0.1.5"
-futures = "^0.1.25"
-reqwest = "^0.9.8"
+futures = "^0.3"
+reqwest = { version = "^0.10", features = ["json"] }
 serde = "^1.0.84"
 serde_derive = "^1.0.84"
 serde_json = "^1.0.34"
+async-stream = "0.2"
 
 [dev-dependencies]
 env_logger = "^0.6.0"
-tokio = "^0.1.14"
+tokio = "^0.2"
 
 [features]
 test-net = []

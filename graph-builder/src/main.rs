@@ -100,8 +100,12 @@ fn main() -> Result<(), Error> {
     };
 
     // Graph scraper
-    let graph_state = state.clone();
-    thread::spawn(move || graph::run(&settings, &graph_state));
+    {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+
+        let graph_state = state.clone();
+        thread::spawn(move || runtime.block_on(graph::run(&settings, &graph_state)));
+    }
 
     // Status service.
     graph::register_metrics(state.registry())?;
@@ -109,7 +113,7 @@ fn main() -> Result<(), Error> {
     let status_state = state.clone();
     HttpServer::new(move || {
         App::new()
-            .register_data(actix_web::web::Data::new(status_state.clone()))
+            .app_data(actix_web::web::Data::new(status_state.clone()))
             .service(
                 actix_web::web::resource("/liveness")
                     .route(actix_web::web::get().to(status::serve_liveness)),
@@ -124,20 +128,20 @@ fn main() -> Result<(), Error> {
             )
     })
     .bind(status_addr)?
-    .start();
+    .run();
 
     // Main service.
     let main_state = state.clone();
     HttpServer::new(move || {
         App::new()
-            .register_data(actix_web::web::Data::new(main_state.clone()))
+            .app_data(actix_web::web::Data::new(main_state.clone()))
             .service(
                 actix_web::web::resource(&format!("{}/v1/graph", app_prefix.clone()))
                     .route(actix_web::web::get().to(graph::index)),
             )
     })
     .bind(service_addr)?
-    .start();
+    .run();
 
     let _ = sys.run();
 
@@ -148,8 +152,8 @@ fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
     use crate::graph::State;
-    use actix_web::test::TestRequest;
     use commons::metrics::HasRegistry;
+    use commons::metrics::RegistryWrapper;
     use commons::testing;
     use failure::{bail, Fallible};
     use parking_lot::RwLock;
@@ -186,8 +190,8 @@ mod tests {
         graph::register_metrics(registry)?;
         testing::dummy_gauge(registry, 42.0)?;
 
-        let http_req = TestRequest::default().data(state).to_http_request();
-        let metrics_call = metrics::serve::<graph::State>(http_req);
+        let metrics_call =
+            metrics::serve::<RegistryWrapper>(actix_web::web::Data::new(RegistryWrapper(registry)));
         let resp = rt.block_on(metrics_call)?;
 
         assert_eq!(resp.status(), 200);

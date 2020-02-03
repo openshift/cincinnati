@@ -2,8 +2,9 @@
 
 use crate as cincinnati;
 use crate::plugins::BoxedPlugin;
-use crate::plugins::{AsyncIO, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
+use crate::plugins::{InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
 use crate::ReleaseId;
+use async_trait::async_trait;
 use failure::Fallible;
 use prometheus::Registry;
 
@@ -20,20 +21,17 @@ pub struct EdgeAddRemovePlugin {
     pub remove_all_edges_value: String,
 }
 
+#[async_trait]
 impl InternalPlugin for EdgeAddRemovePlugin {
-    fn run_internal(self: &Self, io: InternalIO) -> AsyncIO<InternalIO> {
-        let closure = || -> Fallible<InternalIO> {
-            let mut graph = io.graph;
-            self.add_edges(&mut graph)?;
-            self.remove_edges(&mut graph)?;
+    async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
+        let mut graph = io.graph;
+        self.add_edges(&mut graph)?;
+        self.remove_edges(&mut graph)?;
 
-            Ok(InternalIO {
-                graph,
-                parameters: io.parameters,
-            })
-        };
-
-        Box::new(futures::future::result(closure()))
+        Ok(InternalIO {
+            graph,
+            parameters: io.parameters,
+        })
     }
 }
 
@@ -289,11 +287,11 @@ mod tests {
         let expected_graph: cincinnati::Graph =
             generate_custom_graph("image", metadata, Some([(0, 1)].to_vec()));
 
-        let future_processed_graph = Box::new(EdgeAddRemovePlugin {
+        let plugin = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-        })
-        .run_internal(InternalIO {
+        });
+        let future_processed_graph = plugin.run_internal(InternalIO {
             graph: input_graph.clone(),
             parameters: Default::default(),
         });
@@ -342,12 +340,12 @@ mod tests {
         let expected_graph: cincinnati::Graph =
             generate_custom_graph("image", metadata, Some([(0, 1), (2, 3)].to_vec()));
 
-        let future_processed_graph = Box::new(EdgeAddRemovePlugin {
+        let plugin = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-        })
-        .run_internal(InternalIO {
-            graph: input_graph.clone(),
+        });
+        let future_processed_graph = plugin.run_internal(InternalIO {
+            graph: input_graph,
             parameters: Default::default(),
         });
 
@@ -404,12 +402,12 @@ mod tests {
         let expected_graph: cincinnati::Graph =
             generate_custom_graph("image", metadata, Some(vec![]));
 
-        let future_processed_graph = Box::new(EdgeAddRemovePlugin {
+        let plugin = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-        })
-        .run_internal(InternalIO {
-            graph: input_graph.clone(),
+        });
+        let future_processed_graph = plugin.run_internal(InternalIO {
+            graph: input_graph,
             parameters: Default::default(),
         });
 
@@ -454,12 +452,12 @@ mod tests {
         let expected_graph: cincinnati::Graph =
             generate_custom_graph("image", metadata, Some(vec![(0, 1), (0, 2), (1, 2)]));
 
-        let future_processed_graph = Box::new(EdgeAddRemovePlugin {
+        let plugin = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-        })
-        .run_internal(InternalIO {
-            graph: input_graph.clone(),
+        });
+        let future_processed_graph = plugin.run_internal(InternalIO {
+            graph: input_graph,
             parameters: Default::default(),
         });
 
@@ -507,11 +505,12 @@ mod tests {
             Some(vec![(0, 1), (0, 2), (0, 3), (1, 2), (2, 3)]),
         );
 
-        let future_processed_graph = Box::new(EdgeAddRemovePlugin {
+        let plugin = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-        })
-        .run_internal(InternalIO {
+        });
+
+        let future_processed_graph = plugin.run_internal(InternalIO {
             graph: input_graph,
             parameters: Default::default(),
         });
@@ -556,11 +555,11 @@ mod tests {
                 let expected_graph: cincinnati::Graph =
                     generate_custom_graph("image", input_metadata, $expected_edges.to_owned());
 
-                let future_processed_graph = Box::new(EdgeAddRemovePlugin {
+                let plugin = Box::new(EdgeAddRemovePlugin {
                     key_prefix: KEY_PREFIX.to_string(),
                     remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
-                })
-                .run_internal(InternalIO {
+                });
+                let future_processed_graph = plugin.run_internal(InternalIO {
                     graph: input_graph.clone(),
                     parameters: Default::default(),
                 });

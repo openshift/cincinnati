@@ -2,8 +2,6 @@
 
 use super::Client;
 use failure::Error;
-use futures::future;
-use futures::prelude::*;
 use reqwest::Method;
 
 /// API result with all labels.
@@ -59,29 +57,29 @@ impl Into<(String, String)> for Label {
 
 impl Client {
     /// Fetch manifestref labels
-    pub fn get_labels<S: AsRef<str>>(
+    pub async fn get_labels<S: AsRef<str>>(
         &self,
         repository: S,
         manifest_ref: S,
         filter: Option<S>,
-    ) -> impl Future<Item = Vec<Label>, Error = Error> {
+    ) -> Result<Vec<Label>, Error> {
         let endpoint = format!(
             "repository/{}/manifest/{}/labels",
             repository.as_ref(),
             manifest_ref.as_ref()
         );
-        let req = self.new_request(Method::GET, &endpoint);
-        future::result(req)
-            .map(|req| {
-                if let Some(filter) = filter {
-                    req.query(&[("filter", filter.as_ref())])
-                } else {
-                    req
-                }
-            })
-            .and_then(|req| req.send().from_err())
-            .and_then(|resp| resp.error_for_status().map_err(Error::from))
-            .and_then(|mut resp| resp.json::<Labels>().from_err())
-            .map(|json| json.labels)
+
+        let req = self.new_request(Method::GET, &endpoint).map(|req| {
+            if let Some(filter) = filter {
+                req.query(&[("filter", filter.as_ref())])
+            } else {
+                req
+            }
+        })?;
+
+        let resp = req.send().await?;
+        let json = resp.json::<Labels>().await?;
+
+        Ok(json.labels)
     }
 }

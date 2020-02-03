@@ -21,7 +21,6 @@ use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
 use commons::metrics::HasRegistry;
 use commons::GraphError;
 use failure::{Error, Fallible};
-use futures::Future;
 use lazy_static;
 pub use parking_lot::RwLock;
 use prometheus::{self, histogram_opts, labels, opts, Counter, Gauge, Histogram, IntGauge};
@@ -97,26 +96,22 @@ pub fn register_metrics(registry: &prometheus::Registry) -> Fallible<()> {
 }
 
 /// Serve Cincinnati graph requests.
-pub fn index(req: HttpRequest) -> Result<HttpResponse, GraphError> {
+pub async fn index(
+    req: HttpRequest,
+    app_data: actix_web::web::Data<State>,
+) -> Result<HttpResponse, GraphError> {
     V1_GRAPH_INCOMING_REQS.inc();
 
     // Check that the client can accept JSON media type.
     commons::ensure_content_type(req.headers(), CONTENT_TYPE)?;
 
     // Check for required client parameters.
-    let mandatory_params = &req
-        .app_data::<State>()
-        .expect(commons::MISSING_APPSTATE_PANIC_MSG)
-        .mandatory_params;
+    let mandatory_params = &app_data.mandatory_params;
     commons::ensure_query_params(mandatory_params, req.query_string())?;
 
-    let resp = HttpResponse::Ok().content_type(CONTENT_TYPE).body(
-        req.app_data::<State>()
-            .expect(commons::MISSING_APPSTATE_PANIC_MSG)
-            .json
-            .read()
-            .clone(),
-    );
+    let resp = HttpResponse::Ok()
+        .content_type(CONTENT_TYPE)
+        .body(app_data.json.read().clone());
     Ok(resp)
 }
 
@@ -169,7 +164,7 @@ impl HasRegistry for State {
 }
 
 #[allow(clippy::useless_let_if_seq)]
-pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
+pub async fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
     // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
     let mut cache = HashMap::new();
 
@@ -215,7 +210,8 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
             password.as_ref().map(String::as_ref),
             &mut cache,
             &settings.manifestref_key,
-        );
+        )
+        .await;
         UPSTREAM_SCRAPES.inc();
 
         let releases = match scrape {
@@ -249,7 +245,7 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
             }
         };
 
-        let future_graph = cincinnati::plugins::process(
+        let graph = match cincinnati::plugins::process(
             state.plugins.iter(),
             cincinnati::plugins::PluginIO::InternalIO(cincinnati::plugins::InternalIO {
                 graph,
@@ -257,13 +253,9 @@ pub fn run<'a>(settings: &'a config::AppSettings, state: &State) -> ! {
                 parameters: Default::default(),
             }),
         )
-        .map(|internal_io| internal_io.graph);
-
-        let graph = match tokio::runtime::current_thread::Runtime::new()
-            .unwrap()
-            .block_on(future_graph)
+        .await
         {
-            Ok(graph) => graph,
+            Ok(internal_io) => internal_io.graph,
             Err(err) => {
                 err.iter_chain().for_each(|cause| error!("{}", cause));
                 continue;

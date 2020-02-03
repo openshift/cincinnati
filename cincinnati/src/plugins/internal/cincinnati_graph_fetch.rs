@@ -4,12 +4,13 @@
 //! remote endpoint, which makes it effectively discard any given input graph.
 
 use crate::plugins::{
-    AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
+    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
 use crate::CONTENT_TYPE;
+use async_trait::async_trait;
 use commons::GraphError;
 use failure::Fallible;
-use futures::{future, Future, Stream};
+use futures::TryFutureExt;
 use prometheus::{Counter, Registry};
 use reqwest;
 use reqwest::header::{HeaderValue, ACCEPT};
@@ -88,53 +89,52 @@ impl CincinnatiGraphFetchPlugin {
     }
 }
 
-impl InternalPlugin for CincinnatiGraphFetchPlugin {
-    fn run_internal(self: &Self, io: InternalIO) -> AsyncIO<InternalIO> {
-        let upstream = self.upstream.to_owned();
-        let http_upstream_errors_total = self.http_upstream_errors_total.clone();
-
-        trace!("getting graph from upstream at {}", upstream);
+impl CincinnatiGraphFetchPlugin {
+    async fn do_run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
+        trace!("getting graph from upstream at {}", self.upstream);
         self.http_upstream_reqs.inc();
 
-        let future_graph = futures::future::result(
-            reqwest::r#async::ClientBuilder::new()
-                .build()
-                .map_err(|e| GraphError::FailedUpstreamRequest(e.to_string())),
-        )
-        .and_then(move |client| {
-            client
-                .get(&upstream)
-                .header(ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
-                .send()
-                .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
-        })
-        .and_then(move |res| {
-            if res.status().is_success() {
-                future::ok(res)
-            } else {
-                future::err(GraphError::FailedUpstreamFetch(res.status().to_string()))
-            }
-        })
-        .and_then(move |res| {
-            res.into_body()
-                // TODO(steveeJ): find a way to make this fail in a test
-                .concat2()
-                .map_err(move |e| GraphError::FailedUpstreamFetch(e.to_string()))
-        })
-        .and_then(move |body| {
-            serde_json::from_slice(&body).map_err(|e| GraphError::FailedJsonIn(e.to_string()))
-        })
-        .map(|graph| InternalIO {
+        let client = reqwest::ClientBuilder::new()
+            .build()
+            .map_err(|e| GraphError::FailedUpstreamRequest(e.to_string()))?;
+
+        let res = client
+            .get(&self.upstream)
+            .header(ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
+            .send()
+            .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
+            .await?;
+
+        if !res.status().is_success() {
+            return Err(GraphError::FailedUpstreamFetch(res.status().to_string()).into());
+        }
+
+        let body = res
+            // TODO(steveeJ): find a way to make this fail in a test
+            .bytes()
+            .map_err(move |e| GraphError::FailedUpstreamFetch(e.to_string()))
+            .await?;
+
+        let graph =
+            serde_json::from_slice(&body).map_err(|e| GraphError::FailedJsonIn(e.to_string()))?;
+
+        Ok(InternalIO {
             graph,
             parameters: io.parameters,
         })
-        .map_err(move |e| {
-            error!("error fetching graph: {}", e);
-            http_upstream_errors_total.inc();
-            failure::Error::from(e)
-        });
+    }
+}
 
-        Box::new(future_graph)
+#[async_trait]
+impl InternalPlugin for CincinnatiGraphFetchPlugin {
+    async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
+        self.do_run_internal(io)
+            .map_err(move |e| {
+                error!("error fetching graph: {}", e);
+                self.http_upstream_errors_total.inc();
+                e
+            })
+            .await
     }
 }
 
@@ -142,11 +142,9 @@ impl InternalPlugin for CincinnatiGraphFetchPlugin {
 mod tests {
     use super::*;
     use crate::testing::generate_custom_graph;
-    use actix_web::test::TestRequest;
     use commons::metrics::{self, RegistryWrapper};
     use commons::testing::{self, init_runtime};
     use failure::{bail, Fallible};
-    use futures::Future;
     use prometheus::Registry;
 
     macro_rules! fetch_upstream_success_test {
@@ -174,16 +172,15 @@ mod tests {
                 assert_eq!(0, http_upstream_reqs.clone().get() as u64);
                 assert_eq!(0, http_upstream_errors_total.clone().get() as u64);
 
-                let future_processed_graph = plugin
-                    .run_internal(InternalIO {
-                        graph: Default::default(),
-                        parameters: Default::default(),
-                    })
-                    .and_then(|final_io| Ok(final_io.graph));
+                let future_processed_graph = plugin.run_internal(InternalIO {
+                    graph: Default::default(),
+                    parameters: Default::default(),
+                });
 
                 let processed_graph = runtime
                     .block_on(future_processed_graph)
-                    .expect("plugin run failed");
+                    .expect("plugin run failed")
+                    .graph;
 
                 assert_eq!($expected_graph, processed_graph);
 
@@ -240,12 +237,10 @@ mod tests {
                 assert_eq!(0, http_upstream_reqs.clone().get() as u64);
                 assert_eq!(0, http_upstream_errors_total.clone().get() as u64);
 
-                let future_result = plugin
-                    .run_internal(InternalIO {
-                        graph: Default::default(),
-                        parameters: Default::default(),
-                    })
-                    .and_then(|final_io| Ok(final_io.graph));
+                let future_result = plugin.run_internal(InternalIO {
+                    graph: Default::default(),
+                    parameters: Default::default(),
+                });
 
                 assert!(runtime.block_on(future_result).is_err());
 
@@ -300,10 +295,9 @@ mod tests {
 
         let _ = CincinnatiGraphFetchPlugin::try_new(mockito::server_url(), Some(registry))?;
 
-        let http_req = TestRequest::default()
-            .data(RegistryWrapper(registry))
-            .to_http_request();
-        let metrics_call = metrics::serve::<metrics::RegistryWrapper>(http_req);
+        let metrics_call = metrics::serve::<metrics::RegistryWrapper>(actix_web::web::Data::new(
+            RegistryWrapper(registry),
+        ));
         let resp = rt.block_on(metrics_call)?;
 
         assert_eq!(resp.status(), 200);

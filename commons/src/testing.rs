@@ -1,7 +1,7 @@
 //! Test helpers.
 
 use failure::Fallible;
-use tokio::runtime::current_thread::Runtime;
+use tokio::runtime::Runtime;
 
 /// Initialize logging.
 pub fn init_logger() -> Fallible<()> {

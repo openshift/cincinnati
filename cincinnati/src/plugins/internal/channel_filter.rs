@@ -3,11 +3,11 @@
 //! and the value must match the regex specified at CHANNEL_VALIDATION_REGEX_STR
 
 use crate::plugins::{
-    AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
+    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
+use async_trait::async_trait;
 use commons::GraphError;
 use failure::Fallible;
-use futures::Future;
 use prometheus::Registry;
 
 static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
@@ -51,62 +51,53 @@ lazy_static! {
         regex::Regex::new(&CHANNEL_VALIDATION_REGEX_STR).expect("could not create regex");
 }
 
+#[async_trait]
 impl InternalPlugin for ChannelFilterPlugin {
-    fn run_internal(self: &Self, internal_io: InternalIO) -> AsyncIO<InternalIO> {
-        let future_result = futures::future::ok((
-            internal_io,
-            self.key_prefix.to_owned(),
-            self.key_suffix.to_owned(),
-        ))
-        .and_then(|(internal_io, key_prefix, key_suffix)| {
-            let channel = get_multiple_values!(internal_io.parameters, "channel")
-                .map_err(|e| GraphError::MissingParams(vec![e.to_string()]))?
-                .clone();
+    async fn run_internal(self: &Self, internal_io: InternalIO) -> Fallible<InternalIO> {
+        let channel = get_multiple_values!(internal_io.parameters, "channel")
+            .map_err(|e| GraphError::MissingParams(vec![e.to_string()]))?
+            .clone();
 
-            if !CHANNEL_VALIDATION_REGEX_RE.is_match(&channel) {
-                return Err(GraphError::InvalidParams(format!(
-                    "channel '{}' does not match regex '{}'",
-                    channel, CHANNEL_VALIDATION_REGEX_STR
-                )));
-            };
+        if !CHANNEL_VALIDATION_REGEX_RE.is_match(&channel) {
+            Err(GraphError::InvalidParams(format!(
+                "channel '{}' does not match regex '{}'",
+                channel, CHANNEL_VALIDATION_REGEX_STR
+            )))?;
+        };
 
-            let mut graph = internal_io.graph;
+        let mut graph = internal_io.graph;
 
-            let to_remove = {
-                graph
-                    .find_by_fn_mut(|release| {
-                        match release {
-                            crate::Release::Concrete(concrete_release) => concrete_release
-                                .metadata
-                                .get_mut(&format!("{}.{}", key_prefix, key_suffix))
-                                .map_or(true, |values| {
-                                    !values.split(',').any(|value| value.trim() == channel)
-                                }),
-                            // remove if it's not a ConcreteRelease
-                            _ => true,
-                        }
-                    })
-                    .into_iter()
-                    .map(|(release_id, version)| {
-                        trace!("queuing '{}' for removal", version);
-                        release_id
-                    })
-                    .collect()
-            };
+        let to_remove = {
+            graph
+                .find_by_fn_mut(|release| {
+                    match release {
+                        crate::Release::Concrete(concrete_release) => concrete_release
+                            .metadata
+                            .get_mut(&format!("{}.{}", self.key_prefix, self.key_suffix))
+                            .map_or(true, |values| {
+                                !values.split(',').any(|value| value.trim() == channel)
+                            }),
+                        // remove if it's not a ConcreteRelease
+                        _ => true,
+                    }
+                })
+                .into_iter()
+                .map(|(release_id, version)| {
+                    trace!("queuing '{}' for removal", version);
+                    release_id
+                })
+                .collect()
+        };
 
-            // remove all matches from the Graph
-            let removed = graph.remove_releases(to_remove);
+        // remove all matches from the Graph
+        let removed = graph.remove_releases(to_remove);
 
-            trace!("removed {} releases", removed);
+        trace!("removed {} releases", removed);
 
-            Ok(InternalIO {
-                graph,
-                parameters: internal_io.parameters,
-            })
+        Ok(InternalIO {
+            graph,
+            parameters: internal_io.parameters,
         })
-        .map_err(move |e| failure::Error::from(e));
-
-        Box::new(future_result)
     }
 }
 
@@ -146,7 +137,8 @@ mod tests {
             },
         ] {
             for channel in &mut datum.channels {
-                let future_result = plugin.clone().run_internal(InternalIO {
+                let plugin = plugin.clone();
+                let future_result = plugin.run_internal(InternalIO {
                     graph: Default::default(),
                     parameters: [("channel", channel)]
                         .iter()
@@ -378,17 +370,16 @@ mod tests {
 
         for (i, datum) in data.into_iter().enumerate() {
             println!("processing data set #{}: '{}'", i, datum.description);
-            let future_processed_graph = plugin
-                .clone()
-                .run_internal(InternalIO {
-                    graph: datum.input_graph,
-                    parameters: datum.parameters,
-                })
-                .and_then(|final_io| Ok(final_io.graph));
+            let plugin = plugin.clone();
+            let future_processed_graph = plugin.run_internal(InternalIO {
+                graph: datum.input_graph,
+                parameters: datum.parameters,
+            });
 
             let processed_graph = runtime
                 .block_on(future_processed_graph)
-                .expect("plugin run failed");
+                .expect("plugin run failed")
+                .graph;
 
             assert_eq!(datum.expected_graph, processed_graph);
         }

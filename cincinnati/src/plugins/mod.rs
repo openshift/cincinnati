@@ -12,15 +12,13 @@ pub mod internal;
 pub use self::catalog::{build_plugins, deserialize_config, PluginSettings};
 use crate as cincinnati;
 use crate::plugins::interface::{PluginError, PluginExchange};
+use async_trait::async_trait;
 use failure::{Error, Fallible, ResultExt};
-use futures::IntoFuture;
-use futures::{Future, Stream};
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::Debug;
 
 pub mod prelude {
-    pub use super::AsyncIO;
     pub use super::BoxedPlugin;
     pub use super::ExternalPluginWrapper;
     pub use super::InternalPluginWrapper;
@@ -29,9 +27,6 @@ pub mod prelude {
     pub use futures_locks;
     pub use std::iter::FromIterator;
 }
-
-/// Convenience type to wrap other types in a Future
-pub type AsyncIO<T> = Box<dyn Future<Item = T, Error = Error> + Send>;
 
 /// Convenience type for the thread-safe storage of plugins
 pub type BoxedPlugin = Box<dyn Plugin<PluginIO>>;
@@ -83,29 +78,32 @@ pub struct ExternalIO {
 }
 
 /// Trait which fronts InternalPlugin and ExternalPlugin, allowing their trait objects to live in the same collection
+#[async_trait]
 pub trait Plugin<T>
 where
     Self: Sync + Send + Debug,
     T: TryInto<PluginIO> + TryFrom<PluginIO>,
     T: Sync + Send,
 {
-    fn run(self: &Self, t: T) -> AsyncIO<T>;
+    async fn run(self: &Self, t: T) -> Fallible<T>;
 }
 
 /// Trait to be implemented by internal plugins with their native IO type
+#[async_trait]
 pub trait InternalPlugin {
-    fn run_internal(self: &Self, input: InternalIO) -> AsyncIO<InternalIO>;
+    async fn run_internal(self: &Self, input: InternalIO) -> Fallible<InternalIO>;
 }
 
 /// Trait to be implemented by external plugins with its native IO type
 ///
 /// There's a gotcha in that this type can't be used to access the information
 /// directly as it's merely bytes.
+#[async_trait]
 pub trait ExternalPlugin
 where
     Self: Debug,
 {
-    fn run_external(self: &Self, input: ExternalIO) -> AsyncIO<ExternalIO>;
+    async fn run_external(self: &Self, input: ExternalIO) -> Fallible<ExternalIO>;
 }
 
 /// Convert from InternalIO to PluginIO
@@ -281,43 +279,31 @@ pub struct ExternalPluginWrapper<T>(pub T);
 
 /// This implementation allows the process function to run ipmlementors of
 /// InternalPlugin
+#[async_trait]
 impl<T> Plugin<PluginIO> for InternalPluginWrapper<T>
 where
     T: InternalPlugin,
     T: Sync + Send + Debug,
 {
-    fn run(self: &Self, plugin_io: PluginIO) -> AsyncIO<PluginIO> {
-        let internal_io: InternalIO = match plugin_io.try_into() {
-            Ok(internal_io) => internal_io,
-            Err(e) => return Box::new(futures::future::err(e)),
-        };
+    async fn run(self: &Self, plugin_io: PluginIO) -> Fallible<PluginIO> {
+        let internal_io: InternalIO = plugin_io.try_into()?;
 
-        Box::new(
-            self.0
-                .run_internal(internal_io)
-                .and_then(|internal_io| -> Fallible<PluginIO> { Ok(internal_io.into()) }),
-        )
+        Ok(self.0.run_internal(internal_io).await?.into())
     }
 }
 
 /// This implementation allows the process function to run ipmlementors of
 /// ExternalPlugin
+#[async_trait]
 impl<T> Plugin<PluginIO> for ExternalPluginWrapper<T>
 where
     T: ExternalPlugin,
     T: Sync + Send + Debug,
 {
-    fn run(self: &Self, plugin_io: PluginIO) -> AsyncIO<PluginIO> {
-        let external_io: ExternalIO = match plugin_io.try_into() {
-            Ok(external_io) => external_io,
-            Err(e) => return Box::new(futures::future::err(e)),
-        };
+    async fn run(self: &Self, plugin_io: PluginIO) -> Fallible<PluginIO> {
+        let external_io: ExternalIO = plugin_io.try_into()?;
 
-        Box::new(
-            self.0
-                .run_external(external_io)
-                .and_then(|external_io| -> Fallible<PluginIO> { Ok(external_io.into()) }),
-        )
+        Ok(self.0.run_external(external_io).await?.into())
     }
 }
 
@@ -325,18 +311,19 @@ where
 ///
 /// This function automatically converts between the different IO representations
 /// if necessary.
-pub fn process<T>(plugins: T, initial_io: PluginIO) -> AsyncIO<InternalIO>
+pub async fn process<T>(plugins: T, initial_io: PluginIO) -> Fallible<InternalIO>
 where
     T: Iterator<Item = &'static BoxedPlugin>,
     T: Sync + Send,
     T: 'static,
 {
-    let future_result = futures::stream::iter_ok::<_, Error>(plugins)
-        .fold(initial_io, |io, next_plugin| next_plugin.run(io))
-        .into_future()
-        .and_then(TryInto::try_into);
+    let mut io = initial_io;
 
-    Box::new(future_result)
+    for next_plugin in plugins {
+        io = next_plugin.run(io).await?;
+    }
+
+    io.try_into()
 }
 
 #[cfg(test)]
@@ -344,7 +331,7 @@ mod tests {
     use super::*;
     use crate::plugins::Plugin;
     use crate::testing::generate_graph;
-    use futures_locks::Mutex as FuturesMutex;
+    use futures::lock::Mutex as FuturesMutex;
     use std::collections::HashMap;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
@@ -389,43 +376,41 @@ mod tests {
         counter: AtomicUsize,
         dict: Arc<FuturesMutex<HashMap<usize, bool>>>,
     }
+    #[async_trait]
     impl InternalPlugin for TestInternalPlugin {
-        fn run_internal(self: &Self, mut io: InternalIO) -> AsyncIO<InternalIO> {
+        async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
             self.counter.fetch_add(1, Ordering::SeqCst);
             let counter = self.counter.load(Ordering::SeqCst);
 
-            let future_io = self
-                .dict
-                .lock()
-                .map_err(|_| failure::err_msg("could not lock self.dict"))
-                .map(move |mut dict_guard| {
-                    (*dict_guard).insert(counter, true);
+            let mut dict_guard = self.dict.lock().await;
 
-                    io.parameters
-                        .insert("COUNTER".to_string(), format!("{}", counter));
+            (*dict_guard).insert(counter, true);
 
-                    io
-                });
+            io.parameters
+                .insert("COUNTER".to_string(), format!("{}", counter));
 
-            Box::new(future_io)
+            Ok(io)
         }
     }
+    #[async_trait]
     impl Plugin<InternalIO> for TestInternalPlugin {
-        fn run(self: &Self, io: InternalIO) -> AsyncIO<InternalIO> {
-            Box::new(futures::future::ok(io))
+        async fn run(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
+            Ok(io)
         }
     }
 
     #[derive(Debug)]
     struct TestExternalPlugin {}
+    #[async_trait]
     impl ExternalPlugin for TestExternalPlugin {
-        fn run_external(self: &Self, io: ExternalIO) -> AsyncIO<ExternalIO> {
-            Box::new(futures::future::ok(io))
+        async fn run_external(self: &Self, io: ExternalIO) -> Fallible<ExternalIO> {
+            Ok(io)
         }
     }
+    #[async_trait]
     impl Plugin<ExternalIO> for TestExternalPlugin {
-        fn run(self: &Self, io: ExternalIO) -> AsyncIO<ExternalIO> {
-            Box::new(futures::future::ok(io))
+        async fn run(self: &Self, io: ExternalIO) -> Fallible<ExternalIO> {
+            Ok(io)
         }
     }
 
@@ -463,7 +448,7 @@ mod tests {
             .collect(),
         };
 
-        let plugins_future: AsyncIO<InternalIO> = super::process(
+        let plugins_future = super::process(
             PLUGINS.iter(),
             PluginIO::InternalIO(initial_internalio.clone()),
         );
@@ -512,7 +497,7 @@ mod tests {
                 .collect(),
             };
 
-            let plugins_future: AsyncIO<InternalIO> = process(
+            let plugins_future = process(
                 PLUGINS.iter(),
                 PluginIO::InternalIO(initial_internalio.clone()),
             );

@@ -1,8 +1,9 @@
 //! This plugin removes releases according to its metadata
 
 use crate::plugins::{
-    AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
+    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
+use async_trait::async_trait;
 use failure::Fallible;
 use prometheus::Registry;
 
@@ -35,35 +36,32 @@ impl NodeRemovePlugin {
     }
 }
 
+#[async_trait]
 impl InternalPlugin for NodeRemovePlugin {
-    fn run_internal(self: &Self, io: InternalIO) -> AsyncIO<InternalIO> {
-        let closure = || -> Fallible<InternalIO> {
-            let mut graph = io.graph;
-            let key_suffix = "release.remove";
+    async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
+        let mut graph = io.graph;
+        let key_suffix = "release.remove";
 
-            let to_remove = {
-                graph
-                    .find_by_metadata_pair(&format!("{}.{}", self.key_prefix, key_suffix), "true")
-                    .into_iter()
-                    .map(|(release_id, version)| {
-                        trace!("queuing '{}' for removal", version);
-                        release_id
-                    })
-                    .collect()
-            };
-
-            // remove all matches from the Graph
-            let removed = graph.remove_releases(to_remove);
-
-            trace!("removed {} releases", removed);
-
-            Ok(InternalIO {
-                graph,
-                parameters: io.parameters,
-            })
+        let to_remove = {
+            graph
+                .find_by_metadata_pair(&format!("{}.{}", self.key_prefix, key_suffix), "true")
+                .into_iter()
+                .map(|(release_id, version)| {
+                    trace!("queuing '{}' for removal", version);
+                    release_id
+                })
+                .collect()
         };
 
-        Box::new(futures::future::result(closure()))
+        // remove all matches from the Graph
+        let removed = graph.remove_releases(to_remove);
+
+        trace!("removed {} releases", removed);
+
+        Ok(InternalIO {
+            graph,
+            parameters: io.parameters,
+        })
     }
 }
 
@@ -104,11 +102,11 @@ mod tests {
             generate_custom_graph("image", metadata, None)
         };
 
-        let future_processed_graph =
-            Box::new(NodeRemovePlugin { key_prefix }).run_internal(InternalIO {
-                graph: input_graph.clone(),
-                parameters: Default::default(),
-            });
+        let plugin = Box::new(NodeRemovePlugin { key_prefix });
+        let future_processed_graph = plugin.run_internal(InternalIO {
+            graph: input_graph,
+            parameters: Default::default(),
+        });
 
         let processed_graph = runtime
             .block_on(future_processed_graph)

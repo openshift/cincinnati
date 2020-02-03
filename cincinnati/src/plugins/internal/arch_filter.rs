@@ -6,11 +6,11 @@
 //! if they are present. The assumption for this is that the architecture would
 //! be encoded as part of the _build_ information according to the SemVer specification.
 use crate::plugins::{
-    AsyncIO, BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
+    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
 };
+use async_trait::async_trait;
 use commons::GraphError;
 use failure::{Fallible, ResultExt};
-use futures::Future;
 use prometheus::Registry;
 
 pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
@@ -82,85 +82,74 @@ lazy_static! {
         regex::Regex::new(&ARCH_VALIDATION_REGEX_STR).expect("could not create regex");
 }
 
+#[async_trait]
 impl InternalPlugin for ArchFilterPlugin {
-    fn run_internal(self: &Self, internal_io: InternalIO) -> AsyncIO<InternalIO> {
+    async fn run_internal(self: &Self, internal_io: InternalIO) -> Fallible<InternalIO> {
         let arch = infer_arch(
             internal_io.parameters.get("arch").map(|s| s.to_string()),
             self.default_arch.clone(),
-        )
-        .map_err(failure::Error::from);
+        )?;
 
-        let future_result = futures::future::result(arch)
-            .join(futures::future::ok::<_, failure::Error>((
-                internal_io,
-                self.key_prefix.to_owned(),
-                self.key_suffix.to_owned(),
-            )))
-            .and_then(|(arch, (internal_io, key_prefix, key_suffix))| {
-                let mut graph = internal_io.graph;
+        let mut graph = internal_io.graph;
 
-                // iterate over all releases attempt to remove the arch metadata key
-                // 1. if it exists, keep every release which matches the given `arch`
-                // 2. collect all other releases to be removed
-                let to_remove = {
-                    graph
-                        .find_by_fn_mut(|release| {
-                            match release {
-                                crate::Release::Concrete(concrete_release) => concrete_release
-                                    .metadata
-                                    .remove(&format!("{}.{}", key_prefix, key_suffix))
-                                    .map_or(true, |values| {
-                                        !values.split(',').any(|value| value.trim() == arch)
-                                    }),
-                                // remove if it's not a ConcreteRelease
-                                _ => true,
-                            }
-                        })
-                        .into_iter()
-                        .map(|(release_id, version)| {
-                            trace!("queuing '{}' for removal", version);
-                            release_id
-                        })
-                        .collect()
+        // iterate over all releases attempt to remove the arch metadata key
+        // 1. if it exists, keep every release which matches the given `arch`
+        // 2. collect all other releases to be removed
+        let to_remove = {
+            graph
+                .find_by_fn_mut(|release| {
+                    match release {
+                        crate::Release::Concrete(concrete_release) => concrete_release
+                            .metadata
+                            .remove(&format!("{}.{}", self.key_prefix, self.key_suffix))
+                            .map_or(true, |values| {
+                                !values.split(',').any(|value| value.trim() == arch)
+                            }),
+                        // remove if it's not a ConcreteRelease
+                        _ => true,
+                    }
+                })
+                .into_iter()
+                .map(|(release_id, version)| {
+                    trace!("queuing '{}' for removal", version);
+                    release_id
+                })
+                .collect()
+        };
+
+        // remove all matches from the Graph
+        let removed = graph.remove_releases(to_remove);
+
+        trace!("removed {} releases", removed);
+
+        // remove the build suffix from the version
+        graph
+            .iter_releases_mut(|mut release| {
+                let version = {
+                    let release_version = release.version().to_owned();
+
+                    semver::Version::parse(&release_version)
+                        .context(release_version.clone())
+                        .map(|mut version| {
+                            version.build.retain(|elem| elem.to_string() != arch);
+                            trace!("rewriting version {} ->  {}", release_version, version);
+                            version.to_string()
+                        })?
                 };
 
-                // remove all matches from the Graph
-                let removed = graph.remove_releases(to_remove);
+                match &mut release {
+                    crate::Release::Abstract(release) => release.version = version,
+                    crate::Release::Concrete(release) => release.version = version,
+                };
 
-                trace!("removed {} releases", removed);
-
-                // remove the build suffix from the version
-                graph
-                    .iter_releases_mut(|mut release| {
-                        let version = {
-                            let release_version = release.version().to_owned();
-
-                            semver::Version::parse(&release_version)
-                                .context(release_version.clone())
-                                .map(|mut version| {
-                                    version.build.retain(|elem| elem.to_string() != arch);
-                                    trace!("rewriting version {} ->  {}", release_version, version);
-                                    version.to_string()
-                                })?
-                        };
-
-                        match &mut release {
-                            crate::Release::Abstract(release) => release.version = version,
-                            crate::Release::Concrete(release) => release.version = version,
-                        };
-
-                        Ok(())
-                    })
-                    .map_err(|e| GraphError::ArchVersionError(e.to_string()))?;
-
-                Ok(InternalIO {
-                    graph,
-                    parameters: internal_io.parameters,
-                })
+                Ok(())
             })
-            .map_err(failure::Error::from);
+            .map_err(|e| GraphError::ArchVersionError(e.to_string()))?;
 
-        Box::new(future_result)
+        Ok(InternalIO {
+            graph,
+            parameters: internal_io.parameters,
+        })
     }
 }
 
@@ -232,12 +221,12 @@ mod tests {
         let expected_graph: cincinnati::Graph =
             generate_custom_graph("image", expected_metadata, expected_edges.to_owned());
 
-        let future_processed_graph = Box::new(ArchFilterPlugin {
+        let plugin = Box::new(ArchFilterPlugin {
             key_prefix: "release".to_string(),
             key_suffix: "arch".to_string(),
             default_arch: "amd64".to_string(),
-        })
-        .run_internal(InternalIO {
+        });
+        let future_processed_graph = plugin.run_internal(InternalIO {
             graph: input_graph.clone(),
             parameters: [("arch", "arm64")]
                 .iter()

@@ -1,8 +1,5 @@
-extern crate futures;
-extern crate tokio;
-
-use self::futures::prelude::*;
-use self::tokio::runtime::Runtime;
+use futures::StreamExt;
+use tokio::runtime::Runtime;
 
 #[cfg(feature = "test-net-private")]
 mod private;
@@ -19,8 +16,15 @@ fn test_public_stream_active_tags() {
     let expected = vec!["0.0.1", "0.0.0"];
 
     let client = quay::v1::Client::builder().build().unwrap();
-    let fetch_tags = client.stream_tags(repo, true).collect();
-    let tags = rt.block_on(fetch_tags).unwrap();
+    let fetch_tags = async {
+        client
+            .stream_tags(repo, true)
+            .await
+            .map(Result::unwrap)
+            .collect::<Vec<quay::v1::Tag>>()
+            .await
+    };
+    let tags = rt.block_on(fetch_tags);
 
     let tag_names: Vec<String> = tags.into_iter().map(|tag| tag.name).collect();
     assert_eq!(tag_names, expected);
@@ -33,8 +37,15 @@ fn test_public_get_labels() {
     let tag_name = "0.0.1";
 
     let client = quay::v1::Client::builder().build().unwrap();
-    let fetch_tags = client.stream_tags(repo, true).collect();
-    let tags = rt.block_on(fetch_tags).unwrap();
+    let fetch_tags = async {
+        client
+            .stream_tags(repo, true)
+            .await
+            .map(Result::unwrap)
+            .collect::<Vec<quay::v1::Tag>>()
+            .await
+    };
+    let tags = rt.block_on(fetch_tags);
 
     let filtered_tags: Vec<quay::v1::Tag> = tags
         .into_iter()
