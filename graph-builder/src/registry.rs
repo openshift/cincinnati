@@ -13,19 +13,18 @@
 // limitations under the License.
 
 use crate::release::Metadata;
+use async_compression::futures::bufread::GzipDecoder;
+use async_tar::Archive;
 use cincinnati;
 use failure::{Error, Fallible, ResultExt};
-use flate2::read::GzDecoder;
 use futures::prelude::*;
 use futures::TryStreamExt;
 use serde_json;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::Read;
 use std::iter::Iterator;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::string::String;
-use tar::Archive;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Release {
@@ -400,7 +399,7 @@ async fn find_first_release(
             &blob.len(),
         );
 
-        match assemble_metadata(&blob, metadata_filename) {
+        match assemble_metadata(&blob, metadata_filename).await {
             Ok(metadata) => {
                 return Ok((
                     tag.clone(),
@@ -446,27 +445,30 @@ struct Layer {
     blob_sum: String,
 }
 
-fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<Metadata, Error> {
-    let mut archive = Archive::new(GzDecoder::new(blob));
-    match archive
-        .entries()?
-        .filter_map(|entry| match entry {
-            Ok(file) => Some(file),
-            Err(err) => {
-                debug!("failed to read archive entry: {}", err);
-                None
-            }
-        })
-        .find(|file| match file.header().path() {
-            Ok(path) => path == Path::new(metadata_filename),
-            Err(err) => {
-                debug!("failed to read file header: {}", err);
-                false
-            }
-        }) {
+async fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<Metadata, Error> {
+    use async_std::stream::StreamExt;
+
+    let mut archive = Archive::new(GzipDecoder::new(blob));
+
+    match async_std::stream::StreamExt::filter_map(archive.entries()?, |entry| match entry {
+        Ok(file) => Some(file),
+        Err(err) => {
+            debug!("failed to read archive entry: {}", err);
+            None
+        }
+    })
+    .find(|file| match file.header().path() {
+        Ok(path) => &(*path) == async_std::path::Path::new(metadata_filename),
+        Err(err) => {
+            debug!("failed to read file header: {}", err);
+            false
+        }
+    })
+    .await
+    {
         Some(mut file) => {
             let mut contents = String::new();
-            file.read_to_string(&mut contents)?;
+            file.read_to_string(&mut contents).await?;
             match serde_json::from_str::<Metadata>(&contents) {
                 Ok(m) => Ok::<Metadata, Error>(m),
                 Err(e) => bail!(format!("couldn't parse '{}': {}", metadata_filename, e)),

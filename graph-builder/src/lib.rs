@@ -6,7 +6,6 @@ extern crate dkregistry;
 extern crate env_logger;
 #[macro_use]
 extern crate failure;
-extern crate flate2;
 extern crate futures;
 extern crate itertools;
 #[macro_use]
@@ -27,7 +26,6 @@ extern crate smart_default;
 #[macro_use]
 extern crate structopt;
 extern crate parking_lot;
-extern crate tar;
 extern crate tokio;
 extern crate toml;
 
