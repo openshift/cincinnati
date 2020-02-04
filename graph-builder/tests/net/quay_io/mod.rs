@@ -1,25 +1,16 @@
-extern crate cincinnati;
-extern crate commons;
-extern crate graph_builder;
-extern crate quay;
-extern crate semver;
-extern crate url;
-
-use self::cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY;
-use self::cincinnati::testing::{TestGraphBuilder, TestMetadata};
-use self::cincinnati::Empty;
-use self::cincinnati::WouldCycle;
-use self::graph_builder::graph::create_graph;
-use self::graph_builder::registry::Registry;
-use self::graph_builder::registry::{self, fetch_releases, Release};
-use self::graph_builder::release::{Metadata, MetadataKind::V0};
-use self::semver::Version;
+use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY;
+use cincinnati::testing::{TestGraphBuilder, TestMetadata};
+use cincinnati::{Empty, WouldCycle};
 use failure::{Fallible, ResultExt};
+use graph_builder::graph::create_graph;
+use graph_builder::registry::{self, fetch_releases, Registry, Release};
+use graph_builder::release::{Metadata, MetadataKind::V0};
 use itertools::Itertools;
+use semver::Version;
 use std::collections::HashMap;
 
 #[cfg(feature = "test-net-private")]
-use self::graph_builder::registry::read_credentials;
+use graph_builder::registry::read_credentials;
 
 lazy_static::lazy_static! {
     static ref FETCH_CONCURRENCY: usize = {

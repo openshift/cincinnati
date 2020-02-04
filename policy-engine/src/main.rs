@@ -2,37 +2,24 @@
 
 #![deny(missing_docs)]
 
-extern crate actix;
-extern crate actix_web;
 #[macro_use]
 extern crate cincinnati;
 #[macro_use]
 extern crate commons;
-extern crate env_logger;
 #[macro_use]
 extern crate failure;
-extern crate futures;
-extern crate hyper;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-extern crate prometheus;
-extern crate semver;
-extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_json;
 #[macro_use]
 extern crate smart_default;
 #[macro_use]
 extern crate structopt;
-extern crate openapiv3;
 #[macro_use]
 extern crate custom_debug_derive;
-
-extern crate tempfile;
-extern crate url;
 
 mod config;
 mod graph;
