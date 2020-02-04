@@ -6,6 +6,20 @@ use std::env;
 use test_case::test_case;
 use url::Url;
 
+pub fn sort_by_version(v: &mut Value) {
+    if !v.is_object() {
+        return;
+    }
+    let obj = v.as_object_mut().unwrap();
+    let nodes = obj.get_mut("nodes").unwrap();
+    nodes.as_array_mut().unwrap().sort_unstable_by(|a, b| {
+        a.get("version")
+            .unwrap()
+            .as_str()
+            .cmp(&b.get("version").unwrap().as_str())
+    });
+}
+
 #[test_case("a",    "amd64", include_str!("./testdata/a-amd64.json");    "channel a amd64")]
 #[test_case("b",    "amd64", include_str!("./testdata/b-amd64.json");    "channel b amd64")]
 #[test_case("test", "amd64", include_str!("./testdata/test-amd64.json"); "channel test amd64")]
@@ -17,7 +31,8 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str, testdata: &str
         _ => panic!("GRAPH_URL unset"),
     };
 
-    let expected: Value = serde_json::from_str(testdata).unwrap();
+    let mut expected: Value = serde_json::from_str(testdata).unwrap();
+    sort_by_version(&mut expected);
 
     let mut graph_url = Url::parse(&graph_base_url).unwrap();
     graph_url
@@ -40,6 +55,7 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str, testdata: &str
         .unwrap();
     assert_eq!(res.status().is_success(), true);
     let text = runtime.block_on(res.text()).unwrap();
-    let actual = serde_json::from_str(&text).unwrap();
+    let mut actual = serde_json::from_str(&text).unwrap();
+    sort_by_version(&mut actual);
     assert_json_include!(actual: actual, expected: expected)
 }
