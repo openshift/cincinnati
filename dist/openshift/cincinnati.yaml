@@ -284,7 +284,7 @@ parameters:
     value: "openshift-release-dev/ocp-release"
     displayName: Graph builder quay repo
   - name: GB_BINARY
-    value: /usr/bin/graph-binary
+    value: /usr/bin/graph-builder
     displayName: Path to graph-builder binary
   - name: PE_BINARY
     value: /usr/bin/policy-engine
