@@ -65,9 +65,6 @@ cd graph-builder/tests/images
 ./build-n-push.sh test-*
 ```
 
-### Run CI testsuite locally
-The script `hack/run-all-tests.sh` can be used to run the CI tests locally before submitting a pull-request.
-
 #### Language-Level
 The graph-builder package currently has network dependent tests which gated behind the feature `test-net` and `test-net-private`.
 The latter requires setting the environment variable `CINCINNATI_TEST_CREDENTIALS_PATH` which is equivalent to *graph-builder's* `--credentials-path`.
@@ -98,6 +95,8 @@ For details please see [github.com/openshift/release/(...)/openshift-cincinnati-
 
 
 ## Development
+
+For developing Cincinnati refer to [the developer documentation](./docs/developer/developing.md) document.
 
 ### Updating the Plugin-Interface Scheme
 The interface for external plugins is defined as a Protobuf v3 scheme in the file [cincinnati/src/plugins/interface.proto][./cincinnati/src/plugins/interface.proto].
