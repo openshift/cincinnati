@@ -75,6 +75,10 @@ pub struct DockerRegistryOptions {
     /// Metadata key where to record the manifest-reference
     #[structopt(long = "upstream.registry.manifestref_key")]
     pub manifestref_key: Option<String>,
+
+    /// Concurrency for graph fetching
+    #[structopt(long = "upstream.registry.fetch_concurrency")]
+    pub fetch_concurrency: Option<usize>,
 }
 
 impl MergeOptions<Option<ServiceOptions>> for AppSettings {
@@ -109,6 +113,7 @@ impl MergeOptions<Option<DockerRegistryOptions>> for AppSettings {
             assign_if_some!(self.repository, registry.repository);
             assign_if_some!(self.credentials_path, registry.credentials_path);
             assign_if_some!(self.manifestref_key, registry.manifestref_key);
+            assign_if_some!(self.fetch_concurrency, registry.fetch_concurrency);
         }
         Ok(())
     }

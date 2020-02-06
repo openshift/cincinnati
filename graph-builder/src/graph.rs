@@ -210,6 +210,7 @@ pub async fn run(settings: &config::AppSettings, state: &State) -> ! {
             password.as_ref().map(String::as_ref),
             &mut cache,
             &settings.manifestref_key,
+            settings.fetch_concurrency,
         )
         .await;
         UPSTREAM_SCRAPES.inc();

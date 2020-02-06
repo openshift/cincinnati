@@ -60,6 +60,10 @@ pub struct AppSettings {
     /// Disable quay-metadata (Satellite compat).
     #[default(false)]
     pub disable_quay_api_metadata: bool,
+
+    /// Concurrency for graph fetching
+    #[default(16)]
+    pub fetch_concurrency: usize,
 }
 
 impl AppSettings {

@@ -195,6 +195,7 @@ pub async fn fetch_releases(
     password: Option<&str>,
     cache: &mut crate::registry::cache::Cache,
     manifestref_key: &str,
+    concurrency: usize,
 ) -> Result<Vec<Release>, Error> {
     let authenticated_client = dkregistry::v2::Client::configure()
         .registry(&registry.host_port_string())
@@ -218,7 +219,7 @@ pub async fn fetch_releases(
         Arc::new(FuturesMutex::new(Vec::with_capacity(estimated_releases)))
     };
 
-    tags.try_for_each_concurrent(8, |tag| {
+    tags.try_for_each_concurrent(concurrency, |tag| {
         let authenticated_client = authenticated_client.clone();
         let cache = cache.clone();
         let releases = releases.clone();

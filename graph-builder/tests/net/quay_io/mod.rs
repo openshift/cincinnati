@@ -21,6 +21,14 @@ use std::collections::HashMap;
 #[cfg(feature = "test-net-private")]
 use self::graph_builder::registry::read_credentials;
 
+lazy_static::lazy_static! {
+    static ref FETCH_CONCURRENCY: usize = {
+        let app_settings = graph_builder::config::AppSettings::default();
+        app_settings.fetch_concurrency
+    };
+
+}
+
 fn init_logger() {
     let _ = env_logger::try_init_from_env(env_logger::Env::default());
 }
@@ -152,6 +160,7 @@ fn fetch_release_private_with_credentials_must_succeed() {
             password.as_ref().map(String::as_ref),
             &mut cache,
             MANIFESTREF_KEY,
+            *FETCH_CONCURRENCY,
         ))
         .expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
@@ -195,6 +204,7 @@ fn fetch_release_private_without_credentials_must_fail() {
         None,
         &mut cache,
         MANIFESTREF_KEY,
+        *FETCH_CONCURRENCY,
     ));
     assert_eq!(true, releases.is_err());
     assert_eq!(
@@ -221,6 +231,7 @@ fn fetch_release_public_with_no_release_metadata_must_not_error() {
             None,
             &mut cache,
             MANIFESTREF_KEY,
+            *FETCH_CONCURRENCY,
         ))
         .expect("should not error on emtpy repo");
     assert!(releases.is_empty())
@@ -240,6 +251,7 @@ fn fetch_release_public_with_first_empty_tag_must_succeed() {
             None,
             &mut cache,
             MANIFESTREF_KEY,
+            *FETCH_CONCURRENCY,
         ))
         .expect("fetch_releases failed: ");
     assert_eq!(2, releases.len());
@@ -283,6 +295,7 @@ fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
                 password.as_ref().map(String::as_ref),
                 &mut cache,
                 MANIFESTREF_KEY,
+                *FETCH_CONCURRENCY,
             ))
             .expect("fetch_releases failed: ");
         assert_eq!(2, releases.len());
@@ -340,6 +353,7 @@ fn fetch_release_with_cyclic_metadata_fails() -> Fallible<()> {
             password,
             &mut cache,
             MANIFESTREF_KEY,
+            *FETCH_CONCURRENCY,
         ))
         .expect("fetch_releases failed: ");
 
@@ -371,6 +385,7 @@ fn fetch_releases_public_multiarch_manual_succeeds() -> Fallible<()> {
             password.as_ref().map(String::as_ref),
             &mut cache,
             MANIFESTREF_KEY,
+            *FETCH_CONCURRENCY,
         ))
         .expect("fetch_releases failed: ");
 
@@ -396,6 +411,7 @@ fn create_graph_public_multiarch_manual_succeeds() -> Fallible<()> {
                 password.as_ref().map(String::as_ref),
                 &mut cache,
                 MANIFESTREF_KEY,
+                *FETCH_CONCURRENCY,
             ))
             .context("fetch_releases failed: ")?;
 
