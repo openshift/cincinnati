@@ -16,7 +16,8 @@ env_logger = "^0.6.0"
 failure = "^0.1.1"
 async-compression = { version = "^0.2.0", features = [ "stream", "futures-bufread", "gzip"] }
 futures = "0.3"
-itertools = "^0.7.8"
+futures-locks-pre = "0.5.1-pre"
+itertools = "^0.8.2"
 lazy_static = "^1.2.0"
 log = "^0.4.3"
 prometheus = { git = "https://github.com/pingcap/rust-prometheus.git", rev = "6a02b0d2943f8fffce672e236e22c6f925184d93"}

@@ -70,6 +70,7 @@ objects:
                 "--upstream.registry.url", "$(REGISTRY)",
                 "--upstream.registry.repository", "$(REPOSITORY)",
                 "--upstream.registry.credentials_path", "/etc/secrets/registry-credentials",
+                "--upstream.registry.fetch_concurrency", "${GB_UPSTREAM_FETCH_CONCURRENCY}",
               ]
               ports:
                 - name: graph-builder
@@ -289,3 +290,6 @@ parameters:
   - name: PE_BINARY
     value: /usr/bin/policy-engine
     displayName: Path to policy-engine binary
+  - name: GB_UPSTREAM_FETCH_CONCURRENCY
+    value: "16"
+    displayName: Concurrency when fetching the upstream metadata

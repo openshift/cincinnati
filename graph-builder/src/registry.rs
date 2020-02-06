@@ -17,14 +17,15 @@ use async_compression::futures::bufread::GzipDecoder;
 use async_tar::Archive;
 use cincinnati;
 use failure::{Error, Fallible, ResultExt};
+use futures::lock::Mutex as FuturesMutex;
 use futures::prelude::*;
 use futures::TryStreamExt;
 use serde_json;
-use std::collections::HashMap;
 use std::fs::File;
 use std::iter::Iterator;
 use std::path::PathBuf;
 use std::string::String;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Release {
@@ -39,6 +40,21 @@ impl Into<cincinnati::Release> for Release {
             payload: self.source,
             metadata: self.metadata.metadata,
         })
+    }
+}
+
+/// Module for the release cache
+pub mod cache {
+    use crate::registry::Release;
+    use futures_locks_pre::RwLock as FuturesRwLock;
+    use std::collections::HashMap;
+
+    /// The cache type to hold the release cache
+    pub type Cache = FuturesRwLock<HashMap<u64, Option<Release>>>;
+
+    /// Instantiates a new release cache
+    pub fn new() -> Cache {
+        FuturesRwLock::new(HashMap::new())
     }
 }
 
@@ -172,13 +188,14 @@ pub fn read_credentials(
 
 /// Fetches a vector of all release metadata from the given repository, hosted on the given
 /// registry.
-pub async fn fetch_releases<S: ::std::hash::BuildHasher>(
+pub async fn fetch_releases(
     registry: &Registry,
     repo: &str,
     username: Option<&str>,
     password: Option<&str>,
-    cache: &mut HashMap<u64, Option<Release>, S>,
+    cache: &mut crate::registry::cache::Cache,
     manifestref_key: &str,
+    concurrency: usize,
 ) -> Result<Vec<Release>, Error> {
     let authenticated_client = dkregistry::v2::Client::configure()
         .registry(&registry.host_port_string())
@@ -191,107 +208,116 @@ pub async fn fetch_releases<S: ::std::hash::BuildHasher>(
         .await
         .map_err(|e| format_err!("{}", e))?;
 
-    let manifest_and_ref_by_tag = {
-        let tags: Vec<String> = get_tags(repo, &authenticated_client)
-            .await
-            .try_collect()
-            .await?;
+    let authenticated_client_get_tags = authenticated_client.clone();
+    let tags = Box::pin(get_tags(repo, &authenticated_client_get_tags).await);
 
-        let mut manifest_and_ref_by_tag = Vec::with_capacity(tags.len());
-
-        for tag in tags {
-            manifest_and_ref_by_tag
-                .push(get_manifest_and_ref(tag, repo.to_owned(), &authenticated_client).await?);
-        }
-
-        manifest_and_ref_by_tag
+    let releases = {
+        let estimated_releases = match tags.size_hint() {
+            (_, Some(upper)) => upper,
+            (lower, None) => lower,
+        };
+        Arc::new(FuturesMutex::new(Vec::with_capacity(estimated_releases)))
     };
 
-    let mut releases = Vec::with_capacity(manifest_and_ref_by_tag.len());
+    tags.try_for_each_concurrent(concurrency, |tag| {
+        let authenticated_client = authenticated_client.clone();
+        let cache = cache.clone();
+        let releases = releases.clone();
 
-    for (tag, manifest, manifestref) in manifest_and_ref_by_tag {
-        // Try to read the architecture from the manifest
-        let arch = match manifest.architectures() {
-            Ok(archs) => {
-                // We don't support ManifestLists now, so we expect only 1
-                // architecture for the given manifest
-                ensure!(
-                    archs.len() == 1,
-                    "[{}] broke assumption of exactly one architecture per tag: {:?}",
-                    tag,
-                    archs
+        async move {
+            trace!("[{}] Fetching release", tag);
+            let (tag, manifest, manifestref) =
+                get_manifest_and_ref(tag, repo.to_owned(), &authenticated_client).await?;
+
+            // Try to read the architecture from the manifest
+            let arch = match manifest.architectures() {
+                Ok(archs) => {
+                    // We don't support ManifestLists now, so we expect only 1
+                    // architecture for the given manifest
+                    ensure!(
+                        archs.len() == 1,
+                        "[{}] broke assumption of exactly one architecture per tag: {:?}",
+                        tag,
+                        archs
+                    );
+                    archs.first().map(std::string::ToString::to_string)
+                }
+                Err(e) => {
+                    error!(
+                        "could not get architecture from manifest for tag {}: {}",
+                        tag, e
+                    );
+                    None
+                }
+            };
+
+            let layers_digests = manifest
+                .layers_digests(arch.as_ref().map(String::as_str))
+                .map_err(|e| format_err!("{}", e))
+                .context(format!(
+                    "[{}] could not get layers_digests from manifest",
+                    tag
+                ))?
+                // Reverse the order to start with the top-most layer
+                .into_iter()
+                .rev()
+                .collect();
+
+            let mut release = match cache_release(
+                layers_digests,
+                authenticated_client.to_owned(),
+                registry.host.to_owned().to_string(),
+                repo.to_owned(),
+                tag.to_owned(),
+                cache.clone(),
+            )
+            .await?
+            {
+                Some(release) => release,
+                None => {
+                    // Reminder: this means the layer_digests point to layers
+                    // without any release and we've cached this before
+                    return Ok(());
+                }
+            };
+
+            // Replace the tag specifier with the manifestref
+            release.source = {
+                let mut source_split: Vec<&str> = release.source.split(':').collect();
+                let _ = source_split.pop();
+
+                format!("{}@{}", source_split.join(":"), manifestref)
+            };
+
+            // Attach the manifestref this release was found in for further processing
+            release
+                .metadata
+                .metadata
+                .insert(manifestref_key.to_owned(), manifestref);
+
+            // Process the manifest architecture if given
+            if let Some(arch) = arch {
+                // Encode the architecture as SemVer information
+                release.metadata.version.build =
+                    vec![semver::Identifier::AlphaNumeric(arch.to_string())];
+
+                // Attach the architecture for later processing
+                release.metadata.metadata.insert(
+                    "io.openshift.upgrades.graph.release.arch".to_owned(),
+                    arch.to_string(),
                 );
-                archs.first().map(std::string::ToString::to_string)
-            }
-            Err(e) => {
-                error!(
-                    "could not get architecture from manifest for tag {}: {}",
-                    tag, e
-                );
-                None
-            }
-        };
+            };
 
-        let layers_digests = manifest
-            .layers_digests(arch.as_ref().map(String::as_str))
-            .map_err(|e| format_err!("{}", e))
-            .context(format!(
-                "[{}] could not get layers_digests from manifest",
-                tag
-            ))?
-            // Reverse the order to start with the top-most layer
-            .into_iter()
-            .rev()
-            .collect();
+            releases.lock().await.push(release);
 
-        let mut release = match cache_release(
-            layers_digests,
-            authenticated_client.to_owned(),
-            registry.host.to_owned().to_string(),
-            repo.to_owned(),
-            tag.to_owned(),
-            cache,
-        )
-        .await?
-        {
-            Some(release) => release,
-            None => {
-                // Reminder: this means the layer_digests point to layers
-                // without any release and we've cached this before
-                continue;
-            }
-        };
+            Ok(())
+        }
+    })
+    .await?;
 
-        // Replace the tag specifier with the manifestref
-        release.source = {
-            let mut source_split: Vec<&str> = release.source.split(':').collect();
-            let _ = source_split.pop();
-
-            format!("{}@{}", source_split.join(":"), manifestref)
-        };
-
-        // Attach the manifestref this release was found in for further processing
-        release
-            .metadata
-            .metadata
-            .insert(manifestref_key.to_owned(), manifestref);
-
-        // Process the manifest architecture if given
-        if let Some(arch) = arch {
-            // Encode the architecture as SemVer information
-            release.metadata.version.build =
-                vec![semver::Identifier::AlphaNumeric(arch.to_string())];
-
-            // Attach the architecture for later processing
-            release.metadata.metadata.insert(
-                "io.openshift.upgrades.graph.release.arch".to_owned(),
-                arch.to_string(),
-            );
-        };
-
-        releases.push(release);
-    }
-    releases.shrink_to_fit();
+    let releases = Arc::<FuturesMutex<Vec<Release>>>::try_unwrap(releases)
+        .map_err(|_| format_err!("Unwrapping the shared Releases vector. This must not fail."))?
+        .into_inner();
 
     Ok(releases)
 }
@@ -305,13 +331,13 @@ pub async fn fetch_releases<S: ::std::hash::BuildHasher>(
 /// Update Images with release metadata should be immutable, but
 /// tags on registry can be mutated at any time. Thus, the cache
 /// is keyed on the hash of tag layers.
-async fn cache_release<S: ::std::hash::BuildHasher>(
+async fn cache_release(
     layer_digests: Vec<String>,
     authenticated_client: dkregistry::v2::Client,
     registry_host: String,
     repo: String,
     tag: String,
-    cache: &mut HashMap<u64, Option<Release>, S>,
+    cache: crate::registry::cache::Cache,
 ) -> Fallible<Option<Release>> {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
@@ -322,8 +348,8 @@ async fn cache_release<S: ::std::hash::BuildHasher>(
         hasher.finish()
     };
 
-    if let Some(release) = cache.get(&hashed_tag_layers) {
-        trace!("Using cached release metadata for tag {}", &tag);
+    if let Some(release) = cache.read().await.get(&hashed_tag_layers) {
+        trace!("[{}] Using cached release metadata", &tag);
         return Ok(release.clone());
     }
 
@@ -337,8 +363,11 @@ async fn cache_release<S: ::std::hash::BuildHasher>(
     .await
     .context("failed to find first release")?;
 
-    trace!("Caching release metadata for new tag {}", &tag);
-    cache.insert(hashed_tag_layers, release.clone());
+    trace!("[{}] Caching release metadata", &tag);
+    cache
+        .write()
+        .await
+        .insert(hashed_tag_layers, release.clone());
     Ok(release)
 }
 
@@ -346,7 +375,7 @@ async fn cache_release<S: ::std::hash::BuildHasher>(
 async fn get_tags<'a, 'b: 'a>(
     repo: &'b str,
     authenticated_client: &'b dkregistry::v2::Client,
-) -> impl Stream<Item = Fallible<String>> + 'a {
+) -> impl TryStreamExt<Item = Fallible<String>> + 'a {
     authenticated_client
         // According to https://docs.docker.com/registry/spec/api/#listing-image-tags
         // the tags should be ordered lexically but they aren't
@@ -359,7 +388,7 @@ async fn get_manifest_and_ref(
     repo: String,
     authenticated_client: &dkregistry::v2::Client,
 ) -> Result<(String, dkregistry::v2::manifest::Manifest, String), failure::Error> {
-    trace!("processing: {}:{}", &repo, &tag);
+    trace!("[{}] Processing {}", &tag, &repo);
     let (manifest, manifestref) = authenticated_client
         .get_manifest_and_ref(&repo, &tag)
         .map_err(|e| format_err!("{}", e))
@@ -381,7 +410,7 @@ async fn find_first_release(
     let tag = repo_tag.clone();
 
     for layer_digest in layer_digests {
-        trace!("Downloading layer {}...", &layer_digest);
+        trace!("[{}] Downloading layer {}", &tag, &layer_digest);
         let (registry_host, repo, tag) = (registry_host.clone(), repo.clone(), repo_tag.clone());
 
         let blob = authenticated_client
@@ -392,7 +421,7 @@ async fn find_first_release(
         let metadata_filename = "release-manifests/release-metadata";
 
         trace!(
-            "{}: Looking for {} in archive {} with {} bytes",
+            "[{}] Looking for {} in archive {} with {} bytes",
             &tag,
             &metadata_filename,
             &layer_digest,
@@ -411,14 +440,14 @@ async fn find_first_release(
             }
             Err(e) => {
                 debug!(
-                    "could not assemble metadata from layer ({}) of tag '{}': {}",
-                    &layer_digest, &tag, e,
+                    "[{}] Could not assemble metadata from layer ({}): {}",
+                    &tag, &layer_digest, e,
                 );
             }
         }
     }
 
-    warn!("could not find any release in tag {}", tag);
+    warn!("[{}] Could not find any release", tag);
     Ok((tag, None))
 }
 

@@ -90,10 +90,10 @@ fn main() -> Result<(), Error> {
         let ready = Arc::new(RwLock::new(false));
 
         graph::State::new(
-            json_graph.clone(),
+            json_graph,
             settings.mandatory_client_parameters.clone(),
-            live.clone(),
-            ready.clone(),
+            live,
+            ready,
             Box::leak(Box::new(plugins)),
             Box::leak(Box::new(registry)),
         )
@@ -131,7 +131,7 @@ fn main() -> Result<(), Error> {
     .run();
 
     // Main service.
-    let main_state = state.clone();
+    let main_state = state;
     HttpServer::new(move || {
         App::new()
             .app_data(actix_web::web::Data::new(main_state.clone()))
@@ -171,14 +171,7 @@ mod tests {
             metrics::new_registry(Some(METRICS_PREFIX.to_string())).unwrap(),
         ));
 
-        State::new(
-            json_graph.clone(),
-            HashSet::new(),
-            live.clone(),
-            ready.clone(),
-            plugins,
-            registry,
-        )
+        State::new(json_graph, HashSet::new(), live, ready, plugins, registry)
     }
 
     #[test]
