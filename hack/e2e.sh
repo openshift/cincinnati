@@ -55,7 +55,4 @@ while [ $ATTEMPTS -ge 0 ]; do
 done
 
 # Run e2e tests
-pushd graph-builder
-  curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.40.0 -y
-  cargo test --features test-e2e e2e --no-default-features  -- --nocapture
-popd
+/usr/bin/cincinnati-e2e-test
