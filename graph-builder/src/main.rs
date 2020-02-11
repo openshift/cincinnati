@@ -12,19 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[macro_use]
-extern crate log;
-
 use actix_web::{App, HttpServer};
 use cincinnati::plugins::prelude::*;
 use commons::metrics::{self, HasRegistry};
-use failure::{Error, ResultExt};
-use graph_builder::{config, graph, graph::RwLock, status};
+use failure::{ensure, Error, Fallible, ResultExt};
+use graph_builder::{self, config, graph, status};
+use log::debug;
+use parking_lot::RwLock;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::thread;
-
-/// Common prefix for graph-builder metrics.
-pub static METRICS_PREFIX: &str = "cincinnati_gb";
 
 fn main() -> Result<(), Error> {
     let sys = actix::System::new("graph-builder");
@@ -34,6 +31,9 @@ fn main() -> Result<(), Error> {
         .filter(Some(module_path!()), settings.verbosity)
         .init();
     debug!("application settings:\n{:#?}", settings);
+
+    let registry: prometheus::Registry =
+        metrics::new_registry(Some(config::METRICS_PREFIX.to_string()))?;
 
     let plugins: Vec<BoxedPlugin> = if settings.disable_quay_api_metadata {
         Default::default()
@@ -46,10 +46,33 @@ fn main() -> Result<(), Error> {
             QuayMetadataFetchPlugin, DEFAULT_QUAY_LABEL_FILTER, DEFAULT_QUAY_MANIFESTREF_KEY,
         };
         use cincinnati::plugins::internal::node_remove::NodeRemovePlugin;
+        use graph_builder::plugins::release_scrape_dockerv2::{
+            ReleaseScrapeDockerv2Plugin, ReleaseScrapeDockerv2Settings,
+        };
         use quay::v1::DEFAULT_API_BASE;
 
         // TODO(steveeJ): actually make this vec configurable
         new_plugins!(
+            InternalPluginWrapper(ReleaseScrapeDockerv2Plugin::try_new(
+                toml::from_str::<ReleaseScrapeDockerv2Settings>(&format!(
+                    r#"
+                        registry = "{}"
+                        repository = "{}"
+                        manifestref_key = "{}"
+                        fetch_concurrency = {}
+                        credentials_path = {:?}
+                    "#,
+                    &settings.registry,
+                    settings.repository.clone(),
+                    settings.manifestref_key.clone(),
+                    settings.fetch_concurrency.clone(),
+                    settings.credentials_path.clone().unwrap_or_default(),
+                ))?,
+                // Cache
+                None,
+                // prometheus::Registry
+                Some(&registry),
+            )?),
             InternalPluginWrapper(
                 // TODO(lucab): source options from plugins config.
                 QuayMetadataFetchPlugin::try_new(
@@ -70,7 +93,12 @@ fn main() -> Result<(), Error> {
             })
         )
     };
-    let registry: prometheus::Registry = metrics::new_registry(Some(METRICS_PREFIX.to_string()))?;
+
+    ensure_registered_metrics(
+        &registry,
+        config::METRICS_PREFIX,
+        &settings.metrics_required,
+    )?;
 
     let service_addr = (settings.address, settings.port);
     let status_addr = (settings.status_address, settings.status_port);
@@ -141,10 +169,34 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
+fn ensure_registered_metrics(
+    registry: &prometheus::Registry,
+    metrics_prefix: &str,
+    metrics_required: &HashSet<String>,
+) -> Fallible<()> {
+    let registered_metric_names = registry
+        .gather()
+        .iter()
+        .map(prometheus::proto::MetricFamily::get_name)
+        .map(Into::into)
+        .collect::<HashSet<String>>();
+
+    metrics_required.iter().try_for_each(|required_metric| {
+        ensure!(
+            registered_metric_names.contains(&format!("{}_{}", metrics_prefix, required_metric)),
+            "Required metric '{}' has not been registered: {:#?}",
+            required_metric,
+            registered_metric_names,
+        );
+
+        Ok(())
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::State;
+    use ::graph_builder::graph::{self, State};
     use commons::metrics::HasRegistry;
     use commons::metrics::RegistryWrapper;
     use commons::testing;
@@ -161,7 +213,7 @@ mod tests {
 
         let plugins = Box::leak(Box::new([]));
         let registry: &'static Registry = Box::leak(Box::new(
-            metrics::new_registry(Some(METRICS_PREFIX.to_string())).unwrap(),
+            metrics::new_registry(Some(config::METRICS_PREFIX.to_string())).unwrap(),
         ));
 
         State::new(json_graph, HashSet::new(), live, ready, plugins, registry)

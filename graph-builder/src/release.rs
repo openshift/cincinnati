@@ -17,7 +17,23 @@ use semver::Version;
 use std::collections::HashMap;
 use std::fmt;
 
-#[derive(Debug, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Release {
+    pub source: String,
+    pub metadata: Metadata,
+}
+
+impl Into<cincinnati::Release> for Release {
+    fn into(self) -> cincinnati::Release {
+        cincinnati::Release::Concrete(cincinnati::ConcreteRelease {
+            version: self.metadata.version.to_string(),
+            payload: self.source,
+            metadata: self.metadata.metadata,
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Metadata {
     pub kind: MetadataKind,
     pub version: Version,
@@ -43,7 +59,7 @@ impl fmt::Display for Metadata {
     }
 }
 
-#[derive(Debug, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum MetadataKind {
     #[serde(rename = "cincinnati-metadata-v0")]
     V0,

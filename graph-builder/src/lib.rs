@@ -15,9 +15,12 @@ extern crate structopt;
 
 pub mod config;
 pub mod graph;
-pub mod registry;
+pub mod plugins;
 pub mod release;
 pub mod status;
+
+#[cfg(test)]
+pub mod tests;
 
 #[allow(dead_code)]
 /// Build info

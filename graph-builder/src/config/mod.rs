@@ -12,3 +12,6 @@ mod options;
 mod settings;
 
 pub use self::settings::AppSettings;
+
+/// Common prefix for graph-builder metrics.
+pub const METRICS_PREFIX: &str = "cincinnati_gb";
