@@ -59,6 +59,11 @@ objects:
                     configMapKeyRef:
                       key: gb.log.verbosity
                       name: cincinnati
+                - name: "RUST_BACKTRACE"
+                  valueFrom:
+                    configMapKeyRef:
+                      key: gb.rust_backtrace
+                      name: cincinnati
               command:
                 - ${GB_BINARY}
               args: [
@@ -130,6 +135,11 @@ objects:
                   valueFrom:
                     configMapKeyRef:
                       key: pe.mandatory_client_parameters
+                      name: cincinnati
+                - name: "RUST_BACKTRACE"
+                  valueFrom:
+                    configMapKeyRef:
+                      key: pe.rust_backtrace
                       name: cincinnati
               command:
                 - ${PE_BINARY}
@@ -213,11 +223,13 @@ objects:
       gb.registry: "quay.io"
       gb.repository: ${{GB_CINCINNATI_REPO}}
       gb.log.verbosity: ${{GB_LOG_VERBOSITY}}
+      gb.rust_backtrace: "${RUST_BACKTRACE}"
       pe.address: "0.0.0.0"
       pe.status.address: "0.0.0.0"
       pe.upstream: "http://localhost:8080/v1/graph"
       pe.log.verbosity: ${{PE_LOG_VERBOSITY}}
       pe.mandatory_client_parameters: "channel"
+      pe.rust_backtrace: "${RUST_BACKTRACE}"
 
 parameters:
   - name: IMAGE
@@ -293,3 +305,6 @@ parameters:
   - name: GB_UPSTREAM_FETCH_CONCURRENCY
     value: "16"
     displayName: Concurrency when fetching the upstream metadata
+  - name: RUST_BACKTRACE
+    value: "0"
+    displayName: Set RUST_BACKTRACE env var
