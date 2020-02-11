@@ -23,12 +23,10 @@ oc create secret generic ci-pull-secret --from-file=.dockercfg=/tmp/cluster/pull
 oc secrets link default ci-pull-secret --for=pull
 
 # Apply oc template
-oc new-app -f dist/openshift/cincinnati.yaml \
+oc new-app -f template/cincinnati.yaml \
   -p IMAGE="${IMAGE_FORMAT%/*}/stable" \
   -p IMAGE_TAG=deploy \
   -p GB_CINCINNATI_REPO="redhat/openshift-cincinnati-test-public-manual" \
-  -p GB_BINARY="/go/src/github.com/openshift/cincinnati/target/release/graph-builder" \
-  -p PE_BINARY="/go/src/github.com/openshift/cincinnati/target/release/policy-engine" \
   -p GB_CPU_REQUEST=50m \
   -p PE_CPU_REQUEST=50m
 
