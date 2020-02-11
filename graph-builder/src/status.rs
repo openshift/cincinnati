@@ -8,12 +8,12 @@ use failure::Fallible;
 ///
 /// Status:
 ///  * Live (200 code): The upstream scrape loop thread is running
-///  * Not Live (500 code): everything else.
+///  * Not Live (503 code): everything else.
 pub async fn serve_liveness(app_data: actix_web::web::Data<State>) -> Fallible<HttpResponse> {
     let resp = if app_data.is_live() {
         HttpResponse::Ok().finish()
     } else {
-        HttpResponse::InternalServerError().finish()
+        HttpResponse::ServiceUnavailable().finish()
     };
 
     Ok(resp)
@@ -23,12 +23,12 @@ pub async fn serve_liveness(app_data: actix_web::web::Data<State>) -> Fallible<H
 ///
 /// Status:
 ///  * Ready (200 code): a JSON graph as the result of a successful scrape is available.
-///  * Not Ready (500 code): no JSON graph available yet.
+///  * Not Ready (503 code): no JSON graph available yet.
 pub async fn serve_readiness(app_data: actix_web::web::Data<State>) -> Fallible<HttpResponse> {
     let resp = if app_data.is_ready() {
         HttpResponse::Ok().finish()
     } else {
-        HttpResponse::InternalServerError().finish()
+        HttpResponse::ServiceUnavailable().finish()
     };
 
     Ok(resp)
