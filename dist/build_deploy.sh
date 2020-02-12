@@ -26,10 +26,6 @@ function cleanup() {
 }
 trap cleanup EXIT
 
-docker_cargo cargo build --release
-mkdir $RELEASE_OUTPUT_DIR
-cp ${RELEASE_DIR}/{graph-builder,policy-engine} $DOCKERFILE_DEPLOY  $RELEASE_OUTPUT_DIR/
-
 docker build -t "${IMAGE}:${IMAGE_TAG}" $RELEASE_OUTPUT_DIR
 
 if [[ -n "$QUAY_USER" && -n "$QUAY_TOKEN" ]]; then
