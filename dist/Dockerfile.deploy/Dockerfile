@@ -1,4 +1,4 @@
-FROM cincinnati:build AS builder
+FROM local/cincinnati-build:latest AS builder
 # build
 COPY . .
 RUN cargo build --release && \
