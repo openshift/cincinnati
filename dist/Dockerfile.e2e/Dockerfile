@@ -1,4 +1,4 @@
-FROM cincinnati:build as builder
+FROM cincinnati:build AS builder
 # build e2e tests
 COPY . .
 
