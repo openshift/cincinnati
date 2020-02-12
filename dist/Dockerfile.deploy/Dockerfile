@@ -1,8 +1,8 @@
 FROM local/cincinnati-build:latest AS builder
 # build
 COPY . .
-RUN cargo build --release && \
-    mkdir -p /opt/cincinnati/bin && \
+RUN if [ ! -z target/release/graph-builder ]; then cargo build --release; fi
+RUN mkdir -p /opt/cincinnati/bin && \
     cp -rvf target/release/graph-builder /opt/cincinnati/bin && \
     cp -rvf target/release/policy-engine /opt/cincinnati/bin
 
