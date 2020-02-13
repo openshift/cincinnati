@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-IMAGE_BUILD="${IMAGE_BUILD:-local/cincinnati-build:latest}"
+IMAGE_BUILD="${IMAGE_BUILD:-quay.io/app-sre/cincinnati:builder}"
 PROJECT_PARENT_DIR="${ABSOLUTE_PATH:?need ABSOLUTE_PATH set}/../"
 GIT_REV="$(git rev-parse --short=7 HEAD)"
 BUILD_VOLUME_CARGO_GIT="build_cargo_git_${GIT_REV}"

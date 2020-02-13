@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO [vrutkovs]: rework this as Prow CI doesn't use it anymore 
+
 set -ex
 
 ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,10 +27,6 @@ function cleanup() {
     fi
 }
 trap cleanup EXIT
-
-docker_cargo cargo build --release
-mkdir $RELEASE_OUTPUT_DIR
-cp ${RELEASE_DIR}/{graph-builder,policy-engine} $DOCKERFILE_DEPLOY  $RELEASE_OUTPUT_DIR/
 
 docker build -t "${IMAGE}:${IMAGE_TAG}" $RELEASE_OUTPUT_DIR
 
