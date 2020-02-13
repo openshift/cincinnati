@@ -12,7 +12,7 @@ ensure_build_container "${DOCKERFILE_BUILD}"
 
 DOCKERFILE_DEPLOY="$ABSOLUTE_PATH/Dockerfile.deploy/Dockerfile"
 
-docker build -t "${IMAGE}:${IMAGE_TAG}" $DOCKERFILE_DEPLOY
+docker build -t "${IMAGE}:${IMAGE_TAG}" -f $DOCKERFILE_DEPLOY .
 
 if [[ -n "$QUAY_USER" && -n "$QUAY_TOKEN" ]]; then
     DOCKER_CONF="$PWD/.docker"
