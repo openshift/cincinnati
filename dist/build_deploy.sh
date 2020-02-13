@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# TODO [vrutkovs]: rework this as Prow CI doesn't use it anymore 
+
 set -ex
 
 ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

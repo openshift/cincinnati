@@ -1,4 +1,4 @@
-FROM local/cincinnati-build:latest AS builder
+FROM quay.io/app-sre/cincinnati:builder AS builder
 # build e2e tests
 COPY . .
 

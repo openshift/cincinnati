@@ -1,4 +1,4 @@
-FROM quay.io/app-sre/cincinnati:base AS builder
+FROM quay.io/app-sre/cincinnati:builder AS builder
 # build
 COPY . .
 RUN cargo build --release && \
