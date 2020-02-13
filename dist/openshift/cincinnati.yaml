@@ -237,9 +237,9 @@ parameters:
     displayName: "Graph-builder CPU limit"
     description: "Maximum amount of CPU (millicores) allowed for graph-builder (default: 750m)"
   - name: PE_MEMORY_LIMIT
-    value: "256Mi"
+    value: "512Mi"
     displayName: "Policy-engine memory limit"
-    description: "Maximum amount of memory (bytes) allowed for policy-engine (default: 256Mi)"
+    description: "Maximum amount of memory (bytes) allowed for policy-engine (default: 512Mi)"
   - name: PE_CPU_LIMIT
     value: "750m"
     displayName: "Policy-engine CPU limit"
