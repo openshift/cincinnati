@@ -11,24 +11,8 @@ DOCKERFILE_BUILD="$ABSOLUTE_PATH/Dockerfile.build/"
 ensure_build_container "${DOCKERFILE_BUILD}"
 
 DOCKERFILE_DEPLOY="$ABSOLUTE_PATH/Dockerfile.deploy/Dockerfile"
-RELEASE_DIR="${PROJECT_PARENT_DIR}/target/release"
-RELEASE_OUTPUT_DIR="${PROJECT_PARENT_DIR}/release-$(date +'%Y%m%d.%H%M%S')"
 
-function cleanup() {
-    set +e
-    if [[ ! -n "$KEEP_CARGO_OUTPUT" ]]; then
-        docker_cargo cargo clean
-    fi
-    docker_cargo_stop_all
-    if [[ ! -n "$KEEP_RELEASE_OUTPUT" ]]; then
-        rm -f ${RELEASE_OUTPUT_DIR}/{graph-builder,policy-engine}
-        rm -f ${RELEASE_OUTPUT_DIR}/$(basename ${DOCKERFILE_DEPLOY})
-        rmdir ${RELEASE_OUTPUT_DIR}
-    fi
-}
-trap cleanup EXIT
-
-docker build -t "${IMAGE}:${IMAGE_TAG}" $RELEASE_OUTPUT_DIR
+docker build -t "${IMAGE}:${IMAGE_TAG}" $DOCKERFILE_DEPLOY
 
 if [[ -n "$QUAY_USER" && -n "$QUAY_TOKEN" ]]; then
     DOCKER_CONF="$PWD/.docker"
