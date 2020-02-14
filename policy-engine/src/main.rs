@@ -58,7 +58,12 @@ lazy_static! {
     static ref BUILD_INFO: Counter = Counter::with_opts(opts!(
         "build_info",
         "Build information",
-        labels! {"git_commit" => built_info::GIT_VERSION.unwrap(),}
+        labels! {
+            "git_commit" => match built_info::GIT_VERSION {
+                Some(commit) => commit,
+                None => "unknown"
+            },
+        }
     ))
     .unwrap();
 }
