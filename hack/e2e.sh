@@ -28,7 +28,8 @@ oc new-app -f template/cincinnati.yaml \
   -p IMAGE_TAG=deploy \
   -p GB_CINCINNATI_REPO="redhat/openshift-cincinnati-test-public-manual" \
   -p GB_CPU_REQUEST=50m \
-  -p PE_CPU_REQUEST=50m
+  -p PE_CPU_REQUEST=50m \
+  -p RUST_BACKTRACE="1"
 
 # Wait for dc to rollout
 oc wait --for=condition=available --timeout=5m deploymentconfig/cincinnati
