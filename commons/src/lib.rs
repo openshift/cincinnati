@@ -5,13 +5,10 @@
 extern crate actix_web;
 #[macro_use]
 extern crate failure;
-extern crate serde;
 #[macro_use]
 extern crate lazy_static;
-extern crate prometheus;
 #[macro_use]
 extern crate serde_json;
-extern crate url;
 
 mod config;
 pub use crate::config::MergeOptions;

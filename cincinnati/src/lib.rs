@@ -12,30 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate daggy;
 #[macro_use]
 extern crate failure;
-extern crate serde;
+
 #[macro_use]
 extern crate serde_derive;
-extern crate commons;
 #[macro_use]
 extern crate log;
-extern crate protobuf;
-extern crate toml;
-extern crate url;
 #[macro_use]
 extern crate lazy_static;
-extern crate regex;
 #[macro_use]
 extern crate smart_default;
-extern crate actix_web;
-extern crate futures;
-extern crate prometheus;
-extern crate serde_json;
 #[macro_use]
 extern crate custom_debug_derive;
-pub extern crate futures_locks;
 
 #[cfg(test)]
 extern crate tokio;

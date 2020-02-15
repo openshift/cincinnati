@@ -103,15 +103,14 @@ where
 
 #[cfg(test)]
 pub(crate) mod tests {
-    extern crate tokio;
 
-    use self::tokio::runtime::Runtime;
     use crate::graph;
     use crate::AppState;
     use actix_web::http;
     use cincinnati::plugins::prelude::*;
     use mockito;
     use std::error::Error;
+    use tokio::runtime::Runtime;
 
     pub(crate) fn common_init() -> Runtime {
         let _ = env_logger::try_init_from_env(env_logger::Env::default());

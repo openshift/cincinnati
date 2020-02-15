@@ -12,20 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate actix;
-extern crate actix_web;
-extern crate failure;
-extern crate graph_builder;
 #[macro_use]
 extern crate log;
-extern crate structopt;
-extern crate tempfile;
 
-use crate::failure::ResultExt;
 use actix_web::{App, HttpServer};
 use cincinnati::plugins::prelude::*;
 use commons::metrics::{self, HasRegistry};
-use failure::Error;
+use failure::{Error, ResultExt};
 use graph_builder::{config, graph, graph::RwLock, status};
 use std::sync::Arc;
 use std::thread;
