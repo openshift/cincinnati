@@ -5,7 +5,7 @@ use crate::plugins::BoxedPlugin;
 use crate::plugins::{InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
 use crate::ReleaseId;
 use async_trait::async_trait;
-use failure::Fallible;
+use failure::{Fallible, ResultExt};
 use prometheus::Registry;
 
 pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
@@ -19,6 +19,10 @@ pub struct EdgeAddRemovePlugin {
 
     #[default(DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string())]
     pub remove_all_edges_value: String,
+
+    /// If true causes the removal of all processed metadata from the releases.
+    #[default(false)]
+    pub remove_consumed_metadata: bool,
 }
 
 #[async_trait]
@@ -53,7 +57,8 @@ impl PluginSettings for EdgeAddRemovePlugin {
 ///     2. next
 /// 2. *.remove
 ///     1. previous
-///     2. next
+///     2. previous_regex
+///     3. next
 ///
 /// This ordering has implications on the result of semantical contradictions, so that the `*.remove` labels take precedence over `*.add`.
 ///
@@ -94,11 +99,18 @@ impl EdgeAddRemovePlugin {
             };
         }
 
+        let previous_remove_key = format!("{}.{}", self.key_prefix, "previous.remove");
         graph
-            .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "previous.remove"))
+            .find_by_metadata_key(&previous_remove_key)
             .into_iter()
             .try_for_each(
                 |(to, to_version, from_csv): (ReleaseId, String, String)| -> Fallible<()> {
+                    if self.remove_consumed_metadata {
+                        graph
+                            .get_metadata_as_ref_mut(&to)
+                            .map(|metadata| metadata.remove(&previous_remove_key))?;
+                    }
+
                     if from_csv.trim() == self.remove_all_edges_value {
                         let parents: Vec<daggy::EdgeIndex> = graph
                             .previous_releases(&to)
@@ -114,7 +126,7 @@ impl EdgeAddRemovePlugin {
                             try_annotate_semver_build(&mut graph, from_version, &to)?;
 
                         if let Some(from) = graph.find_by_version(&from_version) {
-                            info!("[{}]: removing previous {}", from_version, to_version,);
+                            info!("[{}]: removing previous {}", to_version, from_version);
                             handle_remove_edge!(from, to)
                         } else {
                             warn!(
@@ -127,11 +139,73 @@ impl EdgeAddRemovePlugin {
                 },
             )?;
 
+        // Remove edges instructed by "previous.remove_regex"
+        let previous_remove_regex_key = format!("{}.{}", self.key_prefix, "previous.remove_regex");
         graph
-            .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "next.remove"))
+            .find_by_metadata_key(&previous_remove_regex_key)
+            .into_iter()
+            .try_for_each(
+                |(to, to_version, from_regex_string): (ReleaseId, String, String)| -> Fallible<()> {
+                    if self.remove_consumed_metadata {
+                        graph
+                            .get_metadata_as_ref_mut(&to)
+                            .map(|metadata| metadata.remove(&previous_remove_regex_key))?;
+                    }
+
+                    let from_regex = regex::Regex::new(&from_regex_string)
+                        .context(format!("Parsing {} as Regex", &from_regex_string))?;
+
+                    if from_regex_string == ".*" {
+                        let parents: Vec<daggy::EdgeIndex> = graph
+                            .previous_releases(&to)
+                            .map(|(edge_index, _, _)| edge_index)
+                            .collect();
+
+                        trace!(
+                            "removing parents by regex for '{}': {:?}",
+                            to_version,
+                            parents
+                        );
+                        return graph.remove_edges_by_index(&parents);
+                    };
+
+                    let froms = graph.find_by_fn_mut(|release| {
+                        if from_regex.is_match(release.version()) {
+                            debug!(
+                                "Regex '{}' matches version '{}'",
+                                &from_regex,
+                                release.version(),
+                            );
+                            true
+                        } else {
+                            false
+                        }
+                    });
+
+                    for (from, from_version) in froms {
+                        info!(
+                            "[{}]: removing previous {} by regex",
+                            to_version, from_version
+                        );
+                        handle_remove_edge!(from, to);
+                    }
+
+                    Ok(())
+                },
+            )?;
+
+        let next_remove_key = format!("{}.{}", self.key_prefix, "next.remove");
+        graph
+            .find_by_metadata_key(&next_remove_key)
             .into_iter()
             .try_for_each(
                 |(from, from_version, to_csv): (ReleaseId, String, String)| -> Fallible<()> {
+                    if self.remove_consumed_metadata {
+                        graph
+                            .get_metadata_as_ref_mut(&from)
+                            .map(|metadata| metadata.remove(&next_remove_key))?;
+                    }
+
                     for to_version in to_csv.split(',').map(str::trim) {
                         let to_version = try_annotate_semver_build(&mut graph, to_version, &from)?;
                         if let Some(to) = graph.find_by_version(&to_version) {
@@ -167,10 +241,17 @@ impl EdgeAddRemovePlugin {
             };
         }
 
+        let previous_add_key = format!("{}.{}", self.key_prefix, "previous.add");
         graph
-            .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "previous.add"))
+            .find_by_metadata_key(&previous_add_key)
             .into_iter()
             .try_for_each(|(to, to_version, from_csv)| -> Fallible<()> {
+                if self.remove_consumed_metadata {
+                    graph
+                        .get_metadata_as_ref_mut(&to)
+                        .map(|metadata| metadata.remove(&previous_add_key))?;
+                }
+
                 for from_version in from_csv.split(',').map(str::trim) {
                     let from_version_annotated =
                         try_annotate_semver_build(&mut graph, from_version, &to)?;
@@ -191,10 +272,17 @@ impl EdgeAddRemovePlugin {
                 Ok(())
             })?;
 
+        let next_add_key = format!("{}.{}", self.key_prefix, "next.add");
         graph
-            .find_by_metadata_key(&format!("{}.{}", self.key_prefix, "next.add"))
+            .find_by_metadata_key(&next_add_key)
             .into_iter()
             .try_for_each(|(from, from_version, to_csv)| -> Fallible<()> {
+                if self.remove_consumed_metadata {
+                    graph
+                        .get_metadata_as_ref_mut(&from)
+                        .map(|metadata| metadata.remove(&next_add_key))?;
+                }
+
                 for to_version in to_csv.split(',').map(str::trim) {
                     let to_version_annotated =
                         try_annotate_semver_build(&mut graph, to_version, &from)?;
@@ -290,6 +378,8 @@ mod tests {
         let plugin = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+
+            ..Default::default()
         });
         let future_processed_graph = plugin.run_internal(InternalIO {
             graph: input_graph.clone(),
@@ -343,6 +433,8 @@ mod tests {
         let plugin = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+
+            ..Default::default()
         });
         let future_processed_graph = plugin.run_internal(InternalIO {
             graph: input_graph,
@@ -405,6 +497,8 @@ mod tests {
         let plugin = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+
+            ..Default::default()
         });
         let future_processed_graph = plugin.run_internal(InternalIO {
             graph: input_graph,
@@ -455,6 +549,8 @@ mod tests {
         let plugin = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+
+            ..Default::default()
         });
         let future_processed_graph = plugin.run_internal(InternalIO {
             graph: input_graph,
@@ -508,6 +604,8 @@ mod tests {
         let plugin = Box::new(EdgeAddRemovePlugin {
             key_prefix,
             remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+
+            ..Default::default()
         });
 
         let future_processed_graph = plugin.run_internal(InternalIO {
@@ -558,6 +656,8 @@ mod tests {
                 let plugin = Box::new(EdgeAddRemovePlugin {
                     key_prefix: KEY_PREFIX.to_string(),
                     remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+
+                    ..Default::default()
                 });
                 let future_processed_graph = plugin.run_internal(InternalIO {
                     graph: input_graph.clone(),
