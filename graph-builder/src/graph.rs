@@ -14,10 +14,9 @@
 
 use crate::built_info;
 use crate::config;
-use crate::registry::{self, Registry};
 use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::prelude::*;
-use cincinnati::{AbstractRelease, Graph, Release, CONTENT_TYPE};
+use cincinnati::{AbstractRelease, Graph, CONTENT_TYPE};
 use commons::metrics::HasRegistry;
 use commons::GraphError;
 use failure::{Error, Fallible};
@@ -38,11 +37,6 @@ lazy_static! {
     static ref GRAPH_LAST_SUCCESSFUL_REFRESH: IntGauge = IntGauge::new(
         "graph_last_successful_refresh_timestamp",
         "UTC timestamp of last successful graph refresh"
-    )
-    .unwrap();
-    static ref GRAPH_UPSTREAM_RAW_RELEASES: IntGauge = IntGauge::new(
-        "graph_upstream_raw_releases",
-        "Number of releases fetched from upstream, before processing"
     )
     .unwrap();
     static ref UPSTREAM_ERRORS: Counter = Counter::new(
@@ -90,7 +84,6 @@ pub fn register_metrics(registry: &prometheus::Registry) -> Fallible<()> {
     commons::register_metrics(&registry)?;
     registry.register(Box::new(GRAPH_FINAL_RELEASES.clone()))?;
     registry.register(Box::new(GRAPH_LAST_SUCCESSFUL_REFRESH.clone()))?;
-    registry.register(Box::new(GRAPH_UPSTREAM_RAW_RELEASES.clone()))?;
     registry.register(Box::new(UPSTREAM_ERRORS.clone()))?;
     registry.register(Box::new(UPSTREAM_SCRAPES.clone()))?;
     registry.register(Box::new(GRAPH_UPSTREAM_INITIAL_SCRAPE.clone()))?;
@@ -170,17 +163,6 @@ impl HasRegistry for State {
 
 #[allow(clippy::useless_let_if_seq)]
 pub async fn run(settings: &config::AppSettings, state: &State) -> ! {
-    // Grow-only cache, mapping tag (hashed layers) to optional release metadata.
-    let mut cache = registry::cache::new();
-
-    let registry = Registry::try_from_str(&settings.registry)
-        .unwrap_or_else(|_| panic!("failed to parse '{}' as Url", &settings.registry));
-
-    // Read the credentials outside the loop to avoid re-reading the file
-    let (username, password) =
-        registry::read_credentials(settings.credentials_path.as_ref(), &registry.host)
-            .expect("could not read registry credentials");
-
     // Indicate if a panic happens
     let previous_hook = std::panic::take_hook();
     let panic_live = state.live.clone();
@@ -208,75 +190,41 @@ pub async fn run(settings: &config::AppSettings, state: &State) -> ! {
 
         debug!("graph update triggered");
         let scrape_timer = UPSTREAM_SCRAPES_DURATION.start_timer();
-        let scrape = registry::fetch_releases(
-            &registry,
-            &settings.repository,
-            username.as_ref().map(String::as_ref),
-            password.as_ref().map(String::as_ref),
-            &mut cache,
-            &settings.manifestref_key,
-            settings.fetch_concurrency,
-        )
-        .await;
-        UPSTREAM_SCRAPES.inc();
 
-        let releases = match scrape {
-            Ok(releases) => {
-                if releases.is_empty() {
-                    warn!(
-                        "could not find any releases in {}/{}",
-                        &registry.host_port_string(),
-                        &settings.repository
-                    );
-                };
-
-                // Record scrape duration
-                scrape_value = scrape_timer.stop_and_discard();
-                releases
-            }
-            Err(err) => {
-                UPSTREAM_ERRORS.inc();
-                err.iter_chain()
-                    .for_each(|cause| error!("failed to fetch all release metadata: {}", cause));
-                continue;
-            }
-        };
-        GRAPH_UPSTREAM_RAW_RELEASES.set(releases.len() as i64);
-
-        let graph = match create_graph(releases) {
-            Ok(graph) => graph,
-            Err(err) => {
-                err.iter_chain().for_each(|cause| error!("{}", cause));
-                continue;
-            }
-        };
-
-        let graph = match cincinnati::plugins::process(
+        let scrape = cincinnati::plugins::process(
             state.plugins.iter(),
             cincinnati::plugins::PluginIO::InternalIO(cincinnati::plugins::InternalIO {
-                graph,
+                // the first plugin will produce the initial graph
+                graph: Default::default(),
                 // the plugins used in the graph-builder don't expect any parameters yet
                 parameters: Default::default(),
             }),
         )
-        .await
-        {
-            Ok(internal_io) => internal_io.graph,
+        .await;
+        UPSTREAM_SCRAPES.inc();
+
+        let internal_io = match scrape {
+            Ok(internal_io) => internal_io,
             Err(err) => {
+                UPSTREAM_ERRORS.inc();
                 err.iter_chain().for_each(|cause| error!("{}", cause));
                 continue;
             }
         };
 
-        let json_graph = match serde_json::to_string(&graph) {
+        let json_graph = match serde_json::to_string(&internal_io.graph) {
             Ok(json) => json,
             Err(err) => {
+                UPSTREAM_ERRORS.inc();
                 error!("Failed to serialize graph: {}", err);
                 continue;
             }
         };
 
         *state.json.write() = json_graph;
+
+        // Record scrape duration
+        scrape_value = scrape_timer.stop_and_discard();
 
         if first_success {
             *state.ready.write() = true;
@@ -288,7 +236,7 @@ pub async fn run(settings: &config::AppSettings, state: &State) -> ! {
 
         GRAPH_LAST_SUCCESSFUL_REFRESH.set(chrono::Utc::now().timestamp() as i64);
 
-        let nodes_count = graph.releases_count();
+        let nodes_count = internal_io.graph.releases_count();
         GRAPH_FINAL_RELEASES.set(nodes_count as i64);
         debug!("graph update completed, {} valid releases", nodes_count);
     }
@@ -298,7 +246,7 @@ pub async fn run(settings: &config::AppSettings, state: &State) -> ! {
 ///
 /// When processing previous/next release metadata it is assumed that the edge
 /// destination has the same build type as the origin.
-pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
+pub fn create_graph(releases: Vec<crate::release::Release>) -> Result<Graph, Error> {
     let mut graph = Graph::default();
 
     releases
@@ -331,7 +279,7 @@ pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
             previous.iter().try_for_each(|version| {
                 let previous = match graph.find_by_version(&version.to_string()) {
                     Some(id) => id,
-                    None => graph.add_release(Release::Abstract(AbstractRelease {
+                    None => graph.add_release(cincinnati::Release::Abstract(AbstractRelease {
                         version: version.to_string(),
                     }))?,
                 };
@@ -341,7 +289,7 @@ pub fn create_graph(releases: Vec<registry::Release>) -> Result<Graph, Error> {
             next.iter().try_for_each(|version| {
                 let next = match graph.find_by_version(&version.to_string()) {
                     Some(id) => id,
-                    None => graph.add_release(Release::Abstract(AbstractRelease {
+                    None => graph.add_release(cincinnati::Release::Abstract(AbstractRelease {
                         version: version.to_string(),
                     }))?,
                 };

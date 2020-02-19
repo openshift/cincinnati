@@ -84,7 +84,10 @@ mod tests {
         let repo = "cincinnati/cli-test";
 
         let mut settings = AppSettings::default();
-        assert_eq!(settings.repository, "openshift".to_string());
+        assert_eq!(
+            settings.repository,
+            crate::plugins::release_scrape_dockerv2::DEFAULT_SCRAPE_REPOSITORY
+        );
 
         let args = vec!["argv0", "--upstream.registry.repository", repo];
         let cli = CliOptions::from_iter_safe(args).unwrap();

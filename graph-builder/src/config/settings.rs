@@ -37,11 +37,11 @@ pub struct AppSettings {
 
     // TODO(lucab): split this in (TLS, hostname+port).
     /// Target host for the registry scraper.
-    #[default("http://localhost:5000")]
+    #[default(crate::plugins::release_scrape_dockerv2::DEFAULT_SCRAPE_REGISTRY.to_string())]
     pub registry: String,
 
     /// Target image for the registry scraper.
-    #[default("openshift")]
+    #[default(crate::plugins::release_scrape_dockerv2::DEFAULT_SCRAPE_REPOSITORY.to_string())]
     pub repository: String,
 
     /// Listening address for the status service.
@@ -62,8 +62,15 @@ pub struct AppSettings {
     pub disable_quay_api_metadata: bool,
 
     /// Concurrency for graph fetching
-    #[default(16)]
+    #[default(crate::plugins::release_scrape_dockerv2::DEFAULT_FETCH_CONCURRENCY)]
     pub fetch_concurrency: usize,
+
+    /// Metrics which are required to be registered, to be specified without the `METRICS_PREFIX`.
+    /// If these are not registered by the time all plugins have been loaded an error will be thrown.
+    #[default([
+        "graph_upstream_raw_releases",
+    ].iter().cloned().map(Into::into).collect())]
+    pub metrics_required: HashSet<String>,
 }
 
 impl AppSettings {
