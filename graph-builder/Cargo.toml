@@ -11,7 +11,6 @@ actix-web = "^2.0"
 chrono = "^0.4.7"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
-dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "712f7dae50068948e8678af535ce90bb63afd878" }
 env_logger = "^0.6.0"
 failure = "^0.1.1"
 flate2 = "^1.0.1"
@@ -27,7 +26,6 @@ semver = { version = "^0.9.0", features = [ "serde" ] }
 serde = "^1.0.70"
 serde_derive = "^1.0.70"
 serde_json = "^1.0.22"
-serde_yaml = "^0.8.11"
 smart-default = "^0.5.1"
 structopt = "^0.2.10"
 tar = "^0.4.16"
@@ -43,7 +41,6 @@ custom_debug_derive = "^0.1.7"
 built = "^0.3.2"
 
 [dev-dependencies]
-walkdir = "2.3.1"
 twoway = "^0.2"
 assert-json-diff = "1.0.0"
 test-case = "1.0.0"

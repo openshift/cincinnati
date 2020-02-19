@@ -68,8 +68,8 @@ impl MergeOptions<Option<Vec<toml::Value>>> for AppSettings {
     fn try_merge(&mut self, opts: Option<Vec<toml::Value>>) -> Fallible<()> {
         if let Some(policies) = opts {
             for conf in policies {
-                let plugin = cincinnati::plugins::deserialize_config(conf)?;
-                self.policies.push(plugin);
+                let plugin = cincinnati::plugins::catalog::deserialize_config(conf)?;
+                self.plugin_settings.push(plugin);
             }
         }
         Ok(())
@@ -165,13 +165,13 @@ mod tests {
 
     #[test]
     fn toml_basic_policy() {
-        use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
         use cincinnati::plugins::prelude::*;
 
-        let expected: Vec<BoxedPlugin> = new_plugins!(InternalPluginWrapper(ChannelFilterPlugin {
-            key_prefix: String::from("io.openshift.upgrades.graph"),
-            key_suffix: String::from("release.channels"),
-        }));
+        let expected: Vec<BoxedPlugin> =
+            cincinnati::new_plugins!(InternalPluginWrapper(ChannelFilterPlugin {
+                key_prefix: String::from("io.openshift.upgrades.graph"),
+                key_suffix: String::from("release.channels"),
+            }));
         let mut settings = AppSettings::default();
 
         let opts = {
@@ -192,9 +192,9 @@ mod tests {
         };
         assert!(opts.policy.is_some());
         settings.try_merge(Some(opts)).unwrap();
-        assert_eq!(settings.policies.len(), 1);
+        assert_eq!(settings.plugin_settings.len(), 1);
 
-        let policies = settings.policy_plugins(None).unwrap();
-        assert_eq!(policies, expected);
+        let plugins = settings.validate_and_build_plugins(None).unwrap();
+        assert_eq!(plugins, expected);
     }
 }

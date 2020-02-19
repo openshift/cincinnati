@@ -1,11 +1,7 @@
-use async_trait::async_trait;
-use cincinnati::plugins::prelude::*;
-use cincinnati::plugins::InternalIO;
-use cincinnati::plugins::InternalPlugin;
-use failure::{Fallible, ResultExt};
-use serde::de::DeserializeOwned;
-use std::path::PathBuf;
-use std::str::FromStr;
+use crate as cincinnati;
+
+use self::cincinnati::plugins::prelude::*;
+use self::cincinnati::plugins::prelude_plugin_impl::*;
 
 mod graph_data_model {
     //! This module contains the data types corresponding to the graph data files.
@@ -111,6 +107,18 @@ pub struct OpenshiftSecondaryMetadataParserSettings {
     default_arch: String,
 }
 
+impl OpenshiftSecondaryMetadataParserSettings {
+    /// Validate plugin configuration and fill in defaults.
+    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>> {
+        let settings: Self = cfg.try_into()?;
+
+        ensure!(!settings.key_prefix.is_empty(), "empty key_prefix");
+        ensure!(!settings.default_arch.is_empty(), "empty default_arch");
+
+        Ok(Box::new(settings))
+    }
+}
+
 /// Plugin.
 #[derive(Debug)]
 pub struct OpenshiftSecondaryMetadataParserPlugin {
@@ -193,6 +201,8 @@ where
 }
 
 impl OpenshiftSecondaryMetadataParserPlugin {
+    pub(crate) const PLUGIN_NAME: &'static str = "openshift-secondary-metadata-parse";
+
     async fn process_raw_metadata(&self, io: &mut InternalIO) -> Fallible<()> {
         let path = self.settings.data_directory.join("raw/metadata.json");
 
@@ -408,15 +418,18 @@ impl InternalPlugin for OpenshiftSecondaryMetadataParserPlugin {
 
 #[cfg(test)]
 mod tests {
-    use cincinnati::plugins::InternalIO;
-    use cincinnati::plugins::InternalPlugin;
+    use crate as cincinnati;
+
+    use self::cincinnati::plugins::InternalIO;
+    use self::cincinnati::plugins::InternalPlugin;
+
     use failure::{Fallible, ResultExt};
     use std::path::PathBuf;
     use std::str::FromStr;
 
     lazy_static::lazy_static! {
         static ref TEST_FIXTURE_DIR: PathBuf = {
-            PathBuf::from_str("src/plugins/openshift_secondary_metadata_parser/test_fixtures").unwrap()
+            PathBuf::from_str("src/plugins/internal/graph_builder/openshift_secondary_metadata_parser/test_fixtures").unwrap()
         };
     }
 

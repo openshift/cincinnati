@@ -9,7 +9,7 @@ macro_rules! get_multiple_values {
                     if let Some(value) = $map.get($key) {
                         value
                     } else {
-                        bail!("{}", $key)
+                        failure::bail!("{}", $key)
                     },
                 )
             };
@@ -25,7 +25,7 @@ macro_rules! get_multiple_values {
                             if let Some(value) = $map.get($key) {
                                 value
                             } else {
-                                bail!("{}", $key)
+                                failure::bail!("{}", $key)
                             },
                         )*
                     )
@@ -73,15 +73,27 @@ macro_rules! new_plugin {
 
 #[macro_export]
 macro_rules! new_plugins {
-    ($($x:expr),*) => { vec![$(new_plugin!($x)),*] };
-}
+        ($($x:expr),*) => { vec![$(new_plugin!($x)),*] };
+    }
 
 #[macro_export]
 macro_rules! plugin_config {
     ($( $tuple:expr ),*) => {
-        cincinnati::plugins::deserialize_config(toml::value::Value::Table(toml::value::Table::from_iter(
+        cincinnati::plugins::catalog::deserialize_config(toml::value::Value::Table(toml::value::Table::from_iter(
             [ $(($tuple)),* ]
             .iter()
+            .map(|(k, v)| (k.to_string(), toml::value::Value::String(v.to_string()))),
+        )))
+    };
+}
+
+#[macro_export]
+macro_rules! plugin_config_option {
+    ($( $tuple:expr ),*) => {
+        cincinnati::plugins::catalog::deserialize_config(toml::value::Value::Table(toml::value::Table::from_iter(
+            [ $(($tuple)),* ]
+            .iter()
+            .filter_map(|kv| kv.as_ref())
             .map(|(k, v)| (k.to_string(), toml::value::Value::String(v.to_string()))),
         )))
     };

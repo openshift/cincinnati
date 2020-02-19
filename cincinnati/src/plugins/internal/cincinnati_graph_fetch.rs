@@ -3,15 +3,14 @@
 //! Instead of processing the input graph, this plugin fetches a graph from a
 //! remote endpoint, which makes it effectively discard any given input graph.
 
-use crate::plugins::{
-    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
-};
-use crate::CONTENT_TYPE;
-use async_trait::async_trait;
+use crate as cincinnati;
+
+use self::cincinnati::plugins::prelude::*;
+use self::cincinnati::plugins::prelude_plugin_impl::*;
+use self::cincinnati::CONTENT_TYPE;
+
 use commons::GraphError;
-use failure::Fallible;
-use futures::TryFutureExt;
-use prometheus::{Counter, Registry};
+use prometheus::Counter;
 use reqwest;
 use reqwest::header::{HeaderValue, ACCEPT};
 
@@ -42,7 +41,7 @@ pub struct CincinnatiGraphFetchPlugin {
 }
 
 impl PluginSettings for CincinnatiGraphFetchSettings {
-    fn build_plugin(&self, registry: Option<&Registry>) -> Fallible<BoxedPlugin> {
+    fn build_plugin(&self, registry: Option<&prometheus::Registry>) -> Fallible<BoxedPlugin> {
         let cfg = self.clone();
         let plugin = CincinnatiGraphFetchPlugin::try_new(cfg.upstream, registry)?;
         Ok(new_plugin!(InternalPluginWrapper(plugin)))
@@ -141,7 +140,7 @@ impl InternalPlugin for CincinnatiGraphFetchPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::generate_custom_graph;
+    use cincinnati::testing::generate_custom_graph;
     use commons::metrics::{self, RegistryWrapper};
     use commons::testing::{self, init_runtime};
     use failure::{bail, Fallible};
@@ -194,8 +193,8 @@ mod tests {
 
     fetch_upstream_success_test!(
         name: fetch_success_empty_graph_fetch,
-        mock_body: &serde_json::to_string(&crate::Graph::default())?,
-        expected_graph: crate::Graph::default(),
+        mock_body: &serde_json::to_string(&cincinnati::Graph::default())?,
+        expected_graph: cincinnati::Graph::default(),
     );
 
     fetch_upstream_success_test!(

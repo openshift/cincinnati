@@ -12,12 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::release::Metadata;
-use failure::{Error, Fallible, ResultExt};
+use crate as cincinnati;
+
+use self::cincinnati::plugins::internal::graph_builder::release::Metadata;
+
+use failure::{bail, ensure, format_err, Error, Fallible, ResultExt};
 use flate2::read::GzDecoder;
 use futures::lock::Mutex as FuturesMutex;
 use futures::prelude::*;
 use futures::TryStreamExt;
+use log::{debug, error, trace, warn};
+use serde::Deserialize;
 use serde_json;
 use std::fs::File;
 use std::io::Read;
@@ -29,7 +34,7 @@ use tar::Archive;
 
 /// Module for the release cache
 pub mod cache {
-    use crate::release::Release;
+    use super::cincinnati::plugins::internal::graph_builder::release::Release;
     use std::collections::HashMap;
     use std::sync::Arc;
     use tokio::sync::RwLock as FuturesRwLock;
@@ -193,7 +198,7 @@ pub async fn fetch_releases(
     cache: cache::Cache,
     manifestref_key: &str,
     concurrency: usize,
-) -> Result<Vec<crate::release::Release>, Error> {
+) -> Result<Vec<cincinnati::plugins::internal::graph_builder::release::Release>, Error> {
     let authenticated_client = dkregistry::v2::Client::configure()
         .registry(&registry.host_port_string())
         .insecure_registry(registry.insecure)
@@ -288,9 +293,11 @@ pub async fn fetch_releases(
     })
     .await?;
 
-    let releases = Arc::<FuturesMutex<Vec<crate::release::Release>>>::try_unwrap(releases)
-        .map_err(|_| format_err!("Unwrapping the shared Releases vector. This must not fail."))?
-        .into_inner();
+    let releases = Arc::<
+        FuturesMutex<Vec<cincinnati::plugins::internal::graph_builder::release::Release>>,
+    >::try_unwrap(releases)
+    .map_err(|_| format_err!("Unwrapping the shared Releases vector. This must not fail."))?
+    .into_inner();
 
     Ok(releases)
 }
@@ -315,7 +322,7 @@ async fn lookup_or_fetch(
     manifestref: String,
     manifestref_key: String,
     arch: Option<String>,
-) -> Fallible<Option<crate::release::Release>> {
+) -> Fallible<Option<cincinnati::plugins::internal::graph_builder::release::Release>> {
     if let Some(release) = cache.read().await.get(&manifestref) {
         trace!(
             "[{}] Using cached release metadata for manifestref {}",
@@ -398,7 +405,7 @@ async fn find_first_release(
     repo: String,
     tag: String,
     manifestref: String,
-) -> Fallible<Option<crate::release::Release>> {
+) -> Fallible<Option<cincinnati::plugins::internal::graph_builder::release::Release>> {
     for layer_digest in layer_digests {
         trace!("[{}] Downloading layer {}", &tag, &layer_digest);
         let (registry_host, repo, tag) = (registry_host.clone(), repo.clone(), tag.clone());
@@ -425,7 +432,12 @@ async fn find_first_release(
                 // Specify the source by manifestref
                 let source = format!("{}/{}@{}", registry_host, repo, &manifestref);
 
-                return Ok(Some(crate::release::Release { source, metadata }));
+                return Ok(Some(
+                    cincinnati::plugins::internal::graph_builder::release::Release {
+                        source,
+                        metadata,
+                    },
+                ));
             }
             Err(e) => {
                 debug!(

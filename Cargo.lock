@@ -551,14 +551,18 @@ dependencies = [
  "commons 0.1.0",
  "custom_debug_derive 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "daggy 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dkregistry 0.4.0-alpha.0 (git+https://github.com/camallo/dkregistry-rs.git?rev=712f7dae50068948e8678af535ce90bb63afd878)",
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "flate2 1.0.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-locks 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "mockito 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pretty_assertions 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prometheus 0.7.0 (git+https://github.com/pingcap/rust-prometheus.git?rev=6a02b0d2943f8fffce672e236e22c6f925184d93)",
  "protobuf 2.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "protoc-rust 2.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -569,11 +573,15 @@ dependencies = [
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_yaml 0.8.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "smart-default 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tar 0.4.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "twoway 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "walkdir 2.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1041,7 +1049,6 @@ dependencies = [
  "cincinnati 0.1.0",
  "commons 0.1.0",
  "custom_debug_derive 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "dkregistry 0.4.0-alpha.0 (git+https://github.com/camallo/dkregistry-rs.git?rev=712f7dae50068948e8678af535ce90bb63afd878)",
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 1.0.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1059,7 +1066,6 @@ dependencies = [
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_yaml 0.8.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "smart-default 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.4.26 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1069,7 +1075,6 @@ dependencies = [
  "toml 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "twoway 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "walkdir 2.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

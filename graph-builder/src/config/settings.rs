@@ -1,4 +1,8 @@
+//! Application settings for graph-builder.
+
 use super::{cli, file};
+use cincinnati::plugins::catalog::{build_plugins, PluginSettings};
+use cincinnati::plugins::BoxedPlugin;
 use commons::MergeOptions;
 use failure::Fallible;
 use std::collections::HashSet;
@@ -37,11 +41,11 @@ pub struct AppSettings {
 
     // TODO(lucab): split this in (TLS, hostname+port).
     /// Target host for the registry scraper.
-    #[default(crate::plugins::release_scrape_dockerv2::DEFAULT_SCRAPE_REGISTRY.to_string())]
+    #[default(cincinnati::plugins::internal::release_scrape_dockerv2::DEFAULT_SCRAPE_REGISTRY.to_string())]
     pub registry: String,
 
     /// Target image for the registry scraper.
-    #[default(crate::plugins::release_scrape_dockerv2::DEFAULT_SCRAPE_REPOSITORY.to_string())]
+    #[default(cincinnati::plugins::internal::release_scrape_dockerv2::DEFAULT_SCRAPE_REPOSITORY.to_string())]
     pub repository: String,
 
     /// Listening address for the status service.
@@ -56,13 +60,8 @@ pub struct AppSettings {
     #[default(log::LevelFilter::Warn)]
     pub verbosity: log::LevelFilter,
 
-    // TODO(lucab): drop this when plugins are configurable.
-    /// Disable quay-metadata (Satellite compat).
-    #[default(false)]
-    pub disable_quay_api_metadata: bool,
-
     /// Concurrency for graph fetching
-    #[default(crate::plugins::release_scrape_dockerv2::DEFAULT_FETCH_CONCURRENCY)]
+    #[default(cincinnati::plugins::internal::release_scrape_dockerv2::DEFAULT_FETCH_CONCURRENCY)]
     pub fetch_concurrency: usize,
 
     /// Metrics which are required to be registered, to be specified without the `METRICS_PREFIX`.
@@ -71,6 +70,9 @@ pub struct AppSettings {
         "graph_upstream_raw_releases",
     ].iter().cloned().map(Into::into).collect())]
     pub metrics_required: HashSet<String>,
+
+    /// Plugin configuration.
+    pub plugin_settings: Vec<Box<dyn PluginSettings>>,
 }
 
 impl AppSettings {
@@ -94,6 +96,22 @@ impl AppSettings {
         Self::try_validate(cfg)
     }
 
+    /// Validate and return configured plugins.
+    pub fn validate_and_build_plugins(
+        &self,
+        registry: Option<&prometheus::Registry>,
+    ) -> Fallible<Vec<BoxedPlugin>> {
+        let default_plugin_settings = self.default_openshift_plugin_settings()?;
+
+        let plugin_settings: &Vec<Box<dyn PluginSettings>> = if self.plugin_settings.is_empty() {
+            &default_plugin_settings
+        } else {
+            &self.plugin_settings
+        };
+
+        build_plugins(plugin_settings, registry)
+    }
+
     /// Validate and build runtime settings.
     fn try_validate(self) -> Fallible<Self> {
         if self.pause_secs.as_secs() == 0 {
@@ -101,5 +119,45 @@ impl AppSettings {
         }
 
         Ok(self)
+    }
+
+    fn default_openshift_plugin_settings(
+        &self,
+        // registry: Option<&prometheus::Registry>,
+    ) -> Fallible<Vec<Box<dyn PluginSettings>>> {
+        use cincinnati::plugins::internal::edge_add_remove::DEFAULT_REMOVE_ALL_EDGES_VALUE;
+        use cincinnati::plugins::prelude::*;
+
+        let plugins = vec![
+            plugin_config_option!(
+                Some(("name", ReleaseScrapeDockerv2Plugin::PLUGIN_NAME)),
+                Some(("registry", &self.registry)),
+                Some(("repository", &self.repository)),
+                Some(("manifestref_key", &self.manifestref_key)),
+                Some(("fetch_concurrency", &format!("{}", self.fetch_concurrency))),
+                self.credentials_path
+                    .as_ref()
+                    .map(|pathbuf| pathbuf.to_str())
+                    .flatten()
+                    .map(|path| ("credentials_path", path))
+            )?,
+            plugin_config!(
+                ("name", QuayMetadataFetchPlugin::PLUGIN_NAME),
+                ("repository", &self.repository),
+                ("manifestref_key", &self.manifestref_key),
+                ("api-base", quay::v1::DEFAULT_API_BASE)
+            )?,
+            plugin_config!(
+                ("name", NodeRemovePlugin::PLUGIN_NAME,),
+                ("key_prefix", &self.manifestref_key)
+            )?,
+            plugin_config!(
+                ("name", EdgeAddRemovePlugin::PLUGIN_NAME),
+                ("key_prefix", &self.manifestref_key),
+                ("remove_all_edges_value", DEFAULT_REMOVE_ALL_EDGES_VALUE)
+            )?,
+        ];
+
+        Ok(plugins)
     }
 }

@@ -1,13 +1,11 @@
 use super::registry;
 
-use async_trait::async_trait;
-use cincinnati::plugins::prelude::*;
-use cincinnati::plugins::InternalIO;
-use cincinnati::plugins::InternalPlugin;
-use custom_debug_derive::CustomDebug;
-use failure::{Fallible, ResultExt};
+use crate as cincinnati;
+
+use self::cincinnati::plugins::prelude::*;
+use self::cincinnati::plugins::prelude_plugin_impl::*;
+
 use std::convert::TryInto;
-use std::path::PathBuf;
 
 /// Default registry to scrape.
 pub static DEFAULT_SCRAPE_REGISTRY: &str = "https://quay.io";
@@ -35,8 +33,8 @@ pub struct ReleaseScrapeDockerv2Settings {
     #[default(DEFAULT_MANIFESTREF_KEY.to_string())]
     manifestref_key: String,
 
-    #[default(DEFAULT_FETCH_CONCURRENCY)]
-    fetch_concurrency: usize,
+    #[default(DEFAULT_FETCH_CONCURRENCY.to_string())]
+    fetch_concurrency: String,
 
     /// Username for authenticating with the registry
     #[default(Option::None)]
@@ -59,10 +57,27 @@ impl PluginSettings for ReleaseScrapeDockerv2Settings {
     }
 }
 
+impl ReleaseScrapeDockerv2Settings {
+    /// Validate plugin configuration and fill in defaults.
+    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>> {
+        let settings: Self = cfg.try_into()?;
+
+        ensure!(!settings.repository.is_empty(), "empty repository");
+        ensure!(!settings.registry.is_empty(), "empty registry");
+        ensure!(
+            !settings.manifestref_key.is_empty(),
+            "empty manifestref_key prefix"
+        );
+
+        Ok(Box::new(settings))
+    }
+}
+
 /// Metadata fetcher for quay.io API.
 #[derive(CustomDebug)]
 pub struct ReleaseScrapeDockerv2Plugin {
     settings: ReleaseScrapeDockerv2Settings,
+    fetch_concurrency: usize,
     registry: registry::Registry,
     cache: registry::cache::Cache,
 
@@ -71,6 +86,9 @@ pub struct ReleaseScrapeDockerv2Plugin {
 }
 
 impl ReleaseScrapeDockerv2Plugin {
+    /// Plugin name, for configuration.
+    pub const PLUGIN_NAME: &'static str = "release-scrape-dockerv2";
+
     pub fn try_new(
         mut settings: ReleaseScrapeDockerv2Settings,
         cache: Option<registry::cache::Cache>,
@@ -99,8 +117,11 @@ impl ReleaseScrapeDockerv2Plugin {
             settings.password = password;
         }
 
+        let fetch_concurrency = settings.fetch_concurrency.parse()?;
+
         Ok(Self {
             settings,
+            fetch_concurrency,
             registry,
             cache: cache.unwrap_or_else(registry::cache::new),
             graph_upstream_raw_releases,
@@ -118,7 +139,7 @@ impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
             self.settings.password.as_ref().map(String::as_ref),
             self.cache.clone(),
             &self.settings.manifestref_key,
-            self.settings.fetch_concurrency,
+            self.fetch_concurrency,
         )
         .await
         .context("failed to fetch all release metadata")?;
@@ -134,7 +155,8 @@ impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
         self.graph_upstream_raw_releases
             .set(releases.len().try_into()?);
 
-        let graph = crate::graph::create_graph(releases).unwrap();
+        let graph =
+            cincinnati::plugins::internal::graph_builder::release::create_graph(releases).unwrap();
 
         Ok(InternalIO {
             graph,
@@ -147,7 +169,8 @@ impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
 #[cfg(feature = "test-net")]
 mod network_tests {
     use super::*;
-    use crate::tests::common_init;
+
+    use cincinnati::plugins::internal::graph_builder::commons::tests::common_init;
     use cincinnati::testing::{TestGraphBuilder, TestMetadata};
     use failure::{Fallible, ResultExt};
     use std::collections::HashSet;

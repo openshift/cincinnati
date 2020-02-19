@@ -3,14 +3,26 @@
 //! This catalog relies on a static list of all available plugins,
 //! referenced by name. It is used for configuration purposes.
 
+use crate as cincinnati;
+
+use self::cincinnati::plugins::BoxedPlugin;
+
 use super::internal::arch_filter::ArchFilterPlugin;
 use super::internal::channel_filter::ChannelFilterPlugin;
 use super::internal::cincinnati_graph_fetch::CincinnatiGraphFetchPlugin;
 use super::internal::edge_add_remove::EdgeAddRemovePlugin;
+use super::internal::github_openshift_secondary_metadata_scraper::{
+    GithubOpenshiftSecondaryMetadataScraperPlugin, GithubOpenshiftSecondaryMetadataScraperSettings,
+};
 use super::internal::metadata_fetch_quay::QuayMetadataFetchPlugin;
 use super::internal::node_remove::NodeRemovePlugin;
-use crate::plugins::BoxedPlugin;
-use failure::Fallible;
+use super::internal::openshift_secondary_metadata_parser::{
+    OpenshiftSecondaryMetadataParserPlugin, OpenshiftSecondaryMetadataParserSettings,
+};
+use super::internal::release_scrape_dockerv2::{
+    ReleaseScrapeDockerv2Plugin, ReleaseScrapeDockerv2Settings,
+};
+use failure::{bail, format_err, Fallible};
 use std::fmt::Debug;
 
 /// Key used to look up plugin-type in a configuration entry.
@@ -40,18 +52,27 @@ pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>>
             CincinnatiGraphFetchPlugin::deserialize_config(cfg)
         }
         ArchFilterPlugin::PLUGIN_NAME => ArchFilterPlugin::deserialize_config(cfg),
+        ReleaseScrapeDockerv2Plugin::PLUGIN_NAME => {
+            ReleaseScrapeDockerv2Settings::deserialize_config(cfg)
+        }
+        GithubOpenshiftSecondaryMetadataScraperPlugin::PLUGIN_NAME => {
+            GithubOpenshiftSecondaryMetadataScraperSettings::deserialize_config(cfg)
+        }
+        OpenshiftSecondaryMetadataParserPlugin::PLUGIN_NAME => {
+            OpenshiftSecondaryMetadataParserSettings::deserialize_config(cfg)
+        }
         x => bail!("unknown plugin '{}'", x),
     }
 }
 
 /// Bulid a vector of plugins from PluginSettings
 pub fn build_plugins(
-    policies: &[Box<dyn PluginSettings>],
+    settings: &[Box<dyn PluginSettings>],
     registry: Option<&prometheus::Registry>,
 ) -> Fallible<Vec<BoxedPlugin>> {
-    let mut plugins = Vec::with_capacity(policies.len());
-    for conf in policies {
-        let plugin = conf.build_plugin(registry)?;
+    let mut plugins = Vec::with_capacity(settings.len());
+    for setting in settings {
+        let plugin = setting.build_plugin(registry)?;
         plugins.push(plugin);
     }
 

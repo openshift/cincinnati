@@ -23,6 +23,9 @@ pub struct FileOptions {
 
     /// Status service options.
     pub status: Option<options::StatusOptions>,
+
+    /// Plugin settings.
+    pub plugin_settings: Option<Vec<toml::Value>>,
 }
 
 impl FileOptions {
@@ -51,9 +54,23 @@ impl MergeOptions<Option<FileOptions>> for AppSettings {
     fn try_merge(&mut self, opts: Option<FileOptions>) -> Fallible<()> {
         if let Some(file) = opts {
             assign_if_some!(self.verbosity, file.verbosity);
+            assign_if_some!(self.pause_secs, file.pause_secs);
+            self.try_merge(file.upstream)?;
             self.try_merge(file.service)?;
             self.try_merge(file.status)?;
-            self.try_merge(file.upstream)?;
+            self.try_merge(file.plugin_settings)?;
+        }
+        Ok(())
+    }
+}
+
+impl MergeOptions<Option<Vec<toml::Value>>> for AppSettings {
+    fn try_merge(&mut self, opts: Option<Vec<toml::Value>>) -> Fallible<()> {
+        if let Some(policies) = opts {
+            for conf in policies {
+                let plugin = cincinnati::plugins::catalog::deserialize_config(conf)?;
+                self.plugin_settings.push(plugin);
+            }
         }
         Ok(())
     }

@@ -6,3 +6,10 @@ pub mod cincinnati_graph_fetch;
 pub mod edge_add_remove;
 pub mod metadata_fetch_quay;
 pub mod node_remove;
+
+mod graph_builder;
+
+pub use graph_builder::{
+    github_openshift_secondary_metadata_scraper, openshift_secondary_metadata_parser,
+    release_scrape_dockerv2,
+};

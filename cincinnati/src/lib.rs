@@ -17,17 +17,6 @@ extern crate failure;
 
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate smart_default;
-#[macro_use]
-extern crate custom_debug_derive;
-
-#[cfg(test)]
-extern crate tokio;
 
 #[macro_use]
 pub mod plugins;
@@ -40,14 +29,14 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::collections::HashMap;
 use std::{collections, fmt};
 
-pub use daggy::WouldCycle;
+pub use daggy::{self, WouldCycle};
 
 pub const CONTENT_TYPE: &str = "application/json";
 const EXPECT_NODE_WEIGHT: &str = "all exisitng nodes to have a weight (release)";
 
 /// Graph type which stores `Release` as node-weights and `Empty` as edge-weights.
 #[derive(Debug, Default)]
-#[cfg_attr(test, derive(Clone))]
+#[cfg_attr(any(test, feature = "clone"), derive(Clone))]
 pub struct Graph {
     dag: Dag<Release, Empty>,
 }

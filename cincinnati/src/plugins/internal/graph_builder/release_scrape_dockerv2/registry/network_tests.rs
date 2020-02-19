@@ -1,24 +1,28 @@
-use crate as graph_builder;
-use crate::tests::common_init;
-use crate::tests::remove_metadata_by_key;
+use crate as cincinnati;
+
+use cincinnati::plugins::internal::graph_builder::commons::tests::{
+    common_init, remove_metadata_by_key,
+};
+use cincinnati::plugins::internal::graph_builder::release::{
+    create_graph, Metadata, MetadataKind::V0, Release,
+};
+use cincinnati::plugins::internal::graph_builder::release_scrape_dockerv2::registry::{
+    self, fetch_releases, Registry,
+};
 use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY;
 use cincinnati::{Empty, WouldCycle};
-use failure::Fallible;
-use graph_builder::graph::create_graph;
-use graph_builder::plugins::release_scrape_dockerv2::registry::{self, fetch_releases, Registry};
-use graph_builder::release::Release;
-use graph_builder::release::{Metadata, MetadataKind::V0};
+use failure::{bail, ensure, Fallible};
 use itertools::Itertools;
 use semver::Version;
 use std::collections::HashMap;
 
 #[cfg(feature = "test-net-private")]
-use graph_builder::plugins::release_scrape_dockerv2::registry::read_credentials;
+use cincinnati::plugins::internal::graph_builder::release_scrape_dockerv2::registry::read_credentials;
 
 lazy_static::lazy_static! {
+
     static ref FETCH_CONCURRENCY: usize = {
-        let app_settings = graph_builder::config::AppSettings::default();
-        app_settings.fetch_concurrency
+        cincinnati::plugins::internal::graph_builder::release_scrape_dockerv2::DEFAULT_FETCH_CONCURRENCY
     };
 
 }

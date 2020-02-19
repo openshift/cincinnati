@@ -5,13 +5,14 @@
 //! The filtering also removes any architecture suffixes from the version strings
 //! if they are present. The assumption for this is that the architecture would
 //! be encoded as part of the _build_ information according to the SemVer specification.
-use crate::plugins::{
-    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
-};
-use async_trait::async_trait;
+
+use crate as cincinnati;
+
+use self::cincinnati::plugins::prelude::*;
+use self::cincinnati::plugins::prelude_plugin_impl::*;
+
 use commons::GraphError;
-use failure::{Fallible, ResultExt};
-use prometheus::Registry;
+use lazy_static::lazy_static;
 
 pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 pub static DEFAULT_ARCH_KEY: &str = "release.arch";
@@ -32,12 +33,13 @@ pub struct ArchFilterPlugin {
 }
 
 impl PluginSettings for ArchFilterPlugin {
-    fn build_plugin(&self, _: Option<&Registry>) -> Fallible<BoxedPlugin> {
+    fn build_plugin(&self, _: Option<&prometheus::Registry>) -> Fallible<BoxedPlugin> {
         Ok(new_plugin!(InternalPluginWrapper(self.clone())))
     }
 }
 
 impl ArchFilterPlugin {
+    /// Plugin name, for configuration.
     pub const PLUGIN_NAME: &'static str = "arch-filter";
 
     /// Validate plugin configuration and fill in defaults.
@@ -99,7 +101,7 @@ impl InternalPlugin for ArchFilterPlugin {
             graph
                 .find_by_fn_mut(|release| {
                     match release {
-                        crate::Release::Concrete(concrete_release) => concrete_release
+                        cincinnati::Release::Concrete(concrete_release) => concrete_release
                             .metadata
                             .remove(&format!("{}.{}", self.key_prefix, self.key_suffix))
                             .map_or(true, |values| {
@@ -138,8 +140,8 @@ impl InternalPlugin for ArchFilterPlugin {
                 };
 
                 match &mut release {
-                    crate::Release::Abstract(release) => release.version = version,
-                    crate::Release::Concrete(release) => release.version = version,
+                    cincinnati::Release::Abstract(release) => release.version = version,
+                    cincinnati::Release::Concrete(release) => release.version = version,
                 };
 
                 Ok(())
@@ -156,9 +158,8 @@ impl InternalPlugin for ArchFilterPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate as cincinnati;
-    use crate::testing::TestMetadata;
     use cincinnati::testing::generate_custom_graph;
+    use cincinnati::testing::TestMetadata;
     use commons::testing::init_runtime;
 
     #[test]

@@ -1,11 +1,9 @@
 //! This plugin removes releases according to its metadata
 
-use crate::plugins::{
-    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
-};
-use async_trait::async_trait;
-use failure::Fallible;
-use prometheus::Registry;
+use crate as cincinnati;
+
+use self::cincinnati::plugins::prelude::*;
+use self::cincinnati::plugins::prelude_plugin_impl::*;
 
 /// Prefix for the metadata key operations.
 pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
@@ -18,14 +16,14 @@ pub struct NodeRemovePlugin {
 }
 
 impl PluginSettings for NodeRemovePlugin {
-    fn build_plugin(&self, _: Option<&Registry>) -> Fallible<BoxedPlugin> {
+    fn build_plugin(&self, _: Option<&prometheus::Registry>) -> Fallible<BoxedPlugin> {
         Ok(new_plugin!(InternalPluginWrapper(self.clone())))
     }
 }
 
 impl NodeRemovePlugin {
     /// Plugin name, for configuration.
-    pub(crate) const PLUGIN_NAME: &'static str = "node-remove";
+    pub const PLUGIN_NAME: &'static str = "node-remove";
 
     /// Validate plugin configuration and fill in defaults.
     pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>> {
@@ -68,9 +66,10 @@ impl InternalPlugin for NodeRemovePlugin {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate as cincinnati;
-    use crate::testing::{generate_custom_graph, TestMetadata};
+
+    use super::*;
+    use cincinnati::testing::{generate_custom_graph, TestMetadata};
     use commons::testing::init_runtime;
     use failure::ResultExt;
     use maplit::hashmap;

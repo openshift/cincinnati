@@ -2,6 +2,8 @@
 //!
 //! [GitHub API v3]: https://developer.github.com/v3/
 
+use serde::Deserialize;
+
 /// Commit structure.
 #[derive(Default, Clone, Debug, Deserialize, PartialEq, Eq)]
 pub(crate) struct Commit {

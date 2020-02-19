@@ -16,10 +16,6 @@ pub struct CliOptions {
     #[structopt(short = "c")]
     pub config_path: Option<String>,
 
-    // TODO(lucab): drop this when plugins are configurable.
-    #[structopt(long = "disable_quay_api_metadata")]
-    pub disable_quay_api_metadata: Option<bool>,
-
     #[structopt(flatten)]
     pub service: options::ServiceOptions,
 
@@ -45,12 +41,6 @@ impl MergeOptions<CliOptions> for AppSettings {
         self.try_merge(Some(opts.service))?;
         self.try_merge(Some(opts.status))?;
         self.try_merge(Some(opts.upstream_registry))?;
-
-        // TODO(lucab): drop this when plugins are configurable.
-        assign_if_some!(
-            self.disable_quay_api_metadata,
-            opts.disable_quay_api_metadata
-        );
 
         Ok(())
     }
@@ -86,7 +76,7 @@ mod tests {
         let mut settings = AppSettings::default();
         assert_eq!(
             settings.repository,
-            crate::plugins::release_scrape_dockerv2::DEFAULT_SCRAPE_REPOSITORY
+            cincinnati::plugins::internal::release_scrape_dockerv2::DEFAULT_SCRAPE_REPOSITORY
         );
 
         let args = vec!["argv0", "--upstream.registry.repository", repo];
