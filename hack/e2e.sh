@@ -22,7 +22,7 @@ oc create secret generic cincinnati-registry-credentials --from-file=registry-cr
 oc create secret generic ci-pull-secret --from-file=.dockercfg=/tmp/cluster/pull-secret --type=kubernetes.io/dockercfg
 
 # Wait for default service account to appear
-for ATTEMPT is $(seq 0 5); do
+for ATTEMPT in $(seq 0 5); do
   oc get serviceaccount default && break
   sleep 5
 done
