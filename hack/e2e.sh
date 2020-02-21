@@ -20,6 +20,13 @@ oc create secret generic cincinnati-registry-credentials --from-file=registry-cr
 
 # Use this pull secret to fetch images from CI
 oc create secret generic ci-pull-secret --from-file=.dockercfg=/tmp/cluster/pull-secret --type=kubernetes.io/dockercfg
+
+# Wait for default service account to appear
+for ATTEMPT in $(seq 0 5); do
+  oc get serviceaccount default && break
+  sleep 5
+done
+# Allow default serviceaccount to use CI pull secret
 oc secrets link default ci-pull-secret --for=pull
 
 # Apply oc template
