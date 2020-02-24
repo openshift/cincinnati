@@ -1,0 +1,6 @@
+to: 4.3.0-rc.0
+from: .*
+# 4.2 -> 4.3 updates occasionally hit FailedCreatePodSandBox events, fixed in rc.3, but in neither 4.2.16 nor rc.0: https://bugzilla.redhat.com/show_bug.cgi?id=1787635
+# 4.2 -> 4.3 updates occasionally hit RequiredPoolsFailed degradation, fixed in 4.2.16 and rc.3, but in neither 4.2.13 nor rc.0: https://bugzilla.redhat.com/show_bug.cgi?id=1786993
+# 4.2 -> 4.3 updates occasionally hit RouteHealthDegraded degradation, fixed in rc.0, but not in 4.2.16: https://bugzilla.redhat.com/show_bug.cgi?id=1790704
+# 4.2.* -> 4.3.0-rc.0 Sometimes workloads on GCP are unreachable during 4.2.x to 4.3.0 upgrade sometimes: https://bugzilla.redhat.com/show_bug.cgi?id=1793635
