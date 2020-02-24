@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use failure::Fallible;
 use prometheus::Registry;
 
-static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
+pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 pub static DEFAULT_REMOVE_ALL_EDGES_VALUE: &str = "*";
 
 #[derive(Clone, Debug, Deserialize, SmartDefault)]
