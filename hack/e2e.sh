@@ -54,6 +54,12 @@ oc -n openshift-monitoring create configmap cluster-monitoring-config --from-lit
 # `oc new-app` would stumble on unknown monitoring.coreos.com/v1 objects, so process and create instead
 oc process -f dist/openshift/observability.yaml -p NAMESPACE="cincinnati-e2e" | oc apply -f -
 
+# Export the e2e test environment variables
+E2E_TESTDATA_DIR="${E2E_TESTDATA_DIR:-e2e/tests/testdata}"
+export E2E_TESTDATA_DIR
+read -r E2E_METADATA_REVISION <"${E2E_TESTDATA_DIR}"/metadata_revision
+export E2E_METADATA_REVISION
+
 # Apply oc template
 oc new-app -f dist/openshift/cincinnati.yaml \
   -p IMAGE="${IMAGE}" \
@@ -61,22 +67,27 @@ oc new-app -f dist/openshift/cincinnati.yaml \
   -p GB_CPU_REQUEST=50m \
   -p PE_CPU_REQUEST=50m \
   -p RUST_BACKTRACE="1" \
-  -p GB_PLUGIN_SETTINGS='
+  -p GB_PLUGIN_SETTINGS="$(cat <<-EOF
       [[plugin_settings]]
       name = "release-scrape-dockerv2"
-      repository = "redhat/openshift-cincinnati-test-public-manual"
+      repository = "openshift-release-dev/ocp-release"
       fetch_concurrency = 128
 
       [[plugin_settings]]
-      name = "quay-metadata"
-      repository = "redhat/openshift-cincinnati-test-public-manual"
+      name = "github-secondary-metadata-scrape"
+      github_org = "openshift"
+      github_repo = "cincinnati-graph-data"
+      reference_revision = "${E2E_METADATA_REVISION}"
+      output_directory = "/tmp/cincinnati-graph-data"
 
       [[plugin_settings]]
-      name = "node-remove"
+      name = "openshift-secondary-metadata-parse"
+      data_directory = "/tmp/cincinnati-graph-data"
 
       [[plugin_settings]]
       name = "edge-add-remove"
-  ' \
+EOF
+)" \
   -p ENVIRONMENT_SECRETS="{}" \
   ;
 
