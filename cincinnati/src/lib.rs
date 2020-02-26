@@ -68,6 +68,14 @@ impl Release {
             Release::Concrete(release) => &release.version,
         }
     }
+
+    /// Get a mutable borrow of the release metadata if any
+    pub fn get_metadata_mut(&mut self) -> Option<&mut HashMap<String, String>> {
+        match self {
+            Release::Abstract(_) => None,
+            Release::Concrete(release) => Some(&mut release.metadata),
+        }
+    }
 }
 
 /// Type to represent a Release with all its information.
