@@ -65,7 +65,7 @@ pub fn sort_json_graph_by_version(v: &mut serde_json::Value) {
                     .entry(version.to_string())
                     .and_modify(|(from, to)| {
                         *to = Some(i);
-                        println!(
+                        log::trace!(
                             "{} changed index from {} to {}",
                             version,
                             from.unwrap(),
@@ -94,7 +94,7 @@ pub fn sort_json_graph_by_version(v: &mut serde_json::Value) {
                         let new_i64 = *index_map.get(&old_usize).unwrap() as i64;
                         serde_json::Value::Number(serde_json::Number::from(new_i64))
                     };
-                    println!("Rewriting {:?} -> {:?})", old, new);
+                    log::trace!("Rewriting {:?} -> {:?})", old, new);
                     *old = new;
                 };
             }

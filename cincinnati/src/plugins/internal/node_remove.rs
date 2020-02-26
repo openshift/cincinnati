@@ -7,7 +7,8 @@ use async_trait::async_trait;
 use failure::Fallible;
 use prometheus::Registry;
 
-static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
+/// Prefix for the metadata key operations.
+pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 
 #[derive(Clone, Debug, Deserialize, SmartDefault)]
 #[serde(default)]

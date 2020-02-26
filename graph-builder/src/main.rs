@@ -90,6 +90,7 @@ fn main() -> Result<(), Error> {
             InternalPluginWrapper(EdgeAddRemovePlugin {
                 key_prefix: DEFAULT_QUAY_LABEL_FILTER.to_string(),
                 remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+                remove_consumed_metadata: false,
             })
         )
     };

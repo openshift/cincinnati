@@ -1,0 +1,5 @@
+name: stable-4.3
+versions:
+# until s390 is released on 4.3 we may not want to include it in 4.3 channels
+- 4.3.0
+- 4.3.1
