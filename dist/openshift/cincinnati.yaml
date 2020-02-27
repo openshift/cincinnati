@@ -39,6 +39,9 @@ objects:
                     configMapKeyRef:
                       key: gb.rust_backtrace
                       name: cincinnati
+              envFrom:
+                - configMapRef:
+                    name: environment-secrets
               command:
                 - ${GB_BINARY}
               args: [
@@ -201,6 +204,11 @@ objects:
   - apiVersion: v1
     kind: ConfigMap
     metadata:
+      name: environment-secrets
+    data: ${{ENVIRONMENT_SECRETS}}
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
       name: cincinnati-configs
     data:
       gb.toml: |
@@ -323,3 +331,5 @@ parameters:
     displayName: Set RUST_BACKTRACE env var
   - name: GB_CONFIG_PATH
     value: "/etc/configs/gb.toml"
+  - name: ENVIRONMENT_SECRETS
+    value: '{ "CINCINNATI_GITHUB_SCRAPER_OAUTH_TOKEN_PATH": "/etc/secrets/github_token.key" }'

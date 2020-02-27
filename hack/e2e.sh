@@ -67,6 +67,7 @@ oc new-app -f dist/openshift/cincinnati.yaml \
       [[plugin_settings]]
       name = "edge-add-remove"
   ' \
+  -p ENVIRONMENT_SECRETS="{}" \
   ;
 
 # Wait for dc to rollout
