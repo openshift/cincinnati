@@ -9,4 +9,5 @@ pub mod plugin;
 
 pub use plugin::{
     GithubOpenshiftSecondaryMetadataScraperPlugin, GithubOpenshiftSecondaryMetadataScraperSettings,
+    GITHUB_SCRAPER_TOKEN_PATH_ENV,
 };

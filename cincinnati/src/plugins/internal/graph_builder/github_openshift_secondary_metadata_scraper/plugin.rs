@@ -13,6 +13,9 @@ pub static DEFAULT_OUTPUT_WHITELIST: &[&str] = &[
     "raw/metadata.json",
 ];
 
+/// Environment variable name for the Oauth token path
+pub static GITHUB_SCRAPER_TOKEN_PATH_ENV: &str = "CINCINNATI_GITHUB_SCRAPER_OAUTH_TOKEN_PATH";
+
 static USER_AGENT: &str = "openshift/cincinnati";
 
 /// Plugin settings.
@@ -28,6 +31,7 @@ pub struct GithubOpenshiftSecondaryMetadataScraperSettings {
     /// An empty vector is regarded as a configuration error.
     #[default(DEFAULT_OUTPUT_WHITELIST.iter().map(|s| (*s).to_string()).collect())]
     output_whitelist: Vec<String>,
+    oauth_token_path: Option<PathBuf>,
 }
 
 impl GithubOpenshiftSecondaryMetadataScraperSettings {
@@ -61,6 +65,7 @@ pub struct GithubOpenshiftSecondaryMetadataScraperPlugin {
 
     #[default(FuturesMutex::new(Default::default()))]
     state: FuturesMutex<State>,
+    oauth_token: Option<String>,
 }
 
 impl GithubOpenshiftSecondaryMetadataScraperPlugin {
@@ -81,9 +86,25 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
             )
             .context("Parsing output whitelist strings as regex")?;
 
+        let oauth_token = (&settings.oauth_token_path)
+            .clone()
+            .map(|path| {
+                std::fs::read_to_string(&path)
+                    .context(format!("Reading Oauth token from {:?}", &path))
+            })
+            .transpose()?
+            .map(|token| {
+                token
+                    .lines()
+                    .next()
+                    .map(|first_line| first_line.trim().to_owned())
+            })
+            .flatten();
+
         Ok(Self {
             settings,
             output_whitelist,
+            oauth_token,
 
             ..Default::default()
         })
@@ -94,10 +115,20 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
         let url = github_v3::branches_url(&self.settings.github_org, &self.settings.github_repo);
 
         trace!("Getting branches from {}", &url);
-        let bytes = reqwest::Client::new()
-            .get(&url)
-            .header(reqwest::header::USER_AGENT, USER_AGENT)
-            .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+
+        let request = {
+            let request = reqwest::Client::new()
+                .get(&url)
+                .header(reqwest::header::USER_AGENT, USER_AGENT)
+                .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json");
+            if let Some(token) = &self.oauth_token {
+                request.header(reqwest::header::AUTHORIZATION, format!("token {}", token))
+            } else {
+                request
+            }
+        };
+
+        let bytes = request
             .send()
             .await
             .context(format!("Getting branches from {}", &url))?
@@ -310,6 +341,8 @@ mod network_tests {
 
         let tmpdir = tempfile::tempdir()?;
 
+        let oauth_token_path = std::env::var(GITHUB_SCRAPER_TOKEN_PATH_ENV)?;
+
         let settings =
             toml::from_str::<GithubOpenshiftSecondaryMetadataScraperSettings>(&format!(
                 r#"
@@ -318,6 +351,7 @@ mod network_tests {
                     branch = "master"
                     output_whitelist = [ {} ]
                     output_directory = {:?}
+                    oauth_token_path = {:?}
                 "#,
                 DEFAULT_OUTPUT_WHITELIST
                     .iter()
@@ -325,6 +359,7 @@ mod network_tests {
                     .collect::<Vec<_>>()
                     .join(", "),
                 &tmpdir.path(),
+                oauth_token_path,
             ))?;
 
         debug!("Settings: {:#?}", &settings);
