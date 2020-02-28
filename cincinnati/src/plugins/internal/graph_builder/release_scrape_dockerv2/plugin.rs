@@ -60,7 +60,7 @@ impl PluginSettings for ReleaseScrapeDockerv2Settings {
 impl ReleaseScrapeDockerv2Settings {
     /// Validate plugin configuration and fill in defaults.
     pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>> {
-        let settings: Self = cfg.try_into()?;
+        let mut settings: Self = cfg.try_into()?;
 
         ensure!(!settings.repository.is_empty(), "empty repository");
         ensure!(!settings.registry.is_empty(), "empty registry");
@@ -68,6 +68,12 @@ impl ReleaseScrapeDockerv2Settings {
             !settings.manifestref_key.is_empty(),
             "empty manifestref_key prefix"
         );
+        if let Some(credentials_path) = &settings.credentials_path {
+            if credentials_path == &std::path::PathBuf::from("") {
+                warn!("Settings contain an empty credentials path, setting to None");
+                settings.credentials_path = None;
+            }
+        }
 
         Ok(Box::new(settings))
     }
