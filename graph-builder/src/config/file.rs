@@ -2,10 +2,12 @@
 
 use super::options;
 use super::AppSettings;
+use crate::config::options::de_duration_secs;
 use commons::de::de_loglevel;
 use commons::MergeOptions;
 use failure::{Fallible, ResultExt};
 use std::io::Read;
+use std::time::Duration;
 use std::{fs, io, path};
 
 /// TOML configuration, top-level.
@@ -14,6 +16,10 @@ pub struct FileOptions {
     /// Verbosity level.
     #[serde(default = "Option::default", deserialize_with = "de_loglevel")]
     pub verbosity: Option<log::LevelFilter>,
+
+    /// Duration of the pause (in seconds) between registry scans
+    #[serde(default = "Option::default", deserialize_with = "de_duration_secs")]
+    pub pause_secs: Option<Duration>,
 
     /// Upstream options.
     pub upstream: Option<UpstreamOptions>,
@@ -82,6 +88,9 @@ pub struct UpstreamOptions {
     /// Fetcher method.
     pub method: Option<String>,
 
+    /// DEPRECATED: Pause between upstream scrapes.
+    pub pause_secs: Option<u64>,
+
     /// Docker-registry-v2 upstream options.
     pub registry: Option<options::DockerRegistryOptions>,
 }
@@ -90,6 +99,9 @@ impl MergeOptions<Option<UpstreamOptions>> for AppSettings {
     fn try_merge(&mut self, opts: Option<UpstreamOptions>) -> Fallible<()> {
         if let Some(upstream) = opts {
             self.try_merge(upstream.registry)?;
+            if upstream.pause_secs.is_some() {
+                warn!("the upstream option 'pause_secs' has been deprecated and has no effect. please use '--pause-secs' instead");
+            };
         }
         Ok(())
     }
@@ -103,17 +115,14 @@ mod tests {
 
     #[test]
     fn toml_basic() {
-        let toml_input = "[upstream.registry]\npause_secs=25";
+        let toml_input = r#"
+            [upstream.registry]
+            url="aurl"
+        "#;
         let file_opts: FileOptions = toml::from_str(toml_input).unwrap();
 
-        let pause = file_opts
-            .upstream
-            .unwrap()
-            .registry
-            .unwrap()
-            .pause_secs
-            .unwrap();
-        assert_eq!(pause, std::time::Duration::from_secs(25));
+        let url = file_opts.upstream.unwrap().registry.unwrap().url.unwrap();
+        assert_eq!(url, "aurl");
     }
 
     #[test]
@@ -140,9 +149,9 @@ mod tests {
 
                 [upstream]
                 method = "registry"
+                pause_secs = 35
 
                 [upstream.registry]
-                pause_secs = 35
                 url = "quay.io"
                 repository = "openshift-release-dev/ocp-release"
 
