@@ -15,8 +15,8 @@ set -euo pipefail
 oc new-project cincinnati-e2e
 oc project cincinnati-e2e
 
-# Use pull secret in cincinnati
-oc create secret generic cincinnati-registry-credentials --from-file=registry-credentials=/tmp/cluster/pull-secret
+# Create a dummy secret as a workaround to not having real secrets in e2e
+oc create secret generic cincinnati-credentials --from-literal=""
 
 # Use this pull secret to fetch images from CI
 oc create secret generic ci-pull-secret --from-file=.dockercfg=/tmp/cluster/pull-secret --type=kubernetes.io/dockercfg
