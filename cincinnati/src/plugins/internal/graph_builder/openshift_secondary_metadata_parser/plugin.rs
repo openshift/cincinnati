@@ -10,7 +10,6 @@ mod graph_data_model {
     use serde::Deserialize;
     use serde::Deserializer;
     use std::collections::HashMap;
-
     /// Represents the blocked edges files in the data repository.
     #[derive(Debug, Deserialize)]
     pub struct BlockedEdge {
@@ -386,6 +385,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
                         let mut channels_split = channels.split(',').collect::<Vec<_>>();
                         // this has to match the sorting at
                         // https://github.com/openshift/cincinnati-graph-data/blob/5fc8dd0825b42369de8070ecba2ae0c49d0a99d9/hack/graph-util.py#L187
+                        channels_split.sort_by(|a, b| a.cmp(b));
                         channels_split.sort_by(|a, b| {
                             let a_split: Vec<&str> = a.splitn(2, '-').collect();
                             let b_split: Vec<&str> = b.splitn(2, '-').collect();
