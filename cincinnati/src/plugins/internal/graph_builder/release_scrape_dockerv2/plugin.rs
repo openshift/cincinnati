@@ -33,8 +33,8 @@ pub struct ReleaseScrapeDockerv2Settings {
     #[default(DEFAULT_MANIFESTREF_KEY.to_string())]
     manifestref_key: String,
 
-    #[default(DEFAULT_FETCH_CONCURRENCY.to_string())]
-    fetch_concurrency: String,
+    #[default(DEFAULT_FETCH_CONCURRENCY)]
+    fetch_concurrency: usize,
 
     /// Username for authenticating with the registry
     #[default(Option::None)]
@@ -83,7 +83,6 @@ impl ReleaseScrapeDockerv2Settings {
 #[derive(CustomDebug)]
 pub struct ReleaseScrapeDockerv2Plugin {
     settings: ReleaseScrapeDockerv2Settings,
-    fetch_concurrency: usize,
     registry: registry::Registry,
     cache: registry::cache::Cache,
 
@@ -123,11 +122,8 @@ impl ReleaseScrapeDockerv2Plugin {
             settings.password = password;
         }
 
-        let fetch_concurrency = settings.fetch_concurrency.parse()?;
-
         Ok(Self {
             settings,
-            fetch_concurrency,
             registry,
             cache: cache.unwrap_or_else(registry::cache::new),
             graph_upstream_raw_releases,
@@ -145,7 +141,7 @@ impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
             self.settings.password.as_ref().map(String::as_ref),
             self.cache.clone(),
             &self.settings.manifestref_key,
-            self.fetch_concurrency,
+            self.settings.fetch_concurrency,
         )
         .await
         .context("failed to fetch all release metadata")?;

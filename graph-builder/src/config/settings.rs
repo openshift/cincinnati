@@ -129,18 +129,27 @@ impl AppSettings {
         use cincinnati::plugins::prelude::*;
 
         let plugins = vec![
-            plugin_config_option!(
-                Some(("name", ReleaseScrapeDockerv2Plugin::PLUGIN_NAME)),
-                Some(("registry", &self.registry)),
-                Some(("repository", &self.repository)),
-                Some(("manifestref_key", &self.manifestref_key)),
-                Some(("fetch_concurrency", &format!("{}", self.fetch_concurrency))),
+            ReleaseScrapeDockerv2Settings::deserialize_config(toml::from_str(&format!(
+                r#"
+                    name = "{}"
+                    registry = "{}"
+                    repository = "{}"
+                    manifestref_key = "{}"
+                    fetch_concurrency = {}
+                    {}
+                "#,
+                ReleaseScrapeDockerv2Plugin::PLUGIN_NAME,
+                &self.registry,
+                &self.repository,
+                &self.manifestref_key,
+                self.fetch_concurrency,
                 self.credentials_path
                     .as_ref()
                     .map(|pathbuf| pathbuf.to_str())
                     .flatten()
-                    .map(|path| ("credentials_path", path))
-            )?,
+                    .map(|path| format!("\ncredentials_path = {:?}", path))
+                    .unwrap_or_default()
+            ))?)?,
             plugin_config!(
                 ("name", QuayMetadataFetchPlugin::PLUGIN_NAME),
                 ("repository", &self.repository),
