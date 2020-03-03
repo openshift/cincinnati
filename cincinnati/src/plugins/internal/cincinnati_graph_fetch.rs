@@ -10,6 +10,7 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use self::cincinnati::CONTENT_TYPE;
 
 use commons::GraphError;
+use failure::{Fallible, ResultExt};
 use prometheus::Counter;
 use reqwest;
 use reqwest::header::{HeaderValue, ACCEPT};
@@ -38,6 +39,9 @@ pub struct CincinnatiGraphFetchPlugin {
     /// The optional metric for counting failed upstream requests
     #[debug(skip)]
     pub http_upstream_errors_total: Counter,
+
+    // graph-builder connection client
+    client: reqwest::Client,
 }
 
 impl PluginSettings for CincinnatiGraphFetchSettings {
@@ -80,10 +84,15 @@ impl CincinnatiGraphFetchPlugin {
             registry.register(Box::new(http_upstream_errors_total.clone()))?;
         };
 
+        let client = reqwest::ClientBuilder::new()
+            .build()
+            .context("Building reqwest client")?;
+
         Ok(Self {
             upstream,
             http_upstream_reqs,
             http_upstream_errors_total,
+            client,
         })
     }
 }
@@ -93,11 +102,8 @@ impl CincinnatiGraphFetchPlugin {
         trace!("getting graph from upstream at {}", self.upstream);
         self.http_upstream_reqs.inc();
 
-        let client = reqwest::ClientBuilder::new()
-            .build()
-            .map_err(|e| GraphError::FailedUpstreamRequest(e.to_string()))?;
-
-        let res = client
+        let res = self
+            .client
             .get(&self.upstream)
             .header(ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
             .send()
