@@ -1,18 +1,9 @@
-# root, no json header
-GET GRAPH_URL
-
-# root, json header
-GET GRAPH_URL
-Accept: application/json
-
-# wrong channel
-GET GRAPH_URL?channel=foo
-Accept: application/json
-
-# correct channel, no arch
-GET GRAPH_URL?channel=test
-Accept: application/json
-
 # valid request
+GET GRAPH_URL?channel=a&arch=amd64
+Accept: application/json
+
+GET GRAPH_URL?channel=b&arch=amd64
+Accept: application/json
+
 GET GRAPH_URL?channel=test&arch=amd64
 Accept: application/json
