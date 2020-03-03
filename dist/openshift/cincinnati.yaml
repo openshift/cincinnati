@@ -74,7 +74,7 @@ objects:
                 "--status.port", "${GB_STATUS_PORT}",
                 "--upstream.registry.url", "$(REGISTRY)",
                 "--upstream.registry.repository", "$(REPOSITORY)",
-                "--upstream.registry.credentials_path", "/etc/secrets/registry-credentials",
+                "--upstream.registry.credentials_path", "${GB_REGISTRY_CREDENTIALS_PATH}",
                 "--upstream.registry.fetch_concurrency", "${GB_UPSTREAM_FETCH_CONCURRENCY}",
               ]
               ports:
@@ -308,3 +308,5 @@ parameters:
   - name: RUST_BACKTRACE
     value: "0"
     displayName: Set RUST_BACKTRACE env var
+  - name: GB_REGISTRY_CREDENTIALS_PATH
+    value: "/etc/secrets/registry-credentials"
