@@ -33,11 +33,25 @@ oc secrets link default ci-pull-secret --for=pull
 oc new-app -f template/cincinnati.yaml \
   -p IMAGE="${IMAGE_FORMAT%/*}/stable" \
   -p IMAGE_TAG=deploy \
-  -p GB_CINCINNATI_REPO="redhat/openshift-cincinnati-test-public-manual" \
   -p GB_CPU_REQUEST=50m \
   -p PE_CPU_REQUEST=50m \
   -p RUST_BACKTRACE="1" \
-  -p GB_REGISTRY_CREDENTIALS_PATH="" \
+  -p GB_PLUGIN_SETTINGS='
+      [[plugin_settings]]
+      name = "release-scrape-dockerv2"
+      repository = "redhat/openshift-cincinnati-test-public-manual"
+      fetch_concurrency = 128
+
+      [[plugin_settings]]
+      name = "quay-metadata"
+      repository = "redhat/openshift-cincinnati-test-public-manual"
+
+      [[plugin_settings]]
+      name = "node-remove"
+
+      [[plugin_settings]]
+      name = "edge-add-remove"
+  ' \
   ;
 
 # Wait for dc to rollout
