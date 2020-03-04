@@ -344,6 +344,7 @@ mod tests_net {
 
     #[cfg(feature = "test-net-private")]
     #[test]
+    #[ignore = "currently broken on CI"]
     fn metadata_fetch_from_private_quay_succeeds() -> Fallible<()> {
         let mut runtime = init_runtime()?;
 

@@ -10,6 +10,7 @@ fn common_init() -> (Runtime, Option<String>) {
 }
 
 #[test]
+#[ignore = "currently broken on CI"]
 fn test_wrong_auth() {
     let (mut rt, _) = common_init();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
@@ -30,6 +31,7 @@ fn test_wrong_auth() {
 }
 
 #[test]
+#[ignore = "currently broken on CI"]
 fn test_stream_active_tags() {
     let (mut rt, token) = common_init();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
@@ -53,6 +55,7 @@ fn test_stream_active_tags() {
 }
 
 #[test]
+#[ignore = "currently broken on CI"]
 fn test_get_labels() {
     let (mut rt, token) = common_init();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
