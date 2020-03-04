@@ -14,7 +14,6 @@ if [[ -n "${CINCINNATI_TEST_CREDENTIALS_PATH}" && -n "${CINCINNATI_TEST_QUAY_API
     cargo_test_flags["cincinnati"]+=",test-net-private"
     cargo_test_flags["graph-builder"]+=",test-net-private"
     cargo_test_flags["quay"]+=",test-net-private"
-
     export CINCINNATI_TEST_QUAY_API_TOKEN="$(cat ${CINCINNATI_TEST_QUAY_API_TOKEN_PATH})"
 fi
 

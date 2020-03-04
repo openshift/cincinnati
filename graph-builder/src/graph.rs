@@ -16,10 +16,10 @@ use crate::built_info;
 use crate::config;
 use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::prelude::*;
-use cincinnati::{AbstractRelease, Graph, CONTENT_TYPE};
+use cincinnati::CONTENT_TYPE;
 use commons::metrics::HasRegistry;
 use commons::GraphError;
-use failure::{Error, Fallible};
+use failure::Fallible;
 use lazy_static;
 pub use parking_lot::RwLock;
 use prometheus::{self, histogram_opts, labels, opts, Counter, Gauge, Histogram, IntGauge};
@@ -240,62 +240,4 @@ pub async fn run(settings: &config::AppSettings, state: &State) -> ! {
         GRAPH_FINAL_RELEASES.set(nodes_count as i64);
         debug!("graph update completed, {} valid releases", nodes_count);
     }
-}
-
-/// Turns a collection of Releases into a Cincinnati Graph
-///
-/// When processing previous/next release metadata it is assumed that the edge
-/// destination has the same build type as the origin.
-pub fn create_graph(releases: Vec<crate::release::Release>) -> Result<Graph, Error> {
-    let mut graph = Graph::default();
-
-    releases
-        .into_iter()
-        .inspect(|release| trace!("Adding a release to the graph '{:?}'", release))
-        .try_for_each(|release| {
-            let previous = release
-                .metadata
-                .previous
-                .iter()
-                .cloned()
-                .map(|mut previous| {
-                    previous.build = release.metadata.version.build.clone();
-                    previous
-                })
-                .collect::<Vec<_>>();
-
-            let next = release
-                .metadata
-                .next
-                .iter()
-                .cloned()
-                .map(|mut next| {
-                    next.build = release.metadata.version.build.clone();
-                    next
-                })
-                .collect::<Vec<_>>();
-            let current = graph.add_release(release)?;
-
-            previous.iter().try_for_each(|version| {
-                let previous = match graph.find_by_version(&version.to_string()) {
-                    Some(id) => id,
-                    None => graph.add_release(cincinnati::Release::Abstract(AbstractRelease {
-                        version: version.to_string(),
-                    }))?,
-                };
-                graph.add_edge(&previous, &current)
-            })?;
-
-            next.iter().try_for_each(|version| {
-                let next = match graph.find_by_version(&version.to_string()) {
-                    Some(id) => id,
-                    None => graph.add_release(cincinnati::Release::Abstract(AbstractRelease {
-                        version: version.to_string(),
-                    }))?,
-                };
-                graph.add_edge(&current, &next)
-            })
-        })?;
-
-    Ok(graph)
 }

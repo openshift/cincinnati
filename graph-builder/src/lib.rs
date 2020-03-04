@@ -12,15 +12,12 @@ extern crate serde_derive;
 extern crate smart_default;
 #[macro_use]
 extern crate structopt;
+#[macro_use]
+extern crate cincinnati;
 
 pub mod config;
 pub mod graph;
-pub mod plugins;
-pub mod release;
 pub mod status;
-
-#[cfg(test)]
-pub mod tests;
 
 #[allow(dead_code)]
 /// Build info

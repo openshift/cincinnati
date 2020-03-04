@@ -15,8 +15,8 @@ set -euo pipefail
 oc new-project cincinnati-e2e
 oc project cincinnati-e2e
 
-# Use pull secret in cincinnati
-oc create secret generic cincinnati-registry-credentials --from-file=registry-credentials=/tmp/cluster/pull-secret
+# Create a dummy secret as a workaround to not having real secrets in e2e
+oc create secret generic cincinnati-credentials --from-literal=""
 
 # Use this pull secret to fetch images from CI
 oc create secret generic ci-pull-secret --from-file=.dockercfg=/tmp/cluster/pull-secret --type=kubernetes.io/dockercfg
@@ -36,7 +36,9 @@ oc new-app -f template/cincinnati.yaml \
   -p GB_CINCINNATI_REPO="redhat/openshift-cincinnati-test-public-manual" \
   -p GB_CPU_REQUEST=50m \
   -p PE_CPU_REQUEST=50m \
-  -p RUST_BACKTRACE="1"
+  -p RUST_BACKTRACE="1" \
+  -p GB_REGISTRY_CREDENTIALS_PATH="" \
+  ;
 
 # Wait for dc to rollout
 oc wait --for=condition=available --timeout=5m deploymentconfig/cincinnati

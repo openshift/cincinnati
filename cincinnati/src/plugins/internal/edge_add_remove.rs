@@ -1,12 +1,9 @@
 //! This plugin adds and removes Edges from Nodes based on metadata labels.
 
 use crate as cincinnati;
-use crate::plugins::BoxedPlugin;
-use crate::plugins::{InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings};
-use crate::ReleaseId;
-use async_trait::async_trait;
-use failure::{Fallible, ResultExt};
-use prometheus::Registry;
+
+use self::cincinnati::plugins::prelude::*;
+use self::cincinnati::plugins::prelude_plugin_impl::*;
 
 pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 pub static DEFAULT_REMOVE_ALL_EDGES_VALUE: &str = "*";
@@ -40,7 +37,7 @@ impl InternalPlugin for EdgeAddRemovePlugin {
 }
 
 impl PluginSettings for EdgeAddRemovePlugin {
-    fn build_plugin(&self, _: Option<&Registry>) -> Fallible<BoxedPlugin> {
+    fn build_plugin(&self, _: Option<&prometheus::Registry>) -> Fallible<BoxedPlugin> {
         Ok(new_plugin!(InternalPluginWrapper(self.clone())))
     }
 }
@@ -67,7 +64,7 @@ impl PluginSettings for EdgeAddRemovePlugin {
 /// This includes cases where add or remove instructions refer to edges or releases which don't exist in the graph.
 impl EdgeAddRemovePlugin {
     /// Plugin name, for configuration.
-    pub(crate) const PLUGIN_NAME: &'static str = "edge-add-remove";
+    pub const PLUGIN_NAME: &'static str = "edge-add-remove";
 
     /// Validate plugin configuration and fill in defaults.
     pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>> {
@@ -90,7 +87,7 @@ impl EdgeAddRemovePlugin {
         macro_rules! handle_remove_edge {
             ($from:ident, $to:ident) => {
                 if let Err(e) = graph.remove_edge(&$from, &$to) {
-                    if let Some(eae) = e.downcast_ref::<crate::errors::EdgeDoesntExist>() {
+                    if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeDoesntExist>() {
                         warn!("{}", eae);
                         continue;
                     };
@@ -112,7 +109,7 @@ impl EdgeAddRemovePlugin {
                     }
 
                     if from_csv.trim() == self.remove_all_edges_value {
-                        let parents: Vec<daggy::EdgeIndex> = graph
+                        let parents: Vec<cincinnati::daggy::EdgeIndex> = graph
                             .previous_releases(&to)
                             .map(|(edge_index, _, _)| edge_index)
                             .collect();
@@ -232,7 +229,7 @@ impl EdgeAddRemovePlugin {
         macro_rules! handle_add_edge {
             ($direction:expr, $from:ident, $to:ident, $from_string:ident, $to_string:ident) => {
                 if let Err(e) = graph.add_edge(&$from, &$to) {
-                    if let Some(eae) = e.downcast_ref::<crate::errors::EdgeAlreadyExists>() {
+                    if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeAlreadyExists>() {
                         warn!("{}", eae);
                         continue;
                     };
@@ -333,8 +330,7 @@ fn try_annotate_semver_build(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate as cincinnati;
-    use crate::testing::generate_custom_graph;
+    use cincinnati::testing::generate_custom_graph;
     use commons::testing::init_runtime;
     use failure::ResultExt;
     use std::collections::HashMap;

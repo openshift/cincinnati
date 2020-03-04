@@ -159,7 +159,7 @@ pub(crate) mod tests {
     fn failed_plugin_execution() -> Result<(), Box<dyn Error>> {
         let mut rt = common_init();
 
-        let plugins = build_plugins(
+        let plugins = cincinnati::plugins::catalog::build_plugins(
             &[plugin_config!(
                 ("name", "channel-filter"),
                 ("key_prefix", "io.openshift.upgrades.graph"),
@@ -261,7 +261,7 @@ pub(crate) mod tests {
                 .create();
 
             // prepare and run the policy-engine test-service
-            let plugins = build_plugins(plugin_config, None)?;
+            let plugins = cincinnati::plugins::catalog::build_plugins(plugin_config, None)?;
 
             let app = actix_web::App::new()
                 .app_data(actix_web::web::Data::new(AppState {
@@ -346,9 +346,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
-        use cincinnati::plugins::internal::cincinnati_graph_fetch::CincinnatiGraphFetchPlugin;
-        use std::iter::FromIterator;
+        use cincinnati::plugins::prelude::*;
 
         [
             TestParams {

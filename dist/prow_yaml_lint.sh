@@ -12,5 +12,5 @@ if ! type -f "${YAML_LINTER}"; then
 fi
 
 find . \
-  -path "./graph-builder/src/plugins/openshift_secondary_metadata_parser/test_fixtures" -prune -o \
+  -path "./cincinnati/src/plugins/internal/graph_builder/openshift_secondary_metadata_parser/test_fixtures" -prune -o \
   -type f \( -name '*.yaml' -o -name '*.yml' \) -print0 | xargs -L 1 -0 "${YAML_LINT_CMD[@]}"

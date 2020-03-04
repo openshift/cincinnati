@@ -26,6 +26,14 @@ pub struct StatusOptions {
 /// Options for the main Cincinnati service.
 #[derive(Debug, Deserialize, Serialize, StructOpt)]
 pub struct ServiceOptions {
+    /// Duration of the pause (in seconds) between registry scans
+    #[structopt(
+        long = "upstream.registry.pause_secs",
+        parse(try_from_str = "duration_from_secs")
+    )]
+    #[serde(default = "Option::default", deserialize_with = "de_duration_secs")]
+    pub pause_secs: Option<Duration>,
+
     /// Address on which the server will listen
     #[structopt(name = "service_address", long = "service.address", alias = "address")]
     pub address: Option<IpAddr>,
@@ -49,14 +57,6 @@ pub struct ServiceOptions {
 /// Options for the Docker-registry-v2 fetcher.
 #[derive(Debug, Deserialize, Serialize, StructOpt)]
 pub struct DockerRegistryOptions {
-    /// Duration of the pause (in seconds) between registry scans
-    #[structopt(
-        long = "upstream.registry.pause_secs",
-        parse(try_from_str = "duration_from_secs")
-    )]
-    #[serde(default = "Option::default", deserialize_with = "de_duration_secs")]
-    pub pause_secs: Option<Duration>,
-
     /// URL for the container image registry
     #[structopt(long = "upstream.registry.url", alias = "registry")]
     pub url: Option<String>,
@@ -84,6 +84,7 @@ pub struct DockerRegistryOptions {
 impl MergeOptions<Option<ServiceOptions>> for AppSettings {
     fn try_merge(&mut self, opts: Option<ServiceOptions>) -> Fallible<()> {
         if let Some(service) = opts {
+            assign_if_some!(self.pause_secs, service.pause_secs);
             assign_if_some!(self.address, service.address);
             assign_if_some!(self.port, service.port);
             assign_if_some!(self.path_prefix, service.path_prefix);
@@ -108,7 +109,6 @@ impl MergeOptions<Option<StatusOptions>> for AppSettings {
 impl MergeOptions<Option<DockerRegistryOptions>> for AppSettings {
     fn try_merge(&mut self, opts: Option<DockerRegistryOptions>) -> Fallible<()> {
         if let Some(registry) = opts {
-            assign_if_some!(self.pause_secs, registry.pause_secs);
             assign_if_some!(self.registry, registry.url);
             assign_if_some!(self.repository, registry.repository);
             assign_if_some!(self.credentials_path, registry.credentials_path);

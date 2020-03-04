@@ -82,7 +82,7 @@ fn main() -> Result<(), Error> {
     .run();
 
     // Main service.
-    let plugins = settings.policy_plugins(Some(registry))?;
+    let plugins = settings.validate_and_build_plugins(Some(registry))?;
     let state = AppState {
         mandatory_params: settings.mandatory_client_parameters.clone(),
         path_prefix: settings.path_prefix.clone(),

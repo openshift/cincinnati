@@ -4,14 +4,15 @@
 #[macro_use]
 pub mod macros;
 
-mod catalog;
+pub mod catalog;
 pub mod external;
 pub mod interface;
 pub mod internal;
 
-pub use self::catalog::{build_plugins, deserialize_config, PluginSettings};
 use crate as cincinnati;
-use crate::plugins::interface::{PluginError, PluginExchange};
+
+use self::cincinnati::plugins::interface::{PluginError, PluginExchange};
+
 use async_trait::async_trait;
 use failure::{Error, Fallible, ResultExt};
 use std::collections::HashMap;
@@ -19,13 +20,50 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt::Debug;
 
 pub mod prelude {
-    pub use super::BoxedPlugin;
-    pub use super::ExternalPluginWrapper;
-    pub use super::InternalPluginWrapper;
-    pub use super::{build_plugins, deserialize_config, PluginSettings};
-    pub use crate::{new_plugin, new_plugins};
-    pub use futures_locks;
+    use crate as cincinnati;
+
+    use self::cincinnati::plugins;
+
+    pub use plugins::{BoxedPlugin, InternalPluginWrapper};
+
+    pub use plugins::catalog::PluginSettings;
+    pub use plugins::internal::arch_filter::ArchFilterPlugin;
+    pub use plugins::internal::channel_filter::ChannelFilterPlugin;
+    pub use plugins::internal::cincinnati_graph_fetch::CincinnatiGraphFetchPlugin;
+    pub use plugins::internal::edge_add_remove::EdgeAddRemovePlugin;
+    pub use plugins::internal::github_openshift_secondary_metadata_scraper::{
+        GithubOpenshiftSecondaryMetadataScraperPlugin,
+        GithubOpenshiftSecondaryMetadataScraperSettings,
+    };
+    pub use plugins::internal::metadata_fetch_quay::QuayMetadataFetchPlugin;
+    pub use plugins::internal::node_remove::NodeRemovePlugin;
+    pub use plugins::internal::openshift_secondary_metadata_parser::{
+        OpenshiftSecondaryMetadataParserPlugin, OpenshiftSecondaryMetadataParserSettings,
+    };
+    pub use plugins::internal::release_scrape_dockerv2::{
+        ReleaseScrapeDockerv2Plugin, ReleaseScrapeDockerv2Settings,
+    };
+
     pub use std::iter::FromIterator;
+}
+
+pub mod prelude_plugin_impl {
+    use self::cincinnati::plugins;
+    use crate as cincinnati;
+
+    pub use self::cincinnati::{daggy, ReleaseId};
+    pub use plugins::catalog::PluginSettings;
+    pub use plugins::{BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper};
+
+    pub use async_trait::async_trait;
+    pub use custom_debug_derive::CustomDebug;
+    pub use failure::{bail, ensure, Fallible, ResultExt};
+    pub use futures::TryFutureExt;
+    pub use log::{debug, error, info, trace, warn};
+    pub use serde::{de::DeserializeOwned, Deserialize};
+    pub use smart_default::SmartDefault;
+    pub use std::path::PathBuf;
+    pub use std::str::FromStr;
 }
 
 /// Convenience type for the thread-safe storage of plugins
@@ -332,6 +370,7 @@ mod tests {
     use crate::plugins::Plugin;
     use crate::testing::generate_graph;
     use futures::lock::Mutex as FuturesMutex;
+    use lazy_static::lazy_static;
     use std::collections::HashMap;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;

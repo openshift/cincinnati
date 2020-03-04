@@ -2,13 +2,13 @@
 //! It reads the requested channel from the parameters value at key "channel",
 //! and the value must match the regex specified at CHANNEL_VALIDATION_REGEX_STR
 
-use crate::plugins::{
-    BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper, PluginSettings,
-};
-use async_trait::async_trait;
+use crate as cincinnati;
+
+use self::cincinnati::plugins::prelude::*;
+use self::cincinnati::plugins::prelude_plugin_impl::*;
+
 use commons::GraphError;
-use failure::Fallible;
-use prometheus::Registry;
+use lazy_static::lazy_static;
 
 static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 static DEFAULT_CHANNEL_KEY: &str = "release.channels";
@@ -24,7 +24,7 @@ pub struct ChannelFilterPlugin {
 }
 
 impl PluginSettings for ChannelFilterPlugin {
-    fn build_plugin(&self, _: Option<&Registry>) -> Fallible<BoxedPlugin> {
+    fn build_plugin(&self, _: Option<&prometheus::Registry>) -> Fallible<BoxedPlugin> {
         Ok(new_plugin!(InternalPluginWrapper(self.clone())))
     }
 }
@@ -71,7 +71,7 @@ impl InternalPlugin for ChannelFilterPlugin {
             graph
                 .find_by_fn_mut(|release| {
                     match release {
-                        crate::Release::Concrete(concrete_release) => concrete_release
+                        cincinnati::Release::Concrete(concrete_release) => concrete_release
                             .metadata
                             .get_mut(&format!("{}.{}", self.key_prefix, self.key_suffix))
                             .map_or(true, |values| {
@@ -104,7 +104,7 @@ impl InternalPlugin for ChannelFilterPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::generate_custom_graph;
+    use cincinnati::testing::generate_custom_graph;
     use commons::testing::init_runtime;
     use std::collections::HashMap;
 
@@ -218,8 +218,8 @@ mod tests {
         struct Datum {
             pub description: String,
             pub parameters: HashMap<String, String>,
-            pub input_graph: crate::Graph,
-            pub expected_graph: crate::Graph,
+            pub input_graph: cincinnati::Graph,
+            pub expected_graph: cincinnati::Graph,
         }
 
         let data = vec![

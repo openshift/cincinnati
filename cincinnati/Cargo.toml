@@ -24,17 +24,25 @@ serde = "1.0.70"
 serde_derive = "1.0.70"
 serde_json = "^1.0.22"
 smart-default = "^0.5.2"
-tokio = "0.2"
+tokio = { version = "0.2.11", features = [ "fs", "stream" ] }
 toml = "^0.4.10"
 url = "^1.7.2"
-semver = "^0.9.0"
+semver = { version = "^0.9.0", features = [ "serde" ] }
 async-trait = "^0.1"
+tempfile = "^3.1.0"
+flate2 = "^1.0.1"
+tar = "^0.4.16"
+dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "712f7dae50068948e8678af535ce90bb63afd878" }
+itertools = "^0.8.2"
+serde_yaml = "^0.8.11"
 
 [dev-dependencies]
 maplit = "^1.0.2"
 mockito = "^0.20.0"
 serde_json = "1.0.22"
 twoway = "^0.2"
+walkdir = "2.3.1"
+pretty_assertions = "0.6.1"
 
 [build-dependencies]
 protoc-rust = "2.8"

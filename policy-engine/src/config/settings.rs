@@ -1,7 +1,8 @@
 //! Application settings for policy-engine.
 
 use super::{cli, file};
-use cincinnati::plugins::{build_plugins, BoxedPlugin, PluginSettings};
+use cincinnati::plugins::catalog::{self, PluginSettings};
+use cincinnati::plugins::BoxedPlugin;
 use failure::Fallible;
 use hyper::Uri;
 use std::collections::HashSet;
@@ -41,8 +42,8 @@ pub struct AppSettings {
     /// Endpoints namespace for the main service.
     pub path_prefix: String,
 
-    /// Policy plugins configuration.
-    pub policies: Vec<Box<dyn PluginSettings>>,
+    /// Plugin settings.
+    pub plugin_settings: Vec<Box<dyn PluginSettings>>,
 
     /// Required client parameters for the main service.
     pub mandatory_client_parameters: HashSet<String>,
@@ -72,20 +73,20 @@ impl AppSettings {
         Self::try_validate(cfg)
     }
 
-    /// Validate and return policy plugins.
-    pub fn policy_plugins(
+    /// Validate and the configured plugins.
+    pub fn validate_and_build_plugins(
         &self,
         registry: Option<&prometheus::Registry>,
     ) -> Fallible<Vec<BoxedPlugin>> {
-        let default_policies = self.default_openshift_policies()?;
+        let default_plugin_settings = self.default_openshift_plugin_settings()?;
 
-        let policies: &Vec<Box<dyn PluginSettings>> = if self.policies.is_empty() {
-            &default_policies
+        let plugin_settings: &Vec<Box<dyn PluginSettings>> = if self.plugin_settings.is_empty() {
+            &default_plugin_settings
         } else {
-            &self.policies
+            &self.plugin_settings
         };
 
-        build_plugins(policies, registry)
+        catalog::build_plugins(plugin_settings, registry)
     }
 
     /// Validate and build runtime settings.
@@ -102,11 +103,8 @@ impl AppSettings {
         Ok(self)
     }
 
-    fn default_openshift_policies(&self) -> Fallible<Vec<Box<dyn PluginSettings>>> {
-        use cincinnati::plugins::internal::arch_filter::ArchFilterPlugin;
-        use cincinnati::plugins::internal::channel_filter::ChannelFilterPlugin;
-        use cincinnati::plugins::internal::cincinnati_graph_fetch::CincinnatiGraphFetchPlugin;
-        use std::iter::FromIterator;
+    fn default_openshift_plugin_settings(&self) -> Fallible<Vec<Box<dyn PluginSettings>>> {
+        use cincinnati::plugins::prelude::*;
 
         Ok(vec![
             plugin_config!(

@@ -1,11 +1,10 @@
 use super::github_v3;
-use async_trait::async_trait;
-use cincinnati::plugins::prelude::*;
-use cincinnati::plugins::{InternalIO, InternalPlugin};
-use failure::{Fallible, ResultExt};
-use serde::Deserialize;
-use smart_default::SmartDefault;
-use std::path::PathBuf;
+
+use crate as cincinnati;
+
+use self::cincinnati::plugins::prelude::*;
+use self::cincinnati::plugins::prelude_plugin_impl::*;
+
 use tokio::sync::Mutex as FuturesMutex;
 
 pub static DEFAULT_OUTPUT_WHITELIST: &[&str] = &[
@@ -24,8 +23,28 @@ pub struct GithubOpenshiftSecondaryMetadataScraperSettings {
     github_repo: String,
     branch: String,
     output_directory: PathBuf,
+
+    /// Vector of regular expressions used as a positive output filter.
+    /// An empty vector is regarded as a configuration error.
     #[default(DEFAULT_OUTPUT_WHITELIST.iter().map(|s| (*s).to_string()).collect())]
     output_whitelist: Vec<String>,
+}
+
+impl GithubOpenshiftSecondaryMetadataScraperSettings {
+    /// Validate plugin configuration and fill in defaults.
+    pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>> {
+        let settings: Self = cfg.try_into()?;
+
+        ensure!(!settings.github_org.is_empty(), "empty github_org");
+        ensure!(!settings.github_repo.is_empty(), "empty github_repo");
+        ensure!(!settings.branch.is_empty(), "empty branch");
+        ensure!(
+            !settings.output_whitelist.is_empty(),
+            "empty output_whitelist"
+        );
+
+        Ok(Box::new(settings))
+    }
 }
 
 #[derive(Debug, Default)]
@@ -45,6 +64,8 @@ pub struct GithubOpenshiftSecondaryMetadataScraperPlugin {
 }
 
 impl GithubOpenshiftSecondaryMetadataScraperPlugin {
+    pub(crate) const PLUGIN_NAME: &'static str = "github-secondary-metadata-scrape";
+
     /// Instantiate a new instance of `Self`.
     pub fn try_new(settings: GithubOpenshiftSecondaryMetadataScraperSettings) -> Fallible<Self> {
         let output_whitelist: Vec<regex::Regex> = settings
