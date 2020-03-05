@@ -7,9 +7,22 @@
 
 # Prerequirements:
 #   * pull secret (with registry.svc.ci.openshift.org) part in `/tmp/cluster/pull-secret`
+#   * CINCINNATI_IMAGE (optional) - image with graph-builder and policy-engine
 #   * env var IMAGE_FORMAT (e.g `registry.svc.ci.openshift.org/ci-op-ish8m5dt/stable:${component}`)
 
 set -euo pipefail
+
+# Use CI image format by default unless CINCINNATI_IMAGE is set
+if [[ ! -z "${CINCINNATI_IMAGE}" ]]; then
+  IMAGE=$(echo "${CINCINNATI_IMAGE}" | cut -d ':' -f1)
+  IMAGE_TAG=$(echo "${CINCINNATI_IMAGE}" | cut -d ':' -f2)
+else
+  IMAGE="${IMAGE_FORMAT%/*}/stable"
+  IMAGE_TAG="deploy"
+fi
+
+echo "IMAGE=${IMAGE}"
+echo "IMAGE_TAG=${IMAGE_TAG}"
 
 # Create a new project
 oc new-project cincinnati-e2e
@@ -31,8 +44,8 @@ oc secrets link default ci-pull-secret --for=pull
 
 # Apply oc template
 oc new-app -f template/cincinnati.yaml \
-  -p IMAGE="${IMAGE_FORMAT%/*}/stable" \
-  -p IMAGE_TAG=deploy \
+  -p IMAGE="${IMAGE}" \
+  -p IMAGE_TAG="${IMAGE_TAG}" \
   -p GB_CPU_REQUEST=50m \
   -p PE_CPU_REQUEST=50m \
   -p RUST_BACKTRACE="1" \
