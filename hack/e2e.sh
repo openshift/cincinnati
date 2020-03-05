@@ -24,6 +24,9 @@ fi
 echo "IMAGE=${IMAGE}"
 echo "IMAGE_TAG=${IMAGE_TAG}"
 
+# Use defined PULL_SECRET or fall back to CI location
+PULL_SECRET=${PULL_SECRET:-/tmp/cluster/pull-secret}
+
 # Create a new project
 oc new-project cincinnati-e2e
 oc project cincinnati-e2e
@@ -32,7 +35,7 @@ oc project cincinnati-e2e
 oc create secret generic cincinnati-credentials --from-literal=""
 
 # Use this pull secret to fetch images from CI
-oc create secret generic ci-pull-secret --from-file=.dockercfg=/tmp/cluster/pull-secret --type=kubernetes.io/dockercfg
+oc create secret generic ci-pull-secret --from-file=.dockercfg=${PULL_SECRET} --type=kubernetes.io/dockercfg
 
 # Wait for default service account to appear
 for ATTEMPT in $(seq 0 5); do
