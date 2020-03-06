@@ -10,8 +10,6 @@
 #   * CINCINNATI_IMAGE (optional) - image with graph-builder and policy-engine
 #   * env var IMAGE_FORMAT (e.g `registry.svc.ci.openshift.org/ci-op-ish8m5dt/stable:${component}`)
 
-set -euo pipefail
-
 # Use CI image format by default unless CINCINNATI_IMAGE is set
 if [[ ! -z "${CINCINNATI_IMAGE}" ]]; then
   IMAGE=$(echo "${CINCINNATI_IMAGE}" | cut -d ':' -f1)
@@ -27,6 +25,7 @@ echo "IMAGE_TAG=${IMAGE_TAG}"
 # Use defined PULL_SECRET or fall back to CI location
 PULL_SECRET=${PULL_SECRET:-/tmp/cluster/pull-secret}
 
+set -euo pipefail
 # Create a new project
 oc new-project cincinnati-e2e
 oc project cincinnati-e2e
