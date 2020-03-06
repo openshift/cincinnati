@@ -46,7 +46,7 @@ done
 oc secrets link default ci-pull-secret --for=pull
 
 # Apply oc template
-oc new-app -f template/cincinnati.yaml \
+oc new-app -f dist/openshift/cincinnati.yaml \
   -p IMAGE="${IMAGE}" \
   -p IMAGE_TAG="${IMAGE_TAG}" \
   -p GB_CPU_REQUEST=50m \
