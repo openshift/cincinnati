@@ -55,7 +55,18 @@ oc new-app -f template/cincinnati.yaml \
   ;
 
 # Wait for dc to rollout
-oc wait --for=condition=available --timeout=5m deploymentconfig/cincinnati
+oc wait --for=condition=available --timeout=5m deploymentconfig/cincinnati || {
+    status=$?
+    set +e -x
+
+    # Print various information about the deployment
+    oc get events
+    oc describe deploymentconfig/cincinnati
+    oc get configmap/cincinnati-configs -o yaml
+    oc logs --all-containers=true --timestamps=true --selector='app=cincinnati'
+
+    exit $status
+}
 
 # Expose services
 oc expose service cincinnati-policy-engine --port=policy-engine
