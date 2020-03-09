@@ -6,12 +6,12 @@ where
     D: serde::Deserializer<'de>,
 {
     use serde::Deserialize;
-    let numlevel = u8::deserialize(deserializer)?;
+    let occurrences = String::deserialize(deserializer)?;
 
-    let verbosity = match numlevel {
-        0 => log::LevelFilter::Warn,
-        1 => log::LevelFilter::Info,
-        2 => log::LevelFilter::Debug,
+    let verbosity = match occurrences.as_str() {
+        "" => log::LevelFilter::Warn,
+        "v" => log::LevelFilter::Info,
+        "vv" => log::LevelFilter::Debug,
         _ => log::LevelFilter::Trace,
     };
     Ok(Some(verbosity))

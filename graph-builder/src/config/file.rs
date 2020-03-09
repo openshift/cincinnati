@@ -139,7 +139,7 @@ mod tests {
             use std::io::Write;
 
             let sample_config = r#"
-                verbosity = 3
+                verbosity = "vvv"
 
                 [upstream]
                 method = "registry"
