@@ -204,7 +204,7 @@ objects:
       name: cincinnati-configs
     data:
       gb.toml: |
-        verbosity = ${GB_LOG_VERBOSITY}
+        verbosity = "${GB_LOG_VERBOSITY}"
 
         [service]
         pause_secs = ${GB_PAUSE_SECS}
@@ -285,7 +285,7 @@ parameters:
     value: "/api/upgrades_info"
     displayName: Policy engine path prefix
   - name: GB_LOG_VERBOSITY
-    value: "3"
+    value: "vvv"
     displayName: Graph builder log verbosity
   - name: PE_LOG_VERBOSITY
     value: "vv"

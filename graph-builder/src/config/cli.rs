@@ -94,7 +94,7 @@ mod tests {
         let mut settings = AppSettings::default();
         assert_eq!(settings.verbosity, log::LevelFilter::Warn);
 
-        let toml_verbosity = "verbosity=3";
+        let toml_verbosity = r#"verbosity="vvv""#;
         let file_opts: FileOptions = toml::from_str(toml_verbosity).unwrap();
         assert_eq!(file_opts.verbosity, Some(log::LevelFilter::Trace));
 
