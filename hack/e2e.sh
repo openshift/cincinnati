@@ -7,10 +7,25 @@
 
 # Prerequirements:
 #   * pull secret (with registry.svc.ci.openshift.org) part in `/tmp/cluster/pull-secret`
+#   * CINCINNATI_IMAGE (optional) - image with graph-builder and policy-engine
 #   * env var IMAGE_FORMAT (e.g `registry.svc.ci.openshift.org/ci-op-ish8m5dt/stable:${component}`)
 
-set -euo pipefail
+# Use CI image format by default unless CINCINNATI_IMAGE is set
+if [[ ! -z "${CINCINNATI_IMAGE}" ]]; then
+  IMAGE=$(echo "${CINCINNATI_IMAGE}" | cut -d ':' -f1)
+  IMAGE_TAG=$(echo "${CINCINNATI_IMAGE}" | cut -d ':' -f2)
+else
+  IMAGE="${IMAGE_FORMAT%/*}/stable"
+  IMAGE_TAG="deploy"
+fi
 
+echo "IMAGE=${IMAGE}"
+echo "IMAGE_TAG=${IMAGE_TAG}"
+
+# Use defined PULL_SECRET or fall back to CI location
+PULL_SECRET=${PULL_SECRET:-/tmp/cluster/pull-secret}
+
+set -euo pipefail
 # Create a new project
 oc new-project cincinnati-e2e
 oc project cincinnati-e2e
@@ -19,7 +34,7 @@ oc project cincinnati-e2e
 oc create secret generic cincinnati-credentials --from-literal=""
 
 # Use this pull secret to fetch images from CI
-oc create secret generic ci-pull-secret --from-file=.dockercfg=/tmp/cluster/pull-secret --type=kubernetes.io/dockercfg
+oc create secret generic ci-pull-secret --from-file=.dockercfg=${PULL_SECRET} --type=kubernetes.io/dockercfg
 
 # Wait for default service account to appear
 for ATTEMPT in $(seq 0 5); do
@@ -30,9 +45,9 @@ done
 oc secrets link default ci-pull-secret --for=pull
 
 # Apply oc template
-oc new-app -f template/cincinnati.yaml \
-  -p IMAGE="${IMAGE_FORMAT%/*}/stable" \
-  -p IMAGE_TAG=deploy \
+oc new-app -f dist/openshift/cincinnati.yaml \
+  -p IMAGE="${IMAGE}" \
+  -p IMAGE_TAG="${IMAGE_TAG}" \
   -p GB_CPU_REQUEST=50m \
   -p PE_CPU_REQUEST=50m \
   -p RUST_BACKTRACE="1" \
