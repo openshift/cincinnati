@@ -121,11 +121,7 @@ impl AppSettings {
         Ok(self)
     }
 
-    fn default_openshift_plugin_settings(
-        &self,
-        // registry: Option<&prometheus::Registry>,
-    ) -> Fallible<Vec<Box<dyn PluginSettings>>> {
-        use cincinnati::plugins::internal::edge_add_remove::DEFAULT_REMOVE_ALL_EDGES_VALUE;
+    fn default_openshift_plugin_settings(&self) -> Fallible<Vec<Box<dyn PluginSettings>>> {
         use cincinnati::plugins::prelude::*;
 
         let plugins = vec![
@@ -153,18 +149,10 @@ impl AppSettings {
             plugin_config!(
                 ("name", QuayMetadataFetchPlugin::PLUGIN_NAME),
                 ("repository", &self.repository),
-                ("manifestref_key", &self.manifestref_key),
-                ("api-base", quay::v1::DEFAULT_API_BASE)
+                ("manifestref_key", &self.manifestref_key)
             )?,
-            plugin_config!(
-                ("name", NodeRemovePlugin::PLUGIN_NAME,),
-                ("key_prefix", &self.manifestref_key)
-            )?,
-            plugin_config!(
-                ("name", EdgeAddRemovePlugin::PLUGIN_NAME),
-                ("key_prefix", &self.manifestref_key),
-                ("remove_all_edges_value", DEFAULT_REMOVE_ALL_EDGES_VALUE)
-            )?,
+            plugin_config!(("name", NodeRemovePlugin::PLUGIN_NAME))?,
+            plugin_config!(("name", EdgeAddRemovePlugin::PLUGIN_NAME))?,
         ];
 
         Ok(plugins)

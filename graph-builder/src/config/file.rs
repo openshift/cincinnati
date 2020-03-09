@@ -2,12 +2,10 @@
 
 use super::options;
 use super::AppSettings;
-use crate::config::options::de_duration_secs;
 use commons::de::de_loglevel;
 use commons::MergeOptions;
 use failure::{Fallible, ResultExt};
 use std::io::Read;
-use std::time::Duration;
 use std::{fs, io, path};
 
 /// TOML configuration, top-level.
@@ -16,10 +14,6 @@ pub struct FileOptions {
     /// Verbosity level.
     #[serde(default = "Option::default", deserialize_with = "de_loglevel")]
     pub verbosity: Option<log::LevelFilter>,
-
-    /// Duration of the pause (in seconds) between registry scans
-    #[serde(default = "Option::default", deserialize_with = "de_duration_secs")]
-    pub pause_secs: Option<Duration>,
 
     /// Upstream options.
     pub upstream: Option<UpstreamOptions>,
@@ -48,8 +42,9 @@ impl FileOptions {
         let mut content = vec![];
         bufrd.read_to_end(&mut content)?;
         let cfg = toml::from_slice(&content).context(format!(
-            "failed to read config file {}",
-            cfg_path.as_ref().display()
+            "failed to parse config file {}:\n{}",
+            cfg_path.as_ref().display(),
+            std::str::from_utf8(&content).unwrap_or("file not decodable")
         ))?;
 
         Ok(cfg)
@@ -60,7 +55,6 @@ impl MergeOptions<Option<FileOptions>> for AppSettings {
     fn try_merge(&mut self, opts: Option<FileOptions>) -> Fallible<()> {
         if let Some(file) = opts {
             assign_if_some!(self.verbosity, file.verbosity);
-            assign_if_some!(self.pause_secs, file.pause_secs);
             self.try_merge(file.upstream)?;
             self.try_merge(file.service)?;
             self.try_merge(file.status)?;

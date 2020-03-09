@@ -28,7 +28,7 @@ pub struct StatusOptions {
 pub struct ServiceOptions {
     /// Duration of the pause (in seconds) between registry scans
     #[structopt(
-        long = "upstream.registry.pause_secs",
+        long = "service.pause_secs",
         parse(try_from_str = "duration_from_secs")
     )]
     #[serde(default = "Option::default", deserialize_with = "de_duration_secs")]

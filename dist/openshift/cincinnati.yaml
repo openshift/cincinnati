@@ -34,31 +34,6 @@ objects:
               imagePullPolicy: Always
               name: cincinnati-graph-builder
               env:
-                - name: ADDRESS
-                  valueFrom:
-                    configMapKeyRef:
-                      key: gb.address
-                      name: cincinnati
-                - name: STATUS_ADDRESS
-                  valueFrom:
-                    configMapKeyRef:
-                      key: gb.status.address
-                      name: cincinnati
-                - name: REGISTRY
-                  valueFrom:
-                    configMapKeyRef:
-                      key: gb.registry
-                      name: cincinnati
-                - name: REPOSITORY
-                  valueFrom:
-                    configMapKeyRef:
-                      key: gb.repository
-                      name: cincinnati
-                - name: GB_LOG_VERBOSITY
-                  valueFrom:
-                    configMapKeyRef:
-                      key: gb.log.verbosity
-                      name: cincinnati
                 - name: "RUST_BACKTRACE"
                   valueFrom:
                     configMapKeyRef:
@@ -67,15 +42,7 @@ objects:
               command:
                 - ${GB_BINARY}
               args: [
-                "-$(GB_LOG_VERBOSITY)",
-                "--service.address", "$(ADDRESS)",
-                "--service.port", "${GB_PORT}",
-                "--status.address", "$(STATUS_ADDRESS)",
-                "--status.port", "${GB_STATUS_PORT}",
-                "--upstream.registry.url", "$(REGISTRY)",
-                "--upstream.registry.repository", "$(REPOSITORY)",
-                "--upstream.registry.credentials_path", "${GB_REGISTRY_CREDENTIALS_PATH}",
-                "--upstream.registry.fetch_concurrency", "${GB_UPSTREAM_FETCH_CONCURRENCY}",
+                "-c", "${GB_CONFIG_PATH}"
               ]
               ports:
                 - name: graph-builder
@@ -106,6 +73,9 @@ objects:
               volumeMounts:
                 - name: secrets
                   mountPath: /etc/secrets
+                  readOnly: true
+                - name: configs
+                  mountPath: /etc/configs
                   readOnly: true
             - image: ${IMAGE}:${IMAGE_TAG}
               name: cincinnati-policy-engine
@@ -175,6 +145,9 @@ objects:
             - name: secrets
               secret:
                 secretName: cincinnati-credentials
+            - name: configs
+              configMap:
+                name: cincinnati-configs
       triggers:
         - type: ConfigChange
   - apiVersion: v1
@@ -218,11 +191,6 @@ objects:
     metadata:
       name: cincinnati
     data:
-      gb.address: "0.0.0.0"
-      gb.status.address: "0.0.0.0"
-      gb.registry: "quay.io"
-      gb.repository: ${{GB_CINCINNATI_REPO}}
-      gb.log.verbosity: ${{GB_LOG_VERBOSITY}}
       gb.rust_backtrace: "${RUST_BACKTRACE}"
       pe.address: "0.0.0.0"
       pe.status.address: "0.0.0.0"
@@ -230,7 +198,24 @@ objects:
       pe.log.verbosity: ${{PE_LOG_VERBOSITY}}
       pe.mandatory_client_parameters: "channel"
       pe.rust_backtrace: "${RUST_BACKTRACE}"
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: cincinnati-configs
+    data:
+      gb.toml: |
+        verbosity = ${GB_LOG_VERBOSITY}
 
+        [service]
+        pause_secs = ${GB_PAUSE_SECS}
+        address = "${GB_ADDRESS}"
+        port = ${GB_PORT}
+
+        [status]
+        address = "${GB_STATUS_ADDRESS}"
+        port = ${GB_STATUS_PORT}
+
+        ${GB_PLUGIN_SETTINGS}
 parameters:
   - name: IMAGE
     value: "quay.io/app-sre/cincinnati"
@@ -272,12 +257,24 @@ parameters:
     value: "350m"
     displayName: "Policy-engine CPU request"
     description: "Requested amount of CPU (millicores) allowed for policy-engine (default: 350m)"
+  - name: GB_PAUSE_SECS
+    value: "30"
+    displayName: Seconds to pause between scrapes
   - name: GB_PORT
     value: "8080"
     displayName: Graph builder port
+  - name: GB_ADDRESS
+    value: "0.0.0.0"
+    displayName: Graph builder address
+  - name: GB_STATUS_ADDRESS
+    value: "0.0.0.0"
+    displayName: Graph builder status address
   - name: GB_STATUS_PORT
     value: "9080"
     displayName: Graph builder status port
+  - name: GB_PATH_PREFIX
+    value: "/api/upgrades_info"
+    displayName: Graph builder path prefix
   - name: PE_PORT
     value: "8081"
     displayName: Policy engine port
@@ -288,7 +285,7 @@ parameters:
     value: "/api/upgrades_info"
     displayName: Policy engine path prefix
   - name: GB_LOG_VERBOSITY
-    value: "vvv"
+    value: "3"
     displayName: Graph builder log verbosity
   - name: PE_LOG_VERBOSITY
     value: "vv"
@@ -302,11 +299,29 @@ parameters:
   - name: PE_BINARY
     value: /usr/bin/policy-engine
     displayName: Path to policy-engine binary
-  - name: GB_UPSTREAM_FETCH_CONCURRENCY
-    value: "16"
-    displayName: Concurrency when fetching the upstream metadata
+  - name: GB_PLUGIN_SETTINGS
+    displayName: Graph builder plugin settings, passed through verbatim.
+    value: |
+      [[plugin_settings]]
+      name = "release-scrape-dockerv2"
+      registry = "quay.io"
+      repository = "openshift-release-dev/ocp-release"
+      fetch_concurrency = 16
+      credentials_path = "/etc/secrets/registry-credentials"
+
+      [[plugin_settings]]
+      name = "quay-metadata"
+      repository = "openshift-release-dev/ocp-release"
+
+      [[plugin_settings]]
+      name = "node-remove"
+
+      [[plugin_settings]]
+      name = "edge-add-remove"
   - name: RUST_BACKTRACE
     value: "0"
     displayName: Set RUST_BACKTRACE env var
   - name: GB_REGISTRY_CREDENTIALS_PATH
     value: "/etc/secrets/registry_credentials_docker.json"
+  - name: GB_CONFIG_PATH
+    value: "/etc/configs/gb.toml"
