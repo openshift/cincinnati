@@ -26,7 +26,6 @@ RUN \
   pushd $HOME/kcov && \
   curl https://codeload.github.com/SimonKagstrom/kcov/tar.gz/v36 | tar -xz --strip-components=1 && \
   cmake . && make && make install
-RUN cargo install cargo-kcov
 
 RUN \
   mkdir -p $HOME/.cargo/git/ && \
