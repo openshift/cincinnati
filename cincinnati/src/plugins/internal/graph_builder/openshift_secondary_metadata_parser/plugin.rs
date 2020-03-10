@@ -4,6 +4,8 @@ use self::cincinnati::plugins::internal::graph_builder::github_openshift_seconda
 use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
 
+pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
+
 mod graph_data_model {
     //! This module contains the data types corresponding to the graph data files.
 
@@ -101,6 +103,8 @@ pub static DEFAULT_ARCH: &str = "amd64";
 #[serde(default)]
 pub struct OpenshiftSecondaryMetadataParserSettings {
     data_directory: PathBuf,
+
+    #[default(DEFAULT_KEY_FILTER.to_string())]
     key_prefix: String,
 
     #[default(DEFAULT_ARCH.to_string())]
