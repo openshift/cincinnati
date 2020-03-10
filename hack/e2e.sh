@@ -44,6 +44,16 @@ done
 # Allow default serviceaccount to use CI pull secret
 oc secrets link default ci-pull-secret --for=pull
 
+# Reconfigure monitoring operator to support user workloads
+# https://docs.openshift.com/container-platform/4.3/monitoring/monitoring-your-own-services.html
+ oc -n openshift-monitoring create configmap cluster-monitoring-config --from-literal='config.yaml={"techPreviewUserWorkload": {"enabled": true}}'
+
+# Import observability template
+# ServiceMonitors are imported before app deployment to give Prometheus time to catch up with
+# metrics
+# `oc new-app` would stumble on unknown monitoring.coreos.com/v1 objects, so process and create instead
+oc process -f dist/openshift/observability.yaml -p NAMESPACE="cincinnati-e2e" | oc apply -f -
+
 # Apply oc template
 oc new-app -f dist/openshift/cincinnati.yaml \
   -p IMAGE="${IMAGE}" \
@@ -90,17 +100,30 @@ PE_URL=$(oc get route cincinnati-policy-engine -o jsonpath='{.spec.host}')
 export GRAPH_URL="http://${PE_URL}/api/upgrades_info/v1/graph"
 
 # Wait for route to become available
-ATTEMPTS=10
 DELAY=10
-
-while [ $ATTEMPTS -ge 0 ]; do
+for i in $(seq 1 10); do
   CODE=$(curl -s -o /dev/null -w "%{http_code}" --header 'Accept:application/json' "${GRAPH_URL}?channel=a")
   if [ "${CODE}" == "200" ]; then
     break
-  else
-    sleep ${DELAY}
-    ATTEMPTS=$((ATTEMPTS-1))
   fi
+  sleep ${DELAY}
+done
+
+# Wait for cincinnati metrics to be recorded
+# Find out the token Prometheus uses from its serviceaccount secrets
+# and use it to query for GB build info
+PROM_ENDPOINT=$(oc -n openshift-monitoring get route thanos-querier -o jsonpath="{.spec.host}")
+PROM_TOKEN=$(oc -n openshift-monitoring get secret \
+  $(oc -n openshift-monitoring get serviceaccount prometheus-k8s \
+    -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep prometheus-k8s-token) \
+  -o go-template='{{.data.token | base64decode}}')
+
+DELAY=30
+for i in $(seq 1 10); do
+  PROM_OUTPUT=$(curl -kLs -H "Authorization: Bearer ${PROM_TOKEN}" "https://${PROM_ENDPOINT}/api/v1/query?query=cincinnati_gb_build_info" || continue)
+  grep "metric" <<< "${PROM_OUTPUT}" && break
+
+  sleep ${DELAY}
 done
 
 # Run e2e tests
