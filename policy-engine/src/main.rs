@@ -61,6 +61,7 @@ fn main() -> Result<(), Error> {
     let settings = config::AppSettings::assemble()?;
     env_logger::Builder::from_default_env()
         .filter(Some(module_path!()), settings.verbosity)
+        .filter(Some("cincinnati"), settings.verbosity)
         .init();
     debug!("application settings:\n{:#?}", &settings);
 
