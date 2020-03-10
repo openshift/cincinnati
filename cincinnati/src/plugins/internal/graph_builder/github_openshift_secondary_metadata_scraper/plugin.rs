@@ -66,6 +66,8 @@ pub struct GithubOpenshiftSecondaryMetadataScraperPlugin {
     #[default(FuturesMutex::new(Default::default()))]
     state: FuturesMutex<State>,
     oauth_token: Option<String>,
+
+    client: reqwest::Client,
 }
 
 impl GithubOpenshiftSecondaryMetadataScraperPlugin {
@@ -117,7 +119,8 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
         trace!("Getting branches from {}", &url);
 
         let request = {
-            let request = reqwest::Client::new()
+            let request = self
+                .client
                 .get(&url)
                 .header(reqwest::header::USER_AGENT, USER_AGENT)
                 .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json");
