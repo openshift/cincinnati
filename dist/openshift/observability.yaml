@@ -1,0 +1,124 @@
+---
+apiVersion: v1
+kind: Template
+metadata:
+  name: cincinnati-observability
+objects:
+  - apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: cincinnati-graph-builder
+    spec:
+      endpoints:
+        - interval: 5s
+          path: /metrics
+          port: status-gb
+      namespaceSelector:
+        matchNames:
+          - ${NAMESPACE}
+      selector:
+        matchLabels:
+          app: cincinnati-graph-builder
+  - apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: cincinnati-policy-engine
+    spec:
+      endpoints:
+        - interval: 5s
+          path: /metrics
+          port: status-pe
+      namespaceSelector:
+        matchNames:
+          - ${NAMESPACE}
+      selector:
+        matchLabels:
+          app: cincinnati-policy-engine
+  - apiVersion: monitoring.coreos.com/v1
+    kind: PrometheusRule
+    metadata:
+      name: cincinnati-slo
+    spec:
+      groups:
+        - name: cincinnati-graphbuilder.slo.rules
+          interval: 5s
+          rules:
+            # graph builder is up
+            - record: component:slo_availability:5s
+              expr: sum(up{namespace="${NAMESPACE}",job="cincinnati-graph-builder"})
+              labels:
+                component: graphbuilder
+                service: cincinnati
+            # alert: graph builder is down for 1 minute
+            - alert: graphBuilderDown
+              annotations:
+                message: "Graph builder is not available"
+              expr: |
+                absent(component:slo_availability:5s{service="cincinnati",component="graphbuilder"} == 1)
+              for: 1m
+              labels:
+                service: cincinnati
+                component: graphbuilder
+                severity: critical
+
+        - name: cincinnati-policyengine.slo.rules
+          interval: 5s
+          rules:
+            # policy engine is up
+            - record: component:slo_availability:5s
+              expr: sum(up{job="cincinnati-policy-engine"})
+              labels:
+                component: policyengine
+                service: cincinnati
+            # policy engine latency
+            - record: component:slo_latency:5s
+              expr: |
+                histogram_quantile(0.99,
+                  cincinnati_pe_v1_graph_serve_duration_seconds_bucket{
+                    namespace="${NAMESPACE}",job="cincinnati-policy-engine"})
+              labels:
+                component: policyengine
+                service: cincinnati
+            # policy engine error rate
+            - record: component:slo_upstream_error_rate:1m
+              expr: rate(cincinnati_pe_v1_graph_response_errors_total{namespace="${NAMESPACE}",code="500"}[1m])
+              labels:
+                component: policyengine
+                service: cincinnati
+            # alert: policy engine is down for 1m
+            - alert: policyEngineDown
+              annotations:
+                message: "Policy engine is not available"
+              expr: |
+                absent(component:slo_availability:5s{service="cincinnati",component="policyengine"} == 1)
+              for: 1m
+              labels:
+                service: cincinnati
+                component: policyengine
+                severity: critical
+            # alert: 99 quantile of policy engine response times are more than 1 second
+            - alert: policyEngineHighLatency
+              annotations:
+                message: "Policy engine latency is too high"
+              expr: |
+                component:slo_latency:5s{service="cincinnati",component="policyengine"} > 1
+              for: 1m
+              labels:
+                service: cincinnati
+                component: policyengine
+                severity: high
+            # alert: policy engine throws more than 1 HTTP 500 error in 5 seconds
+            - alert: policyEngineHTTP500
+              annotations:
+                message: "Policy engine HTTP 500 error rate is too high"
+              expr: |
+                component:slo_upstream_error_rate:1m{service="cincinnati",component="policyengine"} > 1
+              for: 1m
+              labels:
+                service: cincinnati
+                component: policyengine
+                severity: critical
+
+parameters:
+  - name: NAMESPACE
+    value: "cincinnati-e2e"
