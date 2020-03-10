@@ -52,11 +52,37 @@ get-and-display-graph:
 run-graph-builder registry="https://quay.io" repository="openshift-release-dev/ocp-release" credentials_file="${HOME}/.docker/config.json":
 	#!/usr/bin/env bash
 	export RUST_BACKTRACE=1
-	export RUST_LOG="graph_builder=trace,graph-builder=trace,cincinnati=trace"
-	# export RUST_LOG="${RUST_LOG},dkregistry=trace"
-	# strace -f -D -o gb.strace.lol
-	cargo run --package graph-builder -- --service.pause_secs 30 --address 0.0.0.0 --registry {{registry}} --repository {{repository}} -vvv --service.path_prefix {{path_prefix}} --credentials-file {{credentials_file}} # --disable-quay-api-metadata
+	cargo run --package graph-builder -- -c <(cat <<'EOF'
+		verbosity = "vvv"
 
+		[service]
+		pause_secs = 9999999
+		address = "127.0.0.1"
+		port = 8080
+		path_prefix = "{{path_prefix}}"
+
+		[status]
+		address = "127.0.0.1"
+		port = 9080
+
+		[[plugin_settings]]
+		name="release-scrape-dockerv2"
+		registry = "{{registry}}"
+		repository = "{{repository}}"
+		fetch_concurrency=128
+		credentials_file = "{{credentials_file}}"
+
+		[[plugin_settings]]
+		name="quay-metadata"
+		repository="{{repository}}"
+
+		[[plugin_settings]]
+		name="node-remove"
+
+		[[plugin_settings]]
+		name="edge-add-remove"
+	EOF
+	)
 
 run-graph-builder-satellite:
 	just run-graph-builder 'sat-r220-02.lab.eng.rdu2.redhat.com' 'default_organization-custom-ocp'
