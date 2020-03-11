@@ -32,6 +32,16 @@ where
     format!("/{}", path_prefix.as_ref().to_string().trim_matches('/'))
 }
 
+/// Deserialize path_prefix
+pub fn de_path_prefix<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    let path_prefix = String::deserialize(deserializer)?;
+    Ok(Some(parse_path_prefix(path_prefix)))
+}
+
 /// Parse a comma-separated set of client parameters keys.
 pub fn parse_params_set<S>(params: S) -> HashSet<String>
 where
