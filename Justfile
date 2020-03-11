@@ -15,7 +15,7 @@ coverage: test _coverage
 test-pwd +args="":
 	#!/usr/bin/env bash
 	set -e
-	export RUST_BACKTRACE=0 RUST_LOG="graph-builder=trace,cincinnati=trace,dkregistry=trace"
+	export RUST_BACKTRACE=1 RUST_LOG="graph-builder=trace,cincinnati=trace,dkregistry=trace"
 	pushd {{invocation_directory()}}
 	cargo test {{args}}
 
