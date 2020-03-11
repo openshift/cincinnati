@@ -1,3 +1,6 @@
+path_prefix := "api/upgrades_info/"
+scrape_reference :='revision = "6420f7fbf3724e1e5e329ae8d1e2985973f60c14"'
+
 format:
 	cargo fmt --all
 
