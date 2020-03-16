@@ -112,8 +112,8 @@ done
 # Wait for cincinnati metrics to be recorded
 # Find out the token Prometheus uses from its serviceaccount secrets
 # and use it to query for GB build info
-PROM_ENDPOINT=$(oc -n openshift-monitoring get route thanos-querier -o jsonpath="{.spec.host}")
-PROM_TOKEN=$(oc -n openshift-monitoring get secret \
+export PROM_ENDPOINT=$(oc -n openshift-monitoring get route thanos-querier -o jsonpath="{.spec.host}")
+export PROM_TOKEN=$(oc -n openshift-monitoring get secret \
   $(oc -n openshift-monitoring get serviceaccount prometheus-k8s \
     -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep prometheus-k8s-token) \
   -o go-template='{{.data.token | base64decode}}')
@@ -126,5 +126,5 @@ for i in $(seq 1 10); do
   sleep ${DELAY}
 done
 
-# Run e2e tests
-/usr/bin/cincinnati-e2e-test
+# Run e2e tests in sequential mode to have SLO tests in the end
+env RUST_TEST_TASKS=1 /usr/bin/cincinnati-e2e-test

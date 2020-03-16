@@ -50,3 +50,4 @@ pretty_assertions = "0.6.1"
 test-net = []
 test-net-private = []
 test-e2e = []
+test-e2e-slo = []
