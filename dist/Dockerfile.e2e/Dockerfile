@@ -25,5 +25,6 @@ ENV PATH="${PATH}:${HOME}/bin"
 COPY --from=builder /opt/cincinnati/bin/cincinnati-e2e-test /usr/bin
 COPY --from=builder hack/e2e.sh hack/
 COPY --from=builder dist/openshift/cincinnati.yaml dist/openshift/
+COPY --from=builder dist/openshift/observability.yaml dist/openshift/
 
 ENTRYPOINT ["hack/e2e.sh"]
