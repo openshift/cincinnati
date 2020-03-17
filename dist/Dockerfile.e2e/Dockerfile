@@ -3,8 +3,8 @@ FROM quay.io/app-sre/cincinnati:builder AS builder
 COPY . .
 
 # Build and copy test binary
-RUN cd graph-builder && \
-    cargo build --tests --features test-e2e --no-default-features && \
+RUN cd e2e && \
+    cargo build --tests && \
     mkdir -p /opt/cincinnati/bin && \
     cp -rvf ../target/debug/mod-* /opt/cincinnati/bin && \
     rm -rf /opt/cincinnati/bin/mod-*.d && \

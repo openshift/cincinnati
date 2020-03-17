@@ -6,4 +6,5 @@ members = [
 	"graph-builder",
 	"policy-engine",
 	"quay",
+	"e2e",
 ]
