@@ -1,4 +1,4 @@
-FROM quay.io/app-sre/cincinnati:builder AS builder
+FROM quay.io/app-sre/cincinnati:builder AS rust_builder
 # build e2e tests
 COPY . .
 
@@ -15,6 +15,9 @@ RUN cd e2e && \
     cp -rvf ../target/debug/slo-* /opt/cincinnati/bin && \
     rm -rf /opt/cincinnati/bin/slo-*.d && \
     mv /opt/cincinnati/bin/slo-* /opt/cincinnati/bin/cincinnati-e2e-slo
+
+FROM registry.svc.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
+RUN env GOBIN=/usr/local/bin go get -u github.com/tsenart/vegeta
 
 FROM centos:7
 
@@ -34,5 +37,8 @@ COPY --from=rust_builder /opt/cincinnati/bin/cincinnati-e2e-slo /usr/bin
 COPY --from=rust_builder hack/e2e.sh hack/
 COPY --from=rust_builder dist/openshift/cincinnati.yaml dist/openshift/
 COPY --from=rust_builder dist/openshift/observability.yaml dist/openshift/
+COPY --from=golang_builder /usr/local/bin/vegeta /usr/bin
+COPY --from=rust_builder hack/load-testing.sh /usr/local/bin/load-testing.sh
+COPY --from=rust_builder hack/vegeta.targets vegeta.targets
 
 ENTRYPOINT ["hack/e2e.sh"]
