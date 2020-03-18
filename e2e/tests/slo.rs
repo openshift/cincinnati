@@ -35,6 +35,7 @@ fn check_slo(query: &'static str, expected: &'static str) {
     let prometheus_client = Client::builder()
         .api_base(Some(prometheus_api_base.clone()))
         .access_token(Some(prometheus_token))
+        .accept_invalid_certs(Some(true))
         .build()
         .unwrap();
 

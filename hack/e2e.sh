@@ -135,6 +135,9 @@ done
 # Ensure prometheus_query tests are executed
 /usr/bin/cincinnati-prometheus_query-test
 
+# Run load-testing script
+/usr/local/bin/load-testing.sh
+
 # sleep for 30 secs to allow Prometheus scrape latest data
 sleep 30
 
