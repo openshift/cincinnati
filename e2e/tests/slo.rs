@@ -71,7 +71,7 @@ fn query_prom(runtime: &mut Runtime, url: String, token: String) -> Fallible<Str
 #[test_case("clamp_max(cincinnati_gb_graph_upstream_scrapes_total, 1)", "1")]
 // No scrape errors
 #[test_case("cincinnati_gb_graph_upstream_errors_total", "0")]
-fn zz_check_slo(query: &'static str, expected: &'static str) {
+fn check_slo(query: &'static str, expected: &'static str) {
     let prom_url = match env::var("PROM_ENDPOINT") {
         Ok(env) => format!("https://{}/api/v1/query", env),
         _ => panic!("PROM_ENDPOINT unset"),

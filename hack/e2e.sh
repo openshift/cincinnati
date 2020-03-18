@@ -126,5 +126,11 @@ for i in $(seq 1 10); do
   sleep ${DELAY}
 done
 
-# Run e2e tests in sequential mode to have SLO tests in the end
-env RUST_TEST_TASKS=1 /usr/bin/cincinnati-e2e-test
+# Run e2e tests
+/usr/bin/cincinnati-e2e-test
+
+# sleep for 30 secs to allow Prometheus scrape latest data
+sleep 30
+
+# Verify SLO metrics
+/usr/bin/cincinnati-e2e-slo

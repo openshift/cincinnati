@@ -6,9 +6,12 @@ COPY . .
 RUN cd e2e && \
     cargo build --tests && \
     mkdir -p /opt/cincinnati/bin && \
-    cp -rvf ../target/debug/mod-* /opt/cincinnati/bin && \
-    rm -rf /opt/cincinnati/bin/mod-*.d && \
-    mv /opt/cincinnati/bin/mod-* /opt/cincinnati/bin/cincinnati-e2e-test
+    cp -rvf ../target/debug/e2e-* /opt/cincinnati/bin && \
+    rm -rf /opt/cincinnati/bin/e2e-*.d && \
+    mv /opt/cincinnati/bin/e2e-* /opt/cincinnati/bin/cincinnati-e2e-test && \
+    cp -rvf ../target/debug/slo-* /opt/cincinnati/bin && \
+    rm -rf /opt/cincinnati/bin/slo-*.d && \
+    mv /opt/cincinnati/bin/slo-* /opt/cincinnati/bin/cincinnati-e2e-slo
 
 FROM centos:7
 
@@ -23,6 +26,7 @@ RUN mkdir -p ${HOME}/bin && \
 ENV PATH="${PATH}:${HOME}/bin"
 
 COPY --from=builder /opt/cincinnati/bin/cincinnati-e2e-test /usr/bin
+COPY --from=builder /opt/cincinnati/bin/cincinnati-e2e-slo /usr/bin
 COPY --from=builder hack/e2e.sh hack/
 COPY --from=builder dist/openshift/cincinnati.yaml dist/openshift/
 COPY --from=builder dist/openshift/observability.yaml dist/openshift/
