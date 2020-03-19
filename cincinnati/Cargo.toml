@@ -43,6 +43,7 @@ serde_json = "1.0.22"
 twoway = "^0.2"
 walkdir = "2.3.1"
 pretty_assertions = "0.6.1"
+test-case = "1.0.0"
 
 [build-dependencies]
 protoc-rust = "2.8"
