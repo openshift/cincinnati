@@ -418,6 +418,8 @@ impl InternalPlugin for OpenshiftSecondaryMetadataParserPlugin {
 
 #[cfg(test)]
 mod tests {
+    use super::OpenshiftSecondaryMetadataParserPlugin;
+
     use crate as cincinnati;
 
     use self::cincinnati::plugins::InternalIO;
@@ -426,6 +428,7 @@ mod tests {
     use failure::{Fallible, ResultExt};
     use std::path::PathBuf;
     use std::str::FromStr;
+    use test_case::test_case;
 
     lazy_static::lazy_static! {
         static ref TEST_FIXTURE_DIR: PathBuf = {
@@ -433,11 +436,11 @@ mod tests {
         };
     }
 
-    #[test]
-    fn compare_quay_result_fixture_20200220104838() -> Fallible<()> {
+    #[test_case("20200220.104838")]
+    fn compare_quay_result_fixture(fixture: &str) -> Fallible<()> {
         let mut runtime = commons::testing::init_runtime()?;
 
-        let fixture_directory = TEST_FIXTURE_DIR.join("20200220.104838");
+        let fixture_directory = TEST_FIXTURE_DIR.join(fixture);
 
         let read_file_to_graph = |filename: &str| -> Fallible<cincinnati::Graph> {
             let path = fixture_directory.join(filename);
@@ -454,7 +457,7 @@ mod tests {
             read_file_to_graph("graph-gb-with-quay-metadata.json")?;
 
         // Configure the plugin
-        let plugin = Box::new(super::OpenshiftSecondaryMetadataParserPlugin::new(
+        let plugin = Box::new(OpenshiftSecondaryMetadataParserPlugin::new(
             toml::from_str(&format!(
                 r#"
                     data_directory = {:?}
