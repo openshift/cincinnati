@@ -437,6 +437,7 @@ mod tests {
     }
 
     #[test_case("20200220.104838")]
+    #[test_case("20200319.204124")]
     fn compare_quay_result_fixture(fixture: &str) -> Fallible<()> {
         let mut runtime = commons::testing::init_runtime()?;
 
