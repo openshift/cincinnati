@@ -800,5 +800,44 @@ mod tests {
         expected_edges: Some(vec![]),
     );
 
+    #[test]
+    fn edge_remove_bug() -> Fallible<()> {
+        let mut runtime = init_runtime()?;
+
+        lazy_static::lazy_static! {
+            static ref TEST_KEY_PREFIX: &'static str = "io.openshift.upgrades.graph";
+            static ref PLUGINS: Vec<BoxedPlugin> = vec![
+                Box::new(InternalPluginWrapper(EdgeAddRemovePlugin {
+                    key_prefix: TEST_KEY_PREFIX.to_string(),
+                    remove_all_edges_value: DEFAULT_REMOVE_ALL_EDGES_VALUE.to_string(),
+
+                    ..Default::default()
+                })),
+            ];
+
+        };
+
+        let input_graph: cincinnati::Graph = serde_json::from_reader(
+            std::fs::File::open(
+                "src/plugins/test_fixtures/edge_add_remove_trigger_edge_index_error.json",
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        let process_result = cincinnati::plugins::process(
+            PLUGINS.iter(),
+            cincinnati::plugins::PluginIO::InternalIO(cincinnati::plugins::InternalIO {
+                graph: input_graph.clone(),
+                parameters: Default::default(),
+            }),
+        );
+
+        let graph = runtime.block_on(process_result)?.graph;
+        assert_ne!(graph, input_graph);
+
+        Ok(())
+    }
+
     // TODO(steveeJ): add multiarch tests once design is settled
 }
