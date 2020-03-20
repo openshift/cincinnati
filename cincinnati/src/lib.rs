@@ -41,48 +41,12 @@ pub struct Graph {
     dag: Dag<Release, Empty>,
 }
 
-/// Wrapper enum for the concrete and abstract release types.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum Release {
-    Concrete(ConcreteRelease),
-    Abstract(AbstractRelease),
-}
-
-impl Release {
-    /// Return the version string of a given `Release`.
-    pub fn version(&self) -> &str {
-        match self {
-            Release::Abstract(release) => &release.version,
-            Release::Concrete(release) => &release.version,
-        }
-    }
-
-    /// Get a mutable borrow of the release metadata if any
-    pub fn get_metadata_mut(&mut self) -> Option<&mut HashMap<String, String>> {
-        match self {
-            Release::Abstract(_) => None,
-            Release::Concrete(release) => Some(&mut release.metadata),
-        }
-    }
-}
-
 /// Type to represent a Release with all its information.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
-pub struct ConcreteRelease {
+pub struct Release {
     pub version: String,
     pub payload: String,
     pub metadata: HashMap<String, String>,
-}
-
-/// Abtract release only storing a version.
-///
-/// It can be used for adding an edge between an existing and a non-existing
-/// release, and is expected to later be filled up with a `ConcreteRelease` once
-/// the graph is completed.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
-pub struct AbstractRelease {
-    pub version: String,
 }
 
 /// Abstraction over a node in the graph representing a `Release`
@@ -172,9 +136,9 @@ impl Graph {
         match self.find_by_version(&release.version()) {
             Some(id) => {
                 let node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
-                if let Release::Concrete(_) = node {
+                if let Release::Release(_) = node {
                     bail!(
-                        "Concrete release with the same version ({}) already exists",
+                        "Release with the same version ({}) already exists",
                         release.version()
                     );
                 }
@@ -296,7 +260,7 @@ impl Graph {
         self.dag
             .node_references()
             .filter(|nr| {
-                if let Release::Concrete(release) = nr.weight() {
+                if let Release::Release(release) = nr.weight() {
                     if let Some(found_value) = release.metadata.get(key) {
                         return found_value == value;
                     }
@@ -313,7 +277,7 @@ impl Graph {
         self.dag
             .node_references()
             .filter_map(|nr| {
-                if let Release::Concrete(release) = nr.weight() {
+                if let Release::Release(release) = nr.weight() {
                     if let Some(value) = release.metadata.get(key) {
                         return Some((
                             ReleaseId(nr.id()),
@@ -333,7 +297,7 @@ impl Graph {
         release_id: &ReleaseId,
     ) -> Result<&mut HashMap<String, String>, Error> {
         match self.dag.node_weight_mut(release_id.0) {
-            Some(Release::Concrete(release)) => Ok(&mut release.metadata),
+            Some(Release::Release(release)) => Ok(&mut release.metadata),
             _ => bail!("could not get metadata reference"),
         }
     }
@@ -392,28 +356,6 @@ impl Graph {
             .into_iter()
             .rev()
             .filter(|ni| self.dag.remove_node(*ni).is_some())
-            .count()
-    }
-
-    /// Prune the graph from all abstract releases
-    ///
-    /// Return the number of pruned releases
-    pub fn prune_abstract(&mut self) -> usize {
-        let to_remove: Vec<daggy::NodeIndex> = self
-            .dag
-            .node_references()
-            .filter_map(|nr| {
-                if let Release::Abstract(_) = nr.weight() {
-                    Some(nr.0)
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        to_remove
-            .iter()
-            .filter(|ni| self.dag.remove_node(**ni).is_some())
             .count()
     }
 
@@ -630,7 +572,7 @@ impl From<plugins::interface::Graph> for Graph {
         for node in graph.take_nodes().into_iter() {
             graph_converted
                 .dag
-                .add_node(Release::Concrete(ConcreteRelease {
+                .add_node(Release::Release({
                     version: node.version,
                     payload: node.payload,
                     metadata: node.metadata,
@@ -655,7 +597,7 @@ impl From<plugins::interface::Graph> for Graph {
 
 impl From<Graph> for plugins::interface::Graph {
     fn from(graph: Graph) -> Self {
-        use crate::Release::{Abstract, Concrete};
+        use crate::Release::Release;
         use daggy::petgraph::visit::IntoNeighborsDirected;
         use daggy::petgraph::Direction;
 
@@ -670,15 +612,10 @@ impl From<Graph> for plugins::interface::Graph {
 
             // Convert and push node
             let mut node_converted = plugins::interface::Graph_Node::new();
-            match release {
-                Concrete(concrete_release) => {
-                    // TODO(steveeJ): avoid cloning all release content
-                    node_converted.set_version(concrete_release.version.clone());
-                    node_converted.set_metadata(concrete_release.metadata.clone());
-                    node_converted.set_payload(concrete_release.payload.clone());
-                }
-                Abstract(_) => panic!("found Abstract release type"),
-            }
+            // TODO(steveeJ): avoid cloning all release content
+            node_converted.set_version(release.version.clone());
+            node_converted.set_metadata(release.metadata.clone());
+            node_converted.set_payload(release.payload.clone());
             nodes_converted.push(node_converted);
 
             // find neighbors and push edges
@@ -706,17 +643,17 @@ pub mod testing {
 
     pub fn generate_graph() -> Graph {
         let mut graph = Graph::default();
-        let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+        let v1 = graph.dag.add_node(Release::Release({
             version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
             metadata: HashMap::new(),
         }));
-        let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+        let v2 = graph.dag.add_node(Release::Release({
             version: String::from("2.0.0"),
             payload: String::from("image/2.0.0"),
             metadata: HashMap::new(),
         }));
-        let v3 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+        let v3 = graph.dag.add_node(Release::Release({
             version: String::from("3.0.0"),
             payload: String::from("image/3.0.0"),
             metadata: HashMap::new(),
@@ -804,7 +741,7 @@ pub mod testing {
                         }
                     );
 
-                    let release = Release::Concrete(ConcreteRelease {
+                    let release = Release::Release({
                         version,
                         payload,
                         metadata,
@@ -880,12 +817,12 @@ mod tests {
     fn test_graph_eq_false_for_unequal_graphs() {
         let graph1 = {
             let mut graph = Graph::default();
-            let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+            let v1 = graph.dag.add_node(Release::Release({
                 version: String::from("1.0.0"),
                 payload: String::from("image/1.0.0"),
                 metadata: HashMap::new(),
             }));
-            let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+            let v2 = graph.dag.add_node(Release::Release({
                 version: String::from("2.0.0"),
                 payload: String::from("image/2.0.0"),
                 metadata: HashMap::new(),
@@ -896,12 +833,12 @@ mod tests {
         };
         let graph2 = {
             let mut graph = Graph::default();
-            let v3 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+            let v3 = graph.dag.add_node(Release::Release({
                 version: String::from("3.0.0"),
                 payload: String::from("image/3.0.0"),
                 metadata: HashMap::new(),
             }));
-            let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+            let v2 = graph.dag.add_node(Release::Release({
                 version: String::from("2.0.0"),
                 payload: String::from("image/2.0.0"),
                 metadata: HashMap::new(),
@@ -920,18 +857,18 @@ mod tests {
 
     #[test]
     fn test_graph_eq_is_agnostic_to_node_and_edge_order() {
-        let r1 = Release::Concrete(ConcreteRelease {
+        let r1 = Release::Release({
             version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
             metadata: HashMap::new(),
         });
-        let r2 = Release::Concrete(ConcreteRelease {
+        let r2 = Release::Release({
             version: String::from("2.0.0"),
             payload: String::from("image/2.0.0"),
             metadata: HashMap::new(),
         });
 
-        let r3 = Release::Concrete(ConcreteRelease {
+        let r3 = Release::Release({
             version: String::from("3.0.0"),
             payload: String::from("image/3.0.0"),
             metadata: HashMap::new(),
@@ -1052,13 +989,10 @@ mod tests {
         let metadata_key = format!("{}.{}", &prefix, &suffix);
         let expected_metadata_value = "changed";
 
-        let result = graph.find_by_fn_mut(|release| match release {
-            Release::Concrete(concrete_release) => {
-                *concrete_release.metadata.get_mut(&metadata_key).unwrap() =
-                    expected_metadata_value.to_string();
-                true
-            }
-            _ => true,
+        let result = graph.find_by_fn_mut(|release|
+            *release.metadata.get_mut(&metadata_key).unwrap() =
+                expected_metadata_value.to_string();
+            true
         });
 
         assert_eq!(expected, result);

@@ -29,7 +29,7 @@ pub struct Release {
 
 impl Into<cincinnati::Release> for Release {
     fn into(self) -> cincinnati::Release {
-        cincinnati::Release::Concrete(cincinnati::ConcreteRelease {
+        cincinnati::Release::Release(cincinnati::Release {
             version: self.metadata.version.to_string(),
             payload: self.source,
             metadata: self.metadata.metadata,
@@ -79,70 +79,7 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, failure
     releases
         .into_iter()
         .inspect(|release| trace!("Adding a release to the graph '{:?}'", release))
-        .try_for_each(|release| {
-            let previous = release
-                .metadata
-                .previous
-                .iter()
-                .cloned()
-                .map(|mut previous| {
-                    previous.build = release.metadata.version.build.clone();
-                    previous
-                })
-                .collect::<Vec<_>>();
-
-            let next = release
-                .metadata
-                .next
-                .iter()
-                .cloned()
-                .map(|mut next| {
-                    next.build = release.metadata.version.build.clone();
-                    next
-                })
-                .collect::<Vec<_>>();
-            let current = graph.add_release(release)?;
-
-            previous.iter().try_for_each(|version| {
-                let previous = match graph.find_by_version(&version.to_string()) {
-                    Some(id) => id,
-                    None => graph.add_release(cincinnati::Release::Abstract(
-                        cincinnati::AbstractRelease {
-                            version: version.to_string(),
-                        },
-                    ))?,
-                };
-                graph.add_edge(&previous, &current).and_then(|edge| {
-                    trace!(
-                        "Adding EdgeIndex({}): from {} to {:?}",
-                        edge.index(),
-                        &version.to_string(),
-                        current
-                    );
-                    Ok(())
-                })
-            })?;
-
-            next.iter().try_for_each(|version| {
-                let next = match graph.find_by_version(&version.to_string()) {
-                    Some(id) => id,
-                    None => graph.add_release(cincinnati::Release::Abstract(
-                        cincinnati::AbstractRelease {
-                            version: version.to_string(),
-                        },
-                    ))?,
-                };
-                graph.add_edge(&current, &next).and_then(|edge| {
-                    trace!(
-                        "Adding EdgeIndex({}): from {:?} to {}",
-                        edge.index(),
-                        current,
-                        &version.to_string(),
-                    );
-                    Ok(())
-                })
-            })
-        })?;
+				graph.add_release(release);
 
     Ok(graph)
 }

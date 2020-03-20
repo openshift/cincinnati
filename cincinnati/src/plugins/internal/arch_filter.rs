@@ -100,15 +100,12 @@ impl InternalPlugin for ArchFilterPlugin {
         let to_remove = {
             graph
                 .find_by_fn_mut(|release| {
-                    match release {
-                        cincinnati::Release::Concrete(concrete_release) => concrete_release
-                            .metadata
-                            .remove(&format!("{}.{}", self.key_prefix, self.key_suffix))
-                            .map_or(true, |values| {
-                                !values.split(',').any(|value| value.trim() == arch)
-                            }),
-                        // remove if it's not a ConcreteRelease
-                        _ => true,
+                    release
+                        .metadata
+                        .remove(&format!("{}.{}", self.key_prefix, self.key_suffix))
+                        .map_or(true, |values| {
+                            !values.split(',').any(|value| value.trim() == arch)
+                        })
                     }
                 })
                 .into_iter()
@@ -139,10 +136,7 @@ impl InternalPlugin for ArchFilterPlugin {
                         })?
                 };
 
-                match &mut release {
-                    cincinnati::Release::Abstract(release) => release.version = version,
-                    cincinnati::Release::Concrete(release) => release.version = version,
-                };
+                release.version = version,
 
                 Ok(())
             })

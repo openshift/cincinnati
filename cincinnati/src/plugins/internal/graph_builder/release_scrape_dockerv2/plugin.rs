@@ -224,22 +224,17 @@ mod network_tests {
 
             graph_raw
                 .iter_releases_mut(|ref mut release| {
-                    match release {
-                        cincinnati::Release::Concrete(ref mut release) => {
-                            // replace digest by tag to match expectency
-                            let version = release.version.to_string();
-                            let source_front = release.payload.split('@').nth(0).unwrap();
-                            release.payload = format!("{}:{}", source_front, version);
+                    // replace digest by tag to match expectency
+                    let version = release.version.to_string();
+                    let source_front = release.payload.split('@').nth(0).unwrap();
+                    release.payload = format!("{}:{}", source_front, version);
 
-                            // remove unwanted metadata
-                            release
-                                .metadata
-                                .retain(|k, _| !unwanted_metadata_keys.contains(k));
+                    // remove unwanted metadata
+                    release
+                        .metadata
+                        .retain(|k, _| !unwanted_metadata_keys.contains(k));
 
-                            Ok(())
-                        }
-                        _ => panic!("should not get here"),
-                    }
+                    Ok(())
                 })
                 .context("Post-processing the received graph to match the test expectations")?;
 
