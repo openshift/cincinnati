@@ -112,7 +112,15 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, failure
                         },
                     ))?,
                 };
-                graph.add_edge(&previous, &current)
+                graph.add_edge(&previous, &current).and_then(|edge| {
+                    trace!(
+                        "Adding EdgeIndex({}): from {} to {:?}",
+                        edge.index(),
+                        &version.to_string(),
+                        current
+                    );
+                    Ok(())
+                })
             })?;
 
             next.iter().try_for_each(|version| {
@@ -124,7 +132,15 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, failure
                         },
                     ))?,
                 };
-                graph.add_edge(&current, &next)
+                graph.add_edge(&current, &next).and_then(|edge| {
+                    trace!(
+                        "Adding EdgeIndex({}): from {:?} to {}",
+                        edge.index(),
+                        current,
+                        &version.to_string(),
+                    );
+                    Ok(())
+                })
             })
         })?;
 
