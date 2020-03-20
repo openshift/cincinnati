@@ -22,7 +22,7 @@ extern crate serde_derive;
 pub mod plugins;
 
 use daggy::petgraph::visit::{IntoNodeReferences, NodeRef};
-use daggy::{Dag, Walker};
+use daggy::{Dag, EdgeIndex, Walker};
 use failure::{Error, Fallible};
 use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
@@ -187,18 +187,19 @@ impl Graph {
 
     /// Add a transition (edge) from `source` to `target`.
     ///
-    /// Fails with the `WoulcCycle` error if the new edge would lead to a cycle.
-    pub fn add_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
+    /// Fails with the `WouldCycle` error if the new edge would lead to a cycle.
+    pub fn add_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<EdgeIndex, Error> {
+        let from_release: String = self.find_by_releaseid(from)?.version().to_string();
+        let to_release: String = self.find_by_releaseid(to)?.version().to_string();
         if self.dag.find_edge(from.0, to.0).is_some() {
             return Err(Error::from(errors::EdgeAlreadyExists {
-                from: self.find_by_releaseid(from)?.version().to_string(),
-                to: self.find_by_releaseid(to)?.version().to_string(),
+                from: from_release,
+                to: to_release,
             }));
         }
 
         self.dag
             .add_edge(from.0, to.0, Empty {})
-            .map(|_| ())
             .map_err(Into::into)
     }
 
@@ -206,7 +207,7 @@ impl Graph {
     pub fn add_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
         indices
             .iter()
-            .try_fold((), |_, (from, to)| self.add_edge(&from, &to))
+            .try_fold((), |_, (from, to)| self.add_edge(&from, &to).map(|_| ()))
     }
 
     /// Returns a Some(ReleaseId) if the version exists in the graph, None otherwise.
