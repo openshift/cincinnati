@@ -48,12 +48,11 @@ function run_tests() {
 
         if [[ ${HAS_KOV} -eq 1 ]]; then
           rm -f \"${CARGO_TARGET_DIR}\"/debug/${directory}
-          find \"${CARGO_TARGET_DIR}\"/debug/ -maxdepth 1 -type f -executable -print -exec \
+          find \"${CARGO_TARGET_DIR}\"/debug/ -maxdepth 1 -type f -executable -print0 | xargs -n1 -0 \
           kcov \
               --exclude-pattern=$HOME/.cargo \
               --verify \
-              ${CARGO_TARGET_DIR}/cov \
-              {} \\;
+              ${CARGO_TARGET_DIR}/cov
         fi
       "
     )
