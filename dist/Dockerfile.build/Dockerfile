@@ -11,10 +11,11 @@ ENV HOME="/root"
 ENV PATH="${HOME}/.cargo/bin:${PATH}"
 
 # build: Rust stable toolchain + 2 previous versions
-RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.41.0 -y && \
-  rustup install 1.40.0 && \
+RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.42.0 -y && \
   rustup install 1.39.0 && \
-  rustup default 1.41.0
+  rustup install 1.40.0 && \
+  rustup install 1.41.0 && \
+  rustup default 1.42.0
 
 # test: linters
 RUN yum -y install yamllint
