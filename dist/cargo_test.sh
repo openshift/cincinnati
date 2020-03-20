@@ -60,10 +60,10 @@ function run_tests() {
 
   done
 
-  if [[ ${HAS_KOV} -eq 1 && -n "${ARTIFACTS_DIR}" ]]; then
-    mkdir -p "${ARTIFACTS_DIR}"
-    [[ ! -e "${ARTIFACTS_DIR}"/cov ]] || rm -rf "${ARTIFACTS_DIR}"/cov
-    cp -rf "${CARGO_TARGET_DIR}"/cov "${ARTIFACTS_DIR}"/
+  if [[ ${HAS_KOV} -eq 1 && -n "${ARTIFACTS}" ]]; then
+    mkdir -p "${ARTIFACTS}"
+    [[ ! -e "${ARTIFACTS}"/cov ]] || rm -rf "${ARTIFACTS}"/cov
+    cp -rf "${CARGO_TARGET_DIR}"/cov "${ARTIFACTS}"/
   fi
 
   set +x
