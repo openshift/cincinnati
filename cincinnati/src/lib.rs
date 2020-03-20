@@ -261,7 +261,12 @@ impl Graph {
     ///
     /// Stops and fails at the first edge which couldn't be removed.
     pub fn remove_edges_by_index(&mut self, indices: &[daggy::EdgeIndex]) -> Result<(), Error> {
-        indices
+        // Reverse sort the indices to start removing from high numbers.
+        // This is required because removing lower numbers first breaks higher number indices.
+        let mut indices_sorted = indices.to_vec();
+        indices_sorted.sort_by(|a, b| b.cmp(a));
+
+        indices_sorted
             .iter()
             .try_for_each(|ei| self.remove_edge_by_index(*ei))
     }
