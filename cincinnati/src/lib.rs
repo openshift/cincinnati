@@ -187,7 +187,7 @@ impl Graph {
 
     /// Add a transition (edge) from `source` to `target`.
     ///
-    /// Fails with the `WoulcCycle` error if the new edge would lead to a cycle.
+    /// Fails with the `WouldCycle` error if the new edge would lead to a cycle.
     pub fn add_edge(&mut self, from: &ReleaseId, to: &ReleaseId) -> Result<(), Error> {
         if self.dag.find_edge(from.0, to.0).is_some() {
             return Err(Error::from(errors::EdgeAlreadyExists {
