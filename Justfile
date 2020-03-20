@@ -43,7 +43,7 @@ run-ci-tests:
 	set -e
 	hack/run-all-tests.sh
 
-path_prefix = "api/upgrades_info/"
+path_prefix := "api/upgrades_info/"
 
 
 get-and-display-graph:
@@ -55,7 +55,7 @@ run-graph-builder registry="https://quay.io" repository="openshift-release-dev/o
 	export RUST_LOG="graph_builder=trace,graph-builder=trace,cincinnati=trace"
 	# export RUST_LOG="${RUST_LOG},dkregistry=trace"
 	# strace -f -D -o gb.strace.lol
-	cargo run --package graph-builder -- --upstream.registry.pause_secs 30 --address 0.0.0.0 --registry {{registry}} --repository {{repository}} -vvv --service.path_prefix {{path_prefix}} --credentials-file {{credentials_file}} # --disable-quay-api-metadata
+	cargo run --package graph-builder -- --service.pause_secs 30 --address 0.0.0.0 --registry {{registry}} --repository {{repository}} -vvv --service.path_prefix {{path_prefix}} --credentials-file {{credentials_file}} # --disable-quay-api-metadata
 
 
 run-graph-builder-satellite:
