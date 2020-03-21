@@ -10,7 +10,7 @@ use cincinnati::plugins::internal::graph_builder::release_scrape_dockerv2::regis
     self, fetch_releases, Registry,
 };
 use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY;
-use cincinnati::{Empty, WouldCycle};
+use cincinnati::{Empty, MapImpl, WouldCycle};
 use failure::{bail, ensure, Fallible};
 use itertools::Itertools;
 use semver::Version;
@@ -32,15 +32,15 @@ fn expected_releases(
     repo: &str,
     count: usize,
     start: usize,
-    metadata: Option<HashMap<usize, HashMap<String, String>>>,
+    metadata: Option<HashMap<usize, MapImpl<String, String>>>,
     payload_shas: Option<Vec<&str>>,
 ) -> Vec<Release> {
     let source_base = &format!("{}/{}", registry.host_port_string(), repo);
 
     let mut releases = Vec::new();
-    let mut metadata: HashMap<usize, HashMap<String, String>> = metadata.unwrap_or_else(|| {
+    let mut metadata: HashMap<usize, MapImpl<String, String>> = metadata.unwrap_or_else(|| {
         [
-            (0, HashMap::new()),
+            (0, MapImpl::new()),
             (
                 1,
                 [(String::from("kind"), String::from("test"))]

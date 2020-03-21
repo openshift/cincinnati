@@ -331,9 +331,9 @@ fn try_annotate_semver_build(
 mod tests {
     use super::*;
     use cincinnati::testing::generate_custom_graph;
+    use cincinnati::MapImpl;
     use commons::testing::init_runtime;
     use failure::ResultExt;
-    use std::collections::HashMap;
 
     static KEY_PREFIX: &str = "test_key";
 
@@ -344,7 +344,7 @@ mod tests {
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.remove".to_string();
 
-        let metadata: Vec<(usize, HashMap<String, String>)> = [
+        let metadata: Vec<(usize, MapImpl<String, String>)> = [
             (0, [].iter().cloned().collect()),
             (1, [].iter().cloned().collect()),
             (
@@ -398,7 +398,7 @@ mod tests {
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.remove".to_string();
 
-        let metadata: Vec<(usize, HashMap<String, String>)> = [
+        let metadata: Vec<(usize, MapImpl<String, String>)> = [
             (0, [].iter().cloned().collect()),
             (1, [].iter().cloned().collect()),
             (
@@ -454,7 +454,7 @@ mod tests {
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "next.remove".to_string();
 
-        let metadata: Vec<(usize, HashMap<String, String>)> = [
+        let metadata: Vec<(usize, MapImpl<String, String>)> = [
             (
                 0,
                 [(
@@ -518,7 +518,7 @@ mod tests {
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.add".to_string();
 
-        let metadata: Vec<(usize, HashMap<String, String>)> = [
+        let metadata: Vec<(usize, MapImpl<String, String>)> = [
             (0, [].iter().cloned().collect()),
             (1, [].iter().cloned().collect()),
             (
@@ -570,7 +570,7 @@ mod tests {
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "next.add".to_string();
 
-        let metadata: Vec<(usize, HashMap<String, String>)> = [
+        let metadata: Vec<(usize, MapImpl<String, String>)> = [
             (
                 0,
                 [(
@@ -630,7 +630,7 @@ mod tests {
             fn $name() -> Fallible<()> {
                 let mut runtime = init_runtime()?;
 
-                let input_metadata: Vec<(usize, HashMap<String, String>)> = $input_metadata
+                let input_metadata: Vec<(usize, MapImpl<String, String>)> = $input_metadata
                     .iter()
                     .map(|(n, metadata)| {
                         (

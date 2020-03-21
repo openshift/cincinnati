@@ -26,7 +26,6 @@ use daggy::{Dag, EdgeIndex, Walker};
 use failure::{Error, Fallible};
 use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
-use std::collections::HashMap;
 use std::{collections, fmt};
 
 pub use daggy::{self, WouldCycle};
@@ -34,15 +33,27 @@ pub use daggy::{self, WouldCycle};
 pub const CONTENT_TYPE: &str = "application/json";
 const EXPECT_NODE_WEIGHT: &str = "all exisitng nodes to have a weight (release)";
 
+#[cfg(not(any(test, feature = "test")))]
+pub use std::collections::HashMap as MapImpl;
+
+#[cfg(not(any(test, feature = "test")))]
+pub use std::collections::HashSet as SetImpl;
+
+#[cfg(any(test, feature = "test"))]
+pub use std::collections::BTreeMap as MapImpl;
+
+#[cfg(any(test, feature = "test"))]
+pub use std::collections::BTreeSet as SetImpl;
+
 /// Graph type which stores `Release` as node-weights and `Empty` as edge-weights.
 #[derive(Debug, Default)]
-#[cfg_attr(any(test, feature = "clone"), derive(Clone))]
+#[cfg_attr(any(test, feature = "test"), derive(Clone))]
 pub struct Graph {
     dag: Dag<Release, Empty>,
 }
 
 /// Wrapper enum for the concrete and abstract release types.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 #[serde(untagged)]
 pub enum Release {
     Concrete(ConcreteRelease),
@@ -59,7 +70,7 @@ impl Release {
     }
 
     /// Get a mutable borrow of the release metadata if any
-    pub fn get_metadata_mut(&mut self) -> Option<&mut HashMap<String, String>> {
+    pub fn get_metadata_mut(&mut self) -> Option<&mut MapImpl<String, String>> {
         match self {
             Release::Abstract(_) => None,
             Release::Concrete(release) => Some(&mut release.metadata),
@@ -68,11 +79,11 @@ impl Release {
 }
 
 /// Type to represent a Release with all its information.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct ConcreteRelease {
     pub version: String,
     pub payload: String,
-    pub metadata: HashMap<String, String>,
+    pub metadata: MapImpl<String, String>,
 }
 
 /// Abtract release only storing a version.
@@ -80,7 +91,7 @@ pub struct ConcreteRelease {
 /// It can be used for adding an edge between an existing and a non-existing
 /// release, and is expected to later be filled up with a `ConcreteRelease` once
 /// the graph is completed.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct AbstractRelease {
     pub version: String,
 }
@@ -204,7 +215,7 @@ impl Graph {
     }
 
     /// Add edges for all given key/value pairs of releases.
-    pub fn add_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
+    pub fn add_edges(&mut self, indices: MapImpl<ReleaseId, ReleaseId>) -> Result<(), Error> {
         indices
             .iter()
             .try_fold((), |_, (from, to)| self.add_edge(&from, &to).map(|_| ()))
@@ -241,7 +252,7 @@ impl Graph {
     }
 
     /// Remove the directed edges given by the key/value pairs of releases.
-    pub fn remove_edges(&mut self, indices: HashMap<ReleaseId, ReleaseId>) -> Result<(), Error> {
+    pub fn remove_edges(&mut self, indices: MapImpl<ReleaseId, ReleaseId>) -> Result<(), Error> {
         indices
             .iter()
             .try_for_each(|(from, to)| self.remove_edge(from, to))
@@ -336,7 +347,7 @@ impl Graph {
     pub fn get_metadata_as_ref_mut(
         &mut self,
         release_id: &ReleaseId,
-    ) -> Result<&mut HashMap<String, String>, Error> {
+    ) -> Result<&mut MapImpl<String, String>, Error> {
         match self.dag.node_weight_mut(release_id.0) {
             Some(Release::Concrete(release)) => Ok(&mut release.metadata),
             _ => bail!("could not get metadata reference"),
@@ -638,7 +649,7 @@ impl From<plugins::interface::Graph> for Graph {
                 .add_node(Release::Concrete(ConcreteRelease {
                     version: node.version,
                     payload: node.payload,
-                    metadata: node.metadata,
+                    metadata: node.metadata.into_iter().collect(),
                 }));
         }
 
@@ -679,7 +690,8 @@ impl From<Graph> for plugins::interface::Graph {
                 Concrete(concrete_release) => {
                     // TODO(steveeJ): avoid cloning all release content
                     node_converted.set_version(concrete_release.version.clone());
-                    node_converted.set_metadata(concrete_release.metadata.clone());
+                    node_converted
+                        .set_metadata(concrete_release.metadata.clone().into_iter().collect());
                     node_converted.set_payload(concrete_release.payload.clone());
                 }
                 Abstract(_) => panic!("found Abstract release type"),
@@ -706,6 +718,7 @@ impl From<Graph> for plugins::interface::Graph {
     }
 }
 
+#[cfg(any(test, feature = "test"))]
 pub mod testing {
     use super::*;
 
@@ -714,17 +727,17 @@ pub mod testing {
         let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
-            metadata: HashMap::new(),
+            metadata: MapImpl::new(),
         }));
         let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("2.0.0"),
             payload: String::from("image/2.0.0"),
-            metadata: HashMap::new(),
+            metadata: MapImpl::new(),
         }));
         let v3 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("3.0.0"),
             payload: String::from("image/3.0.0"),
-            metadata: HashMap::new(),
+            metadata: MapImpl::new(),
         }));
         graph.dag.add_edge(v1, v2, Empty {}).unwrap();
         graph.dag.add_edge(v2, v3, Empty {}).unwrap();
@@ -733,7 +746,7 @@ pub mod testing {
         graph
     }
 
-    pub type TestMetadata = Vec<(usize, HashMap<String, String>)>;
+    pub type TestMetadata = Vec<(usize, MapImpl<String, String>)>;
     pub type TestEdges = Vec<(usize, usize)>;
 
     #[derive(Debug, Clone)]
@@ -850,6 +863,30 @@ pub mod testing {
             .with_edges(edges)
             .build()
     }
+
+    impl std::cmp::PartialOrd for Release {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            Some(self.version().cmp(other.version()))
+        }
+    }
+
+    impl From<&Graph> for std::collections::BTreeSet<Release> {
+        fn from(graph: &Graph) -> Self {
+            let mut graph = graph.clone();
+            let mut set = Self::new();
+            let _ = graph.iter_releases_mut(|node| {
+                set.insert(node.clone());
+                Ok(())
+            });
+            set
+        }
+    }
+
+    impl std::cmp::Ord for Release {
+        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+            self.version().cmp(other.version())
+        }
+    }
 }
 
 #[cfg(test)]
@@ -888,12 +925,12 @@ mod tests {
             let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
                 version: String::from("1.0.0"),
                 payload: String::from("image/1.0.0"),
-                metadata: HashMap::new(),
+                metadata: MapImpl::new(),
             }));
             let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
                 version: String::from("2.0.0"),
                 payload: String::from("image/2.0.0"),
-                metadata: HashMap::new(),
+                metadata: MapImpl::new(),
             }));
             graph.dag.add_edge(v1, v2, Empty {}).unwrap();
 
@@ -904,12 +941,12 @@ mod tests {
             let v3 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
                 version: String::from("3.0.0"),
                 payload: String::from("image/3.0.0"),
-                metadata: HashMap::new(),
+                metadata: MapImpl::new(),
             }));
             let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
                 version: String::from("2.0.0"),
                 payload: String::from("image/2.0.0"),
-                metadata: HashMap::new(),
+                metadata: MapImpl::new(),
             }));
             graph.dag.add_edge(v2, v3, Empty {}).unwrap();
 
@@ -928,18 +965,18 @@ mod tests {
         let r1 = Release::Concrete(ConcreteRelease {
             version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
-            metadata: HashMap::new(),
+            metadata: MapImpl::new(),
         });
         let r2 = Release::Concrete(ConcreteRelease {
             version: String::from("2.0.0"),
             payload: String::from("image/2.0.0"),
-            metadata: HashMap::new(),
+            metadata: MapImpl::new(),
         });
 
         let r3 = Release::Concrete(ConcreteRelease {
             version: String::from("3.0.0"),
             payload: String::from("image/3.0.0"),
-            metadata: HashMap::new(),
+            metadata: MapImpl::new(),
         });
 
         let graph1 = {

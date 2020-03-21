@@ -52,3 +52,5 @@ protoc-rust = "2.8"
 codegen-protoc = []
 test-net = []
 test-net-private = []
+# Used on a few implementations which shall not be used in non-test code
+test = []
