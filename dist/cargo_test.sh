@@ -33,7 +33,7 @@ function run_tests() {
   fi
 
   for directory in ${!cargo_test_flags[*]}; do
-    if [[ ${HAS_KOV} -eq 1 ]]; then
+    if [[ "${HAS_KOV}" -eq "1" ]]; then
       # we want to prevent completely untested functions to be stripped
       export RUSTFLAGS='-C link-dead-code'
       export CARGO_ARGS="test --no-run"
@@ -47,7 +47,7 @@ function run_tests() {
         cd ${directory}
         cargo ${CARGO_ARGS:-test} ${cargo_test_flags[${directory}]}
 
-        if [[ ${HAS_KOV} -eq 1 ]]; then
+        if [[ \"${HAS_KOV}\" -eq \"1\" ]]; then
           rm -f \"${CARGO_TARGET_DIR}\"/debug/${directory}
           find \"${CARGO_TARGET_DIR}\"/debug/ -maxdepth 1 -type f -executable -print0 | xargs -n1 -0 \
           kcov \
@@ -60,7 +60,7 @@ function run_tests() {
 
   done
 
-  if [[ ${HAS_KOV} -eq 1 && -n "${ARTIFACTS_DIR}" ]]; then
+  if [[ "${HAS_KOV}" -eq "1" && -n "${ARTIFACTS_DIR}" ]]; then
     mkdir -p "${ARTIFACTS_DIR}"
     [[ ! -e "${ARTIFACTS_DIR}"/cov ]] || rm -rf "${ARTIFACTS_DIR}"/cov
     cp -rf "${CARGO_TARGET_DIR}"/cov "${ARTIFACTS_DIR}"/
