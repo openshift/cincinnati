@@ -424,6 +424,7 @@ mod tests {
 
     use self::cincinnati::plugins::InternalIO;
     use self::cincinnati::plugins::InternalPlugin;
+    use self::cincinnati::testing::compare_graphs_verbose;
 
     use failure::{Fallible, ResultExt};
     use std::path::PathBuf;
@@ -471,7 +472,7 @@ mod tests {
         ));
         let edge_add_remove_plugin = Box::new(
             cincinnati::plugins::internal::edge_add_remove::EdgeAddRemovePlugin {
-                remove_consumed_metadata: true,
+                remove_consumed_metadata: false,
 
                 ..Default::default()
             },
@@ -509,21 +510,16 @@ mod tests {
                 .graph
         };
 
-        // Sort the graphs for easier readable diffs
-        let graph_expected_sorted = {
-            let mut graph =
-                serde_json::to_value(&graph_expected).context("Sorting expected graph")?;
-            commons::testing::sort_json_graph_by_version(&mut graph);
-            graph
-        };
-
-        let graph_result_sorted = {
-            let mut graph = serde_json::to_value(&graph_result).context("Sorting result graph")?;
-            commons::testing::sort_json_graph_by_version(&mut graph);
-            graph
-        };
-
-        pretty_assertions::assert_eq!(graph_result_sorted, graph_expected_sorted);
+        if let Err(e) = compare_graphs_verbose(
+            graph_expected,
+            graph_result,
+            &[
+                "io.openshift.upgrades.graph.previous.remove",
+                "io.openshift.upgrades.graph.previous.remove_regex",
+            ],
+        ) {
+            panic!("{}", e);
+        }
 
         Ok(())
     }
