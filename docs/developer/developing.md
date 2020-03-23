@@ -25,11 +25,19 @@ just run-graph-builder
 just run-policy-engine
 ```
 
+## Requesting the graph from the local instance
+
 `$ just get-graph-pe` can be run to get the graph from a local policy-engine instance.
 For example, to get the graph for the "stable-4.2" channel and the "amd64" architecture, run:
 
 ```shell
 just get-graph-pe "stable-4.2" "amd64"
+```
+
+If you would like to visualize the result you can pipe the result through the _display-graph_ recipe as follows:
+
+```shell
+just get-graph-pe "stable-4.2" "amd64" | just display-graph
 ```
 
 To get the graph from a local graph-builder instance, run:

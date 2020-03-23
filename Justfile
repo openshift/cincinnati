@@ -45,9 +45,18 @@ run-ci-tests:
 
 path_prefix := "api/upgrades_info/"
 
+# Reads a graph on stdin, creates an SVG out of it and opens it with SVG-associated default viewer. Meant to be combined with one of the `get-graph-*` recipes.
+display-graph:
+	#!/usr/bin/env bash
+	required_tools=("xdg-open" "dot" "jq" "adfasdf")
+	for tool in "${required_tools[@]}"; do
+		type ${tool} >/dev/null 2>&1 || {
+			printf "ERROR: program '%s' not found, please install it.\n" "${tool}"
+			exit 1
+		}
+	done
 
-get-and-display-graph:
-	just get-graph-gb | jq -cM | {{invocation_directory()}}/hack/graph.sh | dot -Tsvg > graph.svg; xdg-open graph.svg
+	jq -cM . | {{invocation_directory()}}/hack/graph.sh | dot -Tsvg > graph.svg; xdg-open graph.svg
 
 run-graph-builder registry="https://quay.io" repository="openshift-release-dev/ocp-release" credentials_file="${HOME}/.docker/config.json":
 	#!/usr/bin/env bash
