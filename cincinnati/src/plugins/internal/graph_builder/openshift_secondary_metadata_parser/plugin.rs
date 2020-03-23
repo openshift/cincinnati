@@ -265,46 +265,88 @@ impl OpenshiftSecondaryMetadataParserPlugin {
             blocked_edges.len()
         );
 
+        let architectures = {
+            let mut collection = std::collections::BTreeSet::<Vec<semver::Identifier>>::new();
+
+            let _ = io.graph.find_by_fn_mut(|release| {
+                match semver::Version::from_str(release.version()) {
+                    Ok(version_semver) => {
+                        collection.insert(version_semver.build);
+                    }
+                    Err(e) => warn!("{} is not SemVer compliant: {}", release.version(), e),
+                };
+
+                // we don't care about this result
+                false
+            });
+
+            collection.into_iter().collect::<Vec<_>>()
+        };
+
+        trace!(
+            "Will block edges for these architectures by default: {:?}",
+            &architectures
+        );
+
         blocked_edges
             .into_iter()
             .try_for_each(|blocked_edge| -> Fallible<()> {
-                let mut to = blocked_edge.to;
+                // Evaluate the architectures to block
+                let target_versions = {
+                    let mut to = blocked_edge.to.clone();
 
-                // add build information to match architecture
-                if to.build.is_empty() {
-                    let arch =
-                        // Special case for a few cases where the "s390x" arch was encoded with '-' instead of '+'
-                        if to.pre == vec![semver::Identifier::AlphaNumeric("s390x".to_string())] {
-                            "s390x"
+                    if !to.build.is_empty() {
+                        // Don't update architecture if its explicitly defined
+                        vec![to]
+                    } else {
+                        // Special case where the "s390x" arch was encoded with '-' instead of '+'
+                        let special_case_s390x =
+                            vec![semver::Identifier::AlphaNumeric("s390x".to_string())];
+                        if to.pre == special_case_s390x {
+                            to.build = special_case_s390x;
+                            vec![to]
                         } else {
-                            &self.settings.default_arch
-                        };
-
-                    warn!("Adding architecture {} to {:?}", &arch, &to);
-                    to.build
-                        .push(semver::Identifier::AlphaNumeric(arch.to_string()));
-                };
-
-                // find version in the graph
-                let release_id = match io.graph.find_by_version(&to.to_string()) {
-                    Some(release_id) => release_id,
-                    None => {
-                        warn!("Release with version {} not found in graph", to);
-                        return Ok(());
+                            // Default to blocking all architectsures
+                            architectures
+                                .iter()
+                                .map(|blocked_architecture| {
+                                    let mut to = to.clone();
+                                    to.build = blocked_architecture.clone();
+                                    to
+                                })
+                                .collect()
+                        }
                     }
                 };
 
-                // add metadata to block edge using the `previous.remove_regex` metadata
-                io.graph
-                    .get_metadata_as_ref_mut(&release_id)
-                    .context(format!(
-                        "[blocked_edges] Getting mutable metadata for {}",
-                        &to.to_string()
-                    ))?
-                    .insert(
-                        format!("{}.{}", self.settings.key_prefix, "previous.remove_regex"),
-                        blocked_edge.from.to_string(),
-                    );
+                // find all versions in the graph
+                target_versions.iter().for_each(|to| {
+                    match io.graph.find_by_version(&to.to_string()) {
+                        Some(release_id) => {
+                            // add metadata to block edge using the `previous.remove_regex` metadata
+                            match &mut io.graph.get_metadata_as_ref_mut(&release_id).context(
+                                format!(
+                                    "[blocked_edges] Getting mutable metadata for {} failed.",
+                                    &to.to_string()
+                                ),
+                            ) {
+                                Ok(metadata) => {
+                                    metadata.insert(
+                                        format!(
+                                            "{}.{}",
+                                            self.settings.key_prefix, "previous.remove_regex"
+                                        ),
+                                        blocked_edge.from.to_string(),
+                                    );
+                                }
+                                Err(e) => warn!("{}", e),
+                            };
+                        }
+                        None => {
+                            info!("Release with version {} not found in graph", to);
+                        }
+                    };
+                });
 
                 Ok(())
             })?;
