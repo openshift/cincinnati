@@ -169,6 +169,11 @@ pub mod errors {
         pub(crate) from: String,
         pub(crate) to: String,
     }
+
+    /// Missing node weight
+    #[derive(Debug, Fail, Eq, PartialEq)]
+    #[fail(display = "NodeWeight with index {} is missing", 0)]
+    pub struct NodeWeightMissing(pub(crate) usize);
 }
 
 impl Graph {
@@ -443,6 +448,41 @@ impl Graph {
         self.dag
             .node_weights_mut()
             .try_for_each(|mut nw| f(&mut nw))
+    }
+
+    /// Get the edges expressed as version -> versions
+    #[cfg(any(test, feature = "test"))]
+    pub fn get_edges(&self) -> Result<MapImpl<String, SetImpl<String>>, Error> {
+        let mut edges: MapImpl<String, SetImpl<String>> = Default::default();
+
+        self.dag
+            .raw_edges()
+            .iter()
+            .try_for_each(|edge| -> Result<(), Error> {
+                match (
+                    self.dag.node_weight(edge.source()),
+                    self.dag.node_weight(edge.target()),
+                ) {
+                    (Some(source), Some(target)) => {
+                        let source_version = source.version().to_string();
+                        let target_version = target.version().to_string();
+
+                        edges
+                            .entry(source_version)
+                            .or_default()
+                            .insert(target_version);
+
+                        Ok(())
+                    }
+                    (None, _) => Err(errors::NodeWeightMissing(edge.source().index())),
+                    (_, None) => Err(errors::NodeWeightMissing(edge.target().index())),
+                }
+                .map_err(Error::from)?;
+
+                Ok(())
+            })?;
+
+        Ok(edges)
     }
 }
 
@@ -886,6 +926,95 @@ pub mod testing {
         fn cmp(&self, other: &Self) -> std::cmp::Ordering {
             self.version().cmp(other.version())
         }
+    }
+
+    /// Compares two Graphs and gives a verbose error if not.
+    pub fn compare_graphs_verbose(
+        mut left: Graph,
+        mut right: Graph,
+        unwanted_metadata_keys: &[&str],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let removed_keys_left = remove_release_metadata(&mut left, unwanted_metadata_keys);
+        let removed_keys_right = remove_release_metadata(&mut right, unwanted_metadata_keys);
+
+        let releases_left: std::collections::BTreeSet<Release> = (&left).into();
+        let releases_right: std::collections::BTreeSet<Release> = (&right).into();
+
+        let edges_left = right.get_edges()?;
+        let edges_right = left.get_edges()?;
+
+        let mut output: Vec<String> = vec![];
+
+        if releases_left != releases_right {
+            output.push("Graphs differ! Showing differences from left to right".into());
+            output.push("-----------------------------------------------------".into());
+            output.push("nodes:".into());
+            output.push(
+                prettydiff::diff_lines(
+                    Box::leak(Box::new(serde_json::to_string_pretty(&releases_left)?)),
+                    Box::leak(Box::new(serde_json::to_string_pretty(&releases_right)?)),
+                )
+                .format(),
+            );
+
+            if !unwanted_metadata_keys.is_empty() {
+                output.push("removed metadata:".into());
+                output.push(
+                    prettydiff::diff_lines(
+                        &serde_json::to_string_pretty(&removed_keys_left)?,
+                        &serde_json::to_string_pretty(&removed_keys_right)?,
+                    )
+                    .format(),
+                );
+            }
+        }
+
+        if edges_left != edges_right {
+            output.push("edges: ".into());
+            output.push(
+                prettydiff::diff_lines(
+                    &serde_json::to_string_pretty(&edges_left)?,
+                    &serde_json::to_string_pretty(&edges_right)?,
+                )
+                .format(),
+            );
+        }
+
+        let output = output.join("\n");
+
+        if !output.is_empty() {
+            return Err(output.into());
+        }
+
+        Ok(())
+    }
+
+    /// Removes the metadata given by the keys and returns it.
+    pub fn remove_release_metadata(
+        graph: &mut Graph,
+        keys: &[&str],
+    ) -> MapImpl<String, MapImpl<String, String>> {
+        let mut removed_metadata = MapImpl::<String, MapImpl<String, String>>::new();
+
+        let _ = graph.iter_releases_mut(|mut release| {
+            for key in keys {
+                let key = (*key).to_string();
+
+                if let Release::Concrete(concrete_release) = &mut release {
+                    if let Some(removed_value) = concrete_release.metadata.remove(&key) {
+                        removed_metadata
+                            .entry(release.version().to_string())
+                            .or_default()
+                            .insert(key, removed_value);
+                    }
+                }
+            }
+
+            // we don't care about this
+            Ok(())
+        });
+
+        removed_metadata
     }
 }
 
