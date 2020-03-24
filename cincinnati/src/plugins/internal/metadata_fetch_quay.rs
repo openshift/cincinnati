@@ -175,6 +175,7 @@ impl InternalPlugin for QuayMetadataFetchPlugin {
 mod tests_net {
     use super::*;
     use cincinnati::testing::{generate_custom_graph, TestMetadata};
+    use cincinnati::MapImpl;
     use commons::testing::init_runtime;
     use std::collections::HashMap;
 
@@ -191,7 +192,7 @@ mod tests_net {
         input: bool,
     ) -> TestMetadata {
         [
-            (0, HashMap::new()),
+            (0, MapImpl::new()),
             (
                 1,
                 if input {

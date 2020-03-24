@@ -232,9 +232,9 @@ mod network_tests {
                             release.payload = format!("{}:{}", source_front, version);
 
                             // remove unwanted metadata
-                            release
-                                .metadata
-                                .retain(|k, _| !unwanted_metadata_keys.contains(k));
+                            unwanted_metadata_keys.iter().for_each(|key| {
+                                release.metadata.remove(key);
+                            });
 
                             Ok(())
                         }

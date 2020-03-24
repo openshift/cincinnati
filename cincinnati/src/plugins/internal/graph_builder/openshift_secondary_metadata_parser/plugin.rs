@@ -265,46 +265,88 @@ impl OpenshiftSecondaryMetadataParserPlugin {
             blocked_edges.len()
         );
 
+        let architectures = {
+            let mut collection = std::collections::BTreeSet::<Vec<semver::Identifier>>::new();
+
+            let _ = io.graph.find_by_fn_mut(|release| {
+                match semver::Version::from_str(release.version()) {
+                    Ok(version_semver) => {
+                        collection.insert(version_semver.build);
+                    }
+                    Err(e) => warn!("{} is not SemVer compliant: {}", release.version(), e),
+                };
+
+                // we don't care about this result
+                false
+            });
+
+            collection.into_iter().collect::<Vec<_>>()
+        };
+
+        trace!(
+            "Will block edges for these architectures by default: {:?}",
+            &architectures
+        );
+
         blocked_edges
             .into_iter()
             .try_for_each(|blocked_edge| -> Fallible<()> {
-                let mut to = blocked_edge.to;
+                // Evaluate the architectures to block
+                let target_versions = {
+                    let mut to = blocked_edge.to.clone();
 
-                // add build information to match architecture
-                if to.build.is_empty() {
-                    let arch =
-                        // Special case for a few cases where the "s390x" arch was encoded with '-' instead of '+'
-                        if to.pre == vec![semver::Identifier::AlphaNumeric("s390x".to_string())] {
-                            "s390x"
+                    if !to.build.is_empty() {
+                        // Don't update architecture if its explicitly defined
+                        vec![to]
+                    } else {
+                        // Special case where the "s390x" arch was encoded with '-' instead of '+'
+                        let special_case_s390x =
+                            vec![semver::Identifier::AlphaNumeric("s390x".to_string())];
+                        if to.pre == special_case_s390x {
+                            to.build = special_case_s390x;
+                            vec![to]
                         } else {
-                            &self.settings.default_arch
-                        };
-
-                    warn!("Adding architecture {} to {:?}", &arch, &to);
-                    to.build
-                        .push(semver::Identifier::AlphaNumeric(arch.to_string()));
-                };
-
-                // find version in the graph
-                let release_id = match io.graph.find_by_version(&to.to_string()) {
-                    Some(release_id) => release_id,
-                    None => {
-                        warn!("Release with version {} not found in graph", to);
-                        return Ok(());
+                            // Default to blocking all architectsures
+                            architectures
+                                .iter()
+                                .map(|blocked_architecture| {
+                                    let mut to = to.clone();
+                                    to.build = blocked_architecture.clone();
+                                    to
+                                })
+                                .collect()
+                        }
                     }
                 };
 
-                // add metadata to block edge using the `previous.remove_regex` metadata
-                io.graph
-                    .get_metadata_as_ref_mut(&release_id)
-                    .context(format!(
-                        "[blocked_edges] Getting mutable metadata for {}",
-                        &to.to_string()
-                    ))?
-                    .insert(
-                        format!("{}.{}", self.settings.key_prefix, "previous.remove_regex"),
-                        blocked_edge.from.to_string(),
-                    );
+                // find all versions in the graph
+                target_versions.iter().for_each(|to| {
+                    match io.graph.find_by_version(&to.to_string()) {
+                        Some(release_id) => {
+                            // add metadata to block edge using the `previous.remove_regex` metadata
+                            match &mut io.graph.get_metadata_as_ref_mut(&release_id).context(
+                                format!(
+                                    "[blocked_edges] Getting mutable metadata for {} failed.",
+                                    &to.to_string()
+                                ),
+                            ) {
+                                Ok(metadata) => {
+                                    metadata.insert(
+                                        format!(
+                                            "{}.{}",
+                                            self.settings.key_prefix, "previous.remove_regex"
+                                        ),
+                                        blocked_edge.from.to_string(),
+                                    );
+                                }
+                                Err(e) => warn!("{}", e),
+                            };
+                        }
+                        None => {
+                            info!("Release with version {} not found in graph", to);
+                        }
+                    };
+                });
 
                 Ok(())
             })?;
@@ -418,14 +460,18 @@ impl InternalPlugin for OpenshiftSecondaryMetadataParserPlugin {
 
 #[cfg(test)]
 mod tests {
+    use super::OpenshiftSecondaryMetadataParserPlugin;
+
     use crate as cincinnati;
 
     use self::cincinnati::plugins::InternalIO;
     use self::cincinnati::plugins::InternalPlugin;
+    use self::cincinnati::testing::compare_graphs_verbose;
 
     use failure::{Fallible, ResultExt};
     use std::path::PathBuf;
     use std::str::FromStr;
+    use test_case::test_case;
 
     lazy_static::lazy_static! {
         static ref TEST_FIXTURE_DIR: PathBuf = {
@@ -433,11 +479,12 @@ mod tests {
         };
     }
 
-    #[test]
-    fn compare_quay_result_fixture_20200220104838() -> Fallible<()> {
+    #[test_case("20200220.104838")]
+    #[test_case("20200319.204124")]
+    fn compare_quay_result_fixture(fixture: &str) -> Fallible<()> {
         let mut runtime = commons::testing::init_runtime()?;
 
-        let fixture_directory = TEST_FIXTURE_DIR.join("20200220.104838");
+        let fixture_directory = TEST_FIXTURE_DIR.join(fixture);
 
         let read_file_to_graph = |filename: &str| -> Fallible<cincinnati::Graph> {
             let path = fixture_directory.join(filename);
@@ -454,7 +501,7 @@ mod tests {
             read_file_to_graph("graph-gb-with-quay-metadata.json")?;
 
         // Configure the plugin
-        let plugin = Box::new(super::OpenshiftSecondaryMetadataParserPlugin::new(
+        let plugin = Box::new(OpenshiftSecondaryMetadataParserPlugin::new(
             toml::from_str(&format!(
                 r#"
                     data_directory = {:?}
@@ -467,7 +514,7 @@ mod tests {
         ));
         let edge_add_remove_plugin = Box::new(
             cincinnati::plugins::internal::edge_add_remove::EdgeAddRemovePlugin {
-                remove_consumed_metadata: true,
+                remove_consumed_metadata: false,
 
                 ..Default::default()
             },
@@ -505,21 +552,16 @@ mod tests {
                 .graph
         };
 
-        // Sort the graphs for easier readable diffs
-        let graph_expected_sorted = {
-            let mut graph =
-                serde_json::to_value(&graph_expected).context("Sorting expected graph")?;
-            commons::testing::sort_json_graph_by_version(&mut graph);
-            graph
-        };
-
-        let graph_result_sorted = {
-            let mut graph = serde_json::to_value(&graph_result).context("Sorting result graph")?;
-            commons::testing::sort_json_graph_by_version(&mut graph);
-            graph
-        };
-
-        pretty_assertions::assert_eq!(graph_result_sorted, graph_expected_sorted);
+        if let Err(e) = compare_graphs_verbose(
+            graph_expected,
+            graph_result,
+            &[
+                "io.openshift.upgrades.graph.previous.remove",
+                "io.openshift.upgrades.graph.previous.remove_regex",
+            ],
+        ) {
+            panic!("{}", e);
+        }
 
         Ok(())
     }

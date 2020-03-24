@@ -14,11 +14,12 @@
 
 use crate as cincinnati;
 
+use self::cincinnati::MapImpl;
+
 use itertools::Itertools;
 use log::trace;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -47,7 +48,7 @@ pub struct Metadata {
     #[serde(default)]
     pub next: Vec<Version>,
     #[serde(default)]
-    pub metadata: HashMap<String, String>,
+    pub metadata: MapImpl<String, String>,
 }
 
 impl fmt::Display for Metadata {

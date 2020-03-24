@@ -1,0 +1,21 @@
+name: stable-4.3
+versions:
+# 4.2.16+amd64 - withheld as it's only valid into 4.3.0,4.3.1 people should go direct to 4.3.5
+# not 4.2.17 because we had a long quiet time after 4.2.16 with no releases
+# 4.2.18+amd64 - withheld as it's only valid into 4.3.1, people should go direct to 4.3.5
+# 4.2.19+amd64 - withheld as it's only valid into 4.3.1, people should go direct to 4.3.5
+- 4.2.20+amd64
+- 4.2.21+amd64
+- 4.2.22+amd64
+# until s390 is released on 4.3 we may not want to include it in 4.3 channels
+# 4.2 -> 4.3 updates occasionally hit RequiredPoolsFailed, fixed in 4.2.18 and rc.0, but not in 4.2.16: https://bugzilla.redhat.com/show_bug.cgi?id=1782152 https://bugzilla.redhat.com/show_bug.cgi?id=1782149
+# not 4.2.17 because we had a long quiet time after 4.2.16 with no releases
+# 4.2.21 edge into stable-4.3 pending further review
+- 4.3.0
+- 4.3.1
+# Upgrade edges disabled for 4.3.2 and 4.3.3 because of bugs https://bugzilla.redhat.com/show_bug.cgi?id=1802248, https://bugzilla.redhat.com/show_bug.cgi?id=1805444, https://bugzilla.redhat.com/show_bug.cgi?id=1808429
+- 4.3.2
+- 4.3.3
+# No 4.3.4 because of https://bugzilla.redhat.com/show_bug.cgi?id=1805726
+# No 4.3.6 because of https://bugzilla.redhat.com/show_bug.cgi?id=1811886
+- 4.3.5

@@ -72,7 +72,6 @@ mod tests {
     use cincinnati::testing::{generate_custom_graph, TestMetadata};
     use commons::testing::init_runtime;
     use failure::ResultExt;
-    use maplit::hashmap;
 
     #[test]
     fn ensure_release_remove() -> Fallible<()> {
@@ -85,19 +84,31 @@ mod tests {
             let metadata: TestMetadata = vec![
                 (
                     0,
-                    hashmap! { format!("{}.{}", key_prefix, key_suffix) => String::from("true") },
+                    [(
+                        format!("{}.{}", key_prefix, key_suffix),
+                        String::from("true"),
+                    )]
+                    .iter()
+                    .cloned()
+                    .collect(),
                 ),
-                (1, hashmap! {}),
+                (1, [].iter().cloned().collect()),
                 (
                     2,
-                    hashmap! { format!("{}.{}", key_prefix, key_suffix) => String::from("true") },
+                    [(
+                        format!("{}.{}", key_prefix, key_suffix),
+                        String::from("true"),
+                    )]
+                    .iter()
+                    .cloned()
+                    .collect(),
                 ),
             ];
             generate_custom_graph("image", metadata, None)
         };
 
         let expected_graph: cincinnati::Graph = {
-            let metadata: TestMetadata = vec![(1, hashmap! {})];
+            let metadata: TestMetadata = vec![(1, [].iter().cloned().collect())];
 
             generate_custom_graph("image", metadata, None)
         };
