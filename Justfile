@@ -45,18 +45,53 @@ run-ci-tests:
 
 path_prefix := "api/upgrades_info/"
 
+# Reads a graph on stdin, creates an SVG out of it and opens it with SVG-associated default viewer. Meant to be combined with one of the `get-graph-*` recipes.
+display-graph:
+	#!/usr/bin/env bash
+	required_tools=("xdg-open" "dot" "jq" "adfasdf")
+	for tool in "${required_tools[@]}"; do
+		type ${tool} >/dev/null 2>&1 || {
+			printf "ERROR: program '%s' not found, please install it.\n" "${tool}"
+			exit 1
+		}
+	done
 
-get-and-display-graph:
-	just get-graph-gb | jq -cM | {{invocation_directory()}}/hack/graph.sh | dot -Tsvg > graph.svg; xdg-open graph.svg
+	jq -cM . | {{invocation_directory()}}/hack/graph.sh | dot -Tsvg > graph.svg; xdg-open graph.svg
 
 run-graph-builder registry="https://quay.io" repository="openshift-release-dev/ocp-release" credentials_file="${HOME}/.docker/config.json":
 	#!/usr/bin/env bash
 	export RUST_BACKTRACE=1
-	export RUST_LOG="graph_builder=trace,graph-builder=trace,cincinnati=trace"
-	# export RUST_LOG="${RUST_LOG},dkregistry=trace"
-	# strace -f -D -o gb.strace.lol
-	cargo run --package graph-builder -- --service.pause_secs 30 --address 0.0.0.0 --registry {{registry}} --repository {{repository}} -vvv --service.path_prefix {{path_prefix}} --credentials-file {{credentials_file}} # --disable-quay-api-metadata
+	cargo run --package graph-builder -- -c <(cat <<'EOF'
+		verbosity = "vvv"
 
+		[service]
+		pause_secs = 9999999
+		address = "127.0.0.1"
+		port = 8080
+		path_prefix = "{{path_prefix}}"
+
+		[status]
+		address = "127.0.0.1"
+		port = 9080
+
+		[[plugin_settings]]
+		name="release-scrape-dockerv2"
+		registry = "{{registry}}"
+		repository = "{{repository}}"
+		fetch_concurrency=128
+		credentials_file = "{{credentials_file}}"
+
+		[[plugin_settings]]
+		name="quay-metadata"
+		repository="{{repository}}"
+
+		[[plugin_settings]]
+		name="node-remove"
+
+		[[plugin_settings]]
+		name="edge-add-remove"
+	EOF
+	)
 
 run-graph-builder-satellite:
 	just run-graph-builder 'sat-r220-02.lab.eng.rdu2.redhat.com' 'default_organization-custom-ocp'
