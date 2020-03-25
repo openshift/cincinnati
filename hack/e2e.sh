@@ -129,6 +129,9 @@ for i in $(seq 1 10); do
   sleep ${DELAY}
 done
 
+# Show test failure details
+export RUST_BACKTRACE="1"
+
 # Run e2e tests
 /usr/bin/cincinnati-e2e-test
 
