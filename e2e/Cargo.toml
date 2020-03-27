@@ -18,6 +18,8 @@ url = "^1.7.2"
 commons = { path = "../commons" }
 tokio = { version = "0.2.11", features = [ "fs", "stream" ] }
 prometheus-query = { path = "../prometheus-query" }
+lazy_static = "^1.2.0"
+cincinnati = { path = "../cincinnati", features = ["test"] }
 
 [features]
 test-e2e-prom-query = []
