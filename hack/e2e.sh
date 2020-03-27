@@ -124,7 +124,7 @@ export PROM_TOKEN=$(oc -n openshift-monitoring get secret \
 DELAY=30
 for i in $(seq 1 10); do
   PROM_OUTPUT=$(curl -kLs -H "Authorization: Bearer ${PROM_TOKEN}" "${PROM_ENDPOINT}/api/v1/query?query=cincinnati_gb_build_info") || continue
-  grep "metric" <<< "${PROM_OUTPUT}" && break
+  grep "metric" <<< "${PROM_OUTPUT}" || continue && break
 
   sleep ${DELAY}
 done
