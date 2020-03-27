@@ -50,7 +50,7 @@ fn check_slo(query: &'static str, expected: &'static str) {
         QueryData::Vector(vector_data) => vector_data,
         _ => panic!("expected vector"),
     };
-    assert!(vector_data.len() > 0);
+    assert_ne!(vector_data.len(), 0, "the vector contains 0 elements");
     let first_result: &VectorResult = vector_data.get(0).unwrap();
     assert_eq!(first_result.sample().to_string(), expected);
 }
