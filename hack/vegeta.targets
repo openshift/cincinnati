@@ -1,0 +1,9 @@
+# valid request
+GET GRAPH_URL?channel=a&arch=amd64
+Accept: application/json
+
+GET GRAPH_URL?channel=b&arch=amd64
+Accept: application/json
+
+GET GRAPH_URL?channel=test&arch=amd64
+Accept: application/json

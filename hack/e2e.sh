@@ -46,7 +46,7 @@ oc secrets link default ci-pull-secret --for=pull
 
 # Reconfigure monitoring operator to support user workloads
 # https://docs.openshift.com/container-platform/4.3/monitoring/monitoring-your-own-services.html
- oc -n openshift-monitoring create configmap cluster-monitoring-config --from-literal='config.yaml={"techPreviewUserWorkload": {"enabled": true}}'
+oc -n openshift-monitoring create configmap cluster-monitoring-config --from-literal='config.yaml={"techPreviewUserWorkload": {"enabled": true}}'
 
 # Import observability template
 # ServiceMonitors are imported before app deployment to give Prometheus time to catch up with
@@ -112,7 +112,10 @@ done
 # Wait for cincinnati metrics to be recorded
 # Find out the token Prometheus uses from its serviceaccount secrets
 # and use it to query for GB build info
-export PROM_ENDPOINT=$(oc -n openshift-monitoring get route thanos-querier -o jsonpath="{.spec.host}")
+PROM_ROUTE=$(oc -n openshift-monitoring get route thanos-querier -o jsonpath="{.spec.host}")
+export PROM_ENDPOINT="https://${PROM_ROUTE}"
+echo "Using Prometheus endpoint ${PROM_ENDPOINT}"
+
 export PROM_TOKEN=$(oc -n openshift-monitoring get secret \
   $(oc -n openshift-monitoring get serviceaccount prometheus-k8s \
     -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep prometheus-k8s-token) \
@@ -120,11 +123,26 @@ export PROM_TOKEN=$(oc -n openshift-monitoring get secret \
 
 DELAY=30
 for i in $(seq 1 10); do
-  PROM_OUTPUT=$(curl -kLs -H "Authorization: Bearer ${PROM_TOKEN}" "https://${PROM_ENDPOINT}/api/v1/query?query=cincinnati_gb_build_info" || continue)
-  grep "metric" <<< "${PROM_OUTPUT}" && break
+  PROM_OUTPUT=$(curl -kLs -H "Authorization: Bearer ${PROM_TOKEN}" "${PROM_ENDPOINT}/api/v1/query?query=cincinnati_gb_build_info") || continue
+  grep "metric" <<< "${PROM_OUTPUT}" || continue && break
 
   sleep ${DELAY}
 done
 
-# Run e2e tests in sequential mode to have SLO tests in the end
-env RUST_TEST_TASKS=1 /usr/bin/cincinnati-e2e-test
+# Show test failure details
+export RUST_BACKTRACE="1"
+
+# Run e2e tests
+/usr/bin/cincinnati-e2e-test
+
+# Ensure prometheus_query tests are executed
+/usr/bin/cincinnati-prometheus_query-test
+
+# Run load-testing script
+/usr/local/bin/load-testing.sh
+
+# sleep for 30 secs to allow Prometheus scrape latest data
+sleep 30
+
+# Verify SLO metrics
+/usr/bin/cincinnati-e2e-slo

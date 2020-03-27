@@ -5,5 +5,7 @@ members = [
 	"commons",
 	"graph-builder",
 	"policy-engine",
+	"prometheus-query",
 	"quay",
+	"e2e",
 ]

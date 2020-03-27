@@ -1,0 +1,23 @@
+[package]
+name = "prometheus-query"
+version = "0.0.0-dev"
+authors = ["Stefan Junker <mail@stefanjunker.de>"]
+publish = false
+edition = "2018"
+
+[dependencies]
+commons = { path = "../commons" }
+failure = "^0.1.5"
+futures = "^0.3"
+reqwest = "^0.9.8"
+serde = { version = "^1.0.84", features = ["derive"] }
+serde_derive = "^1.0.84"
+serde_json = "^1.0.34"
+strum = "^0.14.0"
+strum_macros = "^0.14.0"
+log = "^0.4.3"
+chrono = "^0.4.0"
+
+[dev-dependencies]
+env_logger = "^0.6.0"
+tokio = "^0.1.14"
