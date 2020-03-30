@@ -64,12 +64,12 @@ oc new-app -f dist/openshift/cincinnati.yaml \
   -p GB_PLUGIN_SETTINGS='
       [[plugin_settings]]
       name = "release-scrape-dockerv2"
-      repository = "redhat/openshift-cincinnati-test-public-manual"
+      repository = "openshift-release-dev/ocp-release"
       fetch_concurrency = 128
 
       [[plugin_settings]]
       name = "quay-metadata"
-      repository = "redhat/openshift-cincinnati-test-public-manual"
+      repository = "openshift-release-dev/ocp-release"
 
       [[plugin_settings]]
       name = "node-remove"
