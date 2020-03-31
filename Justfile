@@ -1,3 +1,21 @@
+path_prefix := "api/upgrades_info/"
+
+testdata_dir := "e2e/tests/testdata/"
+metadata_revision_file := "metadata_revision"
+metadata_reference :='reference_branch = "master"'
+
+pause_secs := "9999999"
+registry := "https://quay.io"
+repository := "openshift-release-dev/ocp-release"
+credentials_file := "${HOME}/.docker/config.json"
+
+metadata_reference_e2e:
+	printf 'reference_revision = "%s"' "$(cat {{testdata_dir}}/{{metadata_revision_file}})"
+
+metadata_reference_revision:
+	#!/usr/bin/env bash
+	read -r var <"{{testdata_dir}}"/metadata_revision; printf $var
+
 format:
 	cargo fmt --all
 
@@ -25,25 +43,77 @@ test: format
 	export RUST_BACKTRACE=1 RUST_LOG="graph-builder=trace,cincinnati=trace,dkregistry=trace"
 	cargo test --all
 
-_test component features='test-net,test-net-private' rustcargs='--ignored':
+_test component cargoargs='--features test-net,test-net-private' rustcargs='--ignored':
 	#!/usr/bin/env bash
 	set -xe
-	(pushd {{component}} && cargo test --features {{features}} -- {{rustcargs}})
+	(pushd {{component}} && cargo test {{cargoargs}} -- {{rustcargs}})
 
 
 test-net-private:
 	#!/usr/bin/env bash
 	set -e
-	just _test quay "test-net,test-net-private" ""
-	just _test cincinnati "test-net,test-net-private" ""
-	just _test graph-builder "test-net,test-net-private" ""
+	just _test quay "--features test-net,test-net-private" ""
+	just _test cincinnati "--features test-net,test-net-private" ""
+	just _test graph-builder "--features test-net,test-net-private" ""
 
 run-ci-tests:
 	#!/usr/bin/env bash
 	set -e
 	hack/run-all-tests.sh
 
-path_prefix := "api/upgrades_info/"
+# Runs the client part of the e2e test suite.
+run-e2e-test-only filter="e2e":
+	#!/usr/bin/env bash
+	set -e
+	export GRAPH_URL='http://127.0.0.1:8081/{{path_prefix}}v1/graph'
+	export E2E_METADATA_REVISION="$(just metadata_reference_revision)"
+
+	# we need to use the parent-directory here because the test runs in the graph-builder directory
+	export E2E_TESTDATA_DIR="../{{ testdata_dir }}"
+
+	just _test e2e "" "{{ filter }}"
+
+# Spawns a Cincinnati stack on localhost and runs the e2e test suite.
+run-e2e:
+	#!/usr/bin/env bash
+	set -e
+
+	just \
+		registry="{{registry}}" repository="{{repository}}" \
+		run-daemons-e2e 2>&1 &
+	DAEMON_PARENTPID=$!
+	trap "kill $DAEMON_PARENTPID" EXIT
+
+	# give the graph-builder time to scrape
+	sleep 180
+
+	for i in `seq 1 100`; do
+		just run-e2e-test-only && {
+			echo Test successful.
+			exit 0
+		} || {
+			echo Attempt failed. Trying again in 10 seconds.
+			sleep 10
+		}
+	done
+
+	echo Test failed.
+	exit 1
+
+# Capture new e2e fixtures and refresh the metadata revision file.
+e2e-fixtures-capture-only:
+	#!/usr/bin/env bash
+	set -e
+
+	for base in "stable"; do
+		for version in "4.2" "4.3"; do
+			for arch in "amd64" "s390x"; do
+				for suffix in "-production"; do
+					just get-graph-pe"${suffix}" "${base}-${version}" "${arch}" > {{testdata_dir}}/"$(just metadata_reference_revision)_${base}-${version}_${arch}${suffix}".json
+				done
+			done
+		done
+	done
 
 # Reads a graph on stdin, creates an SVG out of it and opens it with SVG-associated default viewer. Meant to be combined with one of the `get-graph-*` recipes.
 display-graph:
@@ -58,14 +128,18 @@ display-graph:
 
 	jq -cM . | {{invocation_directory()}}/hack/graph.sh | dot -Tsvg > graph.svg; xdg-open graph.svg
 
-run-graph-builder registry="https://quay.io" repository="openshift-release-dev/ocp-release" credentials_file="${HOME}/.docker/config.json":
+run-graph-builder:
 	#!/usr/bin/env bash
 	export RUST_BACKTRACE=1
-	cargo run --package graph-builder -- -c <(cat <<'EOF'
+
+	trap 'rm -rf "$TMPDIR"' EXIT
+	export TMPDIR=$(mktemp -d)
+
+	cargo run --package graph-builder -- -c <(cat <<-EOF
 		verbosity = "vvv"
 
 		[service]
-		pause_secs = 9999999
+		pause_secs = {{pause_secs}}
 		address = "127.0.0.1"
 		port = 8080
 		path_prefix = "{{path_prefix}}"
@@ -82,24 +156,35 @@ run-graph-builder registry="https://quay.io" repository="openshift-release-dev/o
 		credentials_file = "{{credentials_file}}"
 
 		[[plugin_settings]]
-		name="quay-metadata"
-		repository="{{repository}}"
+		name = "github-secondary-metadata-scrape"
+		github_org = "openshift"
+		github_repo = "cincinnati-graph-data"
+		branch = "master"
+		output_directory = "${TMPDIR}"
+		{{metadata_reference}}
 
 		[[plugin_settings]]
-		name="node-remove"
+		name = "openshift-secondary-metadata-parse"
+		data_directory = "${TMPDIR}"
 
 		[[plugin_settings]]
-		name="edge-add-remove"
+		name = "edge-add-remove"
 	EOF
 	)
 
 run-graph-builder-satellite:
-	just run-graph-builder 'sat-r220-02.lab.eng.rdu2.redhat.com' 'default_organization-custom-ocp'
+	just registry='sat-r220-02.lab.eng.rdu2.redhat.com' repository='default_organization-custom-ocp' run-graph-builder
+
+run-graph-builder-e2e:
+	just \
+		registry="{{registry}}" repository="{{repository}}" \
+		metadata_reference="$(just metadata_reference_e2e)" \
+		run-graph-builder
 
 run-policy-engine:
 	#!/usr/bin/env bash
 	export RUST_BACKTRACE=1 RUST_LOG="policy_engine=trace,cincinnati=trace,actix=trace,actix_web=trace"
-	cargo run --package policy-engine -- -vvvv --service.address 0.0.0.0 --service.path_prefix {{path_prefix}} --upstream.cincinnati.url 'http://localhost:8080/{{path_prefix}}v1/graph' --service.mandatory_client_parameters='channel'
+	cargo run --package policy-engine -- -vvvv --service.address 0.0.0.0 --service.path_prefix {{path_prefix}} --upstream.cincinnati.url 'http://127.0.0.1:8080/{{path_prefix}}v1/graph' --service.mandatory_client_parameters='channel'
 
 kill-daemons:
 	pkill graph-builder
@@ -107,16 +192,29 @@ kill-daemons:
 
 run-daemons:
 	#!/usr/bin/env bash
-	just run-graph-builder #"https://quay.io" "redhat/openshift-cincinnati-test-public-manual" ~/.docker/config.json 2>&1 &
+	just run-graph-builder 2>&1 &
 	PG_PID=$!
 
 	just run-policy-engine 2>&1 &
 	PE_PID=$!
 
 	trap "kill $PG_PID $PE_PID" EXIT
-	while true; do sleep 30; done
+	sleep infinity
 
-get-graph port channel arch host="http://localhost":
+run-daemons-e2e:
+	#!/usr/bin/env bash
+	just \
+		registry="{{registry}}" repository="{{repository}}" \
+		run-graph-builder-e2e 2>&1 &
+	PG_PID=$!
+
+	just run-policy-engine 2>&1 &
+	PE_PID=$!
+
+	trap "kill $PG_PID $PE_PID" EXIT
+	sleep infinity
+
+get-graph port channel arch host="http://127.0.0.1":
 	curl --header 'Accept:application/json' {{host}}:{{port}}/{{path_prefix}}v1/graph?channel='{{channel}}'\&arch='{{arch}}' | jq .
 
 get-graph-gb:

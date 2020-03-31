@@ -43,6 +43,14 @@ pub(crate) fn archive_entry_directory_name(org: &str, repo: &str, commit: &Commi
     format!("{}-{}-{}", &org, &repo, &commit.sha[0..7],)
 }
 
+/// Format a commit URL
+pub(crate) fn commit_url(org: &str, repo: &str, sha: &str) -> String {
+    format!(
+        "https://api.github.com/repos/{}/{}/commits/{}",
+        org, repo, sha
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

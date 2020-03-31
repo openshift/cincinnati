@@ -450,9 +450,12 @@ impl Graph {
             .try_for_each(|mut nw| f(&mut nw))
     }
 
-    /// Get the edges expressed as version -> versions
+    /// Get the edges expressed as version -> versions; optionally include edges from/to `Release::Abstract`.
     #[cfg(any(test, feature = "test"))]
-    pub fn get_edges(&self) -> Result<MapImpl<String, SetImpl<String>>, Error> {
+    pub fn get_edges(
+        &self,
+        include_abstract: bool,
+    ) -> Result<MapImpl<String, SetImpl<String>>, Error> {
         let mut edges: MapImpl<String, SetImpl<String>> = Default::default();
 
         self.dag
@@ -467,10 +470,17 @@ impl Graph {
                         let source_version = source.version().to_string();
                         let target_version = target.version().to_string();
 
-                        edges
-                            .entry(source_version)
-                            .or_default()
-                            .insert(target_version);
+                        if include_abstract
+                            || match (source, target) {
+                                (Release::Concrete(_), Release::Concrete(_)) => true,
+                                _ => false,
+                            }
+                        {
+                            edges
+                                .entry(source_version)
+                                .or_default()
+                                .insert(target_version);
+                        }
 
                         Ok(())
                     }
@@ -937,56 +947,48 @@ pub mod testing {
         let removed_keys_left = remove_release_metadata(&mut left, unwanted_metadata_keys);
         let removed_keys_right = remove_release_metadata(&mut right, unwanted_metadata_keys);
 
-        let releases_left: std::collections::BTreeSet<Release> = (&left).into();
-        let releases_right: std::collections::BTreeSet<Release> = (&right).into();
-
-        let edges_left = right.get_edges()?;
-        let edges_right = left.get_edges()?;
+        if left == right {
+            return Ok(());
+        }
 
         let mut output: Vec<String> = vec![];
+        output.push("Graphs differ! Showing differences from left to right".into());
+        output.push("-----------------------------------------------------".into());
 
-        if releases_left != releases_right {
-            output.push("Graphs differ! Showing differences from left to right".into());
-            output.push("-----------------------------------------------------".into());
-            output.push("nodes:".into());
+        let edges_left = right.get_edges(false)?;
+        let edges_right = left.get_edges(false)?;
+        output.push("edges: ".into());
+        output.push(
+            prettydiff::diff_lines(
+                &serde_json::to_string_pretty(&edges_left)?,
+                &serde_json::to_string_pretty(&edges_right)?,
+            )
+            .format(),
+        );
+
+        let releases_left: std::collections::BTreeSet<Release> = (&left).into();
+        let releases_right: std::collections::BTreeSet<Release> = (&right).into();
+        output.push("nodes:".into());
+        output.push(
+            prettydiff::diff_lines(
+                Box::leak(Box::new(serde_json::to_string_pretty(&releases_left)?)),
+                Box::leak(Box::new(serde_json::to_string_pretty(&releases_right)?)),
+            )
+            .format(),
+        );
+
+        if !unwanted_metadata_keys.is_empty() {
+            output.push("removed metadata:".into());
             output.push(
                 prettydiff::diff_lines(
-                    Box::leak(Box::new(serde_json::to_string_pretty(&releases_left)?)),
-                    Box::leak(Box::new(serde_json::to_string_pretty(&releases_right)?)),
+                    &serde_json::to_string_pretty(&removed_keys_left)?,
+                    &serde_json::to_string_pretty(&removed_keys_right)?,
                 )
                 .format(),
             );
-
-            if !unwanted_metadata_keys.is_empty() {
-                output.push("removed metadata:".into());
-                output.push(
-                    prettydiff::diff_lines(
-                        &serde_json::to_string_pretty(&removed_keys_left)?,
-                        &serde_json::to_string_pretty(&removed_keys_right)?,
-                    )
-                    .format(),
-                );
-            }
         }
 
-        if edges_left != edges_right {
-            output.push("edges: ".into());
-            output.push(
-                prettydiff::diff_lines(
-                    &serde_json::to_string_pretty(&edges_left)?,
-                    &serde_json::to_string_pretty(&edges_right)?,
-                )
-                .format(),
-            );
-        }
-
-        let output = output.join("\n");
-
-        if !output.is_empty() {
-            return Err(output.into());
-        }
-
-        Ok(())
+        Err(output.join("\n").into())
     }
 
     /// Removes the metadata given by the keys and returns it.

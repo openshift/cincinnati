@@ -1,15 +1,28 @@
-use assert_json_diff::assert_json_include;
-use commons::testing::sort_json_graph_by_version;
+use failure::ResultExt;
 use reqwest::header::{HeaderValue, ACCEPT};
-use serde_json::Value;
 use std::env;
 use test_case::test_case;
 use url::Url;
 
-#[test_case("a",    "amd64", include_str!("./testdata/a-amd64.json");    "channel a amd64")]
-#[test_case("b",    "amd64", include_str!("./testdata/b-amd64.json");    "channel b amd64")]
-#[test_case("test", "amd64", include_str!("./testdata/test-amd64.json"); "channel test amd64")]
-fn e2e_channel_success(channel: &'static str, arch: &'static str, testdata: &str) {
+lazy_static::lazy_static! {
+    static ref METADATA_REVISION: String = std::env::var("E2E_METADATA_REVISION").unwrap();
+    static ref TESTDATA_DIR: String = std::env::var("E2E_TESTDATA_DIR").unwrap();
+}
+
+#[test_case("stable-4.2", "amd64")]
+#[test_case("stable-4.2", "s390x")]
+#[test_case("stable-4.3", "amd64")]
+#[test_case("stable-4.3", "s390x")]
+fn e2e_channel_success(channel: &'static str, arch: &'static str) {
+    let file_suffix = "-production";
+    let testdata_path = format!(
+        "{}/{}_{}_{}{}.json",
+        *TESTDATA_DIR, *METADATA_REVISION, channel, arch, file_suffix,
+    );
+    let testdata = &std::fs::read_to_string(&testdata_path)
+        .context(format!("reading {}", &testdata_path))
+        .unwrap();
+
     let mut runtime = commons::testing::init_runtime().unwrap();
 
     let graph_base_url = match env::var("GRAPH_URL") {
@@ -17,8 +30,7 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str, testdata: &str
         _ => panic!("GRAPH_URL unset"),
     };
 
-    let mut expected: Value = serde_json::from_str(testdata).unwrap();
-    sort_json_graph_by_version(&mut expected);
+    let expected: cincinnati::Graph = serde_json::from_str(testdata).unwrap();
 
     let mut graph_url = Url::parse(&graph_base_url).unwrap();
     graph_url
@@ -41,7 +53,16 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str, testdata: &str
         .unwrap();
     assert_eq!(res.status().is_success(), true);
     let text = runtime.block_on(res.text()).unwrap();
-    let mut actual = serde_json::from_str(&text).unwrap();
-    sort_json_graph_by_version(&mut actual);
-    assert_json_include!(actual: actual, expected: expected)
+    let actual: cincinnati::Graph = serde_json::from_str(&text).unwrap();
+
+    if let Err(e) = cincinnati::testing::compare_graphs_verbose(
+        expected,
+        actual,
+        &[
+            "io.openshift.upgrades.graph.previous.remove_regex",
+            "io.openshift.upgrades.graph.previous.remove",
+        ],
+    ) {
+        panic!("{}", e);
+    }
 }

@@ -318,11 +318,15 @@ parameters:
       credentials_path = "/etc/secrets/registry_credentials_docker.json"
 
       [[plugin_settings]]
-      name = "quay-metadata"
-      repository = "openshift-release-dev/ocp-release"
+      name = "github-secondary-metadata-scrape"
+      github_org = "openshift"
+      github_repo = "cincinnati-graph-data"
+      reference_branch = "master"
+      output_directory = "/tmp/cincinnati/graph-data"
 
       [[plugin_settings]]
-      name = "node-remove"
+      name = "openshift-secondary-metadata-parse"
+      data_directory = "/tmp/cincinnati/graph-data"
 
       [[plugin_settings]]
       name = "edge-add-remove"

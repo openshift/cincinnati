@@ -1,7 +1,10 @@
 use crate as cincinnati;
 
+use self::cincinnati::plugins::internal::graph_builder::github_openshift_secondary_metadata_scraper::plugin::GRAPH_DATA_DIR_PARAM_KEY;
 use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
+
+pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 
 mod graph_data_model {
     //! This module contains the data types corresponding to the graph data files.
@@ -100,6 +103,8 @@ pub static DEFAULT_ARCH: &str = "amd64";
 #[serde(default)]
 pub struct OpenshiftSecondaryMetadataParserSettings {
     data_directory: PathBuf,
+
+    #[default(DEFAULT_KEY_FILTER.to_string())]
     key_prefix: String,
 
     #[default(DEFAULT_ARCH.to_string())]
@@ -202,9 +207,20 @@ where
 impl OpenshiftSecondaryMetadataParserPlugin {
     pub(crate) const PLUGIN_NAME: &'static str = "openshift-secondary-metadata-parse";
 
-    async fn process_raw_metadata(&self, io: &mut InternalIO) -> Fallible<()> {
-        let path = self.settings.data_directory.join("raw/metadata.json");
+    fn get_data_directory(&self, io: &InternalIO) -> PathBuf {
+        if let Some(data_dir) = io.parameters.get(GRAPH_DATA_DIR_PARAM_KEY) {
+            PathBuf::from(data_dir)
+        } else {
+            self.settings.data_directory.clone()
+        }
+    }
 
+    async fn process_raw_metadata(
+        &self,
+        graph: &mut cincinnati::Graph,
+        data_dir: &PathBuf,
+    ) -> Fallible<()> {
+        let path = data_dir.join("raw/metadata.json");
         let json = tokio::fs::read(&path)
             .await
             .context(format!("Reading {:?}", &path))?;
@@ -215,7 +231,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
 
         raw_metadata.iter().for_each(|(version, metadata)| {
             metadata.iter().for_each(|(key, value)| {
-                io.graph.find_by_fn_mut(|release| {
+                graph.find_by_fn_mut(|release| {
                     let release_semver = semver::Version::from_str(release.version())
                         .context(format!("Parsing {} as SemVer", release.version()));
                     if let Err(e) = &release_semver {
@@ -251,8 +267,12 @@ impl OpenshiftSecondaryMetadataParserPlugin {
         Ok(())
     }
 
-    async fn process_blocked_edges(&self, io: &mut InternalIO) -> Fallible<()> {
-        let blocked_edges_dir = self.settings.data_directory.join("blocked-edges");
+    async fn process_blocked_edges(
+        &self,
+        graph: &mut cincinnati::Graph,
+        data_dir: &PathBuf,
+    ) -> Fallible<()> {
+        let blocked_edges_dir = data_dir.join("blocked-edges");
         let blocked_edges: Vec<graph_data_model::BlockedEdge> =
             deserialize_directory_files(&blocked_edges_dir, regex::Regex::new("ya+ml")?)
                 .await
@@ -268,7 +288,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
         let architectures = {
             let mut collection = std::collections::BTreeSet::<Vec<semver::Identifier>>::new();
 
-            let _ = io.graph.find_by_fn_mut(|release| {
+            let _ = graph.find_by_fn_mut(|release| {
                 match semver::Version::from_str(release.version()) {
                     Ok(version_semver) => {
                         collection.insert(version_semver.build);
@@ -321,15 +341,13 @@ impl OpenshiftSecondaryMetadataParserPlugin {
 
                 // find all versions in the graph
                 target_versions.iter().for_each(|to| {
-                    match io.graph.find_by_version(&to.to_string()) {
+                    match graph.find_by_version(&to.to_string()) {
                         Some(release_id) => {
                             // add metadata to block edge using the `previous.remove_regex` metadata
-                            match &mut io.graph.get_metadata_as_ref_mut(&release_id).context(
-                                format!(
-                                    "[blocked_edges] Getting mutable metadata for {} failed.",
-                                    &to.to_string()
-                                ),
-                            ) {
+                            match &mut graph.get_metadata_as_ref_mut(&release_id).context(format!(
+                                "[blocked_edges] Getting mutable metadata for {} failed.",
+                                &to.to_string()
+                            )) {
                                 Ok(metadata) => {
                                     metadata.insert(
                                         format!(
@@ -354,8 +372,12 @@ impl OpenshiftSecondaryMetadataParserPlugin {
         Ok(())
     }
 
-    async fn process_channels(&self, io: &mut InternalIO) -> Fallible<()> {
-        let channels_dir = self.settings.data_directory.join("channels");
+    async fn process_channels(
+        &self,
+        graph: &mut cincinnati::Graph,
+        data_dir: &PathBuf,
+    ) -> Fallible<()> {
+        let channels_dir = data_dir.join("channels");
         let channels: Vec<graph_data_model::Channel> =
             deserialize_directory_files(&channels_dir, regex::Regex::new("ya+ml")?)
                 .await
@@ -371,7 +393,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
                 .iter()
                 .collect::<Vec<&semver::Version>>();
 
-            let releases_in_channel = io.graph.find_by_fn_mut(|release| {
+            let releases_in_channel = graph.find_by_fn_mut(|release| {
                 let release_semver = match semver::Version::from_str(release.version())
                     .context(format!("Parsing {} as SemVer", release.version()))
                 {
@@ -394,8 +416,8 @@ impl OpenshiftSecondaryMetadataParserPlugin {
             });
 
             for (release_id, version) in releases_in_channel {
-                let metadata = match io
-                    .graph
+                let metadata = match
+                    graph
                     .get_metadata_as_ref_mut(&release_id)
                     .context(format!(
                         "[channels] Getting mutable metadata for {}",
@@ -419,7 +441,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
 
         // Sort the channels as some tests and consumers might already depend on
         // the sorted output which existed in the hack util which is replaced by this plugin.
-        let sorted_releases = io.graph.find_by_fn_mut(|release| {
+        let sorted_releases = graph.find_by_fn_mut(|release| {
             release
                 .get_metadata_mut()
                 .map(|metadata| {
@@ -450,9 +472,11 @@ impl OpenshiftSecondaryMetadataParserPlugin {
 #[async_trait]
 impl InternalPlugin for OpenshiftSecondaryMetadataParserPlugin {
     async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
-        self.process_raw_metadata(&mut io).await?;
-        self.process_blocked_edges(&mut io).await?;
-        self.process_channels(&mut io).await?;
+        let data_dir = self.get_data_directory(&io);
+
+        self.process_raw_metadata(&mut io.graph, &data_dir).await?;
+        self.process_blocked_edges(&mut io.graph, &data_dir).await?;
+        self.process_channels(&mut io.graph, &data_dir).await?;
 
         Ok(io)
     }

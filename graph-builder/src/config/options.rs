@@ -1,7 +1,7 @@
 //! Options shared by CLI and TOML.
 
 use super::AppSettings;
-use commons::{parse_params_set, parse_path_prefix, MergeOptions};
+use commons::{de_path_prefix, parse_params_set, parse_path_prefix, MergeOptions};
 use failure::Fallible;
 use std::collections::HashSet;
 use std::net::IpAddr;
@@ -44,6 +44,7 @@ pub struct ServiceOptions {
 
     /// Namespace prefix for all service endpoints (e.g. '/<prefix>/v1/graph')
     #[structopt(long = "service.path_prefix", parse(from_str = "parse_path_prefix"))]
+    #[serde(default = "Option::default", deserialize_with = "de_path_prefix")]
     pub path_prefix: Option<String>,
 
     /// Comma-separated set of mandatory client parameters
