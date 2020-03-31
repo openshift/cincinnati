@@ -13,7 +13,7 @@ TMP_DIR=$(mktemp -d)
 duration=30s
 
 for workers in 10 50 100; do
-  for rate in 10 100; do
+  for rate in 10 100 500 1000; do
     file="${TMP_DIR}/rate-${rate}-workers-${workers}.bin"
     echo "Testing workers ${workers}, rate ${rate} -> ${file}"
     sed "s,GRAPH_URL,${GRAPH_URL},g" vegeta.targets | \
