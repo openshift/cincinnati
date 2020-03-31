@@ -266,7 +266,7 @@ parameters:
     displayName: "Policy-engine CPU request"
     description: "Requested amount of CPU (millicores) allowed for policy-engine (default: 350m)"
   - name: GB_PAUSE_SECS
-    value: "30"
+    value: "300"
     displayName: Seconds to pause between scrapes
   - name: GB_PORT
     value: "8080"
