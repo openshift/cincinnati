@@ -323,6 +323,7 @@ parameters:
       github_repo = "cincinnati-graph-data"
       reference_branch = "master"
       output_directory = "/tmp/cincinnati/graph-data"
+      oauth_token_path = "/etc/secrets/github_token.key"
 
       [[plugin_settings]]
       name = "openshift-secondary-metadata-parse"
