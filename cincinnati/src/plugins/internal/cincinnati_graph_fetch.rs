@@ -14,6 +14,7 @@ use failure::{Fallible, ResultExt};
 use prometheus::Counter;
 use reqwest;
 use reqwest::header::{HeaderValue, ACCEPT};
+use std::time::Duration;
 
 /// Default URL to upstream graph provider.
 pub static DEFAULT_UPSTREAM_URL: &str = "http://localhost:8080/v1/graph";
@@ -85,6 +86,8 @@ impl CincinnatiGraphFetchPlugin {
         };
 
         let client = reqwest::ClientBuilder::new()
+            .gzip(true)
+            .timeout(Duration::from_secs(30))
             .build()
             .context("Building reqwest client")?;
 
