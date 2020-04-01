@@ -11,11 +11,11 @@ pub mod tests {
         let _ = env_logger::try_init_from_env(env_logger::Env::default());
     }
 
-    pub fn common_init() -> (tokio::runtime::Runtime, registry::cache::Cache) {
+    pub fn common_init() -> (tokio::runtime::Runtime, registry::release_cache::Cache) {
         init_logger();
         (
             tokio::runtime::Runtime::new().unwrap(),
-            registry::cache::new(),
+            registry::release_cache::new(),
         )
     }
 

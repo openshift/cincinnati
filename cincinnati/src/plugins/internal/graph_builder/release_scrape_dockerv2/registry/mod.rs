@@ -33,7 +33,7 @@ use std::sync::Arc;
 use tar::Archive;
 
 /// Module for the release cache
-pub mod cache {
+pub mod release_cache {
     use super::cincinnati::plugins::internal::graph_builder::release::Release;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -44,6 +44,33 @@ pub mod cache {
 
     /// The values of the cache
     type Value = Option<Release>;
+
+    /// The sync cache to hold the `Release` cache
+    type CacheSync = HashMap<Key, Value>;
+
+    /// The async wrapper for `Cache`
+    type CacheAsync<T> = FuturesRwLock<T>;
+
+    /// The cache to hold the `Release` cache
+    pub type Cache = Arc<CacheAsync<CacheSync>>;
+
+    /// Instantiate a new cache
+    pub fn new() -> Cache {
+        Arc::new(CacheAsync::new(CacheSync::new()))
+    }
+}
+
+/// Module for registry cache
+pub mod registry_cache {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use tokio::sync::RwLock as FuturesRwLock;
+
+    /// The key type of the cache - registry tag
+    type Key = String;
+
+    /// The values of the cache - manifestref and the manifest
+    type Value = (String, dkregistry::v2::manifest::Manifest);
 
     /// The sync cache to hold the `Release` cache
     type CacheSync = HashMap<Key, Value>;
@@ -195,7 +222,8 @@ pub async fn fetch_releases(
     repo: &str,
     username: Option<&str>,
     password: Option<&str>,
-    cache: cache::Cache,
+    release_cache: release_cache::Cache,
+    registry_cache: registry_cache::Cache,
     manifestref_key: &str,
     concurrency: usize,
 ) -> Result<Vec<cincinnati::plugins::internal::graph_builder::release::Release>, Error> {
@@ -223,13 +251,15 @@ pub async fn fetch_releases(
 
     tags.try_for_each_concurrent(concurrency, |tag| {
         let authenticated_client = authenticated_client.clone();
-        let cache = cache.clone();
+        let release_cache = release_cache.clone();
+        let registry_cache = registry_cache.clone();
         let releases = releases.clone();
 
         async move {
             trace!("[{}] Fetching release", tag);
             let (tag, manifest, manifestref) =
-                get_manifest_and_ref(tag, repo.to_owned(), &authenticated_client).await?;
+                get_manifest_and_ref(tag, repo.to_owned(), registry_cache, &authenticated_client)
+                    .await?;
 
             // Try to read the architecture from the manifest
             let arch = match manifest.architectures() {
@@ -271,7 +301,7 @@ pub async fn fetch_releases(
                 registry.host.to_owned().to_string(),
                 repo.to_owned(),
                 tag.to_owned(),
-                &cache,
+                &release_cache,
                 manifestref.clone(),
                 manifestref_key.to_string(),
                 arch,
@@ -318,7 +348,7 @@ async fn lookup_or_fetch(
     registry_host: String,
     repo: String,
     tag: String,
-    cache: &cache::Cache,
+    cache: &release_cache::Cache,
     manifestref: String,
     manifestref_key: String,
     arch: Option<String>,
@@ -384,16 +414,38 @@ async fn get_tags<'a, 'b: 'a>(
 async fn get_manifest_and_ref(
     tag: String,
     repo: String,
+    cache: registry_cache::Cache,
     authenticated_client: &dkregistry::v2::Client,
 ) -> Result<(String, dkregistry::v2::manifest::Manifest, String), failure::Error> {
+    let (tag, repo) = (tag.clone(), repo.clone());
     trace!("[{}] Processing {}", &tag, &repo);
-    let (manifest, manifestref) = authenticated_client
+
+    let manifestref = authenticated_client
+        .get_manifestref(&repo, &tag)
+        .map_err(|e| format_err!("{}", e))
+        .await?
+        .ok_or_else(|| format_err!("no manifestref found for {}:{}", &repo, &tag))?;
+
+    if let Some((cached_manifestref, manifest)) = cache.read().await.get(&tag) {
+        if cached_manifestref == &manifestref {
+            trace!(
+                "[{}] Using cached manifest metadata for manifestref {}",
+                &tag,
+                &manifestref
+            );
+            return Ok((tag, (*manifest).clone(), manifestref.clone()));
+        }
+    }
+
+    let (manifest, _) = authenticated_client
         .get_manifest_and_ref(&repo, &tag)
         .map_err(|e| format_err!("{}", e))
         .await?;
 
-    let manifestref =
-        manifestref.ok_or_else(|| format_err!("no manifestref found for {}:{}", &repo, &tag))?;
+    cache
+        .write()
+        .await
+        .insert(tag.clone(), (manifestref.clone(), manifest.clone()));
 
     Ok((tag, manifest, manifestref))
 }

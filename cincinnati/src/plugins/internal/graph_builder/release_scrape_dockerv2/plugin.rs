@@ -52,7 +52,7 @@ pub struct ReleaseScrapeDockerv2Settings {
 
 impl PluginSettings for ReleaseScrapeDockerv2Settings {
     fn build_plugin(&self, registry: Option<&prometheus::Registry>) -> Fallible<BoxedPlugin> {
-        let plugin = ReleaseScrapeDockerv2Plugin::try_new(self.clone(), None, registry)?;
+        let plugin = ReleaseScrapeDockerv2Plugin::try_new(self.clone(), None, None, registry)?;
         Ok(new_plugin!(InternalPluginWrapper(plugin)))
     }
 }
@@ -84,7 +84,8 @@ impl ReleaseScrapeDockerv2Settings {
 pub struct ReleaseScrapeDockerv2Plugin {
     settings: ReleaseScrapeDockerv2Settings,
     registry: registry::Registry,
-    cache: registry::cache::Cache,
+    release_cache: registry::release_cache::Cache,
+    registry_cache: registry::registry_cache::Cache,
 
     #[debug(skip)]
     graph_upstream_raw_releases: prometheus::IntGauge,
@@ -96,7 +97,8 @@ impl ReleaseScrapeDockerv2Plugin {
 
     pub fn try_new(
         mut settings: ReleaseScrapeDockerv2Settings,
-        cache: Option<registry::cache::Cache>,
+        release_cache: Option<registry::release_cache::Cache>,
+        registry_cache: Option<registry::registry_cache::Cache>,
         prometheus_registry: Option<&prometheus::Registry>,
     ) -> failure::Fallible<Self> {
         use prometheus::IntGauge;
@@ -125,7 +127,8 @@ impl ReleaseScrapeDockerv2Plugin {
         Ok(Self {
             settings,
             registry,
-            cache: cache.unwrap_or_else(registry::cache::new),
+            release_cache: release_cache.unwrap_or_else(registry::release_cache::new),
+            registry_cache: registry_cache.unwrap_or_else(registry::registry_cache::new),
             graph_upstream_raw_releases,
         })
     }
@@ -139,7 +142,8 @@ impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
             &self.settings.repository,
             self.settings.username.as_ref().map(String::as_ref),
             self.settings.password.as_ref().map(String::as_ref),
-            self.cache.clone(),
+            self.release_cache.clone(),
+            self.registry_cache.clone(),
             &self.settings.manifestref_key,
             self.settings.fetch_concurrency,
         )
