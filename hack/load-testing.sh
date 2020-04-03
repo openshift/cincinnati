@@ -13,11 +13,11 @@ TMP_DIR=$(mktemp -d)
 duration=30s
 
 for workers in 10 50 100; do
-  for rate in 10 100; do
+  for rate in 10 100 500 1000; do
     file="${TMP_DIR}/rate-${rate}-workers-${workers}.bin"
     echo "Testing workers ${workers}, rate ${rate} -> ${file}"
     sed "s,GRAPH_URL,${GRAPH_URL},g" vegeta.targets | \
-      vegeta attack -format http -workers=${workers} -rate=${rate} -duration ${duration} > ${file}
+      vegeta attack -format http -workers=${workers} -max-workers=${workers} -rate=${rate} -duration ${duration} > ${file}
     vegeta report -type=text ${file}
     # Sleep here to clear up connections cache in cincinnati
     sleep 30

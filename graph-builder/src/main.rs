@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use actix_web::{App, HttpServer};
+use actix_web::{middleware, App, HttpServer};
 use commons::metrics::{self, HasRegistry};
 use failure::{ensure, Error, Fallible, ResultExt};
 use graph_builder::{self, config, graph, status};
@@ -98,12 +98,14 @@ fn main() -> Result<(), Error> {
     let main_state = state;
     HttpServer::new(move || {
         App::new()
+            .wrap(middleware::Compress::default())
             .app_data(actix_web::web::Data::new(main_state.clone()))
             .service(
                 actix_web::web::resource(&format!("{}/v1/graph", app_prefix.clone()))
                     .route(actix_web::web::get().to(graph::index)),
             )
     })
+    .keep_alive(10)
     .bind(service_addr)?
     .run();
 

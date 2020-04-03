@@ -14,9 +14,13 @@ use failure::{Fallible, ResultExt};
 use prometheus::Counter;
 use reqwest;
 use reqwest::header::{HeaderValue, ACCEPT};
+use std::time::Duration;
 
 /// Default URL to upstream graph provider.
 pub static DEFAULT_UPSTREAM_URL: &str = "http://localhost:8080/v1/graph";
+
+/// Default graph-builder connection timeout in seconds.
+pub static DEFAULT_TIMEOUT_SECS: u64 = 30;
 
 /// Plugin settings.
 #[derive(Clone, CustomDebug, Deserialize, SmartDefault)]
@@ -24,6 +28,9 @@ pub static DEFAULT_UPSTREAM_URL: &str = "http://localhost:8080/v1/graph";
 struct CincinnatiGraphFetchSettings {
     #[default(DEFAULT_UPSTREAM_URL.to_string())]
     upstream: String,
+
+    #[default(DEFAULT_TIMEOUT_SECS)]
+    timeout: u64,
 }
 
 /// Graph fetcher for Cincinnati `/v1/graph` endpoints.
@@ -47,7 +54,7 @@ pub struct CincinnatiGraphFetchPlugin {
 impl PluginSettings for CincinnatiGraphFetchSettings {
     fn build_plugin(&self, registry: Option<&prometheus::Registry>) -> Fallible<BoxedPlugin> {
         let cfg = self.clone();
-        let plugin = CincinnatiGraphFetchPlugin::try_new(cfg.upstream, registry)?;
+        let plugin = CincinnatiGraphFetchPlugin::try_new(cfg.upstream, cfg.timeout, registry)?;
         Ok(new_plugin!(InternalPluginWrapper(plugin)))
     }
 }
@@ -67,6 +74,7 @@ impl CincinnatiGraphFetchPlugin {
 
     fn try_new(
         upstream: String,
+        timeout: u64,
         prometheus_registry: Option<&prometheus::Registry>,
     ) -> Fallible<Self> {
         let http_upstream_reqs = Counter::new(
@@ -85,6 +93,8 @@ impl CincinnatiGraphFetchPlugin {
         };
 
         let client = reqwest::ClientBuilder::new()
+            .gzip(true)
+            .timeout(Duration::from_secs(timeout))
             .build()
             .context("Building reqwest client")?;
 
@@ -170,7 +180,9 @@ mod tests {
                     .with_body($mock_body.to_string())
                     .create();
 
-                let plugin = CincinnatiGraphFetchPlugin::try_new(mockito::server_url(), None)?;
+                let timeout: u64 = 30;
+                let plugin =
+                    CincinnatiGraphFetchPlugin::try_new(mockito::server_url(), timeout, None)?;
                 let http_upstream_reqs = plugin.http_upstream_reqs.clone();
                 let http_upstream_errors_total = plugin.http_upstream_errors_total.clone();
 
@@ -235,7 +247,7 @@ mod tests {
                     .with_body($mock_body.to_string())
                     .create();
 
-                let plugin = CincinnatiGraphFetchPlugin::try_new($upstream.to_string(), None)?;
+                let plugin = CincinnatiGraphFetchPlugin::try_new($upstream.to_string(), 30, None)?;
                 let http_upstream_reqs = plugin.http_upstream_reqs.clone();
                 let http_upstream_errors_total = plugin.http_upstream_errors_total.clone();
 
@@ -298,7 +310,10 @@ mod tests {
             metrics_prefix.clone(),
         ))?));
 
-        let _ = CincinnatiGraphFetchPlugin::try_new(mockito::server_url(), Some(registry))?;
+        let timeout: u64 = 30;
+
+        let _ =
+            CincinnatiGraphFetchPlugin::try_new(mockito::server_url(), timeout, Some(registry))?;
 
         let metrics_call = metrics::serve::<metrics::RegistryWrapper>(actix_web::web::Data::new(
             RegistryWrapper(registry),

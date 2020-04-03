@@ -25,7 +25,7 @@ mod config;
 mod graph;
 mod openapi;
 
-use actix_web::{App, HttpServer};
+use actix_web::{middleware, App, HttpServer};
 use cincinnati::plugins::BoxedPlugin;
 use commons::metrics::{self, RegistryWrapper};
 use failure::Error;
@@ -73,6 +73,7 @@ fn main() -> Result<(), Error> {
     registry.register(Box::new(BUILD_INFO.clone()))?;
     HttpServer::new(move || {
         App::new()
+            .wrap(middleware::Compress::default())
             .app_data(actix_web::web::Data::new(RegistryWrapper(registry)))
             .service(
                 actix_web::web::resource("/metrics")
@@ -103,6 +104,7 @@ fn main() -> Result<(), Error> {
                     .route(actix_web::web::get().to(openapi::index)),
             )
     })
+    .keep_alive(10)
     .bind((settings.address, settings.port))?
     .run();
 
