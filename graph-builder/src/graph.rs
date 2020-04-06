@@ -162,7 +162,7 @@ impl HasRegistry for State {
 }
 
 #[allow(clippy::useless_let_if_seq)]
-pub async fn run(settings: &config::AppSettings, state: &State) -> ! {
+pub fn run(settings: &config::AppSettings, state: &State) -> ! {
     // Indicate if a panic happens
     let previous_hook = std::panic::take_hook();
     let panic_live = state.live.clone();
@@ -191,7 +191,7 @@ pub async fn run(settings: &config::AppSettings, state: &State) -> ! {
         debug!("graph update triggered");
         let scrape_timer = UPSTREAM_SCRAPES_DURATION.start_timer();
 
-        let scrape = cincinnati::plugins::process(
+        let scrape = cincinnati::plugins::process_blocking(
             state.plugins.iter(),
             cincinnati::plugins::PluginIO::InternalIO(cincinnati::plugins::InternalIO {
                 // the first plugin will produce the initial graph
@@ -199,8 +199,8 @@ pub async fn run(settings: &config::AppSettings, state: &State) -> ! {
                 // the plugins used in the graph-builder don't expect any parameters yet
                 parameters: Default::default(),
             }),
-        )
-        .await;
+            settings.scrape_timeout_secs,
+        );
         UPSTREAM_SCRAPES.inc();
 
         let internal_io = match scrape {
