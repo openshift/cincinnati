@@ -364,6 +364,69 @@ where
     io.try_into()
 }
 
+/// Wrapper around `process` with an optional timeout.
+///
+/// It creates a new runtime per call which is moved to a new thread.
+/// This has the desired effect of timing out even if the runtime is blocked by a task.
+/// It has the sideeffect that these threads are unrecoverably leaked.
+///
+/// These two strategies are used in combination to implement the timeout:
+/// 1. Use the runtime's internal timeout implementation which works for proper async tasks.
+/// 2. Spawn a separate sleeper thread to enforce a deadline of 101% of the timeout
+///    in case the async timeout is not effective.
+pub fn process_blocking<T>(
+    plugins: T,
+    initial_io: PluginIO,
+    timeout: Option<std::time::Duration>,
+) -> Fallible<InternalIO>
+where
+    T: Iterator<Item = &'static BoxedPlugin>,
+    T: Sync + Send,
+    T: 'static,
+{
+    let mut runtime = tokio::runtime::Runtime::new()?;
+
+    let timeout = match timeout {
+        None => return runtime.block_on(process(plugins, initial_io)),
+        Some(timeout) => timeout,
+    };
+    let deadline = timeout + (timeout / 100);
+
+    let (tx, rx) = std::sync::mpsc::channel::<Fallible<InternalIO>>();
+
+    {
+        let tx = tx.clone();
+
+        std::thread::spawn(move || {
+            let io_future =
+                async { tokio::time::timeout(timeout, process(plugins, initial_io)).await };
+            let io_result = runtime
+                .block_on(io_future)
+                .context(format!(
+                    "Processing all plugins with a timeout of {:?}",
+                    timeout
+                ))
+                .map_err(failure::Error::from)
+                .unwrap_or_else(Err);
+
+            // This may fail if it's attempted after the timeout is exceeded.
+            let _ = tx.send(io_result);
+        });
+    };
+
+    std::thread::spawn(move || {
+        std::thread::sleep(deadline);
+
+        // This may fail if it's attempted after processing is finished.
+        let _ = tx.send(Err(failure::err_msg(format!(
+            "Exceeded timeout of {:?}",
+            &timeout
+        ))));
+    });
+
+    rx.recv()?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -410,14 +473,21 @@ mod tests {
         assert_eq!(input_internal, output_internal);
     }
 
-    #[derive(Debug)]
+    #[derive(custom_debug_derive::CustomDebug)]
+    #[allow(clippy::type_complexity)]
     struct TestInternalPlugin {
         counter: AtomicUsize,
         dict: Arc<FuturesMutex<HashMap<usize, bool>>>,
+        #[debug(skip)]
+        inner_fn: Option<Arc<dyn Fn() -> Fallible<()> + Sync + Send>>,
     }
     #[async_trait]
     impl InternalPlugin for TestInternalPlugin {
         async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
+            if let Some(inner_fn) = &self.inner_fn {
+                inner_fn()?;
+            }
+
             self.counter.fetch_add(1, Ordering::SeqCst);
             let counter = self.counter.load(Ordering::SeqCst);
 
@@ -463,6 +533,7 @@ mod tests {
                 InternalPluginWrapper(TestInternalPlugin {
                     counter: Default::default(),
                     dict: Arc::new(FuturesMutex::new(Default::default())),
+                    inner_fn: None,
                 }),
                 ExternalPluginWrapper(TestExternalPlugin {})
             );
@@ -509,6 +580,7 @@ mod tests {
                 InternalPluginWrapper(TestInternalPlugin {
                     counter: Default::default(),
                     dict: Arc::new(FuturesMutex::new(Default::default())),
+                    inner_fn: None,
                 }),
                 ExternalPluginWrapper(TestExternalPlugin {})
             );
@@ -544,6 +616,99 @@ mod tests {
             let result_internalio: InternalIO = runtime.block_on(plugins_future)?;
 
             assert_eq!(expected_internalio, result_internalio);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn process_blocking_succeeds() -> Fallible<()> {
+        lazy_static! {
+            static ref PLUGIN_DELAY: std::time::Duration = std::time::Duration::from_secs(1);
+            static ref PLUGINS: Vec<BoxedPlugin> =
+                new_plugins!(InternalPluginWrapper(TestInternalPlugin {
+                    counter: Default::default(),
+                    dict: Arc::new(FuturesMutex::new(Default::default())),
+                    inner_fn: Some(Arc::new(|| {
+                        std::thread::sleep(*PLUGIN_DELAY);
+                        Ok(())
+                    })),
+                }));
+        }
+
+        let initial_internalio = InternalIO {
+            graph: Default::default(),
+            parameters: Default::default(),
+        };
+
+        let timeout = *PLUGIN_DELAY * 2;
+        let before_process = std::time::Instant::now();
+        let result_internalio = super::process_blocking(
+            PLUGINS.iter(),
+            PluginIO::InternalIO(initial_internalio),
+            Some(timeout),
+        );
+        let process_duration = before_process.elapsed();
+
+        assert!(
+            process_duration < timeout,
+            "took {:?} despite timeout of {:?}",
+            process_duration,
+            timeout,
+        );
+
+        assert!(
+            result_internalio.is_ok(),
+            "Expected Ok, got {:?}",
+            result_internalio
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn process_blocking_times_out() -> Fallible<()> {
+        lazy_static! {
+            static ref PLUGIN_DELAY: std::time::Duration = std::time::Duration::from_secs(100);
+            static ref PLUGINS: Vec<BoxedPlugin> =
+                new_plugins!(InternalPluginWrapper(TestInternalPlugin {
+                    counter: Default::default(),
+                    dict: Arc::new(FuturesMutex::new(Default::default())),
+                    inner_fn: Some(Arc::new(|| {
+                        std::thread::sleep(*PLUGIN_DELAY);
+                        Ok(())
+                    })),
+                }));
+        }
+
+        let initial_internalio = InternalIO {
+            graph: Default::default(),
+            parameters: Default::default(),
+        };
+
+        // timeout hit
+        let timeout = *PLUGIN_DELAY / 100;
+        for _ in 0..10 {
+            let before_process = std::time::Instant::now();
+            let result_internalio = super::process_blocking(
+                PLUGINS.iter(),
+                PluginIO::InternalIO(initial_internalio.clone()),
+                Some(timeout),
+            );
+            let process_duration = before_process.elapsed();
+
+            assert!(
+                process_duration < *PLUGIN_DELAY,
+                "took {:?} despite timeout of {:?}",
+                process_duration,
+                timeout,
+            );
+
+            assert!(
+                result_internalio.is_err(),
+                "Expected error, got {:?}",
+                result_internalio
+            );
         }
 
         Ok(())
