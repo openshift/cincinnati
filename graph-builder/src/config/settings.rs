@@ -32,7 +32,7 @@ pub struct AppSettings {
     pub path_prefix: String,
 
     /// Pause (in seconds) between registry scrapes.
-    #[default(time::Duration::from_secs(30))]
+    #[default(time::Duration::from_secs(300))]
     pub pause_secs: time::Duration,
 
     /// Listening port for the main service.

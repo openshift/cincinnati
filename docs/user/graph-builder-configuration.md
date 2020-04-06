@@ -20,6 +20,6 @@ TOML configuration currently supports the following sections and options:
    - `registry` (section): configuration for Docker-v2 registry provider.
      - `credentials_path` (string): path to file containing registry credentials, in "dockercfg" format. Default: unset.
      - `manifestref_key` (string): metadata key where to record the manifest-reference. Default: "io.openshift.upgrades.graph.release.manifestref".
-     - `pause_secs` (unsigned integer): pause between repository scrapes, in seconds. Default: 30.
+     - `pause_secs` (unsigned integer): pause between repository scrapes, in seconds. Default: 300.
      - `repository` (string): target image in the registry. Default: "openshift".
      - `url` (string): URL for the registry. Default: "http://localhost:5000". 
