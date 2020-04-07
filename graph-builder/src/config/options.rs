@@ -34,6 +34,14 @@ pub struct ServiceOptions {
     #[serde(default = "Option::default", deserialize_with = "de_duration_secs")]
     pub pause_secs: Option<Duration>,
 
+    /// Timeout for a single scrape in seconds
+    #[structopt(
+        long = "service.scrape_timeout",
+        parse(try_from_str = "duration_from_secs")
+    )]
+    #[serde(default = "Option::default", deserialize_with = "de_duration_secs")]
+    pub scrape_timeout_secs: Option<Duration>,
+
     /// Address on which the server will listen
     #[structopt(name = "service_address", long = "service.address", alias = "address")]
     pub address: Option<IpAddr>,
@@ -86,6 +94,7 @@ impl MergeOptions<Option<ServiceOptions>> for AppSettings {
     fn try_merge(&mut self, opts: Option<ServiceOptions>) -> Fallible<()> {
         if let Some(service) = opts {
             assign_if_some!(self.pause_secs, service.pause_secs);
+            assign_if_some!(self.scrape_timeout_secs, service.scrape_timeout_secs);
             assign_if_some!(self.address, service.address);
             assign_if_some!(self.port, service.port);
             assign_if_some!(self.path_prefix, service.path_prefix);

@@ -215,6 +215,7 @@ objects:
         verbosity = "${GB_LOG_VERBOSITY}"
 
         [service]
+        scrape_timeout_secs = ${GB_SCRAPE_TIMEOUT_SECS}
         pause_secs = ${GB_PAUSE_SECS}
         address = "${GB_ADDRESS}"
         port = ${GB_PORT}
@@ -265,6 +266,9 @@ parameters:
     value: "350m"
     displayName: "Policy-engine CPU request"
     description: "Requested amount of CPU (millicores) allowed for policy-engine (default: 350m)"
+  - name: GB_SCRAPE_TIMEOUT_SECS
+    value: "300"
+    displayName: Graph-builder scrape timeout in seconds
   - name: GB_PAUSE_SECS
     value: "300"
     displayName: Seconds to pause between scrapes

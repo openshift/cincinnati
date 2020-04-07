@@ -65,10 +65,10 @@ fn main() -> Result<(), Error> {
 
     // Graph scraper
     {
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
-
         let graph_state = state.clone();
-        thread::spawn(move || runtime.block_on(graph::run(&settings, &graph_state)));
+        thread::spawn(move || {
+            graph::run(&settings, &graph_state);
+        });
     }
 
     // Status service.
