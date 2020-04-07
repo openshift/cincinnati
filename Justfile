@@ -166,7 +166,6 @@ run-graph-builder:
 
 		[[plugin_settings]]
 		name = "openshift-secondary-metadata-parse"
-		data_directory = "${TMPDIR}"
 
 		[[plugin_settings]]
 		name = "edge-add-remove"
