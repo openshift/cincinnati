@@ -13,4 +13,4 @@ docker run --rm \
   --env GRAPH_URL=${GRAPH_URL} \
   --workdir /tmp \
   --entrypoint=/usr/local/bin/load-testing.sh \
-  -ti "${VEGETA_IMAGE}"
+  -i "${VEGETA_IMAGE}"
