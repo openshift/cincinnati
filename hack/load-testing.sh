@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 #
 # This script is used to load test Cincinnati instance.
 # It uses vegeta - `go get -u github.com/tsenart/vegeta`
