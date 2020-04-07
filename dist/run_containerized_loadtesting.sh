@@ -8,8 +8,8 @@ set -ex
 VEGETA_IMAGE="docker.io/peterevans/vegeta:6.8"
 
 docker run --rm \
-  --volume hack/load-testing.sh:/usr/local/bin/load-testing.sh \
-  --volume hack/vegeta.targets:/tmp/vegeta.targets \
+  --volume $(pwd)/hack/load-testing.sh:/usr/local/bin/load-testing.sh \
+  --volume $(pwd)/hack/vegeta.targets:/tmp/vegeta.targets \
   --env GRAPH_URL=${GRAPH_URL} \
   --workdir /tmp \
   --entrypoint=/usr/local/bin/load-testing.sh \
