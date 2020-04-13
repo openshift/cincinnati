@@ -30,7 +30,7 @@ objects:
             deploymentconfig: cincinnati
         spec:
           containers:
-            - image: ${IMAGE}:${IMAGE_TAG}
+            - image: ${IMAGE}
               imagePullPolicy: Always
               name: cincinnati-graph-builder
               env:
@@ -80,7 +80,7 @@ objects:
                 - name: configs
                   mountPath: /etc/configs
                   readOnly: true
-            - image: ${IMAGE}:${IMAGE_TAG}
+            - image: ${IMAGE}
               name: cincinnati-policy-engine
               imagePullPolicy: Always
               env:
@@ -227,13 +227,9 @@ objects:
         ${GB_PLUGIN_SETTINGS}
 parameters:
   - name: IMAGE
-    value: "quay.io/app-sre/cincinnati"
-    displayName: cincinnati image
-    description: cincinnati docker image. Defaults to quay.io/app-sre/cincinnati
-  - name: IMAGE_TAG
-    value: "latest"
-    displayName: cincinnati version
-    description: cincinnati version which defaults to latest
+    value: "quay.io/app-sre/cincinnati:latest"
+    displayName: cincinnati image name with tag or digest
+    description: cincinnati docker image. Defaults to quay.io/app-sre/cincinnati@sha256:latest
   - name: GB_MEMORY_LIMIT
     value: "512Mi"
     displayName: "Graph-builder memory limit"
