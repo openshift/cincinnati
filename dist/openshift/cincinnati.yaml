@@ -11,7 +11,7 @@ objects:
         app: cincinnati
       name: cincinnati
     spec:
-      replicas: 1
+      replicas: ${{REPLICAS}}
       selector:
         app: cincinnati
         deploymentconfig: cincinnati
@@ -341,3 +341,5 @@ parameters:
     value: "/etc/configs/gb.toml"
   - name: ENVIRONMENT_SECRETS
     value: '{ "CINCINNATI_GITHUB_SCRAPER_OAUTH_TOKEN_PATH": "/etc/secrets/github_token.key" }'
+  - name: REPLICAS
+    value: "1"
