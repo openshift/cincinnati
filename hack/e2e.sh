@@ -88,6 +88,7 @@ oc new-app -f dist/openshift/cincinnati.yaml \
 EOF
 )" \
   -p ENVIRONMENT_SECRETS="{}" \
+  -p REPLICAS="2" \
   ;
 
 # Wait for dc to rollout
