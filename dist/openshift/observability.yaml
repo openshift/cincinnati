@@ -60,6 +60,20 @@ objects:
                 service: cincinnati
                 component: graphbuilder
                 severity: critical
+            # alert: graph builder container has restarted
+            - alert: graphBuilderRestart
+              annotations:
+                message: "Graph builder container has restarted"
+              expr: |
+                increase(
+                  kube_pod_container_status_restarts_total{
+                    namespace="${NAMESPACE}",container="cincinnati-graph-builder"}[5m]
+                ) > 1
+              for: 5m
+              labels:
+                service: cincinnati
+                component: graphbuilder
+                severity: warning
 
         - name: cincinnati-policyengine.slo.rules
           interval: 5s
@@ -118,6 +132,21 @@ objects:
                 service: cincinnati
                 component: policyengine
                 severity: critical
+            # alert: policy engine container has restarted
+            - alert: policyEngineRestart
+              annotations:
+                message: "Policy engine container has restarted"
+              expr: |
+                increase(
+                  kube_pod_container_status_restarts_total{
+                    namespace="${NAMESPACE}",container="cincinnati-policy-engine"}[5m]
+                ) > 1
+              for: 5m
+              labels:
+                service: cincinnati
+                component: policyengine
+                severity: warning
+
 
 parameters:
   - name: NAMESPACE
