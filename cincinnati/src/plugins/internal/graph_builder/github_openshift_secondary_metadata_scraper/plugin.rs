@@ -444,6 +444,8 @@ impl PluginSettings for GithubOpenshiftSecondaryMetadataScraperSettings {
 
 #[async_trait]
 impl InternalPlugin for GithubOpenshiftSecondaryMetadataScraperPlugin {
+    const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
+
     async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
         io.parameters.insert(
             GRAPH_DATA_DIR_PARAM_KEY.to_string(),

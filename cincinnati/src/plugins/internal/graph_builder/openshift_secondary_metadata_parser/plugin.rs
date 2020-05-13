@@ -471,6 +471,8 @@ impl OpenshiftSecondaryMetadataParserPlugin {
 
 #[async_trait]
 impl InternalPlugin for OpenshiftSecondaryMetadataParserPlugin {
+    const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
+
     async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
         let data_dir = self.get_data_directory(&io);
 
