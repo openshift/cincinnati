@@ -112,7 +112,15 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, failure
                             ))?
                         }
                     };
-                    graph.add_edge(&previous, &current)?;
+
+                    if let Err(e) = graph.add_edge(&previous, &current) {
+                        if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeAlreadyExists>()
+                        {
+                            warn!("{}", eae);
+                        } else {
+                            return Err(e);
+                        }
+                    };
 
                     Ok(())
                 })?;
@@ -134,7 +142,15 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, failure
                             ))?
                         }
                     };
-                    graph.add_edge(&current, &next)?;
+
+                    if let Err(e) = graph.add_edge(&&current, &next) {
+                        if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeAlreadyExists>()
+                        {
+                            warn!("{}", eae);
+                        } else {
+                            return Err(e);
+                        }
+                    };
 
                     Ok(())
                 })
@@ -163,6 +179,30 @@ mod tests {
         let mut graph = create_graph(releases).unwrap();
 
         assert_eq!(graph.prune_abstract(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn create_graph_tolerates_duplicate_edges() -> Fallible<()> {
+        let releases = vec![Release {
+            source: "test-0.0.1".to_string(),
+            metadata: Metadata {
+                kind: MetadataKind::V0,
+                version: semver::Version::from((0, 0, 1)),
+                next: vec![
+                    semver::Version::from((0, 0, 2)),
+                    semver::Version::from((0, 0, 2)),
+                ],
+                previous: vec![
+                    semver::Version::from((0, 0, 0)),
+                    semver::Version::from((0, 0, 0)),
+                ],
+                metadata: Default::default(),
+            },
+        }];
+
+        create_graph(releases).unwrap();
 
         Ok(())
     }
