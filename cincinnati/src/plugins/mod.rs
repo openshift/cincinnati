@@ -377,7 +377,7 @@ where
 pub fn process_blocking<T>(
     plugins: T,
     initial_io: PluginIO,
-    timeout: Option<std::time::Duration>,
+    timeout: std::time::Duration,
 ) -> Fallible<InternalIO>
 where
     T: Iterator<Item = &'static BoxedPlugin>,
@@ -386,10 +386,6 @@ where
 {
     let mut runtime = tokio::runtime::Runtime::new()?;
 
-    let timeout = match timeout {
-        None => return runtime.block_on(process(plugins, initial_io)),
-        Some(timeout) => timeout,
-    };
     let deadline = timeout + (timeout / 100);
 
     let (tx, rx) = std::sync::mpsc::channel::<Fallible<InternalIO>>();
@@ -646,7 +642,7 @@ mod tests {
         let result_internalio = super::process_blocking(
             PLUGINS.iter(),
             PluginIO::InternalIO(initial_internalio),
-            Some(timeout),
+            timeout,
         );
         let process_duration = before_process.elapsed();
 
@@ -693,7 +689,7 @@ mod tests {
             let result_internalio = super::process_blocking(
                 PLUGINS.iter(),
                 PluginIO::InternalIO(initial_internalio.clone()),
-                Some(timeout),
+                timeout,
             );
             let process_duration = before_process.elapsed();
 

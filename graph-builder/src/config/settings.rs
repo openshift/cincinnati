@@ -36,7 +36,7 @@ pub struct AppSettings {
     pub pause_secs: time::Duration,
 
     /// Timeout (in seconds) per registry scrape.
-    pub scrape_timeout_secs: Option<time::Duration>,
+    pub scrape_timeout_secs: time::Duration,
 
     /// Listening port for the main service.
     #[default(8080)]
