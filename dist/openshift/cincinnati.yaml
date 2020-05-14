@@ -267,7 +267,7 @@ parameters:
     displayName: "Policy-engine CPU request"
     description: "Requested amount of CPU (millicores) allowed for policy-engine (default: 350m)"
   - name: GB_SCRAPE_TIMEOUT_SECS
-    value: "300"
+    value: "60"
     displayName: Graph-builder scrape timeout in seconds
   - name: GB_PAUSE_SECS
     value: "300"
