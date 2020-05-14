@@ -173,8 +173,7 @@ pub fn run(settings: &config::AppSettings, state: &State) -> ! {
 
     // Don't wait on the first iteration
     let mut first_iteration = true;
-    // Set first_success after initial scrape is done
-    let mut first_success = false;
+    let mut first_success = true;
 
     BUILD_INFO.inc();
 
@@ -186,9 +185,7 @@ pub fn run(settings: &config::AppSettings, state: &State) -> ! {
             *state.live.write() = true;
             first_iteration = false;
         } else {
-            if first_success {
-                thread::sleep(settings.pause_secs);
-            }
+            thread::sleep(settings.pause_secs);
         }
 
         debug!("graph update triggered");
