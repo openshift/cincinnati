@@ -20,7 +20,7 @@ objects:
           intervalSeconds: 1
           maxSurge: 25%
           maxUnavailable: 25%
-          timeoutSeconds: 600
+          timeoutSeconds: 900
           updatePeriodSeconds: 1
         type: Rolling
       template:
