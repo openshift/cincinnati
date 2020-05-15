@@ -99,6 +99,7 @@ oc wait --for=condition=available --timeout=5m deploymentconfig/cincinnati || {
     oc get events
     oc describe deploymentconfig/cincinnati
     oc get configmap/cincinnati-configs -o yaml
+    oc describe pods --selector='app=cincinnati'
     oc logs --all-containers=true --timestamps=true --selector='app=cincinnati'
 
     exit $status
