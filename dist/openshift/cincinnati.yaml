@@ -235,7 +235,7 @@ parameters:
     displayName: cincinnati version
     description: cincinnati version which defaults to latest
   - name: GB_MEMORY_LIMIT
-    value: "512Mi"
+    value: "768Mi"
     displayName: "Graph-builder memory limit"
     description: "Maximum amount of memory (bytes) allowed for graph-builder (default: 523Mi)"
   - name: GB_CPU_LIMIT
