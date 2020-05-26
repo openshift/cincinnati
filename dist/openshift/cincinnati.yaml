@@ -11,7 +11,7 @@ objects:
         app: cincinnati
       name: cincinnati
     spec:
-      replicas: 1
+      replicas: ${{REPLICAS}}
       selector:
         app: cincinnati
         deploymentconfig: cincinnati
@@ -29,6 +29,18 @@ objects:
             app: cincinnati
             deploymentconfig: cincinnati
         spec:
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchExpressions:
+                        - key: app
+                          operator: In
+                          values:
+                            - cincinnati
+                    topologyKey: kubernetes.io/hostname
           containers:
             - image: ${IMAGE}:${IMAGE_TAG}
               imagePullPolicy: Always
@@ -189,6 +201,15 @@ objects:
           targetPort: ${{PE_STATUS_PORT}}
       selector:
         deploymentconfig: cincinnati
+  - apiVersion: policy/v1beta1
+    kind: PodDisruptionBudget
+    metadata:
+      name: cincinnati-pdb
+      namespace: cincinnati
+    spec:
+      minAvailable: 1
+    selector:
+      app: cincinnati
   - apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -341,3 +362,5 @@ parameters:
     value: "/etc/configs/gb.toml"
   - name: ENVIRONMENT_SECRETS
     value: '{ "CINCINNATI_GITHUB_SCRAPER_OAUTH_TOKEN_PATH": "/etc/secrets/github_token.key" }'
+  - name: REPLICAS
+    value: "1"

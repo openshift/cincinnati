@@ -88,10 +88,11 @@ oc new-app -f dist/openshift/cincinnati.yaml \
 EOF
 )" \
   -p ENVIRONMENT_SECRETS="{}" \
+  -p REPLICAS="2" \
   ;
 
 # Wait for dc to rollout
-oc wait --for=condition=available --timeout=5m deploymentconfig/cincinnati || {
+oc wait --for=condition=available --timeout=10m deploymentconfig/cincinnati || {
     status=$?
     set +e -x
 
