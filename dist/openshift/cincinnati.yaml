@@ -208,8 +208,8 @@ objects:
       namespace: cincinnati
     spec:
       minAvailable: 1
-    selector:
-      app: cincinnati
+      selector:
+        app: cincinnati
   - apiVersion: v1
     kind: ConfigMap
     metadata:
