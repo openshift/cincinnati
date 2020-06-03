@@ -1,8 +1,8 @@
 //! Options shared by CLI and TOML.
 
 use super::AppSettings;
+use commons::prelude_errors::*;
 use commons::{de_path_prefix, parse_params_set, parse_path_prefix, MergeOptions};
-use failure::Fallible;
 use std::collections::HashSet;
 use std::net::IpAddr;
 use std::path::PathBuf;
@@ -138,7 +138,7 @@ where
     Ok(Some(Duration::from_secs(secs)))
 }
 
-pub fn duration_from_secs<S>(num: S) -> failure::Fallible<Duration>
+pub fn duration_from_secs<S>(num: S) -> Fallible<Duration>
 where
     S: AsRef<str>,
 {

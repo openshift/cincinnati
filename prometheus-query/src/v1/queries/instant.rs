@@ -1,7 +1,7 @@
 //! Impelement instant queries
 
 use super::*;
-use failure::Fallible;
+use anyhow::Result as Fallible;
 use reqwest;
 use std::time::Duration;
 

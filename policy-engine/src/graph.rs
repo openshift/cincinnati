@@ -5,8 +5,7 @@ use actix_web::web::Query;
 use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::BoxedPlugin;
 use cincinnati::CONTENT_TYPE;
-use commons::{self, GraphError};
-use failure::Fallible;
+use commons::{self, Fallible, GraphError};
 use prometheus::{histogram_opts, Counter, Histogram, Registry};
 use serde_json;
 use std::collections::HashMap;
@@ -109,7 +108,6 @@ pub(crate) mod tests {
     use actix_web::http;
     use cincinnati::plugins::prelude::*;
     use mockito;
-    use std::error::Error;
     use tokio::runtime::Runtime;
 
     pub(crate) fn common_init() -> Runtime {
@@ -156,7 +154,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn failed_plugin_execution() -> Result<(), Box<dyn Error>> {
+    fn failed_plugin_execution() -> Result<(), Error> {
         let mut rt = common_init();
 
         let plugins = cincinnati::plugins::catalog::build_plugins(
@@ -199,12 +197,12 @@ pub(crate) mod tests {
             {
                 Ok(())
             }
-            res => Err(format!("expected InvalidParams error, got: {:?}", res).into()),
+            res => bail!("expected InvalidParams error, got: {:?}", res),
         }
     }
 
     #[test]
-    fn webservice_graph_json_response() -> Result<(), Box<dyn Error>> {
+    fn webservice_graph_json_response() -> Result<(), Error> {
         let _ = common_init();
 
         enum TestResult {
@@ -236,7 +234,7 @@ pub(crate) mod tests {
             passed_params: &[(&str, &str)],
             plugin_config: &[Box<dyn PluginSettings>],
             expected_result: &TestResult,
-        ) -> Result<(), Box<dyn Error>> {
+        ) -> Result<(), Error> {
             let mut runtime = Runtime::new().unwrap();
             let service_uri_base = "/graph";
             let service_uri = format!(
@@ -274,34 +272,31 @@ pub(crate) mod tests {
                         .route(actix_web::web::get().to(graph::index)),
                 );
 
-            let body_future: Box<
-                dyn core::future::Future<Output = Result<_, Box<dyn Error>>> + Unpin,
-            > = Box::new(Box::pin(async {
-                let mut pe_svc = actix_web::test::init_service(app).await;
-                let mut response = actix_web::test::call_service(
-                    &mut pe_svc,
-                    actix_web::test::TestRequest::with_uri(&service_uri)
-                        .header("Accept", "application/json")
-                        .to_request(),
-                )
-                .await;
+            let body_future: Box<dyn core::future::Future<Output = Result<_, Error>> + Unpin> =
+                Box::new(Box::pin(async {
+                    let mut pe_svc = actix_web::test::init_service(app).await;
+                    let mut response = actix_web::test::call_service(
+                        &mut pe_svc,
+                        actix_web::test::TestRequest::with_uri(&service_uri)
+                            .header("Accept", "application/json")
+                            .to_request(),
+                    )
+                    .await;
 
-                if response.status() != expected_result.status_code() {
-                    return Err(format!("unexpected statuscode:{}", response.status()).into());
-                };
+                    if response.status() != expected_result.status_code() {
+                        bail!("unexpected statuscode:{}", response.status());
+                    };
 
-                match response.take_body() {
-                    actix_web::dev::ResponseBody::Body(b) => match b {
-                        actix_web::dev::Body::Bytes(bytes) => {
-                            Ok(std::str::from_utf8(&bytes)?.to_owned())
-                        }
-                        unknown => {
-                            return Err(format!("expected byte body, got '{:?}'", unknown).into())
-                        }
-                    },
-                    _ => return Err("expected body response".into()),
-                }
-            }));
+                    match response.take_body() {
+                        actix_web::dev::ResponseBody::Body(b) => match b {
+                            actix_web::dev::Body::Bytes(bytes) => {
+                                Ok(std::str::from_utf8(&bytes)?.to_owned())
+                            }
+                            unknown => bail!("expected byte body, got '{:?}'", unknown),
+                        },
+                        _ => bail!("expected body response"),
+                    }
+                }));
 
             let body = runtime.block_on(body_future)?;
 
@@ -310,7 +305,7 @@ pub(crate) mod tests {
             let toplevel = if let Some(obj) = json.as_object_mut() {
                 obj
             } else {
-                return Err("not a JSON object".into());
+                bail!("not a JSON object");
             };
 
             match expected_result {
@@ -321,24 +316,23 @@ pub(crate) mod tests {
                     if let Some(kind) = toplevel.remove("kind") {
                         assert_eq!(kind, expected_error.kind())
                     } else {
-                        return Err("expected 'kind' in JSON object".into());
+                        bail!("expected 'kind' in JSON object");
                     }
 
                     if let Some(value) = toplevel.remove("value") {
                         if let Some(result_value) = value.as_str() {
                             if !result_value.contains(&expected_error.value()) {
-                                return Err(format!(
+                                bail!(
                                     "value '{}' doesn't contain: \'{}\'",
                                     result_value,
                                     expected_error.value(),
                                 )
-                                .into());
                             }
                         } else {
-                            return Err(format!("couldn't parse '{}' as string", value).into());
+                            bail!("couldn't parse '{}' as string", value);
                         }
                     } else {
-                        return Err("expected 'value' in JSON object".into());
+                        bail!("expected 'value' in JSON object");
                     }
                 }
             };
@@ -407,7 +401,7 @@ pub(crate) mod tests {
                 &test_param.plugin_config,
                 &test_param.expected_result,
             )
-            .map_err(|e| format!("test '{}' failed: {}", test_param.name, e).into())
+            .map_err(|e| format_err!("test '{}' failed: {}", test_param.name, e))
         })
     }
 }

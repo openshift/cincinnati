@@ -9,8 +9,8 @@ use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
 use self::cincinnati::CONTENT_TYPE;
 
+use commons::prelude_errors::*;
 use commons::GraphError;
-use failure::{Fallible, ResultExt};
 use prometheus::Counter;
 use reqwest;
 use reqwest::header::{HeaderValue, ACCEPT};
@@ -158,8 +158,8 @@ mod tests {
     use super::*;
     use cincinnati::testing::generate_custom_graph;
     use commons::metrics::{self, RegistryWrapper};
+    use commons::prelude_errors::*;
     use commons::testing::{self, init_runtime};
-    use failure::{bail, Fallible};
     use prometheus::Registry;
 
     macro_rules! fetch_upstream_success_test {
@@ -318,7 +318,7 @@ mod tests {
         let metrics_call = metrics::serve::<metrics::RegistryWrapper>(actix_web::web::Data::new(
             RegistryWrapper(registry),
         ));
-        let resp = rt.block_on(metrics_call)?;
+        let resp = rt.block_on(metrics_call);
 
         assert_eq!(resp.status(), 200);
         if let actix_web::body::ResponseBody::Body(body) = resp.body() {

@@ -11,7 +11,7 @@ use cincinnati::plugins::internal::graph_builder::release_scrape_dockerv2::regis
 };
 use cincinnati::plugins::internal::metadata_fetch_quay::DEFAULT_QUAY_MANIFESTREF_KEY as MANIFESTREF_KEY;
 use cincinnati::{Empty, MapImpl, WouldCycle};
-use failure::{bail, ensure, Fallible};
+use commons::prelude_errors::*;
 use itertools::Itertools;
 use semver::Version;
 use std::collections::HashMap;

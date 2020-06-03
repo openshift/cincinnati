@@ -20,8 +20,8 @@ mod tests {
     use async_trait::async_trait;
     use cincinnati::plugins::{interface, ExternalIO, ExternalPlugin, InternalIO, PluginResult};
     use cincinnati::testing::generate_graph;
+    use commons::prelude_errors::*;
     use commons::testing::init_runtime;
-    use failure::Fallible;
     use log::trace;
     use std::convert::TryInto;
 

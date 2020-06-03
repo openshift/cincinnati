@@ -333,7 +333,6 @@ mod tests {
     use cincinnati::testing::generate_custom_graph;
     use cincinnati::MapImpl;
     use commons::testing::init_runtime;
-    use failure::ResultExt;
 
     static KEY_PREFIX: &str = "test_key";
 

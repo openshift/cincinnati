@@ -1,4 +1,4 @@
-use failure::ResultExt;
+use commons::prelude_errors::*;
 use reqwest::header::{HeaderValue, ACCEPT};
 use std::env;
 use test_case::test_case;

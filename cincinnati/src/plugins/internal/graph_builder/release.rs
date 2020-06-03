@@ -16,7 +16,7 @@ use crate as cincinnati;
 
 use self::cincinnati::MapImpl;
 
-use failure::Fallible;
+use commons::prelude_errors::*;
 use itertools::Itertools;
 use log::{trace, warn};
 use semver::Version;
@@ -75,7 +75,7 @@ pub enum MetadataKind {
 ///
 /// When processing previous/next release metadata it is assumed that the edge
 /// destination has the same build type as the origin.
-pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, failure::Error> {
+pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, Error> {
     let mut graph = cincinnati::Graph::default();
 
     releases
@@ -146,7 +146,7 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, failure
                     if let Err(e) = graph.add_edge(&&current, &next) {
                         if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeAlreadyExists>()
                         {
-                            warn!("{}", eae);
+                            warn!("{:?}", eae);
                         } else {
                             return Err(e);
                         }

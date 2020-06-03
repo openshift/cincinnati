@@ -3,7 +3,7 @@
 use super::{cli, file};
 use cincinnati::plugins::catalog::{self, PluginSettings};
 use cincinnati::plugins::BoxedPlugin;
-use failure::Fallible;
+use commons::prelude_errors::*;
 use hyper::Uri;
 use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr};

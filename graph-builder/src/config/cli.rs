@@ -2,8 +2,8 @@
 
 use super::options;
 use super::AppSettings;
+use commons::prelude_errors::*;
 use commons::MergeOptions;
-use failure::Fallible;
 
 /// CLI configuration flags, top-level.
 #[derive(Debug, StructOpt)]

@@ -1,12 +1,9 @@
 //! Asynchronous client for quay.io v1 API.
 
 #[macro_use]
-extern crate failure;
-#[macro_use]
 extern crate serde_derive;
 
-use failure::Fallible;
-use failure::ResultExt;
+use anyhow::{bail, format_err, Context, Result as Fallible};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;

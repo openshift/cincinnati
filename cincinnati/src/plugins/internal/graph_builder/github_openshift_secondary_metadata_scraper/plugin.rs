@@ -44,7 +44,7 @@ impl Reference {
 }
 
 impl TryFrom<(Option<&String>, Option<&String>)> for Reference {
-    type Error = failure::Error;
+    type Error = Error;
 
     fn try_from(options: (Option<&String>, Option<&String>)) -> Fallible<Self> {
         let reference = match (options.0, options.1) {
@@ -194,7 +194,7 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
             reference: settings
                 .reference
                 .clone()
-                .ok_or_else(|| failure::err_msg("settings don't contain a 'reference'"))?,
+                .ok_or_else(|| format_err!("settings don't contain a 'reference'"))?,
             settings,
             output_whitelist,
             oauth_token,
@@ -248,7 +248,7 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
             })
             .nth(0)
             .ok_or_else(|| {
-                failure::err_msg(format!(
+                format_err!(format!(
                     "{}/{} does not have branch {}: {:#?}",
                     &self.settings.github_org,
                     &self.settings.github_repo,
@@ -304,7 +304,7 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
             state
                 .commit_wanted
                 .clone()
-                .ok_or_else(|| failure::err_msg("commit_wanted unset"))?
+                .ok_or_else(|| format_err!("commit_wanted unset"))?
         };
 
         let url = github_v3::tarball_url(
@@ -371,7 +371,7 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
                                 &entry.header().clone().path().unwrap_or_default()
                             ))?
                             .to_str()
-                            .ok_or_else(|| failure::err_msg("Could not get string from entry"))?
+                            .ok_or_else(|| format_err!("Could not get string from entry"))?
                             .to_owned();
                         trace!("Processing entry with path {:?}", &path);
 
@@ -450,7 +450,7 @@ impl InternalPlugin for GithubOpenshiftSecondaryMetadataScraperPlugin {
             self.data_dir
                 .path()
                 .to_str()
-                .ok_or_else(|| failure::err_msg("data_dir cannot be converted to str"))?
+                .ok_or_else(|| format_err!("data_dir cannot be converted to str"))?
                 .to_string(),
         );
 

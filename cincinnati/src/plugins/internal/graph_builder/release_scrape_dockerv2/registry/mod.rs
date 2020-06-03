@@ -15,8 +15,8 @@
 use crate as cincinnati;
 
 use self::cincinnati::plugins::internal::graph_builder::release::Metadata;
+use self::cincinnati::plugins::prelude_plugin_impl::*;
 
-use failure::{bail, ensure, format_err, Error, Fallible, ResultExt};
 use flate2::read::GzDecoder;
 use futures::lock::Mutex as FuturesMutex;
 use futures::prelude::*;
@@ -385,7 +385,7 @@ async fn get_manifest_and_ref(
     tag: String,
     repo: String,
     authenticated_client: &dkregistry::v2::Client,
-) -> Result<(String, dkregistry::v2::manifest::Manifest, String), failure::Error> {
+) -> Result<(String, dkregistry::v2::manifest::Manifest, String), Error> {
     trace!("[{}] Processing {}", &tag, &repo);
     let (manifest, manifestref) = authenticated_client
         .get_manifest_and_ref(&repo, &tag)

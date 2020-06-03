@@ -98,7 +98,7 @@ impl ReleaseScrapeDockerv2Plugin {
         mut settings: ReleaseScrapeDockerv2Settings,
         cache: Option<registry::cache::Cache>,
         prometheus_registry: Option<&prometheus::Registry>,
-    ) -> failure::Fallible<Self> {
+    ) -> Fallible<Self> {
         use prometheus::IntGauge;
         let graph_upstream_raw_releases: IntGauge = IntGauge::new(
             "graph_upstream_raw_releases",
@@ -173,7 +173,7 @@ mod network_tests {
 
     use cincinnati::plugins::internal::graph_builder::commons::tests::common_init;
     use cincinnati::testing::{TestGraphBuilder, TestMetadata};
-    use failure::{Fallible, ResultExt};
+    use commons::prelude_errors::*;
     use std::collections::HashSet;
 
     #[test]

@@ -20,5 +20,5 @@ macro_rules! assign_if_some {
 /// leaving unset ones preserved as-is from existing settings.
 pub trait MergeOptions<T> {
     /// MergeOptions values from `options` into current settings.
-    fn try_merge(&mut self, options: T) -> failure::Fallible<()>;
+    fn try_merge(&mut self, options: T) -> crate::Fallible<()>;
 }

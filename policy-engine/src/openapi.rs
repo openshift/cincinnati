@@ -1,5 +1,6 @@
 use crate::AppState;
 use actix_web::HttpResponse;
+use commons::prelude_errors::*;
 use openapiv3::{OpenAPI, ReferenceOr};
 use std::collections::HashSet;
 
@@ -9,14 +10,14 @@ const SPEC: &str = include_str!("openapiv3.json");
 pub(crate) fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
     let path_prefix = &app_data.path_prefix;
 
-    let mut spec_object: OpenAPI = match serde_json::from_str(SPEC) {
-        Ok(o) => o,
-        Err(e) => {
-            let e = format_err!("Could not deserialize to OpenAPI object: {}", e);
-            error!("{}", e);
-            return HttpResponse::from_error(e.into());
-        }
-    };
+    let mut spec_object: OpenAPI =
+        match serde_json::from_str(SPEC).context("Could not deserialize to OpenAPI object") {
+            Ok(o) => o,
+            Err(e) => {
+                error!("{}", e);
+                return actix_web::error::ErrorInternalServerError(e).into();
+            }
+        };
 
     // Add mandatory parameters to the `graph` endpoint.
     if let Some(path) = spec_object.paths.get_mut("/v1/graph") {
@@ -26,14 +27,13 @@ pub(crate) fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
     // Prefix all paths with `path_prefix`
     spec_object.paths = rewrite_paths(spec_object.paths, path_prefix);
 
-    match serde_json::to_string(&spec_object) {
-        Ok(s) => HttpResponse::from(s),
-        Err(e) => {
-            let e = format_err!("Could not serialize OpenAPI object: {}", e);
-            error!("{}", e);
-            HttpResponse::from_error(e.into())
-        }
-    }
+    serde_json::to_string(&spec_object)
+        .context("Could not serialize OpenAPI object")
+        .map(HttpResponse::from)
+        .unwrap_or_else(|e| {
+            error!("{:?}", e);
+            actix_web::error::ErrorInternalServerError(e).into()
+        })
 }
 
 fn rewrite_paths(paths: openapiv3::Paths, path_prefix: &str) -> openapiv3::Paths {

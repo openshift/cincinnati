@@ -22,7 +22,7 @@ use super::internal::openshift_secondary_metadata_parser::{
 use super::internal::release_scrape_dockerv2::{
     ReleaseScrapeDockerv2Plugin, ReleaseScrapeDockerv2Settings,
 };
-use failure::{bail, format_err, Fallible};
+use commons::prelude_errors::*;
 use std::fmt::Debug;
 
 /// Key used to look up plugin-type in a configuration entry.

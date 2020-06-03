@@ -1,8 +1,8 @@
 //! Options shared by CLI and TOML.
 
 use super::AppSettings;
+use commons::prelude_errors::*;
 use commons::{de_path_prefix, parse_params_set, parse_path_prefix, MergeOptions};
-use failure::Fallible;
 use std::collections::HashSet;
 use std::net::IpAddr;
 
@@ -85,7 +85,7 @@ impl MergeOptions<Option<UpCincinnatiOptions>> for AppSettings {
 }
 
 /// Parse a URI from a string.
-pub fn uri_from_str<S>(input: S) -> failure::Fallible<hyper::Uri>
+pub fn uri_from_str<S>(input: S) -> Fallible<hyper::Uri>
 where
     S: AsRef<str>,
 {

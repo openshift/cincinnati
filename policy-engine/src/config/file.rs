@@ -3,8 +3,8 @@
 use super::options;
 use super::AppSettings;
 use commons::de::de_loglevel;
+use commons::prelude_errors::*;
 use commons::MergeOptions;
-use failure::{Fallible, ResultExt};
 use std::io::Read;
 use std::{fs, io, path};
 
@@ -53,7 +53,7 @@ impl FileOptions {
 }
 
 impl MergeOptions<Option<FileOptions>> for AppSettings {
-    fn try_merge(&mut self, opts: Option<FileOptions>) -> failure::Fallible<()> {
+    fn try_merge(&mut self, opts: Option<FileOptions>) -> Fallible<()> {
         if let Some(file) = opts {
             assign_if_some!(self.verbosity, file.verbosity);
             self.try_merge(file.policy)?;

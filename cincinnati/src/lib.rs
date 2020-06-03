@@ -13,17 +13,14 @@
 // limitations under the License.
 
 #[macro_use]
-extern crate failure;
-
-#[macro_use]
 extern crate serde_derive;
 
 #[macro_use]
 pub mod plugins;
 
+use commons::prelude_errors::*;
 use daggy::petgraph::visit::{IntoNodeReferences, NodeRef};
 use daggy::{Dag, EdgeIndex, Walker};
-use failure::{Error, Fallible};
 use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::{collections, fmt};
@@ -154,9 +151,11 @@ pub struct Empty;
 
 /// Errors that can be returned by the methods in this library
 pub mod errors {
+    use commons::prelude_errors::*;
+
     /// Edge already exists
     #[derive(Debug, Fail, Eq, PartialEq)]
-    #[fail(display = "edge from {:?} to {:?} already exists", from, to)]
+    #[error("edge from {:?} to {:?} already exists", from, to)]
     pub struct EdgeAlreadyExists {
         pub(crate) from: String,
         pub(crate) to: String,
@@ -164,7 +163,7 @@ pub mod errors {
 
     /// Edge doesn't exist
     #[derive(Debug, Fail, Eq, PartialEq)]
-    #[fail(display = "edge from '{:?}' to '{:?}' doesn't exist", from, to)]
+    #[error("edge from '{:?}' to '{:?}' doesn't exist", from, to)]
     pub struct EdgeDoesntExist {
         pub(crate) from: String,
         pub(crate) to: String,
@@ -172,7 +171,7 @@ pub mod errors {
 
     /// Missing node weight
     #[derive(Debug, Fail, Eq, PartialEq)]
-    #[fail(display = "NodeWeight with index {} is missing", 0)]
+    #[error("NodeWeight with index {} is missing", 0)]
     pub struct NodeWeightMissing(pub(crate) usize);
 }
 

@@ -14,7 +14,7 @@ use crate as cincinnati;
 use self::cincinnati::plugins::interface::{PluginError, PluginExchange};
 
 use async_trait::async_trait;
-use failure::{Error, Fallible, ResultExt};
+pub use commons::prelude_errors::*;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::Debug;
@@ -45,6 +45,8 @@ pub mod prelude {
     };
 
     pub use std::iter::FromIterator;
+
+    pub use commons::prelude_errors::*;
 }
 
 pub mod prelude_plugin_impl {
@@ -56,8 +58,8 @@ pub mod prelude_plugin_impl {
     pub use plugins::{BoxedPlugin, InternalIO, InternalPlugin, InternalPluginWrapper};
 
     pub use async_trait::async_trait;
+    pub use commons::prelude_errors::*;
     pub use custom_debug_derive::CustomDebug;
-    pub use failure::{bail, ensure, Fallible, ResultExt};
     pub use futures::TryFutureExt;
     pub use log::{debug, error, info, trace, warn};
     pub use serde::{de::DeserializeOwned, Deserialize};
@@ -89,7 +91,7 @@ pub enum PluginIO {
 /// Error type which corresponds to interface::PluginError
 #[derive(Debug, Fail)]
 pub enum ExternalError {
-    #[fail(display = "PluginError: {:?}", 0)]
+    #[error("PluginError: {:?}", 0)]
     PluginError(PluginError),
 }
 
@@ -406,7 +408,7 @@ where
                     "Processing all plugins with a timeout of {:?}",
                     timeout
                 ))
-                .map_err(failure::Error::from)
+                .map_err(Error::from)
                 .unwrap_or_else(Err);
 
             // This may fail if it's attempted after the timeout is exceeded.
@@ -418,10 +420,7 @@ where
         std::thread::sleep(deadline);
 
         // This may fail if it's attempted after processing is finished.
-        let _ = tx.send(Err(failure::err_msg(format!(
-            "Exceeded timeout of {:?}",
-            &timeout
-        ))));
+        let _ = tx.send(Err(format_err!("Exceeded timeout of {:?}", &timeout)));
     });
 
     rx.recv()?
