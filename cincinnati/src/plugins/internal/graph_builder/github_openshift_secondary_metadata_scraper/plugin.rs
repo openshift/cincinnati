@@ -88,7 +88,7 @@ pub struct GithubOpenshiftSecondaryMetadataScraperSettings {
     /// Vector of regular expressions used as a positive output filter.
     /// An empty vector is regarded as a configuration error.
     #[default(DEFAULT_OUTPUT_WHITELIST.iter().map(|s| (*s).to_string()).collect())]
-    output_whitelist: Vec<String>,
+    output_allowlist: Vec<String>,
     oauth_token_path: Option<PathBuf>,
 }
 
@@ -120,8 +120,8 @@ impl GithubOpenshiftSecondaryMetadataScraperSettings {
             "empty output_directory"
         );
         ensure!(
-            !settings.output_whitelist.is_empty(),
-            "empty output_whitelist"
+            !settings.output_allowlist.is_empty(),
+            "empty output_allowlist"
         );
 
         Ok(Box::new(settings))
@@ -138,7 +138,7 @@ pub struct State {
 #[derive(Debug)]
 pub struct GithubOpenshiftSecondaryMetadataScraperPlugin {
     settings: GithubOpenshiftSecondaryMetadataScraperSettings,
-    output_whitelist: Vec<regex::Regex>,
+    output_allowlist: Vec<regex::Regex>,
 
     reference: Reference,
 
@@ -154,18 +154,18 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
 
     /// Instantiate a new instance of `Self`.
     pub fn try_new(settings: GithubOpenshiftSecondaryMetadataScraperSettings) -> Fallible<Self> {
-        let output_whitelist: Vec<regex::Regex> = settings
-            .output_whitelist
+        let output_allowlist: Vec<regex::Regex> = settings
+            .output_allowlist
             .iter()
             .try_fold(
-                Vec::with_capacity(settings.output_whitelist.len()),
+                Vec::with_capacity(settings.output_allowlist.len()),
                 |mut acc, cur| -> Fallible<_> {
                     let re = regex::Regex::new(cur)?;
                     acc.push(re);
                     Ok(acc)
                 },
             )
-            .context("Parsing output whitelist strings as regex")?;
+            .context("Parsing output allowlist strings as regex")?;
 
         let oauth_token = (&settings.oauth_token_path)
             .clone()
@@ -196,7 +196,7 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
                 .clone()
                 .ok_or_else(|| failure::err_msg("settings don't contain a 'reference'"))?,
             settings,
-            output_whitelist,
+            output_allowlist,
             oauth_token,
             data_dir,
 
@@ -331,14 +331,14 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
             .map(|bytes| (commit_wanted, bytes.to_vec().into_boxed_slice()))
     }
 
-    /// Extract a given blob to the output directory, adhering to the output whitelist, and finally update the completed commit state.
+    /// Extract a given blob to the output directory, adhering to the output allowlist, and finally update the completed commit state.
     async fn extract(&self, commit: github_v3::Commit, bytes: Box<[u8]>) -> Fallible<()> {
         // Use a tempdir as intermediary extraction target, and later rename to the destination
         let tmpdir = tempfile::tempdir_in(&self.settings.output_directory)?;
 
         {
             let commit = commit.clone();
-            let output_whitelist = self.output_whitelist.clone();
+            let output_allowlist = self.output_allowlist.clone();
             let tmpdir = tmpdir.path().to_owned();
 
             tokio::task::spawn_blocking(move || -> Fallible<()> {
@@ -375,9 +375,9 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
                             .to_owned();
                         trace!("Processing entry with path {:?}", &path);
 
-                        if output_whitelist
+                        if output_allowlist
                             .iter()
-                            .any(|whitelist_regex| whitelist_regex.is_match(&path))
+                            .any(|allowlist_regex| allowlist_regex.is_match(&path))
                         {
                             debug!("Unpacking {:?} to {:?}", &path, &tmpdir);
                             entry
@@ -492,7 +492,7 @@ mod network_tests {
                     github_org = "openshift"
                     github_repo = "cincinnati-graph-data"
                     reference = {{ revision = "6420f7fbf3724e1e5e329ae8d1e2985973f60c14" }}
-                    output_whitelist = [ {} ]
+                    output_allowlist = [ {} ]
                     output_directory = {:?}
                     oauth_token_path = {:?}
                 "#,
