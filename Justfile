@@ -118,7 +118,7 @@ e2e-fixtures-capture-only:
 # Reads a graph on stdin, creates an SVG out of it and opens it with SVG-associated default viewer. Meant to be combined with one of the `get-graph-*` recipes.
 display-graph:
 	#!/usr/bin/env bash
-	required_tools=("xdg-open" "dot" "jq" "adfasdf")
+	required_tools=("xdg-open" "dot" "jq")
 	for tool in "${required_tools[@]}"; do
 		type ${tool} >/dev/null 2>&1 || {
 			printf "ERROR: program '%s' not found, please install it.\n" "${tool}"
