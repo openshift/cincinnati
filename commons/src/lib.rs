@@ -4,8 +4,6 @@
 
 extern crate actix_web;
 #[macro_use]
-extern crate failure;
-#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate serde_json;
@@ -18,7 +16,12 @@ pub mod metrics;
 pub mod testing;
 
 mod errors;
-pub use errors::{register_metrics, GraphError, MISSING_APPSTATE_PANIC_MSG};
+pub use errors::{register_metrics, Fallible, GraphError, MISSING_APPSTATE_PANIC_MSG};
+
+/// Commonly used imports for error handling.
+pub mod prelude_errors {
+    pub use crate::errors::prelude::*;
+}
 
 use actix_web::http::header;
 use std::collections::HashSet;

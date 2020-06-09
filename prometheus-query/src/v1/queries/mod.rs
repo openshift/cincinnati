@@ -63,7 +63,7 @@ impl VectorResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use failure::Fallible;
+    use anyhow::{bail, Result as Fallible};
 
     #[test]
     fn deserialize_queryresult() -> Fallible<()> {

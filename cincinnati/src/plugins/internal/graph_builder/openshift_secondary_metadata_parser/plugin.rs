@@ -492,7 +492,7 @@ mod tests {
     use self::cincinnati::plugins::InternalPlugin;
     use self::cincinnati::testing::compare_graphs_verbose;
 
-    use failure::{Fallible, ResultExt};
+    use commons::prelude_errors::*;
     use std::path::PathBuf;
     use std::str::FromStr;
     use test_case::test_case;

@@ -7,8 +7,6 @@ extern crate cincinnati;
 #[macro_use]
 extern crate commons;
 #[macro_use]
-extern crate failure;
-#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
@@ -28,7 +26,7 @@ mod openapi;
 use actix_web::{middleware, App, HttpServer};
 use cincinnati::plugins::BoxedPlugin;
 use commons::metrics::{self, RegistryWrapper};
-use failure::Error;
+use commons::prelude_errors::*;
 use prometheus::{labels, opts, Counter, Registry};
 use std::collections::HashSet;
 

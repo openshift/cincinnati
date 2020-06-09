@@ -1,4 +1,4 @@
-use failure::Fallible;
+use anyhow::Result as Fallible;
 use reqwest;
 
 mod manifest;

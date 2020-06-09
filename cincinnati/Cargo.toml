@@ -10,7 +10,6 @@ commons = { path = "../commons" }
 custom_debug_derive = "^0.1.7"
 daggy = { version = "^0.6.0", features = [ "serde-1" ] }
 env_logger = "^0.6.0"
-failure = "^0.1.1"
 futures = "0.3"
 futures-locks = "0.5.0"
 lazy_static = "^1.2.0"

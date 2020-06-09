@@ -1,6 +1,6 @@
 //! Asynchronous Prometheus HTTP API Client /v1 implementation
 
-use failure::Fallible;
+use anyhow::{bail, Result as Fallible};
 use reqwest;
 
 pub mod queries;

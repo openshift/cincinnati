@@ -1,3 +1,4 @@
+use anyhow::Error;
 use futures::StreamExt;
 use tokio::runtime::Runtime;
 
@@ -24,7 +25,7 @@ fn test_wrong_auth() {
             .stream_tags(repo, true)
             .await
             .map(Result::unwrap_err)
-            .collect::<Vec<failure::Error>>()
+            .collect::<Vec<Error>>()
             .await
     };
     rt.block_on(fetch_tags);

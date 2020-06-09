@@ -1,4 +1,4 @@
-use failure::{Fallible, ResultExt};
+use commons::prelude_errors::*;
 use prometheus_query::v1::queries::{QueryData, QueryResult, VectorResult};
 use prometheus_query::v1::Client;
 

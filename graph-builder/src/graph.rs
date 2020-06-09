@@ -18,8 +18,7 @@ use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::prelude::*;
 use cincinnati::CONTENT_TYPE;
 use commons::metrics::HasRegistry;
-use commons::GraphError;
-use failure::Fallible;
+use commons::{Fallible, GraphError};
 use lazy_static;
 pub use parking_lot::RwLock;
 use prometheus::{self, histogram_opts, labels, opts, Counter, Gauge, Histogram, IntGauge};
@@ -207,7 +206,7 @@ pub fn run(settings: &config::AppSettings, state: &State) -> ! {
             Ok(internal_io) => internal_io,
             Err(err) => {
                 UPSTREAM_ERRORS.inc();
-                err.iter_chain().for_each(|cause| error!("{}", cause));
+                err.chain().for_each(|cause| error!("{}", cause));
                 continue;
             }
         };

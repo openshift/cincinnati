@@ -14,7 +14,7 @@
 
 use actix_web::{middleware, App, HttpServer};
 use commons::metrics::{self, HasRegistry};
-use failure::{ensure, Error, Fallible, ResultExt};
+use commons::prelude_errors::*;
 use graph_builder::{self, config, graph, status};
 use log::debug;
 use parking_lot::RwLock;
@@ -145,7 +145,6 @@ mod tests {
     use commons::metrics::HasRegistry;
     use commons::metrics::RegistryWrapper;
     use commons::testing;
-    use failure::{bail, Fallible};
     use parking_lot::RwLock;
     use prometheus::Registry;
     use std::collections::HashSet;
@@ -175,7 +174,7 @@ mod tests {
 
         let metrics_call =
             metrics::serve::<RegistryWrapper>(actix_web::web::Data::new(RegistryWrapper(registry)));
-        let resp = rt.block_on(metrics_call)?;
+        let resp = rt.block_on(metrics_call);
 
         assert_eq!(resp.status(), 200);
         if let actix_web::body::ResponseBody::Body(body) = resp.body() {

@@ -3,8 +3,8 @@
 use super::{cli, file};
 use cincinnati::plugins::catalog::{build_plugins, PluginSettings};
 use cincinnati::plugins::BoxedPlugin;
+use commons::prelude_errors::*;
 use commons::MergeOptions;
-use failure::Fallible;
 use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
@@ -125,8 +125,6 @@ impl AppSettings {
     }
 
     fn default_openshift_plugin_settings(&self) -> Fallible<Vec<Box<dyn PluginSettings>>> {
-        use failure::ResultExt;
-
         use cincinnati::plugins::internal::github_openshift_secondary_metadata_scraper::GITHUB_SCRAPER_TOKEN_PATH_ENV;
         use cincinnati::plugins::prelude::*;
 

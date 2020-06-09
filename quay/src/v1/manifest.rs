@@ -1,7 +1,7 @@
 //! Manifest API.
 
 use super::Client;
-use failure::Error;
+use anyhow::Error;
 use reqwest::Method;
 
 /// API result with all labels.

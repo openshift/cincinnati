@@ -1,8 +1,8 @@
 //! Tag API.
 
 use super::Client;
+use anyhow::Result as Fallible;
 use async_stream::stream;
-use failure::Fallible;
 use futures::Stream;
 use reqwest::Method;
 

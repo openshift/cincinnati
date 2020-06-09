@@ -71,7 +71,6 @@ mod tests {
     use super::*;
     use cincinnati::testing::{generate_custom_graph, TestMetadata};
     use commons::testing::init_runtime;
-    use failure::ResultExt;
 
     #[test]
     fn ensure_release_remove() -> Fallible<()> {

@@ -1,6 +1,6 @@
 //! Test helpers.
 
-use failure::Fallible;
+use crate::prelude_errors::*;
 use tokio::runtime::Runtime;
 
 /// Initialize logging.
@@ -12,7 +12,7 @@ pub fn init_logger() -> Fallible<()> {
 /// Initialize a tokio runtime for tests, with logging.
 pub fn init_runtime() -> Fallible<Runtime> {
     let _ = init_logger();
-    Runtime::new().map_err(failure::Error::from)
+    Runtime::new().map_err(Error::from)
 }
 
 /// Register a dummy gauge, with given value.

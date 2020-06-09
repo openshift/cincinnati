@@ -3,8 +3,8 @@
 use super::options;
 use super::AppSettings;
 use commons::de::de_loglevel;
+use commons::prelude_errors::*;
 use commons::MergeOptions;
-use failure::{Fallible, ResultExt};
 use std::io::Read;
 use std::{fs, io, path};
 

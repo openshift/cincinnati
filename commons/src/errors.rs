@@ -1,7 +1,20 @@
 use actix_web::http;
 use actix_web::HttpResponse;
-use failure::Fallible;
 use prometheus::{IntCounterVec, Opts, Registry};
+use thiserror::Error;
+
+pub mod prelude {
+    pub use anyhow::anyhow as format_err;
+    pub use anyhow::bail;
+    pub use anyhow::ensure;
+    pub use anyhow::Context;
+    pub use anyhow::Error;
+    pub use anyhow::Result as Fallible;
+
+    // Macro imports
+    pub use thiserror::Error as Fail;
+}
+pub use prelude::*;
 
 lazy_static! {
     static ref V1_GRAPH_ERRORS: IntCounterVec = IntCounterVec::new(
@@ -25,43 +38,43 @@ pub fn register_metrics(registry: &Registry) -> Fallible<()> {
     Ok(())
 }
 
-#[derive(Debug, Fail, Eq, PartialEq)]
+#[derive(Debug, Error, Eq, PartialEq)]
 /// Error that can be returned by `/v1/graph` endpoint.
 pub enum GraphError {
     /// Failed to deserialize JSON.
-    #[fail(display = "failed to deserialize JSON: {}", _0)]
+    #[error("failed to deserialize JSON: {}", _0)]
     FailedJsonIn(String),
 
     /// Failed to serialize JSON.
-    #[fail(display = "failed to serialize JSON: {}", _0)]
+    #[error("failed to serialize JSON: {}", _0)]
     FailedJsonOut(String),
 
     /// Error response from upstream.
-    #[fail(display = "failed to fetch upstream graph: {}", _0)]
+    #[error("failed to fetch upstream graph: {}", _0)]
     FailedUpstreamFetch(String),
 
     /// Plugin failure.
-    #[fail(display = "failed to execute plugins: {}", _0)]
+    #[error("failed to execute plugins: {}", _0)]
     FailedPluginExecution(String),
 
     /// Error while reaching upstream.
-    #[fail(display = "failed to assemble upstream request")]
+    #[error("failed to assemble upstream request")]
     FailedUpstreamRequest(String),
 
     /// Requested invalid mediatype.
-    #[fail(display = "invalid Content-Type requested")]
+    #[error("invalid Content-Type requested")]
     InvalidContentType,
 
     /// Missing client parameters.
-    #[fail(display = "mandatory client parameters missing")]
+    #[error("mandatory client parameters missing")]
     MissingParams(Vec<String>),
 
     /// Invalid client parameters.
-    #[fail(display = "invalid client parameters: {}", _0)]
+    #[error("invalid client parameters: {}", _0)]
     InvalidParams(String),
 
     /// Failed to parse as Semantic Version
-    #[fail(display = "failed to process version: {}", _0)]
+    #[error("failed to process version: {}", _0)]
     ArchVersionError(String),
 }
 

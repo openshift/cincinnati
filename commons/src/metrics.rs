@@ -1,7 +1,7 @@
 //! Metrics service.
 
+use crate::prelude_errors::*;
 use actix_web::HttpResponse;
-use failure::Fallible;
 use prometheus::{self, Registry};
 
 /// For types that store a static Registry reference
@@ -20,26 +20,25 @@ impl HasRegistry for RegistryWrapper {
 }
 
 /// Serve metrics requests (Prometheus textual format).
-pub async fn serve<T>(app_data: actix_web::web::Data<T>) -> Fallible<HttpResponse>
+pub async fn serve<T>(app_data: actix_web::web::Data<T>) -> HttpResponse
 where
     T: 'static + HasRegistry,
 {
     use prometheus::Encoder;
 
     let metrics = app_data.registry().gather();
-    let content = {
-        let tenc = prometheus::TextEncoder::new();
-        let mut buf = vec![];
-        tenc.encode(&metrics, &mut buf).and(Ok(buf))?
-    };
-
-    Ok(HttpResponse::Ok().body(content))
+    let tenc = prometheus::TextEncoder::new();
+    let mut buf = vec![];
+    match tenc.encode(&metrics, &mut buf) {
+        Ok(()) => HttpResponse::Ok().body(buf),
+        Err(e) => HttpResponse::InternalServerError().message_body(format!("{}", e).into()),
+    }
 }
 
 /// Create a custom Prometheus registry.
 pub fn new_registry(prefix: Option<String>) -> Fallible<Registry> {
     Registry::new_custom(prefix.clone(), None).map_err(|e| {
-        failure::err_msg(format!(
+        format_err!(format!(
             "could not create a custom regostry with prefix {:?}: {}",
             prefix,
             e.to_string()
@@ -64,7 +63,7 @@ mod tests {
         testing::dummy_gauge(&registry_wrapped.0, 42.0)?;
 
         let metrics_call = serve::<RegistryWrapper>(actix_web::web::Data::new(registry_wrapped));
-        let resp = rt.block_on(metrics_call)?;
+        let resp = rt.block_on(metrics_call);
 
         assert_eq!(resp.status(), 200);
         if let actix_web::body::ResponseBody::Body(body) = resp.body() {
