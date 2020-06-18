@@ -133,6 +133,8 @@ impl ReleaseScrapeDockerv2Plugin {
 
 #[async_trait]
 impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
+    const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
+
     async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
         let releases = registry::fetch_releases(
             &self.registry,

@@ -53,6 +53,8 @@ lazy_static! {
 
 #[async_trait]
 impl InternalPlugin for ChannelFilterPlugin {
+    const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
+
     async fn run_internal(self: &Self, internal_io: InternalIO) -> Fallible<InternalIO> {
         let channel = get_multiple_values!(internal_io.parameters, "channel")
             .map_err(|e| GraphError::MissingParams(vec![e.to_string()]))?

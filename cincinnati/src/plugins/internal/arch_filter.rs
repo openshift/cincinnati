@@ -86,6 +86,8 @@ lazy_static! {
 
 #[async_trait]
 impl InternalPlugin for ArchFilterPlugin {
+    const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
+
     async fn run_internal(self: &Self, internal_io: InternalIO) -> Fallible<InternalIO> {
         let arch = infer_arch(
             internal_io.parameters.get("arch").map(|s| s.to_string()),

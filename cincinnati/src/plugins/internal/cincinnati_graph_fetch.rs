@@ -142,6 +142,8 @@ impl CincinnatiGraphFetchPlugin {
 
 #[async_trait]
 impl InternalPlugin for CincinnatiGraphFetchPlugin {
+    const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
+
     async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
         self.do_run_internal(io)
             .map_err(move |e| {

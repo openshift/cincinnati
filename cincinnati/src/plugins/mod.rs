@@ -126,12 +126,20 @@ where
     T: Sync + Send,
 {
     async fn run(self: &Self, t: T) -> Fallible<T>;
+
+    fn get_name(self: &Self) -> &'static str;
 }
 
 /// Trait to be implemented by internal plugins with their native IO type
 #[async_trait]
 pub trait InternalPlugin {
+    const PLUGIN_NAME: &'static str;
+
     async fn run_internal(self: &Self, input: InternalIO) -> Fallible<InternalIO>;
+
+    fn get_name(self: &Self) -> &'static str {
+        Self::PLUGIN_NAME
+    }
 }
 
 /// Trait to be implemented by external plugins with its native IO type
@@ -143,7 +151,13 @@ pub trait ExternalPlugin
 where
     Self: Debug,
 {
+    const PLUGIN_NAME: &'static str;
+
     async fn run_external(self: &Self, input: ExternalIO) -> Fallible<ExternalIO>;
+
+    fn get_name(self: &Self) -> &'static str {
+        Self::PLUGIN_NAME
+    }
 }
 
 /// Convert from InternalIO to PluginIO
@@ -330,6 +344,10 @@ where
 
         Ok(self.0.run_internal(internal_io).await?.into())
     }
+
+    fn get_name(&self) -> &'static str {
+        <T as InternalPlugin>::PLUGIN_NAME
+    }
 }
 
 /// This implementation allows the process function to run ipmlementors of
@@ -344,6 +362,10 @@ where
         let external_io: ExternalIO = plugin_io.try_into()?;
 
         Ok(self.0.run_external(external_io).await?.into())
+    }
+
+    fn get_name(&self) -> &'static str {
+        <T as ExternalPlugin>::PLUGIN_NAME
     }
 }
 
@@ -360,6 +382,9 @@ where
     let mut io = initial_io;
 
     for next_plugin in plugins {
+        let plugin_name = next_plugin.get_name();
+        log::trace!("Running next plugin '{}'", plugin_name);
+
         io = next_plugin.run(io).await?;
     }
 
@@ -480,8 +505,11 @@ mod tests {
         #[debug(skip)]
         inner_fn: Option<Arc<dyn Fn() -> Fallible<()> + Sync + Send>>,
     }
+
     #[async_trait]
     impl InternalPlugin for TestInternalPlugin {
+        const PLUGIN_NAME: &'static str = "test_internal_plugin";
+
         async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
             if let Some(inner_fn) = &self.inner_fn {
                 inner_fn()?;
@@ -500,24 +528,14 @@ mod tests {
             Ok(io)
         }
     }
-    #[async_trait]
-    impl Plugin<InternalIO> for TestInternalPlugin {
-        async fn run(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
-            Ok(io)
-        }
-    }
 
     #[derive(Debug)]
     struct TestExternalPlugin {}
     #[async_trait]
     impl ExternalPlugin for TestExternalPlugin {
+        const PLUGIN_NAME: &'static str = "test_internal_plugin";
+
         async fn run_external(self: &Self, io: ExternalIO) -> Fallible<ExternalIO> {
-            Ok(io)
-        }
-    }
-    #[async_trait]
-    impl Plugin<ExternalIO> for TestExternalPlugin {
-        async fn run(self: &Self, io: ExternalIO) -> Fallible<ExternalIO> {
             Ok(io)
         }
     }
@@ -709,6 +727,26 @@ mod tests {
                 result_internalio
             );
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn plugin_names() -> Fallible<()> {
+        lazy_static! {
+            static ref PLUGINS: Vec<BoxedPlugin> = new_plugins!(
+                ExternalPluginWrapper(TestExternalPlugin {}),
+                InternalPluginWrapper(TestInternalPlugin {
+                    counter: Default::default(),
+                    dict: Arc::new(FuturesMutex::new(Default::default())),
+                    inner_fn: None,
+                }),
+                ExternalPluginWrapper(TestExternalPlugin {})
+            );
+        }
+
+        assert_eq!(PLUGINS[0].get_name(), TestExternalPlugin::PLUGIN_NAME);
+        assert_eq!(PLUGINS[1].get_name(), TestInternalPlugin::PLUGIN_NAME);
 
         Ok(())
     }

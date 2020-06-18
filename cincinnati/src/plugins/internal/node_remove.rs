@@ -37,6 +37,8 @@ impl NodeRemovePlugin {
 
 #[async_trait]
 impl InternalPlugin for NodeRemovePlugin {
+    const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
+
     async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
         let mut graph = io.graph;
         let key_suffix = "release.remove";

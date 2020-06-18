@@ -37,6 +37,8 @@ mod tests {
 
     #[async_trait]
     impl ExternalPlugin for DummyWebClient {
+        const PLUGIN_NAME: &'static str = "dummy-web-client";
+
         async fn run_external(self: &Self, io: ExternalIO) -> Fallible<ExternalIO> {
             let input: interface::PluginExchange = io.try_into()?;
 
