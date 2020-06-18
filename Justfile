@@ -156,7 +156,7 @@ run-graph-builder:
 		registry = "{{registry}}"
 		repository = "{{repository}}"
 		fetch_concurrency=128
-		credentials_file = "{{credentials_file}}"
+		credentials_path = "{{credentials_file}}"
 
 		[[plugin_settings]]
 		name = "github-secondary-metadata-scrape"
