@@ -10,10 +10,13 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use self::cincinnati::CONTENT_TYPE;
 
 use commons::prelude_errors::*;
+use commons::tracing::{get_tracer, set_context};
+use opentelemetry::api::{Span, Tracer};
+
 use commons::GraphError;
 use prometheus::Counter;
 use reqwest;
-use reqwest::header::{HeaderValue, ACCEPT};
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use std::time::Duration;
 
 /// Default URL to upstream graph provider.
@@ -109,13 +112,23 @@ impl CincinnatiGraphFetchPlugin {
 
 impl CincinnatiGraphFetchPlugin {
     async fn do_run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
+        // extract current trace ID from headers
+        // this is required to make graph-builder trace a child of police-engine request
+        let mut headers = HeaderMap::new();
+        headers.insert(ACCEPT, HeaderValue::from_static(CONTENT_TYPE));
+        {
+            let span = get_tracer().get_active_span();
+            set_context(span.get_context(), &mut headers)
+                .context("failed to set the tracing context")?;
+        }
+
         trace!("getting graph from upstream at {}", self.upstream);
         self.http_upstream_reqs.inc();
 
         let res = self
             .client
             .get(&self.upstream)
-            .header(ACCEPT, HeaderValue::from_static(CONTENT_TYPE))
+            .headers(headers)
             .send()
             .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
             .await?;
@@ -160,7 +173,6 @@ mod tests {
     use super::*;
     use cincinnati::testing::generate_custom_graph;
     use commons::metrics::{self, RegistryWrapper};
-    use commons::prelude_errors::*;
     use commons::testing::{self, init_runtime};
     use prometheus::Registry;
 

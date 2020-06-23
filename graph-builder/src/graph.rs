@@ -18,8 +18,10 @@ use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::prelude::*;
 use cincinnati::CONTENT_TYPE;
 use commons::metrics::HasRegistry;
+use commons::tracing::get_tracer;
 use commons::{Fallible, GraphError};
 use lazy_static;
+use opentelemetry::api::Tracer;
 pub use parking_lot::RwLock;
 use prometheus::{self, histogram_opts, labels, opts, Counter, Gauge, Histogram, IntGauge};
 use serde_json;
@@ -97,6 +99,8 @@ pub async fn index(
     req: HttpRequest,
     app_data: actix_web::web::Data<State>,
 ) -> Result<HttpResponse, GraphError> {
+    let _ = get_tracer().start("index", None);
+
     V1_GRAPH_INCOMING_REQS.inc();
 
     // Check that the client can accept JSON media type.
