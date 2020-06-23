@@ -15,9 +15,12 @@ use self::cincinnati::plugins::interface::{PluginError, PluginExchange};
 
 use async_trait::async_trait;
 pub use commons::prelude_errors::*;
+use commons::tracing::get_tracer;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::Debug;
+
+use opentelemetry::api::{trace::futures::Instrument, Tracer};
 
 pub mod prelude {
     use crate as cincinnati;
@@ -381,11 +384,14 @@ where
 {
     let mut io = initial_io;
 
+    let _ = get_tracer().start("plugins", None);
+
     for next_plugin in plugins {
         let plugin_name = next_plugin.get_name();
         log::trace!("Running next plugin '{}'", plugin_name);
 
-        io = next_plugin.run(io).await?;
+        let plugin_span = get_tracer().start(plugin_name, None);
+        io = next_plugin.run(io).instrument(plugin_span).await?;
     }
 
     io.try_into()
@@ -454,7 +460,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::plugins::Plugin;
     use crate::testing::generate_graph;
     use futures::lock::Mutex as FuturesMutex;
     use lazy_static::lazy_static;

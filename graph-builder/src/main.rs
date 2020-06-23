@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use actix_service::Service;
 use actix_web::{middleware, App, HttpServer};
 use commons::metrics::{self, HasRegistry};
 use commons::prelude_errors::*;
+use commons::tracing::{get_context, get_tracer, init_tracer, set_span_tags};
 use graph_builder::{self, config, graph, status};
 use log::debug;
+use opentelemetry::api::{trace::futures::Instrument, Tracer};
 use parking_lot::RwLock;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -34,6 +37,9 @@ fn main() -> Result<(), Error> {
 
     let registry: prometheus::Registry =
         metrics::new_registry(Some(config::METRICS_PREFIX.to_string()))?;
+
+    // Enable tracing
+    init_tracer("graph-builder", settings.tracing_endpoint.clone())?;
 
     let plugins = settings.validate_and_build_plugins(Some(&registry))?;
 
@@ -99,6 +105,12 @@ fn main() -> Result<(), Error> {
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
+            .wrap_fn(|req, srv| {
+                let parent_context = get_context(&req);
+                let span = get_tracer().start("request", Some(parent_context));
+                set_span_tags(&req, &span);
+                srv.call(req).instrument(span)
+            })
             .app_data(actix_web::web::Data::new(main_state.clone()))
             .service(
                 actix_web::web::resource(&format!("{}/v1/graph", app_prefix.clone()))

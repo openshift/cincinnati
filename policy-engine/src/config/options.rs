@@ -50,6 +50,10 @@ pub struct ServiceOptions {
         parse(from_str = "parse_params_set")
     )]
     pub mandatory_client_parameters: Option<HashSet<String>>,
+
+    /// Optional tracing endpoint
+    #[structopt(name = "tracing_endpoint", long = "service.tracing_endpoint")]
+    pub tracing_endpoint: Option<String>,
 }
 
 impl MergeOptions<Option<ServiceOptions>> for AppSettings {
@@ -58,6 +62,7 @@ impl MergeOptions<Option<ServiceOptions>> for AppSettings {
             assign_if_some!(self.address, service.address);
             assign_if_some!(self.port, service.port);
             assign_if_some!(self.path_prefix, service.path_prefix);
+            assign_if_some!(self.tracing_endpoint, service.tracing_endpoint);
             if let Some(params) = service.mandatory_client_parameters {
                 self.mandatory_client_parameters.extend(params);
             }

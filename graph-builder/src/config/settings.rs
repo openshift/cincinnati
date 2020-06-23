@@ -76,6 +76,9 @@ pub struct AppSettings {
 
     /// Plugin configuration.
     pub plugin_settings: Vec<Box<dyn PluginSettings>>,
+
+    /// Jaeger host and port for tracing support
+    pub tracing_endpoint: Option<String>,
 }
 
 impl AppSettings {

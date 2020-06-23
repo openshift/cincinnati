@@ -8,6 +8,7 @@ pause_secs := "9999999"
 registry := "https://quay.io"
 repository := "openshift-release-dev/ocp-release"
 credentials_file := "${HOME}/.docker/config.json"
+default_tracing_endpoint := "localhost:6831"
 
 metadata_reference_e2e:
 	printf 'reference_revision = "%s"' "$(cat {{testdata_dir}}/{{metadata_revision_file}})"
@@ -144,6 +145,7 @@ run-graph-builder:
 		address = "127.0.0.1"
 		port = 8080
 		path_prefix = "{{path_prefix}}"
+		tracing_endpoint = "{{default_tracing_endpoint}}"
 
 		[status]
 		address = "127.0.0.1"
@@ -184,7 +186,7 @@ run-graph-builder-e2e:
 run-policy-engine:
 	#!/usr/bin/env bash
 	export RUST_BACKTRACE=1 RUST_LOG="policy_engine=trace,cincinnati=trace,actix=trace,actix_web=trace"
-	cargo run --package policy-engine -- -vvvv --service.address 0.0.0.0 --service.path_prefix {{path_prefix}} --upstream.cincinnati.url 'http://127.0.0.1:8080/{{path_prefix}}v1/graph' --service.mandatory_client_parameters='channel'
+	cargo run --package policy-engine -- -vvvv --service.address 0.0.0.0 --service.path_prefix {{path_prefix}} --upstream.cincinnati.url 'http://127.0.0.1:8080/{{path_prefix}}v1/graph' --service.mandatory_client_parameters='channel' --service.tracing_endpoint "{{default_tracing_endpoint}}"
 
 kill-daemons:
 	pkill graph-builder

@@ -5,7 +5,9 @@ use actix_web::web::Query;
 use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::BoxedPlugin;
 use cincinnati::CONTENT_TYPE;
+use commons::tracing::get_tracer;
 use commons::{self, Fallible, GraphError};
+use opentelemetry::api::{trace::futures::Instrument, Tracer};
 use prometheus::{histogram_opts, Counter, Histogram, Registry};
 use serde_json;
 use std::collections::HashMap;
@@ -38,6 +40,8 @@ pub(crate) async fn index(
     req: HttpRequest,
     app_data: actix_web::web::Data<AppState>,
 ) -> Result<HttpResponse, GraphError> {
+    let span = get_tracer().start("index", None);
+
     V1_GRAPH_INCOMING_REQS.inc();
 
     // Check that the client can accept JSON media type.
@@ -54,6 +58,7 @@ pub(crate) async fn index(
     let timer = V1_GRAPH_SERVE_HIST.start_timer();
 
     let response = process_plugins(app_data.plugins.iter(), plugin_params)
+        .instrument(span)
         .await
         .map_err(|e| {
             error!(
