@@ -17,6 +17,11 @@ serde_json = "^1.0.34"
 tokio = "^0.2"
 url = "^1.7.2"
 futures = "^0.3"
+opentelemetry = "0.4.0"
+opentelemetry-jaeger = "0.3.0"
+reqwest = "^0.10"
+thrift = "0.13"
+actix-service = "1.0.0"
 
 [dev-dependencies]
 twoway = "^0.2"
