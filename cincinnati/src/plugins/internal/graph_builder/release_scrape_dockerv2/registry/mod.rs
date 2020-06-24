@@ -34,7 +34,7 @@ use tar::Archive;
 
 /// Module for the release cache
 pub mod cache {
-    use super::cincinnati::plugins::internal::graph_builder::release::Release;
+    use super::cincinnati::plugins::internal::graph_builder::release::Metadata;
     use std::collections::HashMap;
     use std::sync::Arc;
     use tokio::sync::RwLock as FuturesRwLock;
@@ -43,7 +43,7 @@ pub mod cache {
     type Key = String;
 
     /// The values of the cache
-    type Value = Option<Release>;
+    type Value = Option<Metadata>;
 
     /// The sync cache to hold the `Release` cache
     type CacheSync = HashMap<Key, Value>;
@@ -156,9 +156,19 @@ impl Registry {
         })
     }
 
+    /// Format the registry to qualified string.ToOwned
+    ///
+    /// Even though it creates an invalid registry reference according to Docker
+    /// and podman, this includes the scheme if the registry is set to insecure,
+    /// because we have no other way to indicate this in the URL.
     pub fn host_port_string(&self) -> String {
         format!(
-            "{}{}",
+            "{}{}{}",
+            if self.insecure && !self.scheme.is_empty() {
+                format!("{}://", self.scheme)
+            } else {
+                "".to_string()
+            },
             self.host,
             if let Some(port) = self.port {
                 format!(":{}", port)
@@ -268,7 +278,7 @@ pub async fn fetch_releases(
             let release = match lookup_or_fetch(
                 layers_digests,
                 authenticated_client.to_owned(),
-                registry.host.to_owned().to_string(),
+                registry.to_owned(),
                 repo.to_owned(),
                 tag.to_owned(),
                 &cache,
@@ -315,7 +325,7 @@ pub async fn fetch_releases(
 async fn lookup_or_fetch(
     layer_digests: Vec<String>,
     authenticated_client: dkregistry::v2::Client,
-    registry_host: String,
+    registry: Registry,
     repo: String,
     tag: String,
     cache: &cache::Cache,
@@ -323,50 +333,63 @@ async fn lookup_or_fetch(
     manifestref_key: String,
     arch: Option<String>,
 ) -> Fallible<Option<cincinnati::plugins::internal::graph_builder::release::Release>> {
-    if let Some(release) = cache.read().await.get(&manifestref) {
-        trace!(
-            "[{}] Using cached release metadata for manifestref {}",
-            &tag,
-            &manifestref
-        );
-        return Ok(release.clone());
-    }
+    let cached_metadata = {
+        // Nest the guard in a scope to guarantee that the cache isn't locked when trying to write to it later
+        cache.read().await.get(&manifestref).map(Clone::clone)
+    };
 
-    let release = find_first_release(
-        layer_digests,
-        authenticated_client,
-        registry_host,
-        repo,
-        tag.clone(),
-        manifestref.clone(),
-    )
-    .await
-    .context("failed to find first release")?
-    .map(|mut release| {
-        // Attach the manifestref this release was found in for further processing
-        release
-            .metadata
-            .metadata
-            .insert(manifestref_key, manifestref.clone());
+    let metadata = match cached_metadata {
+        Some(cached_metadata) => {
+            trace!(
+                "[{}] Using cached release metadata for manifestref {}",
+                &tag,
+                &manifestref
+            );
+            cached_metadata.clone()
+        }
+        None => {
+            let metadata = find_first_release_metadata(
+                layer_digests,
+                authenticated_client,
+                repo.clone(),
+                tag.clone(),
+            )
+            .await
+            .context("failed to find first release")?
+            .map(|mut metadata| {
+                // Attach the manifestref this release was found in for further processing
+                metadata
+                    .metadata
+                    .insert(manifestref_key, manifestref.clone());
 
-        // Process the manifest architecture if given
-        if let Some(arch) = arch {
-            // Encode the architecture as SemVer information
-            release.metadata.version.build = vec![semver::Identifier::AlphaNumeric(arch.clone())];
+                // Process the manifest architecture if given
+                if let Some(arch) = arch {
+                    // Encode the architecture as SemVer information
+                    metadata.version.build = vec![semver::Identifier::AlphaNumeric(arch.clone())];
 
-            // Attach the architecture for later processing
-            release
-                .metadata
-                .metadata
-                .insert("io.openshift.upgrades.graph.release.arch".to_owned(), arch);
-        };
+                    // Attach the architecture for later processing
+                    metadata
+                        .metadata
+                        .insert("io.openshift.upgrades.graph.release.arch".to_owned(), arch);
+                };
 
-        release
-    });
+                metadata
+            });
 
-    trace!("[{}] Caching release metadata", &tag);
-    cache.write().await.insert(manifestref, release.clone());
-    Ok(release)
+            trace!("[{}] Caching release metadata", &tag);
+            cache
+                .write()
+                .await
+                .insert(manifestref.clone(), metadata.clone());
+
+            metadata
+        }
+    };
+
+    Ok(metadata.map(|metadata| {
+        let source = format_release_source(&registry, &repo, &manifestref);
+        cincinnati::plugins::internal::graph_builder::release::Release { source, metadata }
+    }))
 }
 
 // Get a stream of tags
@@ -398,17 +421,19 @@ async fn get_manifest_and_ref(
     Ok((tag, manifest, manifestref))
 }
 
-async fn find_first_release(
+fn format_release_source(registry: &Registry, repo: &str, manifestref: &str) -> String {
+    format!("{}/{}@{}", registry.host_port_string(), repo, manifestref)
+}
+
+async fn find_first_release_metadata(
     layer_digests: Vec<String>,
     authenticated_client: dkregistry::v2::Client,
-    registry_host: String,
     repo: String,
     tag: String,
-    manifestref: String,
-) -> Fallible<Option<cincinnati::plugins::internal::graph_builder::release::Release>> {
+) -> Fallible<Option<Metadata>> {
     for layer_digest in layer_digests {
         trace!("[{}] Downloading layer {}", &tag, &layer_digest);
-        let (registry_host, repo, tag) = (registry_host.clone(), repo.clone(), tag.clone());
+        let (repo, tag) = (repo.clone(), tag.clone());
 
         let blob = authenticated_client
             .get_blob(&repo, &layer_digest)
@@ -429,15 +454,7 @@ async fn find_first_release(
             .await?
         {
             Ok(metadata) => {
-                // Specify the source by manifestref
-                let source = format!("{}/{}@{}", registry_host, repo, &manifestref);
-
-                return Ok(Some(
-                    cincinnati::plugins::internal::graph_builder::release::Release {
-                        source,
-                        metadata,
-                    },
-                ));
+                return Ok(Some(metadata));
             }
             Err(e) => {
                 debug!(
@@ -548,21 +565,13 @@ mod tests {
                     port: None,
                 },
             ),
-            (
-                "https://quay.io",
-                Registry {
-                    scheme: "https".to_string(),
-                    insecure: false,
-                    host: "quay.io".to_string(),
-                    port: None,
-                },
-            ),
         ];
 
         for (input, expected) in tests {
             let registry: Registry = Registry::try_from_str(input)
                 .unwrap_or_else(|_| panic!("could not parse {} to registry", input));
             assert_eq!(registry, expected);
+            assert_eq!(input, registry.host_port_string());
         }
     }
 }

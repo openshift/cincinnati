@@ -250,7 +250,7 @@ fn fetch_release_public_with_first_empty_tag_must_succeed() {
 }
 
 #[test]
-fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
+fn fetch_release_public_must_succeed_with_various_registry_urls() {
     let (mut runtime, cache) = common_init();
 
     let test = |registry: Registry| {
@@ -296,9 +296,9 @@ fn fetch_release_public_must_succeed_with_schemes_missing_http_https() {
 
     [
         "quay.io",
+        "quay.io:443",
         // TODO: enable this when the dkregistry-rs migration to reqwest is complete
         //"http://quay.io",
-        "https://quay.io",
     ]
     .iter()
     .map(|url| registry::Registry::try_from_str(url).unwrap())
@@ -343,7 +343,7 @@ fn fetch_release_with_cyclic_metadata_fails() -> Fallible<()> {
 fn fetch_releases_public_multiarch_manual_succeeds() -> Fallible<()> {
     let (mut runtime, cache) = common_init();
 
-    let registry = registry::Registry::try_from_str("https://quay.io")?;
+    let registry = registry::Registry::try_from_str("quay.io")?;
     let repo = "redhat/openshift-cincinnati-test-public-multiarch-manual";
     let (username, password) = (None, None);
     let releases = runtime
