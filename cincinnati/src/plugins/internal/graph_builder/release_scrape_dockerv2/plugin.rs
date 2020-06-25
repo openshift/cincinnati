@@ -8,7 +8,7 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use std::convert::TryInto;
 
 /// Default registry to scrape.
-pub static DEFAULT_SCRAPE_REGISTRY: &str = "https://quay.io";
+pub static DEFAULT_SCRAPE_REGISTRY: &str = "quay.io";
 
 /// Default repository to scrape.
 pub static DEFAULT_SCRAPE_REPOSITORY: &str = "openshift-release-dev/ocp-release";
@@ -182,7 +182,7 @@ mod network_tests {
     fn scrape_public_multiarch_manual_succeeds() -> Fallible<()> {
         let (mut runtime, _) = common_init();
 
-        let registry = "https://quay.io";
+        let registry = DEFAULT_SCRAPE_REGISTRY;
         let repo = "redhat/openshift-cincinnati-test-public-multiarch-manual";
 
         let plugin = Box::new(ReleaseScrapeDockerv2Plugin::try_new(
@@ -302,7 +302,7 @@ mod network_tests {
             ];
 
             TestGraphBuilder::new()
-                .with_image(&format!("quay.io/{}", repo))
+                .with_image(&format!("{}/{}", DEFAULT_SCRAPE_REGISTRY, repo))
                 .with_metadata(input_metadata)
                 .with_edges(input_edges)
                 .with_version_template("0.0.{{i}}")
