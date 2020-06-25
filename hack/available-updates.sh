@@ -12,7 +12,7 @@ then
 fi
 
 URI="${UPSTREAM}?channel=${CHANNEL}&arch=${ARCH}"
-DATA="$(curl -sH Accept:application/json "${URI}")"
+DATA="$(curl -sHL Accept:application/json "${URI}")"
 if test -z "${DATA}"
 then
 	 echo "Failed to fetch data from ${URI}"
