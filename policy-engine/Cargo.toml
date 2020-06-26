@@ -16,7 +16,7 @@ hyper = "^0.13"
 lazy_static = "^1.2.0"
 log = "^0.4.3"
 openapiv3 = "0.1"
-prometheus = { git = "https://github.com/pingcap/rust-prometheus.git", rev = "6a02b0d2943f8fffce672e236e22c6f925184d93"}
+prometheus = "0.9"
 semver = { version = "^0.9.0", features = [ "serde" ] }
 serde = "^1.0.70"
 serde_derive = "^1.0.70"
