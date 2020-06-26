@@ -14,7 +14,7 @@ futures = "0.3"
 futures-locks = "0.5.0"
 lazy_static = "^1.2.0"
 log = "^0.4.3"
-prometheus = { git = "https://github.com/pingcap/rust-prometheus.git", rev = "6a02b0d2943f8fffce672e236e22c6f925184d93"}
+prometheus = "0.9"
 protobuf = "2.0"
 quay = { path = "../quay" }
 regex = "^1.1.0"
