@@ -209,19 +209,29 @@ pub async fn fetch_releases(
     manifestref_key: &str,
     concurrency: usize,
 ) -> Result<Vec<cincinnati::plugins::internal::graph_builder::release::Release>, Error> {
-    let authenticated_client = dkregistry::v2::Client::configure()
-        .registry(&registry.host_port_string())
-        .insecure_registry(registry.insecure)
-        .username(username.map(ToString::to_string))
-        .password(password.map(ToString::to_string))
-        .build()
-        .map_err(|e| format_err!("{}", e))?
-        .authenticate(format!("repository:{}:pull", &repo))
-        .await
-        .map_err(|e| format_err!("{}", e))?;
+    let registry_client = {
+        let authenticate = username.is_some() && password.is_some();
 
-    let authenticated_client_get_tags = authenticated_client.clone();
-    let tags = Box::pin(get_tags(repo, &authenticated_client_get_tags).await);
+        let client_builder = dkregistry::v2::Client::configure()
+            .registry(&registry.host_port_string())
+            .insecure_registry(registry.insecure);
+
+        if authenticate {
+            client_builder
+                .username(username.map(ToString::to_string))
+                .password(password.map(ToString::to_string))
+                .build()
+                .map_err(|e| format_err!("{}", e))?
+                .authenticate(&[&format!("repository:{}:pull", &repo)])
+                .await
+        } else {
+            client_builder.build()
+        }
+        .map_err(|e| format_err!("{}", e))?
+    };
+
+    let registry_client_get_tags = registry_client.clone();
+    let tags = Box::pin(get_tags(repo, &registry_client_get_tags).await);
 
     let releases = {
         let estimated_releases = match tags.size_hint() {
@@ -232,14 +242,14 @@ pub async fn fetch_releases(
     };
 
     tags.try_for_each_concurrent(concurrency, |tag| {
-        let authenticated_client = authenticated_client.clone();
+        let registry_client = registry_client.clone();
         let cache = cache.clone();
         let releases = releases.clone();
 
         async move {
             trace!("[{}] Fetching release", tag);
             let (tag, manifest, manifestref) =
-                get_manifest_and_ref(tag, repo.to_owned(), &authenticated_client).await?;
+                get_manifest_and_ref(tag, repo.to_owned(), &registry_client).await?;
 
             // Try to read the architecture from the manifest
             let arch = match manifest.architectures() {
@@ -277,7 +287,7 @@ pub async fn fetch_releases(
 
             let release = match lookup_or_fetch(
                 layers_digests,
-                authenticated_client.to_owned(),
+                registry_client.to_owned(),
                 registry.to_owned(),
                 repo.to_owned(),
                 tag.to_owned(),
@@ -324,7 +334,7 @@ pub async fn fetch_releases(
 #[allow(clippy::too_many_arguments)]
 async fn lookup_or_fetch(
     layer_digests: Vec<String>,
-    authenticated_client: dkregistry::v2::Client,
+    registry_client: dkregistry::v2::Client,
     registry: Registry,
     repo: String,
     tag: String,
@@ -350,7 +360,7 @@ async fn lookup_or_fetch(
         None => {
             let metadata = find_first_release_metadata(
                 layer_digests,
-                authenticated_client,
+                registry_client,
                 repo.clone(),
                 tag.clone(),
             )
@@ -395,9 +405,9 @@ async fn lookup_or_fetch(
 // Get a stream of tags
 async fn get_tags<'a, 'b: 'a>(
     repo: &'b str,
-    authenticated_client: &'b dkregistry::v2::Client,
+    registry_client: &'b dkregistry::v2::Client,
 ) -> impl TryStreamExt<Item = Fallible<String>> + 'a {
-    authenticated_client
+    registry_client
         // According to https://docs.docker.com/registry/spec/api/#listing-image-tags
         // the tags should be ordered lexically but they aren't
         .get_tags(repo, Some(20))
@@ -407,10 +417,10 @@ async fn get_tags<'a, 'b: 'a>(
 async fn get_manifest_and_ref(
     tag: String,
     repo: String,
-    authenticated_client: &dkregistry::v2::Client,
+    registry_client: &dkregistry::v2::Client,
 ) -> Result<(String, dkregistry::v2::manifest::Manifest, String), Error> {
     trace!("[{}] Processing {}", &tag, &repo);
-    let (manifest, manifestref) = authenticated_client
+    let (manifest, manifestref) = registry_client
         .get_manifest_and_ref(&repo, &tag)
         .map_err(|e| format_err!("{}", e))
         .await?;
@@ -427,7 +437,7 @@ fn format_release_source(registry: &Registry, repo: &str, manifestref: &str) -> 
 
 async fn find_first_release_metadata(
     layer_digests: Vec<String>,
-    authenticated_client: dkregistry::v2::Client,
+    registry_client: dkregistry::v2::Client,
     repo: String,
     tag: String,
 ) -> Fallible<Option<Metadata>> {
@@ -435,7 +445,7 @@ async fn find_first_release_metadata(
         trace!("[{}] Downloading layer {}", &tag, &layer_digest);
         let (repo, tag) = (repo.clone(), tag.clone());
 
-        let blob = authenticated_client
+        let blob = registry_client
             .get_blob(&repo, &layer_digest)
             .map_err(|e| format_err!("{}", e))
             .await?;
