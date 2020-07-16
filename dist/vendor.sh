@@ -2,15 +2,15 @@
 
 CARGO_CONFIG=".cargo/config.toml"
 FILES_TO_COMMIT=(
-  ".cargo"
+  "${CARGO_CONFIG}"
   "vendor"
   "rh-manifest.txt"
 )
 
 # Don't overwrite any existing config
 [ ! -f "${CARGO_CONFIG}" ] || {
-  echo ERROR ${CARGO_CONFIG} exists.
-  exit 1
+  echo WARNING ${CARGO_CONFIG} exists, moving away..
+  mv --backup=existing ${CARGO_CONFIG}{,.prev}
 }
 
 set -xueo pipefail
