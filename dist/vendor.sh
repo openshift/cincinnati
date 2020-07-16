@@ -24,6 +24,8 @@ cargo vendor > "${CARGO_CONFIG}"
 # some vendored files aren't world readable which has lead to issues in container builds when trying out the workflow
 find ./vendor -type f -exec chmod a+r {} \;
 
-
 git add --force "${FILES_TO_COMMIT[@]}"
-git commit -m "Vendor dependencies and update cargo to use them, and add rh-manifest.txt" -- "${FILES_TO_COMMIT[@]}"
+git diff --quiet --staged -- "${FILES_TO_COMMIT[@]}" || {
+  echo Files changed, committing...
+  git commit -m "Update vendored dependencies and rh-manifest.txt" -- "${FILES_TO_COMMIT[@]}"
+}
