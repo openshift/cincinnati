@@ -63,6 +63,7 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str) {
                 "io.openshift.upgrades.graph.previous.remove_regex",
                 "io.openshift.upgrades.graph.previous.remove",
             ],
+            payload_remove_registry_and_repo: true,
 
             ..Default::default()
         },

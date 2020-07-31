@@ -74,9 +74,10 @@ oc new-app -f dist/openshift/cincinnati.yaml \
   -p GB_PLUGIN_SETTINGS="$(cat <<-EOF
       [[plugin_settings]]
       name = "release-scrape-dockerv2"
-      registry = "${E2E_SCRAPE_REGISTRY:-quay.io}"
-      repository = "${E2E_SCRAPE_REPOSITORY:-openshift-release-dev/ocp-release}"
+      registry = "${E2E_SCRAPE_REGISTRY:-registry.svc.ci.openshift.org}"
+      repository = "${E2E_SCRAPE_REPOSITORY:-cincinnati-ci-public/ocp-release}"
       fetch_concurrency = 128
+      anonymous_auth = true
 
       [[plugin_settings]]
       name = "github-secondary-metadata-scrape"
