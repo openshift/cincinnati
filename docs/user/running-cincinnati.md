@@ -16,6 +16,38 @@ The Cincinnati deploymentconfig is available [here](../../dist/openshift/cincinn
 oc new-project cincinnati
 ```
 
+#### Create secret for container registry
+
+If Cincinnati is configured to use services which require authentication, you need to create a secret with name `cincinnati-credentials`. Make sure the auth for the container registry is present in the config.json file to access a container registry with release payloads. See the [container auth format specification][container-auth-format-spec] for more information.
+
+```shell
+oc create secret generic cincinnati-credentials --from-file=.dockerconfigjson=/home/lmohanty/.docker/config.json --type=kubernetes.io/dockerconfigjson
+```
+
+An example config.json:
+
+```
+$ cat ~/.docker/config.json
+{
+        "auths": {
+                "quay.io": {
+                        "auth": "bar=="
+                }
+        }
+}
+```
+
+If you are using a secure external container registry to hold mirrored OpenShift
+release images, Cincinnati will need access to this registry in order to build
+an upgrade graph.  Here's how you can inject your CA Cert into the Cincinnati
+pod.
+
+OpenShift has an external registry API, located at `image.config.openshift.io`,
+that we'll use to store the external registry CA Cert.  You can read more about
+this API in the [OpenShift documentation](https://docs.openshift.com/container-platform/4.3/registry/configuring-registry-operator.html#images-configuration-cas_configuring-registry-operator).
+
+For more information around use of the container registry, see the section on [configuring a container registry](#configure-a-container-registry-to-scrape-release-payload-information).
+
 #### Create Cincinnati deployment
 
 ```shell
@@ -88,3 +120,4 @@ EOF
 ```
 
 [registry-api-v2]: https://docs.docker.com/registry/spec/api
+[container-auth-format-spec]: https://github.com/containers/image/blob/v5.5.2/docs/containers-auth.json.5.md
