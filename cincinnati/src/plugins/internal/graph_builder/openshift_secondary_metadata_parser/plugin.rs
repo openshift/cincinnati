@@ -6,7 +6,7 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 
 pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 
-mod graph_data_model {
+pub mod graph_data_model {
     //! This module contains the data types corresponding to the graph data files.
 
     use serde::de::Visitor;
