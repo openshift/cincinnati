@@ -148,7 +148,7 @@ impl PluginSettings for OpenshiftSecondaryMetadataParserSettings {
     }
 }
 
-async fn deserialize_directory_files<T>(
+pub async fn deserialize_directory_files<T>(
     path: &PathBuf,
     extension_re: regex::Regex,
 ) -> Fallible<Vec<T>>
