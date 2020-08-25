@@ -24,30 +24,30 @@ pub static DEFAULT_FETCH_CONCURRENCY: usize = 16;
 #[serde(default)]
 pub struct ReleaseScrapeDockerv2Settings {
     #[default(DEFAULT_SCRAPE_REGISTRY.to_string())]
-    registry: String,
+    pub registry: String,
 
     #[default(DEFAULT_SCRAPE_REPOSITORY.to_string())]
-    repository: String,
+    pub repository: String,
 
     /// Metadata key where to record the manifest-reference.
     #[default(DEFAULT_MANIFESTREF_KEY.to_string())]
-    manifestref_key: String,
+    pub manifestref_key: String,
 
     #[default(DEFAULT_FETCH_CONCURRENCY)]
-    fetch_concurrency: usize,
+    pub fetch_concurrency: usize,
 
     /// Username for authenticating with the registry
     #[default(Option::None)]
-    username: Option<String>,
+    pub username: Option<String>,
 
     /// Password for authenticating with the registry
     #[default(Option::None)]
-    password: Option<String>,
+    pub password: Option<String>,
 
     /// File containing the credentials for authenticating with the registry.
     /// Takes precedence over username and password
     #[default(Option::None)]
-    credentials_path: Option<PathBuf>,
+    pub credentials_path: Option<PathBuf>,
 }
 
 impl PluginSettings for ReleaseScrapeDockerv2Settings {
