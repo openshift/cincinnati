@@ -204,6 +204,9 @@ where
     Ok(t_vec)
 }
 
+pub static BLOCKED_EDGES_DIR: &str = "blocked-edges";
+pub static CHANNELS_DIR: &str = "channels";
+
 impl OpenshiftSecondaryMetadataParserPlugin {
     pub(crate) const PLUGIN_NAME: &'static str = "openshift-secondary-metadata-parse";
 
@@ -272,7 +275,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
         graph: &mut cincinnati::Graph,
         data_dir: &PathBuf,
     ) -> Fallible<()> {
-        let blocked_edges_dir = data_dir.join("blocked-edges");
+        let blocked_edges_dir = data_dir.join(BLOCKED_EDGES_DIR);
         let blocked_edges: Vec<graph_data_model::BlockedEdge> =
             deserialize_directory_files(&blocked_edges_dir, regex::Regex::new("ya+ml")?)
                 .await
@@ -377,7 +380,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
         graph: &mut cincinnati::Graph,
         data_dir: &PathBuf,
     ) -> Fallible<()> {
-        let channels_dir = data_dir.join("channels");
+        let channels_dir = data_dir.join(CHANNELS_DIR);
         let channels: Vec<graph_data_model::Channel> =
             deserialize_directory_files(&channels_dir, regex::Regex::new("ya+ml")?)
                 .await
