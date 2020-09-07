@@ -52,7 +52,6 @@ function run_tests() {
           find \"${CARGO_TARGET_DIR}\"/debug/ -maxdepth 1 -type f -executable -print0 | xargs -n1 -0 \
           kcov \
               --exclude-pattern=$HOME/.cargo \
-              --verify \
               ${CARGO_TARGET_DIR}/cov
         fi
       "
