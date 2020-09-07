@@ -10,12 +10,8 @@ RUN yum -y install openssl-devel protobuf-compiler
 ENV HOME="/root"
 ENV PATH="${HOME}/.cargo/bin:${PATH}"
 
-# build: Rust stable toolchain + 2 previous versions
-RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.45.0 -y && \
-  rustup install 1.42.0 && \
-  rustup install 1.43.0 && \
-  rustup install 1.44.0 && \
-  rustup default 1.45.0
+# build: Rust stable toolchain
+RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.46.0 -y
 
 # test: linters
 RUN yum -y install yamllint
