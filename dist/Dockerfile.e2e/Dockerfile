@@ -2,7 +2,6 @@ FROM quay.io/app-sre/cincinnati:builder AS rust_builder
 # build e2e tests
 COPY . .
 
-RUN yum -y install jq
 RUN hack/build_e2e.sh
 
 FROM registry.svc.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
