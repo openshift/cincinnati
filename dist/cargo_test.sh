@@ -36,25 +36,27 @@ function run_tests() {
     if [[ "${HAS_KOV}" -eq "1" ]]; then
       # we want to prevent completely untested functions to be stripped
       export RUSTFLAGS='-C link-dead-code'
-      export CARGO_ARGS="test --no-run"
-
-      # delete leftover test executibles
-      [[ ! -d "${CARGO_TARGET_DIR}"/debug ]] || find "${CARGO_TARGET_DIR}"/debug/ -maxdepth 1 -type f -executable -print -delete
     fi
 
     (
       ${1} /usr/bin/env bash -c "\
+        set -x
         cd ${directory}
-        cargo ${CARGO_ARGS:-test} ${cargo_test_flags[${directory}]}
-
-        if [[ \"${HAS_KOV}\" -eq \"1\" ]]; then
-          rm -f \"${CARGO_TARGET_DIR}\"/debug/${directory}
-          find \"${CARGO_TARGET_DIR}\"/debug/ -maxdepth 1 -type f -executable -print0 | xargs -n1 -0 \
-          kcov \
+        mapfile -t tests < <(
+          cargo test --no-run --message-format=json ${cargo_test_flags[${directory}]} | \
+            jq -r 'select(.profile.test == true) | .executable'
+        )
+        for test in \${tests[@]}; do
+          if [[ \"${HAS_KOV}\" -eq \"1\" ]]; then
+            kcov \
               --exclude-pattern=$HOME/.cargo \
               --verify \
-              ${CARGO_TARGET_DIR}/cov
-        fi
+              ${CARGO_TARGET_DIR}/cov \
+              \$test
+          else
+            \$test
+          fi
+        done
       "
     )
 
