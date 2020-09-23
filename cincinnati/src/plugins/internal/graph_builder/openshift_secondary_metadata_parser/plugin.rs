@@ -510,8 +510,8 @@ mod tests {
 
     #[test_case("20200220.104838")]
     #[test_case("20200319.204124")]
-    fn compare_quay_result_fixture(fixture: &str) -> Fallible<()> {
-        let mut runtime = commons::testing::init_runtime()?;
+    fn compare_quay_result_fixture(fixture: &str) {
+        let mut runtime = commons::testing::init_runtime().unwrap();
 
         let fixture_directory = TEST_FIXTURE_DIR.join(fixture);
 
@@ -525,9 +525,9 @@ mod tests {
         };
 
         // Get the fixture data
-        let graph_raw = read_file_to_graph("graph-gb-raw.json")?;
+        let graph_raw = read_file_to_graph("graph-gb-raw.json").unwrap();
         let graph_with_quay_metadata: cincinnati::Graph =
-            read_file_to_graph("graph-gb-with-quay-metadata.json")?;
+            read_file_to_graph("graph-gb-with-quay-metadata.json").unwrap();
 
         // Configure the plugin
         let plugin = Box::new(OpenshiftSecondaryMetadataParserPlugin::new(
@@ -539,8 +539,10 @@ mod tests {
                 &fixture_directory.join("cincinnati-graph-data"),
                 cincinnati::plugins::internal::edge_add_remove::DEFAULT_KEY_FILTER,
             ))
-            .context("Parsing config string to settings")?,
+            .context("Parsing config string to settings")
+            .unwrap(),
         ));
+
         let edge_add_remove_plugin = Box::new(
             cincinnati::plugins::internal::edge_add_remove::EdgeAddRemovePlugin {
                 remove_consumed_metadata: false,
@@ -556,14 +558,16 @@ mod tests {
                     graph: graph_raw,
                     parameters: Default::default(),
                 }))
-                .context("Running plugin")?;
+                .context("Running plugin")
+                .unwrap();
 
             // Run through the EdgeAddRemovePlugin to compare it with the control data
             runtime
                 .block_on(edge_add_remove_plugin.run_internal(io))
                 .context(
                     "Running plugin result with quay metadata through the EdgeEAddRemovePlugin",
-                )?
+                )
+                .unwrap()
                 .graph
         };
 
@@ -577,7 +581,8 @@ mod tests {
                 }))
                 .context(
                     "Running fixture graph with quay metadata through the EdgeEAddRemovePlugin",
-                )?
+                )
+                .unwrap()
                 .graph
         };
 
@@ -592,6 +597,5 @@ mod tests {
             panic!("{}", e);
         }
 
-        Ok(())
     }
 }
