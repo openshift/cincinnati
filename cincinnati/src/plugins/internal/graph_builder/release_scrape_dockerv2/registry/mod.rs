@@ -210,22 +210,32 @@ pub async fn fetch_releases(
     concurrency: usize,
 ) -> Result<Vec<cincinnati::plugins::internal::graph_builder::release::Release>, Error> {
     let registry_client = {
-        let authenticate = username.is_some() && password.is_some();
-
         let client_builder = dkregistry::v2::Client::configure()
             .registry(&registry.host_port_string())
             .insecure_registry(registry.insecure);
+        let scope = format!("repository:{}:pull", &repo);
 
-        if authenticate {
+        if username.is_some() && password.is_some() {
             client_builder
                 .username(username.map(ToString::to_string))
                 .password(password.map(ToString::to_string))
                 .build()?
-                .authenticate(&[&format!("repository:{}:pull", &repo)])
-                .await
+                .authenticate(&[&scope])
+                .await?
         } else {
-            client_builder.build()
-        }?
+            let client = client_builder.build()?;
+
+            if client
+                .is_v2_supported_and_authorized()
+                .await
+                .map(|(_, authorized)| authorized)?
+            {
+                client
+            } else {
+                debug!("registry not authorized, attempting anonymous authorization");
+                client.authenticate(&[&scope]).await?
+            }
+        }
     };
 
     let registry_client_get_tags = registry_client.clone();
