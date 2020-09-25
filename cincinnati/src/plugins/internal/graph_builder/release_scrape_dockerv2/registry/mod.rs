@@ -220,14 +220,12 @@ pub async fn fetch_releases(
             client_builder
                 .username(username.map(ToString::to_string))
                 .password(password.map(ToString::to_string))
-                .build()
-                .map_err(|e| format_err!("{}", e))?
+                .build()?
                 .authenticate(&[&format!("repository:{}:pull", &repo)])
                 .await
         } else {
             client_builder.build()
-        }
-        .map_err(|e| format_err!("{}", e))?
+        }?
     };
 
     let registry_client_get_tags = registry_client.clone();
