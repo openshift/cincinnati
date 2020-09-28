@@ -28,10 +28,13 @@ PULL_SECRET=${PULL_SECRET:-/tmp/cluster/pull-secret}
 set -euo pipefail
 # Copy KUBECONFIG so that it can be mutated
 cp -rvf $KUBECONFIG /tmp/kubeconfig
+ls -l "${KUBECONFIG}" /tmp
 export KUBECONFIG=/tmp/kubeconfig
+grep '^[^ ]' "${KUBECONFIG}"
+ls -l "${KUBECONFIG}"
 
 # Create a new project
-oc new-project cincinnati-e2e
+oc --v=8 new-project cincinnati-e2e
 oc project cincinnati-e2e
 
 # Create a dummy secret as a workaround to not having real secrets in e2e
