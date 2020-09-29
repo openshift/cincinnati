@@ -23,11 +23,11 @@ echo "IMAGE=${IMAGE}"
 echo "IMAGE_TAG=${IMAGE_TAG}"
 
 # Use defined PULL_SECRET or fall back to CI location
-PULL_SECRET=${PULL_SECRET:-/tmp/cluster/pull-secret}
+PULL_SECRET=${PULL_SECRET:-/var/run/secrets/ci.openshift.io/cluster-profile/pull-secret}
 
 set -euo pipefail
 # Copy KUBECONFIG so that it can be mutated
-cp -rvf $KUBECONFIG /tmp/kubeconfig
+cp -Lrvf $KUBECONFIG /tmp/kubeconfig
 export KUBECONFIG=/tmp/kubeconfig
 
 # Create a new project
