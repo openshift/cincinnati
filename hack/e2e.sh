@@ -27,7 +27,9 @@ PULL_SECRET=${PULL_SECRET:-/tmp/cluster/pull-secret}
 
 set -euo pipefail
 # Copy KUBECONFIG so that it can be mutated
-cp -rvf $KUBECONFIG /tmp/kubeconfig
+cp -Lrvf $KUBECONFIG /tmp/kubeconfig
+ls -la /tmp/kubeconfig
+cat /tmp/kubeconfig
 export KUBECONFIG=/tmp/kubeconfig
 
 # Create a new project
