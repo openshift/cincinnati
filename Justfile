@@ -5,10 +5,12 @@ metadata_revision_file := "metadata_revision"
 metadata_reference :='reference_branch = "master"'
 
 pause_secs := "9999999"
-registry := "https://quay.io"
-repository := "openshift-release-dev/ocp-release"
+registry := "registry.svc.ci.openshift.org"
+repository := "cincinnati-ci-public/ocp-release"
 credentials_file := "${HOME}/.docker/config.json"
 default_tracing_endpoint := "localhost:6831"
+
+
 
 metadata_reference_e2e:
 	printf 'reference_revision = "%s"' "$(cat {{testdata_dir}}/{{metadata_revision_file}})"
@@ -36,6 +38,13 @@ test-pwd +args="":
 	set -e
 	export RUST_BACKTRACE=1 RUST_LOG="graph-builder=trace,cincinnati=trace,dkregistry=trace"
 	pushd {{invocation_directory()}}
+	cargo test {{args}}
+
+test-dir dir +args="":
+	#!/usr/bin/env bash
+	set -e
+	export RUST_BACKTRACE=1 RUST_LOG="graph-builder=trace,cincinnati=trace,dkregistry=trace"
+	pushd {{dir}}
 	cargo test {{args}}
 
 test: format
@@ -136,6 +145,10 @@ run-graph-builder:
 	trap 'rm -rf "$TMPDIR"' EXIT
 	export TMPDIR=$(mktemp -d)
 
+	if [[ -n "{{credentials_file}}" ]]; then
+		CREDENTIALS_PATH = "credentials_path = {{credentials_file}}"
+	fi
+
 	cargo run --package graph-builder -- -c <(cat <<-EOF
 		verbosity = "vvv"
 
@@ -156,7 +169,8 @@ run-graph-builder:
 		registry = "{{registry}}"
 		repository = "{{repository}}"
 		fetch_concurrency=128
-		credentials_path = "{{credentials_file}}"
+		${CREDENTIALS_FILE}
+		anonymous_auth = true
 
 		[[plugin_settings]]
 		name = "github-secondary-metadata-scrape"
@@ -179,7 +193,7 @@ run-graph-builder-satellite:
 
 run-graph-builder-e2e:
 	just \
-		registry="{{registry}}" repository="{{repository}}" \
+		registry="{{registry}}" repository="{{repository}}" credentials_file={{credentials_file}} \
 		metadata_reference="$(just metadata_reference_e2e)" \
 		run-graph-builder
 
@@ -239,3 +253,9 @@ get-openapi-staging:
 
 get-openapi-production:
 	just get-openapi https://api.openshift.com 443
+
+sync-ci-ocp-release-repo:
+	#!/usr/bin/env bash
+	set -xe
+	source hack/get_ci_secrets.sh
+	skopeo sync --src docker --dest docker --src-no-creds --dest-authfile="${CINCINNATI_CI_PUBLIC_DOCKERJSON_PATH}" quay.io/openshift-release-dev/ocp-release registry.svc.ci.openshift.org/cincinnati-ci-public/
