@@ -673,10 +673,14 @@ mod tests {
         if let Err(e) = compare_graphs_verbose(
             graph_expected,
             graph_result,
-            &[
-                "io.openshift.upgrades.graph.previous.remove",
-                "io.openshift.upgrades.graph.previous.remove_regex",
-            ],
+            cincinnati::testing::CompareGraphsVerboseSettings {
+                unwanted_metadata_keys: &[
+                    "io.openshift.upgrades.graph.previous.remove_regex",
+                    "io.openshift.upgrades.graph.previous.remove",
+                ],
+
+                ..Default::default()
+            },
         ) {
             panic!("{}", e);
         }
