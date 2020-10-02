@@ -937,14 +937,37 @@ pub mod testing {
         }
     }
 
+    /// Settings for the `compare_graphs_verbose` fn
+    #[derive(Default)]
+    pub struct CompareGraphsVerboseSettings<'a> {
+        pub unwanted_metadata_keys: &'a [&'a str],
+        pub payload_replace_sha_by_tag_left: bool,
+        pub payload_replace_sha_by_tag_right: bool,
+        pub payload_remove_registry_and_repo: bool,
+    }
+
     /// Compares two Graphs and gives a verbose error if not.
     pub fn compare_graphs_verbose(
         mut left: Graph,
         mut right: Graph,
-        unwanted_metadata_keys: &[&str],
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let removed_keys_left = remove_release_metadata(&mut left, unwanted_metadata_keys);
-        let removed_keys_right = remove_release_metadata(&mut right, unwanted_metadata_keys);
+        settings: CompareGraphsVerboseSettings,
+    ) -> Fallible<()> {
+        let removed_keys_left = remove_release_metadata(&mut left, settings.unwanted_metadata_keys);
+        let removed_keys_right =
+            remove_release_metadata(&mut right, settings.unwanted_metadata_keys);
+
+        if settings.payload_replace_sha_by_tag_left {
+            payload_replace_sha_by_tag_fn(&mut left)?;
+        }
+
+        if settings.payload_replace_sha_by_tag_right {
+            payload_replace_sha_by_tag_fn(&mut right)?;
+        }
+
+        if settings.payload_remove_registry_and_repo {
+            payload_remove_registry_and_repo(&mut left)?;
+            payload_remove_registry_and_repo(&mut right)?;
+        }
 
         if left == right {
             return Ok(());
@@ -976,7 +999,7 @@ pub mod testing {
             .format(),
         );
 
-        if !unwanted_metadata_keys.is_empty() {
+        if !settings.unwanted_metadata_keys.is_empty() {
             output.push("removed metadata:".into());
             output.push(
                 prettydiff::diff_lines(
@@ -987,7 +1010,7 @@ pub mod testing {
             );
         }
 
-        Err(output.join("\n").into())
+        bail!(output.join("\n"));
     }
 
     /// Removes the metadata given by the keys and returns it.
@@ -1016,6 +1039,45 @@ pub mod testing {
         });
 
         removed_metadata
+    }
+
+    /// Replace the digests by versioned tags in the release payload strings.
+    pub fn payload_replace_sha_by_tag_fn(graph: &mut Graph) -> Fallible<()> {
+        graph
+            .iter_releases_mut(|ref mut release| {
+                match release {
+                    Release::Concrete(ref mut release) => {
+                        // replace digest by tag to match expectency
+                        let version = release.version.to_string();
+                        let source_front = release.payload.split('@').next().ok_or_else(|| {
+                            Error::msg(format!("invalid version string {:?}", version))
+                        })?;
+                        release.payload = format!("{}:{}", source_front, version);
+
+                        Ok(())
+                    }
+                    _ => panic!("should not get here"),
+                }
+            })
+            .context("Post-processing the received graph to match the test expectations")
+    }
+
+    /// Remove the registry and the repository in release payload strings.
+    pub fn payload_remove_registry_and_repo(graph: &mut Graph) -> Fallible<()> {
+        graph
+            .iter_releases_mut(|ref mut release| {
+                match release {
+                    Release::Concrete(ref mut release) => {
+                        // replace digest by tag to match expectency
+                        let version = release.version.to_string();
+                        release.payload = version;
+
+                        Ok(())
+                    }
+                    _ => panic!("should not get here"),
+                }
+            })
+            .context("Post-processing the received graph to match the test expectations")
     }
 }
 
