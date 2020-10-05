@@ -1,6 +1,46 @@
 {
   "nodes": [
     {
+      "version": "4.1.20",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:a7e97365d16d8d920fedd3684b018b780337e069deb1dd8500e866c0d6110334",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "prerelease-4.1,stable-4.1,candidate-4.2,fast-4.2,stable-4.2",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:a7e97365d16d8d920fedd3684b018b780337e069deb1dd8500e866c0d6110334",
+        "url": "https://access.redhat.com/errata/RHBA-2019:3004"
+      }
+    },
+    {
+      "version": "4.1.21",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:a68066e534c41010b3750f18d620abede491965d5b0e860f5717b626cde08e5b",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "prerelease-4.1,stable-4.1,candidate-4.2,fast-4.2,stable-4.2",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:a68066e534c41010b3750f18d620abede491965d5b0e860f5717b626cde08e5b",
+        "url": "https://access.redhat.com/errata/RHBA-2019:3152"
+      }
+    },
+    {
+      "version": "4.1.22",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:31d3c3f2f3d3f9b40d6fde943d71ef823af3b3ceb41ea4fbcd6f428082a28872",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "prerelease-4.1,stable-4.1,candidate-4.2,fast-4.2,stable-4.2",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:31d3c3f2f3d3f9b40d6fde943d71ef823af3b3ceb41ea4fbcd6f428082a28872",
+        "url": "https://access.redhat.com/errata/RHBA-2019:3294"
+      }
+    },
+    {
+      "version": "4.1.23",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:5dc1a2097ec0ecab4ef322c4e87bce93821c8ac9130a64ea3dc2f2bd8411a69c",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "prerelease-4.1,stable-4.1,candidate-4.2,fast-4.2,stable-4.2",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:5dc1a2097ec0ecab4ef322c4e87bce93821c8ac9130a64ea3dc2f2bd8411a69c",
+        "url": "https://access.redhat.com/errata/RHBA-2019:3766"
+      }
+    },
+    {
       "version": "4.1.24",
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:6f87fb66dfa907db03981e69474ea3069deab66358c18d965f6331bd727ff23f",
       "metadata": {
@@ -8,6 +48,16 @@
         "io.openshift.upgrades.graph.release.channels": "prerelease-4.1,stable-4.1,candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:6f87fb66dfa907db03981e69474ea3069deab66358c18d965f6331bd727ff23f",
         "url": "https://access.redhat.com/errata/RHBA-2019:3875"
+      }
+    },
+    {
+      "version": "4.1.25",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:5f824fa3b3c44c6a78a5fc6a77a82edc47cf2b495bb6b2b31e3e0a4d3d77684b",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "prerelease-4.1,stable-4.1,candidate-4.2,fast-4.2,stable-4.2",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:5f824fa3b3c44c6a78a5fc6a77a82edc47cf2b495bb6b2b31e3e0a4d3d77684b",
+        "url": "https://access.redhat.com/errata/RHBA-2019:3913"
       }
     },
     {
@@ -81,11 +131,31 @@
       }
     },
     {
+      "version": "4.1.38",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:89dc6820f6dd8b56983dccde5a3ca5aaebebd4a8703d77194eb7cea746129d0b",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "prerelease-4.1,stable-4.1,candidate-4.2,fast-4.2,stable-4.2",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:89dc6820f6dd8b56983dccde5a3ca5aaebebd4a8703d77194eb7cea746129d0b",
+        "url": "https://access.redhat.com/errata/RHBA-2020:0691"
+      }
+    },
+    {
+      "version": "4.1.41",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:a8f706d139c8e77d884ccedbf67d69eefd67b66dcf69ee1032b507fe3acbf8c8",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "prerelease-4.1,stable-4.1,candidate-4.2,fast-4.2,stable-4.2",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:a8f706d139c8e77d884ccedbf67d69eefd67b66dcf69ee1032b507fe3acbf8c8",
+        "url": "https://access.redhat.com/errata/RHBA-2020:1446"
+      }
+    },
+    {
       "version": "4.2.0",
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:c5337afd85b94c93ec513f21c8545e3f9e36a227f55d41bc1dfb8fcc3f2be129",
       "metadata": {
         "description": "",
-        "io.openshift.upgrades.graph.previous.remove": "4.1.20",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:c5337afd85b94c93ec513f21c8545e3f9e36a227f55d41bc1dfb8fcc3f2be129",
         "url": "https://access.redhat.com/errata/RHBA-2019:2922"
@@ -96,7 +166,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:32f2e138c0c5af6183830a22801f627bedb414591332960b7c8506ba7f6d7bb6",
       "metadata": {
         "description": "",
-        "io.openshift.upgrades.graph.previous.remove": "*",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:32f2e138c0c5af6183830a22801f627bedb414591332960b7c8506ba7f6d7bb6",
         "url": "https://access.redhat.com/errata/RHBA-2019:3151"
@@ -107,6 +177,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:dc782b44cac3d59101904cc5da2b9d8bdb90e55a07814df50ea7a13071b0f5f0",
       "metadata": {
         "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:dc782b44cac3d59101904cc5da2b9d8bdb90e55a07814df50ea7a13071b0f5f0",
         "url": "https://access.redhat.com/errata/RHBA-2019:3151"
@@ -117,6 +188,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:cebce35c054f1fb066a4dc0a518064945087ac1f3637fe23d2ee2b0c433d6ba8",
       "metadata": {
         "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:cebce35c054f1fb066a4dc0a518064945087ac1f3637fe23d2ee2b0c433d6ba8",
         "url": "https://access.redhat.com/errata/RHBA-2019:3303"
@@ -127,6 +199,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:bac62983757570b9b8f8bc84c740782984a255c16372b3e30cfc8b52c0a187b9",
       "metadata": {
         "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:bac62983757570b9b8f8bc84c740782984a255c16372b3e30cfc8b52c0a187b9",
         "url": "https://access.redhat.com/errata/RHBA-2019:3869"
@@ -137,6 +210,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:4bf307b98beba4d42da3316464013eac120c6e5a398646863ef92b0e2c621230",
       "metadata": {
         "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:4bf307b98beba4d42da3316464013eac120c6e5a398646863ef92b0e2c621230",
         "url": "https://access.redhat.com/errata/RHBA-2019:3919"
@@ -147,6 +221,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:f28cbabd1227352fe704a00df796a4511880174042dece96233036a10ac61639",
       "metadata": {
         "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:f28cbabd1227352fe704a00df796a4511880174042dece96233036a10ac61639",
         "url": "https://access.redhat.com/errata/RHBA-2019:3953"
@@ -157,6 +232,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:dc2e38fb00085d6b7f722475f8b7b758a0cb3a02ba42d9acf8a8298a6d510d9c",
       "metadata": {
         "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:dc2e38fb00085d6b7f722475f8b7b758a0cb3a02ba42d9acf8a8298a6d510d9c",
         "url": "https://access.redhat.com/errata/RHBA-2019:4093"
@@ -167,7 +243,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:49ee20ee3102b15a7cf4c019fd8875134fda41ccda1dc27b6e4483ded2aa8a5c",
       "metadata": {
         "description": "",
-        "io.openshift.upgrades.graph.previous.remove": "*",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:49ee20ee3102b15a7cf4c019fd8875134fda41ccda1dc27b6e4483ded2aa8a5c",
         "url": "https://access.redhat.com/errata/RHBA-2019:4181"
@@ -178,6 +254,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:77ade34c373062c6a6c869e0e56ef93b2faaa373adadaac1430b29484a24d843",
       "metadata": {
         "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:77ade34c373062c6a6c869e0e56ef93b2faaa373adadaac1430b29484a24d843",
         "url": "https://access.redhat.com/errata/RHBA-2019:4181"
@@ -188,6 +265,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:782b41750f3284f3c8ee2c1f8cb896896da074e362cf8a472846356d1617752d",
       "metadata": {
         "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:782b41750f3284f3c8ee2c1f8cb896896da074e362cf8a472846356d1617752d",
         "url": "https://access.redhat.com/errata/RHBA-2020:0014"
@@ -198,6 +276,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:3fabe939da31f9a31f509251b9f73d321e367aba2d09ff392c2f452f6433a95a",
       "metadata": {
         "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:3fabe939da31f9a31f509251b9f73d321e367aba2d09ff392c2f452f6433a95a",
         "url": "https://access.redhat.com/errata/RHBA-2020:0066"
@@ -208,7 +287,8 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:e5a6e348721c38a78d9299284fbb5c60fb340135a86b674b038500bf190ad514",
       "metadata": {
         "description": "",
-        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3,stable-4.3",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:e5a6e348721c38a78d9299284fbb5c60fb340135a86b674b038500bf190ad514",
         "url": "https://access.redhat.com/errata/RHBA-2020:0107"
       }
@@ -218,7 +298,8 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:283a1625e18e0b6d7f354b1b022a0aeaab5598f2144ec484faf89e1ecb5c7498",
       "metadata": {
         "description": "",
-        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3,stable-4.3",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:283a1625e18e0b6d7f354b1b022a0aeaab5598f2144ec484faf89e1ecb5c7498",
         "url": "https://access.redhat.com/errata/RHBA-2020:0395"
       }
@@ -228,7 +309,8 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:b51a0c316bb0c11686e6b038ec7c9f7ff96763f47a53c3443ac82e8c054bc035",
       "metadata": {
         "description": "",
-        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3,stable-4.3",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:b51a0c316bb0c11686e6b038ec7c9f7ff96763f47a53c3443ac82e8c054bc035",
         "url": "https://access.redhat.com/errata/RHBA-2020:0460"
       }
@@ -238,6 +320,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:bd8aa8e0ce08002d4f8e73d6a2f9de5ae535a6a961ff6b8fdf2c52e4a14cc787",
       "metadata": {
         "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.1\\..*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3,stable-4.3",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:bd8aa8e0ce08002d4f8e73d6a2f9de5ae535a6a961ff6b8fdf2c52e4a14cc787",
         "url": "https://access.redhat.com/errata/RHBA-2020:0523"
@@ -258,10 +341,71 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:81154f5c03294534e1eaf0319bef7a601134f891689ccede5d705ef659aa8c92",
       "metadata": {
         "description": "",
-        "io.openshift.upgrades.graph.previous.remove": "*",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3,stable-4.3",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:81154f5c03294534e1eaf0319bef7a601134f891689ccede5d705ef659aa8c92",
         "url": "https://access.redhat.com/errata/RHBA-2020:0685"
+      }
+    },
+    {
+      "version": "4.2.23",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:405077bc32c7228b403643cc5b47678c6b4fce98bc236e043169f784e325547c",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3,stable-4.3",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:405077bc32c7228b403643cc5b47678c6b4fce98bc236e043169f784e325547c",
+        "url": "https://access.redhat.com/errata/RHBA-2020:0787"
+      }
+    },
+    {
+      "version": "4.2.25",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:dfbe59ca5dcc017475a0e1c703f51750c1bde63f12c725fbe4b7a599e36eb725",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3,stable-4.3",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:dfbe59ca5dcc017475a0e1c703f51750c1bde63f12c725fbe4b7a599e36eb725",
+        "url": "https://access.redhat.com/errata/RHBA-2020:0826"
+      }
+    },
+    {
+      "version": "4.2.26",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:af0a6384e787c820279a0954c804d9c27b13458df2de366b3cd5ec3a7cdaa4b2",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3,stable-4.3",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:af0a6384e787c820279a0954c804d9c27b13458df2de366b3cd5ec3a7cdaa4b2",
+        "url": "https://access.redhat.com/errata/RHBA-2020:0936"
+      }
+    },
+    {
+      "version": "4.2.27",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:26b501f5111add85989de9f02e368a0bfda8b43a54d0d56f4bf5916abada34da",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3,stable-4.3",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:26b501f5111add85989de9f02e368a0bfda8b43a54d0d56f4bf5916abada34da",
+        "url": "https://access.redhat.com/errata/RHBA-2020:1263"
+      }
+    },
+    {
+      "version": "4.2.28",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:c196196d04e08518f0b1ea2926c07643b4a0fd0c0b8940c1d541dacd803a6029",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3,stable-4.3",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:c196196d04e08518f0b1ea2926c07643b4a0fd0c0b8940c1d541dacd803a6029",
+        "url": "https://access.redhat.com/errata/RHBA-2020:1398"
+      }
+    },
+    {
+      "version": "4.2.29",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:3bff53ce2202ec59ed87581106b05f364fea0e7459f5806e4dc6e5129f130b36",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,candidate-4.3,fast-4.3,stable-4.3",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:3bff53ce2202ec59ed87581106b05f364fea0e7459f5806e4dc6e5129f130b36",
+        "url": "https://access.redhat.com/errata/RHBA-2020:1450"
       }
     }
   ],
@@ -296,11 +440,11 @@
     ],
     [
       0,
-      12
+      8
     ],
     [
       0,
-      13
+      9
     ],
     [
       1,
@@ -328,7 +472,19 @@
     ],
     [
       1,
-      14
+      8
+    ],
+    [
+      1,
+      9
+    ],
+    [
+      1,
+      10
+    ],
+    [
+      1,
+      11
     ],
     [
       2,
@@ -352,7 +508,15 @@
     ],
     [
       2,
-      15
+      8
+    ],
+    [
+      2,
+      9
+    ],
+    [
+      2,
+      12
     ],
     [
       3,
@@ -372,7 +536,27 @@
     ],
     [
       3,
-      17
+      8
+    ],
+    [
+      3,
+      9
+    ],
+    [
+      3,
+      10
+    ],
+    [
+      3,
+      11
+    ],
+    [
+      3,
+      12
+    ],
+    [
+      3,
+      13
     ],
     [
       4,
@@ -388,7 +572,27 @@
     ],
     [
       4,
-      18
+      8
+    ],
+    [
+      4,
+      9
+    ],
+    [
+      4,
+      10
+    ],
+    [
+      4,
+      11
+    ],
+    [
+      4,
+      12
+    ],
+    [
+      4,
+      13
     ],
     [
       5,
@@ -400,7 +604,31 @@
     ],
     [
       5,
-      19
+      8
+    ],
+    [
+      5,
+      9
+    ],
+    [
+      5,
+      10
+    ],
+    [
+      5,
+      11
+    ],
+    [
+      5,
+      12
+    ],
+    [
+      5,
+      13
+    ],
+    [
+      5,
+      14
     ],
     [
       6,
@@ -408,27 +636,71 @@
     ],
     [
       6,
-      20
+      8
+    ],
+    [
+      6,
+      9
+    ],
+    [
+      6,
+      10
+    ],
+    [
+      6,
+      11
+    ],
+    [
+      6,
+      12
+    ],
+    [
+      6,
+      13
+    ],
+    [
+      6,
+      14
     ],
     [
       7,
-      21
+      8
     ],
     [
       7,
-      22
+      9
     ],
     [
       7,
-      23
+      10
     ],
     [
       7,
-      24
+      11
+    ],
+    [
+      7,
+      12
+    ],
+    [
+      7,
+      13
+    ],
+    [
+      7,
+      14
+    ],
+    [
+      8,
+      9
     ],
     [
       8,
       10
+    ],
+    [
+      8,
+      11
     ],
     [
       8,
@@ -443,24 +715,24 @@
       14
     ],
     [
-      8,
-      15
-    ],
-    [
-      8,
-      17
-    ],
-    [
-      8,
-      18
-    ],
-    [
       9,
       10
     ],
     [
       9,
+      11
+    ],
+    [
+      9,
       12
+    ],
+    [
+      9,
+      13
+    ],
+    [
+      9,
+      14
     ],
     [
       10,
@@ -479,22 +751,6 @@
       14
     ],
     [
-      10,
-      15
-    ],
-    [
-      10,
-      17
-    ],
-    [
-      10,
-      18
-    ],
-    [
-      10,
-      19
-    ],
-    [
       11,
       12
     ],
@@ -507,26 +763,6 @@
       14
     ],
     [
-      11,
-      15
-    ],
-    [
-      11,
-      17
-    ],
-    [
-      11,
-      18
-    ],
-    [
-      11,
-      19
-    ],
-    [
-      11,
-      20
-    ],
-    [
       12,
       13
     ],
@@ -536,95 +772,31 @@
     ],
     [
       12,
-      15
-    ],
-    [
-      12,
-      17
-    ],
-    [
-      12,
-      18
-    ],
-    [
-      12,
-      19
-    ],
-    [
-      12,
-      20
-    ],
-    [
-      12,
-      21
+      31
     ],
     [
       13,
-      14
+      34
     ],
     [
       13,
-      15
+      35
     ],
     [
       13,
-      17
+      36
     ],
     [
       13,
-      18
+      37
     ],
     [
       13,
-      19
-    ],
-    [
-      13,
-      20
-    ],
-    [
-      13,
-      21
-    ],
-    [
-      14,
-      15
-    ],
-    [
-      14,
-      17
-    ],
-    [
-      14,
-      18
-    ],
-    [
-      14,
-      19
-    ],
-    [
-      14,
-      20
-    ],
-    [
-      14,
-      21
-    ],
-    [
-      14,
-      23
-    ],
-    [
-      14,
-      24
+      38
     ],
     [
       15,
       17
-    ],
-    [
-      15,
-      18
     ],
     [
       15,
@@ -644,21 +816,21 @@
     ],
     [
       15,
-      23
+      24
     ],
     [
       15,
-      24
+      25
+    ],
+    [
+      16,
+      17
     ],
     [
       16,
       19
     ],
     [
-      16,
-      20
-    ],
-    [
       17,
       18
     ],
@@ -680,11 +852,15 @@
     ],
     [
       17,
-      23
+      24
     ],
     [
       17,
-      24
+      25
+    ],
+    [
+      17,
+      26
     ],
     [
       18,
@@ -704,11 +880,19 @@
     ],
     [
       18,
-      23
+      24
     ],
     [
       18,
-      24
+      25
+    ],
+    [
+      18,
+      26
+    ],
+    [
+      18,
+      27
     ],
     [
       19,
@@ -724,11 +908,23 @@
     ],
     [
       19,
-      23
+      24
     ],
     [
       19,
-      24
+      25
+    ],
+    [
+      19,
+      26
+    ],
+    [
+      19,
+      27
+    ],
+    [
+      19,
+      28
     ],
     [
       20,
@@ -740,11 +936,23 @@
     ],
     [
       20,
-      23
+      24
     ],
     [
       20,
-      24
+      25
+    ],
+    [
+      20,
+      26
+    ],
+    [
+      20,
+      27
+    ],
+    [
+      20,
+      28
     ],
     [
       21,
@@ -752,23 +960,363 @@
     ],
     [
       21,
-      23
+      24
     ],
     [
       21,
+      25
+    ],
+    [
+      21,
+      26
+    ],
+    [
+      21,
+      27
+    ],
+    [
+      21,
+      28
+    ],
+    [
+      21,
+      30
+    ],
+    [
+      21,
+      31
+    ],
+    [
+      22,
       24
     ],
     [
       22,
-      23
+      25
     ],
     [
       22,
-      24
+      26
+    ],
+    [
+      22,
+      27
+    ],
+    [
+      22,
+      28
+    ],
+    [
+      22,
+      29
+    ],
+    [
+      22,
+      30
+    ],
+    [
+      22,
+      31
     ],
     [
       23,
-      24
+      26
+    ],
+    [
+      23,
+      27
+    ],
+    [
+      24,
+      25
+    ],
+    [
+      24,
+      26
+    ],
+    [
+      24,
+      27
+    ],
+    [
+      24,
+      28
+    ],
+    [
+      24,
+      29
+    ],
+    [
+      24,
+      30
+    ],
+    [
+      24,
+      31
+    ],
+    [
+      25,
+      26
+    ],
+    [
+      25,
+      27
+    ],
+    [
+      25,
+      28
+    ],
+    [
+      25,
+      29
+    ],
+    [
+      25,
+      30
+    ],
+    [
+      25,
+      31
+    ],
+    [
+      26,
+      27
+    ],
+    [
+      26,
+      28
+    ],
+    [
+      26,
+      29
+    ],
+    [
+      26,
+      30
+    ],
+    [
+      26,
+      31
+    ],
+    [
+      26,
+      34
+    ],
+    [
+      26,
+      35
+    ],
+    [
+      27,
+      28
+    ],
+    [
+      27,
+      29
+    ],
+    [
+      27,
+      30
+    ],
+    [
+      27,
+      31
+    ],
+    [
+      27,
+      34
+    ],
+    [
+      27,
+      35
+    ],
+    [
+      27,
+      36
+    ],
+    [
+      27,
+      37
+    ],
+    [
+      28,
+      29
+    ],
+    [
+      28,
+      30
+    ],
+    [
+      28,
+      31
+    ],
+    [
+      28,
+      34
+    ],
+    [
+      28,
+      35
+    ],
+    [
+      28,
+      36
+    ],
+    [
+      28,
+      37
+    ],
+    [
+      29,
+      30
+    ],
+    [
+      29,
+      31
+    ],
+    [
+      29,
+      34
+    ],
+    [
+      29,
+      35
+    ],
+    [
+      29,
+      36
+    ],
+    [
+      29,
+      37
+    ],
+    [
+      29,
+      38
+    ],
+    [
+      30,
+      31
+    ],
+    [
+      30,
+      34
+    ],
+    [
+      30,
+      35
+    ],
+    [
+      30,
+      36
+    ],
+    [
+      30,
+      37
+    ],
+    [
+      30,
+      38
+    ],
+    [
+      31,
+      34
+    ],
+    [
+      31,
+      35
+    ],
+    [
+      31,
+      36
+    ],
+    [
+      31,
+      37
+    ],
+    [
+      31,
+      38
+    ],
+    [
+      32,
+      34
+    ],
+    [
+      32,
+      35
+    ],
+    [
+      32,
+      36
+    ],
+    [
+      32,
+      37
+    ],
+    [
+      32,
+      38
+    ],
+    [
+      33,
+      34
+    ],
+    [
+      33,
+      35
+    ],
+    [
+      33,
+      36
+    ],
+    [
+      33,
+      37
+    ],
+    [
+      33,
+      38
+    ],
+    [
+      34,
+      35
+    ],
+    [
+      34,
+      36
+    ],
+    [
+      34,
+      37
+    ],
+    [
+      34,
+      38
+    ],
+    [
+      35,
+      36
+    ],
+    [
+      35,
+      37
+    ],
+    [
+      35,
+      38
+    ],
+    [
+      36,
+      37
+    ],
+    [
+      36,
+      38
+    ],
+    [
+      37,
+      38
     ]
   ]
 }
