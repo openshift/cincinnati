@@ -1,0 +1,15 @@
+{
+  "nodes": [
+    {
+      "version": "4.3.18",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:dd5263b63a86ca6ac68e185bf6102c6e9ae4be2d0a00a0fb768c32a788787ee7",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.3,fast-4.3,stable-4.3,candidate-4.4,fast-4.4,stable-4.4",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:dd5263b63a86ca6ac68e185bf6102c6e9ae4be2d0a00a0fb768c32a788787ee7",
+        "url": "https://access.redhat.com/errata/RHBA-2020:1529"
+      }
+    }
+  ],
+  "edges": []
+}
