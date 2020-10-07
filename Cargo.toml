@@ -8,4 +8,5 @@ members = [
 	"prometheus-query",
 	"quay",
 	"e2e",
+	"rh-manifest-generator",
 ]
