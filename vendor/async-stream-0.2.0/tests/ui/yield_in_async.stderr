@@ -1,0 +1,13 @@
+error[E0658]: yield syntax is experimental
+ --> $DIR/yield_in_async.rs:6:13
+  |
+6 |             yield 123;
+  |             ^^^^^^^^^
+  |
+  = note: for more information, see https://github.com/rust-lang/rust/issues/43122
+
+error[E0727]: `async` generators are not yet supported
+ --> $DIR/yield_in_async.rs:6:13
+  |
+6 |             yield 123;
+  |             ^^^^^^^^^

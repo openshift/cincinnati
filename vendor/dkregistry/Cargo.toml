@@ -1,0 +1,60 @@
+[package]
+name = "dkregistry"
+version = "0.4.1-alpha.0"
+authors = ["Luca Bruno <lucab@debian.org>", "Stefan Junker <sjunker@redhat.com>"]
+license = "MIT OR Apache-2.0"
+documentation = "https://docs.rs/dkregistry"
+repository = "https://github.com/camallo/dkregistry-rs"
+description = "A pure-Rust asynchronous library for Docker Registry API"
+keywords = ["docker", "registry", "async"]
+exclude = [
+".gitignore",
+".travis.yml",
+]
+edition = "2018"
+
+[package.metadata.release]
+sign-commit = true
+upload-doc = false
+disable-publish = true
+disable-push = true
+pre-release-commit-message = "cargo: dkregistry release {{version}}"
+pro-release-commit-message = "cargo: development version bump"
+tag-prefix = ""
+
+[dependencies]
+base64 = "0.13"
+futures = "0.3"
+http = "0.2"
+libflate = "1.0"
+log = "0.4"
+mime = "0.3"
+regex = "^1.1.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_ignored = "0.1"
+strum = "0.19"
+strum_macros = "0.19"
+tar = "0.4"
+tokio = "0.2"
+reqwest = { version = "0.10", default-features = false, features = ["json"] }
+sha2 = "^0.9.0"
+async-stream = "0.3"
+thiserror = "1.0.19"
+url = "2.1.1"
+
+[dev-dependencies]
+dirs = "3.0"
+env_logger = "0.7"
+mockito = "0.27"
+spectral = "0.6"
+test-case = "1.0.0"
+tokio = { version = "0.2", features = ["macros"] }
+
+[features]
+default = ["reqwest-default-tls"]
+reqwest-default-tls = ["reqwest/default-tls"]
+reqwest-rustls = ["reqwest/rustls-tls"]
+test-net = []
+test-net-private = []
+test-mock = []

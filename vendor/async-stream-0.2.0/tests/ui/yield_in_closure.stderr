@@ -1,0 +1,13 @@
+error[E0658]: yield syntax is experimental
+ --> $DIR/yield_in_closure.rs:7:17
+  |
+7 |                 yield v;
+  |                 ^^^^^^^
+  |
+  = note: for more information, see https://github.com/rust-lang/rust/issues/43122
+
+error[E0628]: generators cannot have explicit parameters
+ --> $DIR/yield_in_closure.rs:6:23
+  |
+6 |             .and_then(|v| {
+  |                       ^^^
