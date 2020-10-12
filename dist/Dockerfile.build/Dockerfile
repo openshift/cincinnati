@@ -5,7 +5,7 @@ RUN yum -y install epel-release
 
 # build: system utilities and libraries
 RUN yum -y groupinstall 'Development Tools'
-RUN yum -y install openssl-devel protobuf-compiler jq
+RUN yum -y install openssl-devel protobuf-compiler jq skopeo buildah
 
 ENV HOME="/root"
 ENV PATH="${HOME}/.cargo/bin:${PATH}"
