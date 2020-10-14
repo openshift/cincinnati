@@ -20,12 +20,15 @@ RUN mkdir -p ${HOME}/bin && \
 ENV PATH="${PATH}:${HOME}/bin"
 
 # Install container tools
+RUN curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/CentOS_7/devel:kubic:libcontainers:stable.repo
 RUN yum -y install skopeo buildah
 
 COPY --from=rust_builder /opt/cincinnati/bin/e2e /usr/bin/cincinnati-e2e-test
 COPY --from=rust_builder /opt/cincinnati/bin/prometheus_query /usr/bin/cincinnati-prometheus_query-test
 COPY --from=rust_builder /opt/cincinnati/bin/slo /usr/bin/cincinnati-e2e-slo
 COPY --from=rust_builder hack/e2e.sh hack/
+COPY --from=rust_builder dist/prepare_ci_credentials.sh dist/
+COPY --from=rust_builder dist/prepare_e2e_images.sh dist/
 COPY --from=rust_builder dist/openshift/cincinnati.yaml dist/openshift/
 COPY --from=rust_builder dist/openshift/observability.yaml dist/openshift/
 COPY --from=golang_builder /usr/local/bin/vegeta /usr/bin
