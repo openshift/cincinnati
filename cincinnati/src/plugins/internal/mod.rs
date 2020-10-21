@@ -10,6 +10,6 @@ pub mod node_remove;
 mod graph_builder;
 
 pub use graph_builder::{
-    github_openshift_secondary_metadata_scraper, openshift_secondary_metadata_parser,
-    release_scrape_dockerv2,
+    dkrv2_openshift_secondary_metadata_scraper, github_openshift_secondary_metadata_scraper,
+    openshift_secondary_metadata_parser, release_scrape_dockerv2,
 };
