@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 type -f jq || {
   echo ERROR: jq is not available.
   exit 1
