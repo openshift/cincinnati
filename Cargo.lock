@@ -359,27 +359,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-stream"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "async-stream-impl 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures-core 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "async-stream-impl"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "proc-macro2 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "syn 1.0.21 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "async-stream-impl"
-version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "proc-macro2 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -654,7 +635,7 @@ dependencies = [
  "commons 0.1.0",
  "custom_debug_derive 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "daggy 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "dkregistry 0.4.1-alpha.0 (git+https://github.com/camallo/dkregistry-rs.git?rev=88510fa126322bf490db7c347daddb98db50da94)",
+ "dkregistry 0.5.1-alpha.0 (git+https://github.com/camallo/dkregistry-rs.git?rev=c618c93baf537a9d7b9b4df3b8da5af06d7a1d3f)",
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 1.0.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -947,10 +928,10 @@ dependencies = [
 
 [[package]]
 name = "dkregistry"
-version = "0.4.1-alpha.0"
-source = "git+https://github.com/camallo/dkregistry-rs.git?rev=88510fa126322bf490db7c347daddb98db50da94#88510fa126322bf490db7c347daddb98db50da94"
+version = "0.5.1-alpha.0"
+source = "git+https://github.com/camallo/dkregistry-rs.git?rev=c618c93baf537a9d7b9b4df3b8da5af06d7a1d3f#c618c93baf537a9d7b9b4df3b8da5af06d7a1d3f"
 dependencies = [
- "async-stream 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-stream 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "http 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3734,9 +3715,7 @@ dependencies = [
 "checksum assert-json-diff 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "32946b6d31d50d0e35896c864907f9cb7e47b52bd875fa3c058618601cfdefb1"
 "checksum async-compression 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2c5c52622726d68ec35fec88edfb4ccb862d4f3b3bfa4af2f45142e69ef9b220"
 "checksum async-stream 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "58982858be7540a465c790b95aaea6710e5139bf8956b1d1344d014fa40100b0"
-"checksum async-stream 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3670df70cbc01729f901f94c887814b3c68db038aad1329a418bae178bc5295c"
 "checksum async-stream-impl 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "393356ed99aa7bff0ac486dde592633b83ab02bd254d8c209d5b9f1d0f533480"
-"checksum async-stream-impl 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a3548b8efc9f8e8a5a0a2808c5bd8451a9031b9e5b879a79590304ae928b0a70"
 "checksum async-trait 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)" = "c8df72488e87761e772f14ae0c2480396810e51b2c2ade912f97f0f7e5b95e3c"
 "checksum atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)" = "1803c647a3ec87095e7ae7acfca019e98de5ec9a7d01343f611cf3152ed71a90"
 "checksum autocfg 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "b671c8fb71b457dd4ae18c4ba1e59aa81793daacc361d82fcd410cef0d491875"
@@ -3792,7 +3771,7 @@ dependencies = [
 "checksum difference 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "524cbf6897b527295dff137cec09ecf3a05f4fddffd7dfcd1585403449e74198"
 "checksum digest 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d3dd60d1080a57a05ab032377049e0591415d2b31afd7028356dbf3cc6dcb066"
 "checksum dirs 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)" = "3fd78930633bd1c6e35c4b42b1df7b0cbc6bc191146e512bb3bedf243fcc3901"
-"checksum dkregistry 0.4.1-alpha.0 (git+https://github.com/camallo/dkregistry-rs.git?rev=88510fa126322bf490db7c347daddb98db50da94)" = "<none>"
+"checksum dkregistry 0.5.1-alpha.0 (git+https://github.com/camallo/dkregistry-rs.git?rev=c618c93baf537a9d7b9b4df3b8da5af06d7a1d3f)" = "<none>"
 "checksum dtoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "ea57b42383d091c85abcc2706240b94ab2a8fa1fc81c10ff23c4de06e2a90b5e"
 "checksum either 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
 "checksum encode_unicode 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
