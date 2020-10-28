@@ -26,9 +26,7 @@ arrayvec 0.5.1 https://crates.io/api/v1/crates/arrayvec/0.5.1/download
 assert-json-diff 1.0.0 https://crates.io/api/v1/crates/assert-json-diff/1.0.0/download
 async-compression 0.2.0 https://crates.io/api/v1/crates/async-compression/0.2.0/download
 async-stream 0.2.0 https://crates.io/api/v1/crates/async-stream/0.2.0/download
-async-stream 0.3.0 https://crates.io/api/v1/crates/async-stream/0.3.0/download
 async-stream-impl 0.2.0 https://crates.io/api/v1/crates/async-stream-impl/0.2.0/download
-async-stream-impl 0.3.0 https://crates.io/api/v1/crates/async-stream-impl/0.3.0/download
 async-trait 0.1.22 https://crates.io/api/v1/crates/async-trait/0.1.22/download
 atty 0.2.13 https://crates.io/api/v1/crates/atty/0.2.13/download
 autocfg 0.1.6 https://crates.io/api/v1/crates/autocfg/0.1.6/download
@@ -84,7 +82,7 @@ derive_more 0.99.2 https://crates.io/api/v1/crates/derive_more/0.99.2/download
 difference 2.0.0 https://crates.io/api/v1/crates/difference/2.0.0/download
 digest 0.9.0 https://crates.io/api/v1/crates/digest/0.9.0/download
 dirs 1.0.5 https://crates.io/api/v1/crates/dirs/1.0.5/download
-dkregistry 0.4.1-alpha.0 git+https://github.com/camallo/dkregistry-rs.git?rev=88510fa126322bf490db7c347daddb98db50da94#88510fa126322bf490db7c347daddb98db50da94
+dkregistry 0.5.1-alpha.0 git+https://github.com/camallo/dkregistry-rs.git?rev=c618c93baf537a9d7b9b4df3b8da5af06d7a1d3f#c618c93baf537a9d7b9b4df3b8da5af06d7a1d3f
 dtoa 0.4.4 https://crates.io/api/v1/crates/dtoa/0.4.4/download
 either 1.5.3 https://crates.io/api/v1/crates/either/1.5.3/download
 encode_unicode 0.3.6 https://crates.io/api/v1/crates/encode_unicode/0.3.6/download
