@@ -1197,6 +1197,45 @@ mod tests {
     }
 
     #[test]
+    fn test_graph_eq_detects_exceeding_nodes() {
+        let r1 = Release::Concrete(ConcreteRelease {
+            version: String::from("1.0.0"),
+            payload: String::from("image/1.0.0"),
+            metadata: MapImpl::new(),
+        });
+        let r2 = Release::Concrete(ConcreteRelease {
+            version: String::from("2.0.0"),
+            payload: String::from("image/2.0.0"),
+            metadata: MapImpl::new(),
+        });
+
+        let r3 = Release::Concrete(ConcreteRelease {
+            version: String::from("3.0.0"),
+            payload: String::from("image/3.0.0"),
+            metadata: MapImpl::new(),
+        });
+
+        let graph1 = {
+            let mut graph = Graph::default();
+            let v1 = graph.dag.add_node(r1.clone());
+            let v2 = graph.dag.add_node(r2.clone());
+            graph.dag.add_edge(v1, v2, Empty {}).unwrap();
+
+            graph
+        };
+        let graph2 = {
+            let mut graph = Graph::default();
+            let v1 = graph.dag.add_node(r1.clone());
+            let v2 = graph.dag.add_node(r2.clone());
+            let _ = graph.dag.add_node(r3.clone());
+            graph.dag.add_edge(v1, v2, Empty {}).unwrap();
+
+            graph
+        };
+        assert_ne!(graph1, graph2);
+    }
+
+    #[test]
     fn roundtrip_conversion_from_graph_via_plugin_interface() {
         let graph_plugin_interface: plugins::interface::Graph = generate_graph().into();
         let graph_native_converted: Graph = graph_plugin_interface.into();
