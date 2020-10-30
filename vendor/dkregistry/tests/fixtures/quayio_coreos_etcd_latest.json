@@ -1,0 +1,72 @@
+{
+   "schemaVersion": 1, 
+   "tag": "latest", 
+   "name": "coreos/etcd", 
+   "architecture": "amd64", 
+   "fsLayers": [
+      {
+         "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+      }, 
+      {
+         "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+      }, 
+      {
+         "blobSum": "sha256:b5fe2ffa645a65600cd5f5ddda9a38626a4f59dae815e4b07395cfb0b7eb8af4"
+      }, 
+      {
+         "blobSum": "sha256:b6012f9c31143d528707545db2ec39d602607b6bf3fe0ca6e77cae660ebeafbf"
+      }, 
+      {
+         "blobSum": "sha256:13bd442767df1f3e05bcec6446c717d17aa6fbe710718bf6edad94adf1b7e3f0"
+      }, 
+      {
+         "blobSum": "sha256:8ef9393b69b798bf2e1bed360d15d140792e956c7b271be7c23d0c4ca0d3adfa"
+      }, 
+      {
+         "blobSum": "sha256:dd4230e0489972fe5b0fb4162e2a29052531d99442205843f3d228f9b58d74dd"
+      }, 
+      {
+         "blobSum": "sha256:627beaf3eaaff1c0bc3311d60fb933c17ad04fe377e1043d9593646d8ae3bfe1"
+      }
+   ], 
+   "history": [
+      {
+         "v1Compatibility": "{\"architecture\":\"amd64\",\"config\":{\"Hostname\":\"84baa8e89c00\",\"Domainname\":\"\",\"User\":\"\",\"AttachStdin\":false,\"AttachStdout\":false,\"AttachStderr\":false,\"ExposedPorts\":{\"2379/tcp\":{},\"2380/tcp\":{}},\"Tty\":false,\"OpenStdin\":false,\"StdinOnce\":false,\"Env\":[\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"],\"Cmd\":[\"/usr/local/bin/etcd\"],\"ArgsEscaped\":true,\"Image\":\"sha256:6cd6a81c129c1c5cf927fcbab0d72c260a0234984a53d8e6513e2071753d3908\",\"Volumes\":null,\"WorkingDir\":\"\",\"Entrypoint\":null,\"OnBuild\":[],\"Labels\":{}},\"container\":\"750038fe52ca625e53018429e039ef0c16a7a36215b9725a21a2ec1fcc8aff66\",\"container_config\":{\"Hostname\":\"84baa8e89c00\",\"Domainname\":\"\",\"User\":\"\",\"AttachStdin\":false,\"AttachStdout\":false,\"AttachStderr\":false,\"ExposedPorts\":{\"2379/tcp\":{},\"2380/tcp\":{}},\"Tty\":false,\"OpenStdin\":false,\"StdinOnce\":false,\"Env\":[\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"],\"Cmd\":[\"/bin/sh\",\"-c\",\"#(nop) \",\"CMD [\\\"/usr/local/bin/etcd\\\"]\"],\"ArgsEscaped\":true,\"Image\":\"sha256:6cd6a81c129c1c5cf927fcbab0d72c260a0234984a53d8e6513e2071753d3908\",\"Volumes\":null,\"WorkingDir\":\"\",\"Entrypoint\":null,\"OnBuild\":[],\"Labels\":{}},\"created\":\"2017-03-27T17:29:48.081049861Z\",\"docker_version\":\"17.03.0-ce\",\"id\":\"c7a3b414a054a6172c19571f5415f602e89b2374f362ad7f238d63e3f34b45a0\",\"os\":\"linux\",\"parent\":\"37d200ad6834f5b1b881991a6a781b27ae1f883cb7391e1033472ff48e51d116\",\"throwaway\":true}"
+      }, 
+      {
+         "v1Compatibility": "{\"id\":\"37d200ad6834f5b1b881991a6a781b27ae1f883cb7391e1033472ff48e51d116\",\"parent\":\"56a90276597ce3387c65f99e3dd49556cf585cce6b9da703ff912814717a28a6\",\"created\":\"2017-03-27T17:29:47.346778781Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c #(nop)  EXPOSE 2379/tcp 2380/tcp\"]},\"throwaway\":true}"
+      }, 
+      {
+         "v1Compatibility": "{\"id\":\"56a90276597ce3387c65f99e3dd49556cf585cce6b9da703ff912814717a28a6\",\"parent\":\"dd546ed9c647c585d50e7132e6f38a74a8bb8fc5d6fabe4b605246a85fa146bc\",\"created\":\"2017-03-27T17:29:46.597751843Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' \\u003e\\u003e /etc/nsswitch.conf\"]}}"
+      }, 
+      {
+         "v1Compatibility": "{\"id\":\"dd546ed9c647c585d50e7132e6f38a74a8bb8fc5d6fabe4b605246a85fa146bc\",\"parent\":\"b9e0c037af96501b654a0af7a6e0e976e567e1c716bba4ecc9ff564026aae9ec\",\"created\":\"2017-03-27T17:29:44.80718711Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c mkdir -p /var/lib/etcd/\"]}}"
+      }, 
+      {
+         "v1Compatibility": "{\"id\":\"b9e0c037af96501b654a0af7a6e0e976e567e1c716bba4ecc9ff564026aae9ec\",\"parent\":\"122b6ec2c30f0d7ada4826e1b1bd6b2a2488833a2a037742fdafa54ef145bd7a\",\"created\":\"2017-03-27T17:29:43.133071276Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c mkdir -p /var/etcd/\"]}}"
+      }, 
+      {
+         "v1Compatibility": "{\"id\":\"122b6ec2c30f0d7ada4826e1b1bd6b2a2488833a2a037742fdafa54ef145bd7a\",\"parent\":\"839fab0b3584c7ed4a9212d73fbff400b5e0f3fc98cddb25cb2cc312e6ca0a7e\",\"created\":\"2017-03-27T17:29:41.224891766Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c #(nop) ADD file:4f56f8c78ab663bc82dba77464ab675e6addb761280cf63cd4b188283153a345 in /usr/local/bin/ \"]}}"
+      }, 
+      {
+         "v1Compatibility": "{\"id\":\"839fab0b3584c7ed4a9212d73fbff400b5e0f3fc98cddb25cb2cc312e6ca0a7e\",\"parent\":\"10dd75e40ed7057fae6f8e40c5db413d4e33aa71bfdada7ec48962fbff10df4f\",\"created\":\"2017-03-27T17:29:40.384655108Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c #(nop) ADD file:0c079325b438e0f2035a303c13409241b7465cda7685acf9f44ec908a18a553d in /usr/local/bin/ \"]}}"
+      }, 
+      {
+         "v1Compatibility": "{\"id\":\"10dd75e40ed7057fae6f8e40c5db413d4e33aa71bfdada7ec48962fbff10df4f\",\"created\":\"2017-03-03T20:32:37.723773456Z\",\"container_config\":{\"Cmd\":[\"/bin/sh -c #(nop) ADD file:730030a984f5f0c5dc9b15ab61da161082b5c0f6e112a9c921b42321140c3927 in / \"]}}"
+      }
+   ], 
+   "signatures": [
+      {
+         "header": {
+            "alg": "RS256", 
+            "jwk": {
+               "e": "AQAB", 
+               "kty": "RSA", 
+               "n": "yB40ou1GMvIxYs1jhxWaeoDiw3oa0_Q2UJThUPtArvO0tRzaun9FnSphhOEHIGcezfq95jy-3MN-FIjmsWgbPHY8lVDS38fF75aCw6qkholwqjmMtUIgPNYoMrg0rLUE5RRyJ84-hKf9Fk7V3fItp1mvCTGKaS3ze-y5dTTrfbNGE7qG638Dla2Fuz-9CNgRQj0JH54o547WkKJC-pG-j0jTDr8lzsXhrZC7lJas4yc-vpt3D60iG4cW_mkdtIj52ZFEgHZ56sUj7AhnNVly0ZP9W1hmw4xEHDn9WLjlt7ivwARVeb2qzsNdguUitcI5hUQNwpOVZ_O3f1rUIL_kRw"
+            }
+         }, 
+         "protected": "eyJmb3JtYXRUYWlsIjogIkNuMCIsICJmb3JtYXRMZW5ndGgiOiA1MTQ4LCAidGltZSI6ICIyMDE3LTAzLTI3VDE3OjM5OjU2WiJ9", 
+         "signature": "lWZVdlMNepWcP4fFhTkkJVeipn3r3viOc3p0XwKPfyrOWchxylsbUSIZYJ1vGNE76TBwk3LlpmjUa6uxkjkjJu5mbC95WzDO1H48HBEu1hK65Gh87NLY3xI5aFVBi3MJi_crfEejcTn0qvEbUZQG6pB1gt5vz1g7kLYa5UhZQqtVS-8UI2qR0-n63ge5zhZtmhY8FEv8yHPZo9Acr6IyI5WQinUXbYFOk3NuwuUpcPQ0q8NIEzMaJAcGKagCykFFi2Dd2xL_whhaFr6HOpaAPxhWj-6QzmuWdraHbU9rvl5q9d5HgJaCyA6hgsTSSTLFW3J8zB3WGIAawEePMJNacw"
+      }
+   ]
+}
