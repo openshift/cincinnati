@@ -593,7 +593,3 @@ mod tests {
         }
     }
 }
-
-#[cfg(test)]
-#[cfg(feature = "test-net")]
-mod network_tests;

@@ -58,10 +58,14 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str) {
     if let Err(e) = cincinnati::testing::compare_graphs_verbose(
         expected,
         actual,
-        &[
-            "io.openshift.upgrades.graph.previous.remove_regex",
-            "io.openshift.upgrades.graph.previous.remove",
-        ],
+        cincinnati::testing::CompareGraphsVerboseSettings {
+            unwanted_metadata_keys: &[
+                "io.openshift.upgrades.graph.previous.remove_regex",
+                "io.openshift.upgrades.graph.previous.remove",
+            ],
+
+            ..Default::default()
+        },
     ) {
         panic!("{}", e);
     }
