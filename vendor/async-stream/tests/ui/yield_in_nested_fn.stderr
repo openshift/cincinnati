@@ -1,0 +1,13 @@
+error[E0658]: yield syntax is experimental
+ --> $DIR/yield_in_nested_fn.rs:6:13
+  |
+6 |             yield "hello";
+  |             ^^^^^^^^^^^^^
+  |
+  = note: for more information, see https://github.com/rust-lang/rust/issues/43122
+
+error[E0627]: yield statement outside of generator literal
+ --> $DIR/yield_in_nested_fn.rs:6:13
+  |
+6 |             yield "hello";
+  |             ^^^^^^^^^^^^^

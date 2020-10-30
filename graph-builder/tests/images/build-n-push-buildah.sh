@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-set -xe
+set -e
 
 unused=${1:?"Please provide at least one target directory in the arguments"}
 
+set -x
+
 REPO_BASE="${REPO_BASE:-quay.io/redhat/openshift-cincinnati}"
+AUTHFILE="${AUTHFILE:-${HOME}/.docker.config.json}"
 
 for target in "${@}"; do
   arch_file="${target}/.arch"
@@ -22,5 +25,5 @@ for target in "${@}"; do
     buildah rm "${build_container}"
   fi
 
-  buildah push "${full_tag}"
+  buildah push --authfile "${AUTHFILE}" "${full_tag}"
 done

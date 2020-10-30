@@ -1,17 +1,18 @@
-FROM centos:7
+FROM quay.io/app-sre/centos:7
 
 # base: EPEL repo for extra tools
 RUN yum -y install epel-release
 
 # build: system utilities and libraries
 RUN yum -y groupinstall 'Development Tools'
-RUN yum -y install openssl-devel protobuf-compiler jq
+RUN yum -y install openssl-devel protobuf-compiler jq skopeo buildah
 
 ENV HOME="/root"
 ENV PATH="${HOME}/.cargo/bin:${PATH}"
 
 # build: Rust stable toolchain
-RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.46.0 -y
+RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.46.0 -y && \
+  rustup install 1.43.1
 
 # test: linters
 RUN yum -y install yamllint

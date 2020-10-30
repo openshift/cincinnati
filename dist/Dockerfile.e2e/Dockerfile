@@ -7,7 +7,7 @@ RUN hack/build_e2e.sh
 FROM registry.svc.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
 RUN env GOBIN=/usr/local/bin go get -u github.com/tsenart/vegeta
 
-FROM centos:7
+FROM quay.io/app-sre/centos:7
 
 ENV HOME="/root"
 
@@ -18,6 +18,9 @@ WORKDIR "${HOME}/cincinnati"
 RUN mkdir -p ${HOME}/bin && \
     curl https://mirror.openshift.com/pub/openshift-v4/clients/oc/latest/linux/oc.tar.gz 2>/dev/null | tar xzf - -C "${HOME}/bin/" oc
 ENV PATH="${PATH}:${HOME}/bin"
+
+# Install container tools
+RUN yum -y install skopeo buildah
 
 COPY --from=rust_builder /opt/cincinnati/bin/e2e /usr/bin/cincinnati-e2e-test
 COPY --from=rust_builder /opt/cincinnati/bin/prometheus_query /usr/bin/cincinnati-prometheus_query-test

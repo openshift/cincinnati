@@ -25,13 +25,13 @@ serde_json = "^1.0.22"
 smart-default = "^0.5.2"
 tokio = { version = "0.2.11", features = [ "time", "fs", "stream" ] }
 toml = "^0.4.10"
-url = "^1.7.2"
+url = "^2.1.1"
 semver = { version = "^0.9.0", features = [ "serde" ] }
 async-trait = "^0.1"
 tempfile = "^3.1.0"
 flate2 = "^1.0.1"
 tar = "^0.4.16"
-dkregistry = "^0.4.0"
+dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "c618c93baf537a9d7b9b4df3b8da5af06d7a1d3f" }
 itertools = "^0.8.2"
 serde_yaml = "^0.8.11"
 prettydiff = { version = "0.3.1", optional = true }
