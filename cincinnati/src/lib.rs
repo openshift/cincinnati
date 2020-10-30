@@ -612,6 +612,10 @@ impl PartialEq for Graph {
     fn eq(&self, other: &Graph) -> bool {
         use daggy::petgraph::visit::IntoNeighbors;
 
+        if self.releases_count() != other.releases_count() {
+            return false;
+        }
+
         let asc_order_release_by_version = {
             use std::cmp::Ordering::{self, *};
 
@@ -678,7 +682,7 @@ impl PartialEq for Graph {
 
                     release == release_other && compare_neighbors()
                 })
-                // Ensure each node in self has exactly one matching node in including its neighbors
+                // Ensure each node in self has exactly one matching node in other including its neighbors
                 .count()
                 == 1
         })
