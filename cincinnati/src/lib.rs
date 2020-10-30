@@ -1056,7 +1056,7 @@ pub mod testing {
 
                         Ok(())
                     }
-                    Release::Abstract(ar) => panic!("unexpected Abstrat release: {:?}", &ar),
+                    Release::Abstract(ar) => panic!("unexpected Abstract release: {:?}", &ar),
                 }
             })
             .context("replacing the sha by the tag in the payload string")
@@ -1074,7 +1074,7 @@ pub mod testing {
 
                         Ok(())
                     }
-                    Release::Abstract(ar) => panic!("unexpected Abstrat release: {:?}", &ar),
+                    Release::Abstract(ar) => panic!("unexpected Abstract release: {:?}", &ar),
                 }
             })
             .context("removing registry and repo from the payload string")
