@@ -608,87 +608,48 @@ impl Serialize for Graph {
     }
 }
 
+#[cfg(any(test, feature = "test"))]
 impl PartialEq for Graph {
     fn eq(&self, other: &Graph) -> bool {
-        use daggy::petgraph::visit::IntoNeighbors;
+        let mut releases = self
+            .dag
+            .node_references()
+            .map(|node_ref| node_ref.1)
+            .collect::<Vec<&Release>>();
+        releases.sort();
 
-        if self.releases_count() != other.releases_count() {
+        let mut releases_other = other
+            .dag
+            .node_references()
+            .map(|node_ref| node_ref.1)
+            .collect::<Vec<&Release>>();
+        releases_other.sort();
+
+        if releases != releases_other {
             return false;
         }
 
-        let asc_order_release_by_version = {
-            use std::cmp::Ordering::{self, *};
-
-            |a: &&Release, b: &&Release| -> Ordering {
-                if a.version() < b.version() {
-                    Less
-                } else if a.version() == b.version() {
-                    Equal
-                } else {
-                    Greater
-                }
-            }
+        let edges = if let Ok(edges) = self.get_edges(true) {
+            edges
+        } else {
+            return false;
         };
 
-        // Look through all nodes in self
-        self.dag.node_references().all(|node_ref| {
-            let dag_other = &other.dag;
-            let node_index = node_ref.0;
-            let release = node_ref.1;
+        let edges_other = if let Ok(edges) = other.get_edges(true) {
+            edges
+        } else {
+            return false;
+        };
 
-            // For each node in self, look through all nodes in other and find a match
-            dag_other
-                .node_references()
-                .filter(|node_ref_other| {
-                    let node_index_other = node_ref_other.0;
-                    let release_other = node_ref_other.1;
+        if edges != edges_other {
+            return false;
+        }
 
-                    // Ensure the set of neighbors of release and release_other are identical
-                    let compare_neighbors = || {
-                        let (neighbors_count, neighbors_other_count) = (
-                            self.dag.neighbors(node_index).count(),
-                            dag_other.neighbors(node_index_other).count(),
-                        );
-
-                        if neighbors_count != neighbors_other_count {
-                            return false;
-                        }
-
-                        let mut neighbors = self
-                            .dag
-                            .neighbors(node_index)
-                            .zip(dag_other.neighbors(node_index_other))
-                            .fold(
-                                Vec::with_capacity(neighbors_count * 2),
-                                |mut neighbors, (neighbor, neighbor_other)| {
-                                    neighbors.push(
-                                        self.dag.node_weight(neighbor).expect(EXPECT_NODE_WEIGHT),
-                                    );
-                                    neighbors.push(
-                                        dag_other
-                                            .node_weight(neighbor_other)
-                                            .expect(EXPECT_NODE_WEIGHT),
-                                    );
-                                    neighbors
-                                },
-                            );
-
-                        // dedup() requires consecutive sorting
-                        neighbors.sort_by(asc_order_release_by_version);
-                        neighbors.dedup();
-
-                        neighbors.len() == neighbors_count
-                    };
-
-                    release == release_other && compare_neighbors()
-                })
-                // Ensure each node in self has exactly one matching node in other including its neighbors
-                .count()
-                == 1
-        })
+        true
     }
 }
 
+#[cfg(any(test, feature = "test"))]
 impl Eq for Graph {}
 
 impl From<plugins::interface::Graph> for Graph {
