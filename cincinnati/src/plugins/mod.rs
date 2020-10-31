@@ -106,8 +106,8 @@ pub enum PluginResult {
 }
 
 /// Struct used by the ExternalPlugin trait impl's
-#[derive(Debug, PartialEq)]
-#[cfg_attr(test, derive(Clone))]
+#[derive(Debug)]
+#[cfg_attr(test, derive(Clone, PartialEq))]
 pub struct InternalIO {
     pub graph: cincinnati::Graph,
     pub parameters: HashMap<String, String>,
