@@ -977,8 +977,8 @@ pub mod testing {
         output.push("Graphs differ! Showing differences from left to right".into());
         output.push("-----------------------------------------------------".into());
 
-        let edges_left = right.get_edges(false)?;
-        let edges_right = left.get_edges(false)?;
+        let edges_left = left.get_edges(false)?;
+        let edges_right = right.get_edges(false)?;
         output.push("edges: ".into());
         output.push(
             prettydiff::diff_lines(
