@@ -110,7 +110,7 @@ e2e-fixtures-capture-only:
 		for version in "4.2" "4.3"; do
 			for arch in "amd64" "s390x"; do
 				for suffix in "-production"; do
-					just get-graph-pe"${suffix}" "${base}-${version}" "${arch}" > {{testdata_dir}}/"$(just metadata_reference_revision)_${base}-${version}_${arch}${suffix}".json
+					just get-graph-pe"${suffix}" "${base}-${version}" "${arch}" | hack/graph-normalize.sh > {{testdata_dir}}/"$(just metadata_reference_revision)_${base}-${version}_${arch}${suffix}".json
 				done
 			done
 		done
