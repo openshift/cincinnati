@@ -1,6 +1,6 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
-set -ueo pipefail
+set -ue
 
 CARGO_CONFIG=".cargo/config.toml"
 FILES_TO_COMMIT=(
@@ -26,8 +26,12 @@ cargo vendor > "${CARGO_CONFIG}"
 # some vendored files aren't world readable which has lead to issues in container builds when trying out the workflow
 find ./vendor -type f -exec chmod a+r {} \;
 
-git add --force "${FILES_TO_COMMIT[@]}"
-git diff --quiet --staged -- "${FILES_TO_COMMIT[@]}" || {
-  echo Files changed, committing...
-  git commit -m "Update vendored dependencies and rh-manifest.txt" -- "${FILES_TO_COMMIT[@]}"
-}
+# check the a variable as we don't want to commit new files on CI
+# it can also be set by developers which want to skip the git operations
+if [ "${OPENSHIFT_CI}" != "true" ]; then
+  git add "${FILES_TO_COMMIT[@]}"
+  git diff --quiet --staged -- "${FILES_TO_COMMIT[@]}" || {
+    echo Files changed, committing...
+    git commit -m "Update vendored dependencies and rh-manifest.txt" -- "${FILES_TO_COMMIT[@]}"
+  }
+fi
