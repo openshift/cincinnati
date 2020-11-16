@@ -1,6 +1,6 @@
 use super::*;
 
-const DEFAULT_SCRAPE_REGISTRY: &str = "quay.io";
+const DEFAULT_SCRAPE_REGISTRY: &str = "registry.svc.ci.openshift.org";
 
 use cincinnati::plugins::internal::graph_builder::commons::tests::common_init;
 use cincinnati::testing::{TestGraphBuilder, TestMetadata};
@@ -21,7 +21,8 @@ fn scrape_private_with_credentials_must_succeed() -> Fallible<()> {
     let (mut runtime, _) = common_init();
 
     let registry = DEFAULT_SCRAPE_REGISTRY;
-    let repo = "redhat/openshift-cincinnati-test-private-manual";
+    let repo = "cincinnati-ci/cincinnati-test-private-manual";
+
     let plugin = Box::new(ReleaseScrapeDockerv2Plugin::try_new(
         // settings
         toml::from_str::<ReleaseScrapeDockerv2Settings>(&format!(
@@ -106,7 +107,7 @@ fn scrape_private_without_credentials_must_fail() -> Fallible<()> {
     let (mut runtime, _) = common_init();
 
     let registry = DEFAULT_SCRAPE_REGISTRY;
-    let repo = "redhat/openshift-cincinnati-test-private-manual";
+    let repo = "cincinnati-ci/cincinnati-test-private-manual";
 
     let plugin = Box::new(ReleaseScrapeDockerv2Plugin::try_new(
         // settings
@@ -116,6 +117,7 @@ fn scrape_private_without_credentials_must_fail() -> Fallible<()> {
                     repository = "{}"
                     manifestref_key = "{}"
                     fetch_concurrency = {}
+                    anonymous_auth = true
                 "#,
             &registry, &repo, DEFAULT_MANIFESTREF_KEY, DEFAULT_FETCH_CONCURRENCY,
         ))?,
@@ -140,7 +142,7 @@ fn scrape_public_with_no_release_metadata_must_not_error() -> Fallible<()> {
     let (mut runtime, _) = common_init();
 
     let registry = DEFAULT_SCRAPE_REGISTRY;
-    let repo = "redhat/openshift-cincinnati-test-nojson-public-manual";
+    let repo = "cincinnati-ci-public/cincinnati-test-nojson-public-manual";
 
     let plugin = Box::new(ReleaseScrapeDockerv2Plugin::try_new(
         // settings
@@ -150,6 +152,7 @@ fn scrape_public_with_no_release_metadata_must_not_error() -> Fallible<()> {
                     repository = "{}"
                     manifestref_key = "{}"
                     fetch_concurrency = {}
+                    anonymous_auth = true
                 "#,
             &registry, &repo, DEFAULT_MANIFESTREF_KEY, DEFAULT_FETCH_CONCURRENCY,
         ))?,
@@ -179,7 +182,7 @@ fn scrape_public_with_first_empty_tag_must_succeed() -> Fallible<()> {
     let (mut runtime, _) = common_init();
 
     let registry = DEFAULT_SCRAPE_REGISTRY;
-    let repo = "redhat/openshift-cincinnati-test-emptyfirsttag-public-manual";
+    let repo = "cincinnati-ci-public/cincinnati-test-emptyfirsttag-public-manual";
 
     let plugin = Box::new(ReleaseScrapeDockerv2Plugin::try_new(
         // settings
@@ -189,6 +192,7 @@ fn scrape_public_with_first_empty_tag_must_succeed() -> Fallible<()> {
                     repository = "{}"
                     manifestref_key = "{}"
                     fetch_concurrency = {}
+                    anonymous_auth = true
                 "#,
             &registry, &repo, DEFAULT_MANIFESTREF_KEY, DEFAULT_FETCH_CONCURRENCY,
         ))?,
@@ -262,7 +266,7 @@ fn scrape_public_with_first_empty_tag_must_succeed() -> Fallible<()> {
 fn scrape_public_must_succeed_with_various_registry_urls(registry: &str) {
     let (mut runtime, _) = common_init();
 
-    let repo = "redhat/openshift-cincinnati-test-public-manual";
+    let repo = "cincinnati-ci-public/cincinnati-test-public-manual";
 
     let plugin = Box::new(
         ReleaseScrapeDockerv2Plugin::try_new(
@@ -273,6 +277,7 @@ fn scrape_public_must_succeed_with_various_registry_urls(registry: &str) {
                     repository = "{}"
                     manifestref_key = "{}"
                     fetch_concurrency = {}
+                    anonymous_auth = true
                 "#,
                 &registry, &repo, DEFAULT_MANIFESTREF_KEY, DEFAULT_FETCH_CONCURRENCY,
             ))
@@ -349,7 +354,7 @@ fn scrape_public_with_cyclic_metadata_fails() -> Fallible<()> {
     let (mut runtime, _) = common_init();
 
     let registry = DEFAULT_SCRAPE_REGISTRY;
-    let repo = "redhat/openshift-cincinnati-test-cyclic-public-manual";
+    let repo = "cincinnati-ci-public/cincinnati-test-cyclic-public-manual";
 
     let plugin = Box::new(ReleaseScrapeDockerv2Plugin::try_new(
         // settings
@@ -359,6 +364,7 @@ fn scrape_public_with_cyclic_metadata_fails() -> Fallible<()> {
                     repository = "{}"
                     manifestref_key = "{}"
                     fetch_concurrency = {}
+                    anonymous_auth = true
                 "#,
             &registry, &repo, DEFAULT_MANIFESTREF_KEY, DEFAULT_FETCH_CONCURRENCY,
         ))?,
@@ -390,7 +396,7 @@ fn scrape_public_multiarch_manual_succeeds() -> Fallible<()> {
     let (mut runtime, _) = common_init();
 
     let registry = DEFAULT_SCRAPE_REGISTRY;
-    let repo = "redhat/openshift-cincinnati-test-public-multiarch-manual";
+    let repo = "cincinnati-ci-public/cincinnati-test-public-multiarch-manual";
 
     let plugin = Box::new(ReleaseScrapeDockerv2Plugin::try_new(
         // settings
@@ -400,6 +406,7 @@ fn scrape_public_multiarch_manual_succeeds() -> Fallible<()> {
                     repository = "{}"
                     manifestref_key = "{}"
                     fetch_concurrency = {}
+                    anonymous_auth = true
                 "#,
             &registry, &repo, DEFAULT_MANIFESTREF_KEY, DEFAULT_FETCH_CONCURRENCY,
         ))?,
