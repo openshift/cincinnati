@@ -1,0 +1,14 @@
+{
+  "critical": {
+    "image": {
+      "docker-manifest-digest": "sha256:3d8d70c6090d4b843f885c8a0c80d01c5fb78dd7c8d16e20929ffc32a15e2fde"
+    },
+    "type": "atomic container signature",
+    "identity": {
+      "docker-reference": "registry.svc.ci.openshift.org/cincinnati-ci-public/cincinnati-graph-data:6420f7fbf3724e1e5e329ae8d1e2985973f60c14"
+    }
+  },
+  "optional": {
+    "creator": "Red Hat OpenShift Signing Authority 0.0.1"
+  }
+}
