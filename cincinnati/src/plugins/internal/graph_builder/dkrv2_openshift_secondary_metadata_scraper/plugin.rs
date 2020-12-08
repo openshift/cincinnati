@@ -118,7 +118,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperSettings {
                 "empty signature base url",
             );
             ensure!(
-                Url::parse(settings.signature_baseurl.as_str()),
+                Url::parse(settings.signature_baseurl.as_str()).is_ok(),
                 "invalid signature base url",
             );
             ensure!(
@@ -392,28 +392,54 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 #[cfg(feature = "test-net")]
 mod network_tests {
     use super::*;
+    use mockito;
     use std::collections::HashSet;
 
     #[tokio::test(threaded_scheduler)]
     async fn openshift_secondary_metadata_extraction() -> Fallible<()> {
+        let fixtures = PathBuf::from(
+            "./src/plugins/internal/graph_builder/dkrv2_openshift_secondary_metadata_scraper/test_fixtures",
+        );
+        let mut public_keys_path = fixtures.clone();
+        public_keys_path.push("public_keys");
+
+        // Prepare mocked signature URL
+        let mut signature_path = fixtures.clone();
+        signature_path.push("signatures/signature-3");
+
+        let _m = mockito::mock(
+            "GET",
+            "/sha256=3d8d70c6090d4b843f885c8a0c80d01c5fb78dd7c8d16e20929ffc32a15e2fde/signature-3",
+        )
+        .with_status(200)
+        .with_body_from_file(signature_path.canonicalize()?)
+        .create();
+
         let tmpdir = tempfile::tempdir()?;
 
+        let config = &format!(
+            r#"
+                registry = "registry.svc.ci.openshift.org"
+                repository = "cincinnati-ci-public/cincinnati-graph-data"
+                tag = "6420f7fbf3724e1e5e329ae8d1e2985973f60c14"
+                output_allowlist = [ {} ]
+                output_directory = {:?}
+                verify_signature = true
+                signature_baseurl = {:?}
+                public_keys_path = {:?}
+            "#,
+            DEFAULT_OUTPUT_WHITELIST
+                .iter()
+                .map(|s| format!(r#"{:?}"#, s))
+                .collect::<Vec<_>>()
+                .join(", "),
+            &tmpdir.path(),
+            mockito::server_url(),
+            &public_keys_path.canonicalize()?,
+        );
+
         let settings = DkrV2OpenshiftSecondaryMetadataScraperSettings::deserialize_config(
-            toml::Value::from_str(&format!(
-                r#"
-                    registry = "registry.svc.ci.openshift.org"
-                    repository = "cincinnati-ci-public/cincinnati-graph-data"
-                    tag = "6420f7fbf3724e1e5e329ae8d1e2985973f60c14"
-                    output_allowlist = [ {} ]
-                    output_directory = {:?}
-                "#,
-                DEFAULT_OUTPUT_WHITELIST
-                    .iter()
-                    .map(|s| format!(r#"{:?}"#, s))
-                    .collect::<Vec<_>>()
-                    .join(", "),
-                &tmpdir.path(),
-            ))?,
+            toml::Value::from_str(config)?,
         )?;
 
         debug!("Settings: {:#?}", &settings);
