@@ -1,6 +1,8 @@
 FROM quay.io/app-sre/cincinnati:builder AS rust_builder
 # build e2e tests
 COPY . .
+# Use root user
+USER 0
 
 # Install jq
 RUN mkdir -p ${HOME}/bin && \
@@ -25,7 +27,7 @@ RUN mkdir -p ${HOME}/bin && \
 ENV PATH="${PATH}:${HOME}/bin"
 
 # Install container tools
-RUN yum -y install skopeo buildah yamllint
+RUN yum -y install yamllint
 
 COPY --from=rust_builder /opt/cincinnati/bin/e2e /usr/bin/cincinnati-e2e-test
 COPY --from=rust_builder /opt/cincinnati/bin/prometheus_query /usr/bin/cincinnati-prometheus_query-test
