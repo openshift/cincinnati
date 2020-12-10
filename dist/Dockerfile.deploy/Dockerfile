@@ -1,7 +1,7 @@
 FROM quay.io/app-sre/cincinnati:builder AS builder
 
-WORKDIR /go/src/github.com/openshift/cincinnati/
-
+# Use root user
+USER 0
 # build
 COPY . .
 # copy git information for built crate

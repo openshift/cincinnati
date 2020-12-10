@@ -29,3 +29,5 @@ RUN \
   mkdir -p $HOME/.cargo/git/ && \
   find $HOME/. -type d -exec chmod 777 {} \; && \
   find $HOME/. -type f -exec chmod ugo+rw {} \;
+
+WORKDIR /go/src/github.com/openshift/cincinnati/
