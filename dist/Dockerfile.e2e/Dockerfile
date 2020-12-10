@@ -2,6 +2,11 @@ FROM quay.io/app-sre/cincinnati:builder AS rust_builder
 # build e2e tests
 COPY . .
 
+# Install jq
+RUN mkdir -p ${HOME}/bin && \
+    curl -L https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 2>/dev/null -o ${HOME}/bin/jq && chmod a+x ${HOME}/bin/jq
+ENV PATH="${PATH}:${HOME}/bin"
+
 RUN hack/build_e2e.sh
 
 FROM registry.svc.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
