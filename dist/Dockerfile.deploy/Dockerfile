@@ -16,8 +16,7 @@ FROM quay.io/app-sre/centos:7
 
 ENV RUST_LOG=actix_web=error,dkregistry=error
 
-RUN yum update -y && \
-    yum install -y openssl && \
+RUN yum install -y openssl && \
     yum clean all
 
 COPY --from=builder /opt/cincinnati/bin/* /usr/bin/
