@@ -32,18 +32,17 @@ RUN yum -y install yamllint
 COPY --from=rust_builder /opt/cincinnati/bin/e2e /usr/bin/cincinnati-e2e-test
 COPY --from=rust_builder /opt/cincinnati/bin/prometheus_query /usr/bin/cincinnati-prometheus_query-test
 COPY --from=rust_builder /opt/cincinnati/bin/slo /usr/bin/cincinnati-e2e-slo
-COPY --from=rust_builder hack/e2e.sh hack/
-COPY --from=rust_builder dist/openshift/cincinnati.yaml dist/openshift/
-COPY --from=rust_builder dist/openshift/observability.yaml dist/openshift/
 COPY --from=golang_builder /usr/local/bin/vegeta /usr/bin
-COPY --from=rust_builder hack/load-testing.sh /usr/local/bin/load-testing.sh
-COPY --from=rust_builder hack/vegeta.targets vegeta.targets
-COPY --from=rust_builder e2e/tests/testdata e2e/tests/testdata
 
-COPY --from=rust_builder dist/prow_yaml_lint.sh dist/
-COPY --from=rust_builder dist/prow_rustfmt.sh dist/
-COPY --from=rust_builder dist/prepare_ci_credentials.sh dist/
-
+COPY hack/e2e.sh hack/
+COPY dist/openshift/cincinnati.yaml dist/openshift/
+COPY dist/openshift/observability.yaml dist/openshift/
+COPY hack/load-testing.sh /usr/local/bin/load-testing.sh
+COPY hack/vegeta.targets vegeta.targets
+COPY e2e/tests/testdata e2e/tests/testdata
+COPY dist/prow_yaml_lint.sh dist/
+COPY dist/prow_rustfmt.sh dist/
+COPY dist/prepare_ci_credentials.sh dist/
 ENV E2E_TESTDATA_DIR "e2e/tests/testdata"
 
 ENTRYPOINT ["hack/e2e.sh"]
