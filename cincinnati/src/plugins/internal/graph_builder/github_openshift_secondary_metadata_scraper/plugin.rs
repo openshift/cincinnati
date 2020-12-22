@@ -9,6 +9,7 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use tokio::sync::Mutex as FuturesMutex;
 
 pub static DEFAULT_OUTPUT_WHITELIST: &[&str] = &[
+    "version",
     "channels/.+\\.ya+ml",
     "blocked-edges/.+\\.ya+ml",
     "raw/metadata.json",

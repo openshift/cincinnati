@@ -7,6 +7,7 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use std::collections::HashSet;
 
 pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
+static SUPPORTED_VERSIONS: &[&str] = &["1.0.0"];
 
 pub mod graph_data_model {
     //! This module contains the data types corresponding to the graph data files.
@@ -295,6 +296,24 @@ impl OpenshiftSecondaryMetadataParserPlugin {
         }
     }
 
+    async fn process_version(&self, data_dir: &PathBuf) -> Fallible<String> {
+        let path = data_dir.join("version");
+        let version = tokio::fs::read(&path)
+            .await
+            .context(format!("Reading {:?}", &path))?;
+        let string_version = String::from_utf8_lossy(&version);
+
+        if SUPPORTED_VERSIONS.contains(&string_version.trim()) {
+            Ok(string_version.into_owned())
+        } else {
+            Err(format_err!(
+                "unrecognized graph-data version {}; supported versions: {:?}",
+                string_version,
+                SUPPORTED_VERSIONS
+            ))
+        }
+    }
+
     async fn process_raw_metadata(
         &self,
         graph: &mut cincinnati::Graph,
@@ -563,6 +582,7 @@ impl InternalPlugin for OpenshiftSecondaryMetadataParserPlugin {
     async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
         let data_dir = self.get_data_directory(&io);
 
+        self.process_version(&data_dir).await?;
         self.process_raw_metadata(&mut io.graph, &data_dir).await?;
         self.process_blocked_edges(&mut io.graph, &data_dir).await?;
         self.process_channels(&mut io.graph, &data_dir).await?;
@@ -673,10 +693,14 @@ mod tests {
         if let Err(e) = compare_graphs_verbose(
             graph_expected,
             graph_result,
-            &[
-                "io.openshift.upgrades.graph.previous.remove",
-                "io.openshift.upgrades.graph.previous.remove_regex",
-            ],
+            cincinnati::testing::CompareGraphsVerboseSettings {
+                unwanted_metadata_keys: &[
+                    "io.openshift.upgrades.graph.previous.remove_regex",
+                    "io.openshift.upgrades.graph.previous.remove",
+                ],
+
+                ..Default::default()
+            },
         ) {
             panic!("{}", e);
         }
