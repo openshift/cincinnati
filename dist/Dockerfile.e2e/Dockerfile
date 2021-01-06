@@ -32,6 +32,10 @@ COPY --from=golang_builder /usr/local/bin/vegeta /usr/bin
 COPY --from=rust_builder hack/load-testing.sh /usr/local/bin/load-testing.sh
 COPY --from=rust_builder hack/vegeta.targets vegeta.targets
 COPY --from=rust_builder e2e/tests/testdata e2e/tests/testdata
+
+COPY --from=rust_builder dist/prow_yaml_lint.sh dist/
+COPY --from=rust_builder dist/prow_rustfmt.sh dist/
+
 ENV E2E_TESTDATA_DIR "e2e/tests/testdata"
 
 ENTRYPOINT ["hack/e2e.sh"]
