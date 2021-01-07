@@ -20,7 +20,7 @@ RUN mkdir -p ${HOME}/bin && \
 ENV PATH="${PATH}:${HOME}/bin"
 
 # Install container tools
-RUN yum -y install skopeo buildah
+RUN yum -y install skopeo buildah yamllint
 
 COPY --from=rust_builder /opt/cincinnati/bin/e2e /usr/bin/cincinnati-e2e-test
 COPY --from=rust_builder /opt/cincinnati/bin/prometheus_query /usr/bin/cincinnati-prometheus_query-test
@@ -35,6 +35,7 @@ COPY --from=rust_builder e2e/tests/testdata e2e/tests/testdata
 
 COPY --from=rust_builder dist/prow_yaml_lint.sh dist/
 COPY --from=rust_builder dist/prow_rustfmt.sh dist/
+COPY --from=rust_builder dist/prepare_ci_credentials.sh dist/
 
 ENV E2E_TESTDATA_DIR "e2e/tests/testdata"
 
