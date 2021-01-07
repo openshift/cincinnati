@@ -35,6 +35,7 @@ COPY --from=rust_builder e2e/tests/testdata e2e/tests/testdata
 
 COPY --from=rust_builder dist/prow_yaml_lint.sh dist/
 COPY --from=rust_builder dist/prow_rustfmt.sh dist/
+COPY --from=rust_builder dist/prepare_ci_credentials.sh dist/
 
 ENV E2E_TESTDATA_DIR "e2e/tests/testdata"
 
