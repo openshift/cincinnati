@@ -7,7 +7,7 @@ RUN hack/build_e2e.sh
 FROM registry.svc.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
 RUN env GOBIN=/usr/local/bin go get -u github.com/tsenart/vegeta
 
-FROM quay.io/app-sre/centos:7
+FROM registry.centos.org/centos/centos:7
 
 ENV HOME="/root"
 
@@ -20,7 +20,9 @@ RUN mkdir -p ${HOME}/bin && \
 ENV PATH="${PATH}:${HOME}/bin"
 
 # Install container tools
-RUN yum -y install skopeo buildah yamllint
+RUN yum update -y && \
+    yum install -y skopeo buildah yamllint && \
+    yum clean all
 
 COPY --from=rust_builder /opt/cincinnati/bin/e2e /usr/bin/cincinnati-e2e-test
 COPY --from=rust_builder /opt/cincinnati/bin/prometheus_query /usr/bin/cincinnati-prometheus_query-test

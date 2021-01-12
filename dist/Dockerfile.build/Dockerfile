@@ -1,4 +1,4 @@
-FROM quay.io/app-sre/centos:7
+FROM registry.centos.org/centos/centos:7
 
 # base: EPEL repo for extra tools
 RUN yum -y install epel-release
@@ -15,7 +15,9 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.46.0 -y && \
   rustup install 1.43.1
 
 # test: linters
-RUN yum -y install yamllint
+RUN yum update -y && \
+    yum install -y yamllint && \
+    yum clean all
 
 # test: code coverage
 RUN yum -y install cmake elfutils-libelf-devel libcurl-devel binutils-devel elfutils-devel
