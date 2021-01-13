@@ -31,6 +31,7 @@ use cincinnati::plugins::BoxedPlugin;
 use commons::metrics::{self, RegistryWrapper};
 use commons::prelude_errors::*;
 use commons::tracing::{get_tracer, init_tracer, set_span_tags};
+use futures::future;
 use opentelemetry::api::{trace::futures::Instrument, Tracer};
 use prometheus::{labels, opts, Counter, Registry};
 use std::collections::HashSet;
@@ -58,9 +59,8 @@ lazy_static! {
     .unwrap();
 }
 
-fn main() -> Result<(), Error> {
-    let sys = actix::System::new("policy-engine");
-
+#[actix_web::main]
+async fn main() -> Result<(), Error> {
     let settings = config::AppSettings::assemble()?;
     env_logger::Builder::from_default_env()
         .filter(Some(module_path!()), settings.verbosity)
@@ -74,7 +74,7 @@ fn main() -> Result<(), Error> {
     ))?));
     graph::register_metrics(registry)?;
     registry.register(Box::new(BUILD_INFO.clone()))?;
-    HttpServer::new(move || {
+    let metrics_server = HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
             .app_data(actix_web::web::Data::new(RegistryWrapper(registry)))
@@ -97,7 +97,7 @@ fn main() -> Result<(), Error> {
         plugins: Box::leak(Box::new(plugins)),
     };
 
-    HttpServer::new(move || {
+    let main_server = HttpServer::new(move || {
         let app_prefix = state.path_prefix.clone();
         App::new()
             .wrap_fn(|req, srv| {
@@ -127,7 +127,7 @@ fn main() -> Result<(), Error> {
 
     BUILD_INFO.inc();
 
-    let _ = sys.run();
+    future::try_join(metrics_server, main_server).await?;
     Ok(())
 }
 

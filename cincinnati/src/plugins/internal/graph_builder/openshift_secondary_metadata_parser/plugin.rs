@@ -180,10 +180,11 @@ pub async fn deserialize_directory_files<T>(
 where
     T: DeserializeOwned,
 {
+    use futures::Stream;
     use std::sync::Arc;
     use std::sync::Mutex;
-    use tokio::stream::Stream;
-    use tokio::stream::StreamExt;
+    use tokio_stream::wrappers::ReadDirStream;
+    use tokio_stream::StreamExt;
 
     // Even though we don't use concurrent threads, the usage of async forces us
     // to guarantee that the error container is thread-safe
@@ -211,45 +212,47 @@ where
         };
     }
 
-    let mut paths = tokio::fs::read_dir(&path)
-        .await
-        .context(format!("Reading directory {:?}", &path))?
-        .filter_map(|tried_direntry| match tried_direntry {
-            Ok(direntry) => {
-                let path = direntry.path();
-                if let Some(extension) = &path.extension() {
-                    let extension_str = extension.to_str().unwrap_or_default();
-                    if extension_re.is_match(extension_str) {
-                        Some(path)
-                    } else {
-                        commit_error!(
-                            error,
-                            DeserializeDirectoryFilesError::InvalidExtension(
-                                path.clone(),
-                                extension_str.to_string(),
-                            )
-                        );
-
-                        None
-                    }
+    let mut paths = ReadDirStream::new(
+        tokio::fs::read_dir(&path)
+            .await
+            .context(format!("Reading directory {:?}", &path))?,
+    )
+    .filter_map(|tried_direntry| match tried_direntry {
+        Ok(direntry) => {
+            let path = direntry.path();
+            if let Some(extension) = &path.extension() {
+                let extension_str = extension.to_str().unwrap_or_default();
+                if extension_re.is_match(extension_str) {
+                    Some(path)
                 } else {
-                    debug!("{:?} does not have an extension", &path);
                     commit_error!(
                         error,
-                        DeserializeDirectoryFilesError::MissingExtension(path)
+                        DeserializeDirectoryFilesError::InvalidExtension(
+                            path.clone(),
+                            extension_str.to_string(),
+                        )
                     );
+
                     None
                 }
-            }
-            Err(e) => {
-                warn!("{}", e);
+            } else {
+                debug!("{:?} does not have an extension", &path);
                 commit_error!(
                     error,
-                    DeserializeDirectoryFilesError::File(path.to_path_buf(), e)
+                    DeserializeDirectoryFilesError::MissingExtension(path)
                 );
                 None
             }
-        });
+        }
+        Err(e) => {
+            warn!("{}", e);
+            commit_error!(
+                error,
+                DeserializeDirectoryFilesError::File(path.to_path_buf(), e)
+            );
+            None
+        }
+    });
 
     let mut t_vec = Vec::with_capacity(match paths.size_hint() {
         (_, Some(upper)) => upper,
@@ -615,7 +618,7 @@ mod tests {
     #[test_case("20200220.104838")]
     #[test_case("20200319.204124")]
     fn compare_quay_result_fixture(fixture: &str) {
-        let mut runtime = commons::testing::init_runtime().unwrap();
+        let runtime = commons::testing::init_runtime().unwrap();
 
         let fixture_directory = TEST_FIXTURE_DIR.join(fixture);
 
@@ -711,7 +714,7 @@ mod tests {
     #[test_case("missing_extension")]
     #[test_case("invalid_extension")]
     fn disallowed_errors_is_effective(disallowed_error: &str) {
-        let mut runtime = commons::testing::init_runtime().unwrap();
+        let runtime = commons::testing::init_runtime().unwrap();
 
         let fixture_directory = TEST_FIXTURE_DIR.join("invalid0");
 

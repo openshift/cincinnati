@@ -1,7 +1,7 @@
 /// Tiny crate to verify message signature and format
 use self::cincinnati::plugins::prelude::*;
 use crate as cincinnati;
-use bytes::buf::BufExt;
+use bytes::Buf;
 use bytes::Bytes;
 use futures::TryFutureExt;
 use reqwest::Client;

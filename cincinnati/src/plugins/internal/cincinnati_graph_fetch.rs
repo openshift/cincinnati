@@ -185,7 +185,7 @@ mod tests {
         ) => {
             #[test]
             fn $name() -> Fallible<()> {
-                let mut runtime = init_runtime()?;
+                let runtime = init_runtime()?;
 
                 // run mock graph-builder
                 let _m = mockito::mock("GET", "/")
@@ -253,7 +253,7 @@ mod tests {
         ) => {
             #[test]
             fn $name() -> Fallible<()> {
-                let mut runtime = init_runtime()?;
+                let runtime = init_runtime()?;
                 // run mock graph-builder
                 let _m = mockito::mock("GET", "/")
                     .with_status($mock_status)
@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn register_metrics() -> Fallible<()> {
-        let mut rt = testing::init_runtime()?;
+        let rt = testing::init_runtime()?;
 
         let metrics_prefix = "test_service".to_string();
         let registry: &'static Registry = Box::leak(Box::new(metrics::new_registry(Some(

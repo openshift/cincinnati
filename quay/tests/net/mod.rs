@@ -11,7 +11,7 @@ fn common_init() -> Runtime {
 
 #[test]
 fn test_public_stream_active_tags() {
-    let mut rt = common_init();
+    let rt = common_init();
     let repo = "redhat/openshift-cincinnati-test-public-manual";
     let expected = vec!["0.0.1", "0.0.0"];
 
@@ -32,7 +32,7 @@ fn test_public_stream_active_tags() {
 
 #[test]
 fn test_public_get_labels() {
-    let mut rt = common_init();
+    let rt = common_init();
     let repo = "redhat/openshift-cincinnati-test-labels-public-manual";
     let tag_name = "0.0.1";
 

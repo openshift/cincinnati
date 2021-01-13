@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn ensure_channel_param_validation() {
-        let mut runtime = init_runtime().unwrap();
+        let runtime = init_runtime().unwrap();
 
         let plugin = Box::new(ChannelFilterPlugin {
             key_prefix: "".to_string(),
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn ensure_channel_filter() {
-        let mut runtime = init_runtime().unwrap();
+        let runtime = init_runtime().unwrap();
 
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "channels".to_string();

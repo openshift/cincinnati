@@ -22,7 +22,7 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str) {
         .context(format!("reading {}", &testdata_path))
         .unwrap();
 
-    let mut runtime = commons::testing::init_runtime().unwrap();
+    let runtime = commons::testing::init_runtime().unwrap();
 
     let graph_base_url = match env::var("GRAPH_URL") {
         Ok(env) => env,
