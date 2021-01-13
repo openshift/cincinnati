@@ -29,7 +29,7 @@ pub struct ServiceOptions {
     /// Duration of the pause (in seconds) between registry scans
     #[structopt(
         long = "service.pause_secs",
-        parse(try_from_str = "duration_from_secs")
+        parse(try_from_str = duration_from_secs)
     )]
     #[serde(default = "Option::default", deserialize_with = "de_duration_secs")]
     pub pause_secs: Option<Duration>,
@@ -37,7 +37,7 @@ pub struct ServiceOptions {
     /// Timeout for a single scrape in seconds
     #[structopt(
         long = "service.scrape_timeout",
-        parse(try_from_str = "duration_from_secs")
+        parse(try_from_str = duration_from_secs)
     )]
     #[serde(default = "Option::default", deserialize_with = "de_duration_secs")]
     pub scrape_timeout_secs: Option<Duration>,
@@ -51,14 +51,14 @@ pub struct ServiceOptions {
     pub port: Option<u16>,
 
     /// Namespace prefix for all service endpoints (e.g. '/<prefix>/v1/graph')
-    #[structopt(long = "service.path_prefix", parse(from_str = "parse_path_prefix"))]
+    #[structopt(long = "service.path_prefix", parse(from_str = parse_path_prefix))]
     #[serde(default = "Option::default", deserialize_with = "de_path_prefix")]
     pub path_prefix: Option<String>,
 
     /// Comma-separated set of mandatory client parameters
     #[structopt(
         long = "service.mandatory_client_parameters",
-        parse(from_str = "parse_params_set")
+        parse(from_str = parse_params_set)
     )]
     pub mandatory_client_parameters: Option<HashSet<String>>,
 

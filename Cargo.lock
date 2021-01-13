@@ -1706,7 +1706,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "smart-default",
- "structopt",
+ "structopt 0.3.21",
  "tar",
  "tempfile",
  "tokio 0.2.25",
@@ -2827,7 +2827,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "smart-default",
- "structopt",
+ "structopt 0.3.21",
  "tempfile",
  "tokio 0.2.25",
  "toml",
@@ -2861,7 +2861,7 @@ checksum = "3bc9e8bdfe446d34975ff774fbb4a2b944d17054f6b5845ec132d4fb9ff8f559"
 dependencies = [
  "ansi_term 0.9.0",
  "prettytable-rs",
- "structopt",
+ "structopt 0.2.18",
 ]
 
 [[package]]
@@ -3895,7 +3895,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16c2cdbf9cc375f15d1b4141bc48aeef444806655cd0e904207edc8d68d86ed7"
 dependencies = [
  "clap",
- "structopt-derive",
+ "structopt-derive 0.2.18",
+]
+
+[[package]]
+name = "structopt"
+version = "0.3.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5277acd7ee46e63e5168a80734c9f6ee81b1367a7d8772a2d765df2a3705d28c"
+dependencies = [
+ "clap",
+ "lazy_static",
+ "structopt-derive 0.4.14",
 ]
 
 [[package]]
@@ -3908,6 +3919,19 @@ dependencies = [
  "proc-macro2 0.4.30",
  "quote 0.6.13",
  "syn 0.15.44",
+]
+
+[[package]]
+name = "structopt-derive"
+version = "0.4.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ba9cdfda491b814720b6b06e0cac513d922fc407582032e8706e9f137976f90"
+dependencies = [
+ "heck",
+ "proc-macro-error",
+ "proc-macro2 1.0.24",
+ "quote 1.0.9",
+ "syn 1.0.60",
 ]
 
 [[package]]
