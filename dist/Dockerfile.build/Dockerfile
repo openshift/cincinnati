@@ -4,8 +4,13 @@ FROM registry.centos.org/centos/centos:7
 RUN yum -y install epel-release
 
 # build: system utilities and libraries
-RUN yum -y groupinstall 'Development Tools'
-RUN yum -y install openssl-devel protobuf-compiler jq skopeo buildah
+RUN yum update -y && \
+    yum -y install epel-release && \
+    yum -y groupinstall 'Development Tools' && \
+    yum -y install openssl-devel protobuf-compiler jq skopeo buildah && \
+    yum -y install yamllint && \
+    yum -y install cmake elfutils-libelf-devel libcurl-devel binutils-devel elfutils-devel && \
+    yum clean all
 
 ENV HOME="/root"
 ENV PATH="${HOME}/.cargo/bin:${PATH}"
@@ -14,13 +19,7 @@ ENV PATH="${HOME}/.cargo/bin:${PATH}"
 RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.46.0 -y && \
   rustup install 1.43.1
 
-# test: linters
-RUN yum update -y && \
-    yum install -y yamllint && \
-    yum clean all
-
 # test: code coverage
-RUN yum -y install cmake elfutils-libelf-devel libcurl-devel binutils-devel elfutils-devel
 RUN \
   mkdir $HOME/kcov && \
   pushd $HOME/kcov && \
