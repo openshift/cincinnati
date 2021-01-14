@@ -9,11 +9,11 @@ use test_case::test_case;
 // No upstream errors
 #[test_case("max_over_time(cincinnati_pe_http_upstream_errors_total[1h])", "0")]
 #[test_case("max_over_time(cincinnati_gb_graph_upstream_errors_total[1h])", "0")]
-// Use clamp_min to bring up the minimal serve duration to 500ms
+// Use clamp_min to bring up the minimal serve duration to 1s
 // If the quantile would produce a bigger result this test would fail
 #[test_case(
-    "clamp_min(histogram_quantile(0.90, sum(cincinnati_pe_v1_graph_serve_duration_seconds_bucket) by (le)), 0.5)",
-    "0.5"
+    "clamp_min(histogram_quantile(0.90, sum(cincinnati_pe_v1_graph_serve_duration_seconds_bucket) by (le)), 1)",
+    "1"
 )]
 // At least one scrape has been performed
 #[test_case("clamp_max(cincinnati_gb_graph_upstream_scrapes_total, 1)", "1")]
