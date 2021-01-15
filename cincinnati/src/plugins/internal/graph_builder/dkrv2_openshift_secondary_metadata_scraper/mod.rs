@@ -4,6 +4,7 @@
 //! rely on the data being in the output directory.
 //! The plugin will only download a tarball if detects a change of revision or on first run.
 
+pub mod gpg;
 pub mod plugin;
 
 pub use plugin::{

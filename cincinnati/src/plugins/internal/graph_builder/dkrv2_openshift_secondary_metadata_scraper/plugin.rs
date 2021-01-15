@@ -1,7 +1,11 @@
 use crate as cincinnati;
+use crate::plugins::internal::dkrv2_openshift_secondary_metadata_scraper::gpg;
 use crate::plugins::internal::release_scrape_dockerv2::registry;
+use reqwest::{Client, ClientBuilder};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tempfile::TempDir;
+use url::Url;
 
 use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
@@ -18,6 +22,9 @@ pub static DEFAULT_OUTPUT_WHITELIST: &[&str] = &[
 pub static DEFAULT_METADATA_IMAGE_REGISTRY: &str = "";
 pub static DEFAULT_METADATA_IMAGE_REPOSITORY: &str = "";
 pub static DEFAULT_METADATA_IMAGE_TAG: &str = "latest";
+pub static DEFAULT_SIGNATURE_BASEURL: &str =
+    "https://mirror.openshift.com/pub/openshift-v4/signatures/openshift/release/";
+pub static DEFAULT_SIGNATURE_FETCH_TIMEOUT_SECS: u64 = 30;
 
 // Defines the key for placing the data directory path in the IO parameters
 pub static GRAPH_DATA_DIR_PARAM_KEY: &str = "io.openshift.upgrades.secondary_metadata.directory";
@@ -58,6 +65,18 @@ pub struct DkrV2OpenshiftSecondaryMetadataScraperSettings {
     /// Takes precedence over username and password
     #[default(Option::None)]
     credentials_path: Option<PathBuf>,
+
+    /// Ensure signatures are verified
+    #[default(false)]
+    verify_signature: bool,
+
+    /// Base URL for signature verification
+    #[default(DEFAULT_SIGNATURE_BASEURL.to_string())]
+    signature_baseurl: String,
+
+    /// Public keys for signature verification
+    #[default(Option::None)]
+    public_keys_path: Option<PathBuf>,
 }
 
 impl DkrV2OpenshiftSecondaryMetadataScraperSettings {
@@ -93,6 +112,21 @@ impl DkrV2OpenshiftSecondaryMetadataScraperSettings {
             }
         }
 
+        if settings.verify_signature {
+            ensure!(
+                !settings.signature_baseurl.is_empty(),
+                "empty signature base url",
+            );
+            ensure!(
+                Url::parse(settings.signature_baseurl.as_str()).is_ok(),
+                "invalid signature base url",
+            );
+            ensure!(
+                !settings.public_keys_path.is_none(),
+                "empty public keys path",
+            );
+        }
+
         Ok(Box::new(settings))
     }
 }
@@ -112,7 +146,7 @@ pub struct DkrV2OpenshiftSecondaryMetadataScraperPlugin {
     output_allowlist: Vec<regex::Regex>,
     data_dir: TempDir,
     state: FuturesMutex<State>,
-
+    http_client: Client,
     registry: registry::Registry,
 }
 
@@ -156,12 +190,17 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
             settings.username = username;
             settings.password = password;
         }
+        let http_client = ClientBuilder::new()
+            .gzip(true)
+            .timeout(Duration::from_secs(DEFAULT_SIGNATURE_FETCH_TIMEOUT_SECS))
+            .build()
+            .context("Building reqwest client")?;
 
         Ok(Self {
             settings,
             output_allowlist,
             data_dir,
-
+            http_client,
             registry,
             state: FuturesMutex::new(State::default()),
         })
@@ -193,7 +232,22 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
             .await?;
         trace!("manifest: {:?}, reference: {:?}", manifest, reference);
 
-        // TODO: download signature and verify the manifest. yield an error if either step fails.
+        if self.settings.verify_signature {
+            let reference = reference.ok_or_else(|| {
+                format_err!(
+                    "no manifestref found for {}:{}",
+                    &self.settings.repository,
+                    &self.settings.tag
+                )
+            })?;
+
+            let public_keys = self.settings.public_keys_path.as_ref().unwrap();
+            let base_url = Url::parse(self.settings.signature_baseurl.as_str()).unwrap();
+
+            let keyring = gpg::load_public_keys(&public_keys)?;
+            gpg::verify_signatures_for_digest(&self.http_client, &base_url, &keyring, &reference)
+                .await?;
+        }
 
         let layers = manifest.layers_digests(None)?;
         trace!("layers: {:?}", &layers);
@@ -338,28 +392,54 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 #[cfg(feature = "test-net")]
 mod network_tests {
     use super::*;
+    use mockito;
     use std::collections::HashSet;
 
     #[tokio::test(threaded_scheduler)]
     async fn openshift_secondary_metadata_extraction() -> Fallible<()> {
+        let fixtures = PathBuf::from(
+            "./src/plugins/internal/graph_builder/dkrv2_openshift_secondary_metadata_scraper/test_fixtures",
+        );
+        let mut public_keys_path = fixtures.clone();
+        public_keys_path.push("public_keys");
+
+        // Prepare mocked signature URL
+        let mut signature_path = fixtures.clone();
+        signature_path.push("signatures/signature-3");
+
+        let _m = mockito::mock(
+            "GET",
+            "/sha256=3d8d70c6090d4b843f885c8a0c80d01c5fb78dd7c8d16e20929ffc32a15e2fde/signature-3",
+        )
+        .with_status(200)
+        .with_body_from_file(signature_path.canonicalize()?)
+        .create();
+
         let tmpdir = tempfile::tempdir()?;
 
+        let config = &format!(
+            r#"
+                registry = "registry.svc.ci.openshift.org"
+                repository = "cincinnati-ci-public/cincinnati-graph-data"
+                tag = "6420f7fbf3724e1e5e329ae8d1e2985973f60c14"
+                output_allowlist = [ {} ]
+                output_directory = {:?}
+                verify_signature = true
+                signature_baseurl = {:?}
+                public_keys_path = {:?}
+            "#,
+            DEFAULT_OUTPUT_WHITELIST
+                .iter()
+                .map(|s| format!(r#"{:?}"#, s))
+                .collect::<Vec<_>>()
+                .join(", "),
+            &tmpdir.path(),
+            mockito::server_url(),
+            &public_keys_path.canonicalize()?,
+        );
+
         let settings = DkrV2OpenshiftSecondaryMetadataScraperSettings::deserialize_config(
-            toml::Value::from_str(&format!(
-                r#"
-                    registry = "registry.svc.ci.openshift.org"
-                    repository = "cincinnati-ci-public/cincinnati-graph-data"
-                    tag = "6420f7fbf3724e1e5e329ae8d1e2985973f60c14"
-                    output_allowlist = [ {} ]
-                    output_directory = {:?}
-                "#,
-                DEFAULT_OUTPUT_WHITELIST
-                    .iter()
-                    .map(|s| format!(r#"{:?}"#, s))
-                    .collect::<Vec<_>>()
-                    .join(", "),
-                &tmpdir.path(),
-            ))?,
+            toml::Value::from_str(config)?,
         )?;
 
         debug!("Settings: {:#?}", &settings);
