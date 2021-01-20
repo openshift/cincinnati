@@ -7,7 +7,7 @@ RUN hack/build_e2e.sh
 FROM registry.svc.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
 RUN env GOBIN=/usr/local/bin go get -u github.com/tsenart/vegeta
 
-FROM quay.io/app-sre/centos:7
+FROM registry.centos.org/centos/centos:7
 
 ENV HOME="/root"
 
@@ -20,7 +20,9 @@ RUN mkdir -p ${HOME}/bin && \
 ENV PATH="${PATH}:${HOME}/bin"
 
 # Install container tools
-RUN yum -y install skopeo buildah
+RUN yum update -y && \
+    yum install -y skopeo buildah yamllint && \
+    yum clean all
 
 COPY --from=rust_builder /opt/cincinnati/bin/e2e /usr/bin/cincinnati-e2e-test
 COPY --from=rust_builder /opt/cincinnati/bin/prometheus_query /usr/bin/cincinnati-prometheus_query-test
@@ -32,6 +34,11 @@ COPY --from=golang_builder /usr/local/bin/vegeta /usr/bin
 COPY --from=rust_builder hack/load-testing.sh /usr/local/bin/load-testing.sh
 COPY --from=rust_builder hack/vegeta.targets vegeta.targets
 COPY --from=rust_builder e2e/tests/testdata e2e/tests/testdata
+
+COPY --from=rust_builder dist/prow_yaml_lint.sh dist/
+COPY --from=rust_builder dist/prow_rustfmt.sh dist/
+COPY --from=rust_builder dist/prepare_ci_credentials.sh dist/
+
 ENV E2E_TESTDATA_DIR "e2e/tests/testdata"
 
 ENTRYPOINT ["hack/e2e.sh"]

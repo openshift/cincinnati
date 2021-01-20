@@ -12,7 +12,7 @@ RUN cargo build --release && \
     cp -rvf target/release/graph-builder /opt/cincinnati/bin && \
     cp -rvf target/release/policy-engine /opt/cincinnati/bin
 
-FROM quay.io/app-sre/centos:7
+FROM registry.centos.org/centos/centos:7
 
 ENV RUST_LOG=actix_web=error,dkregistry=error
 
