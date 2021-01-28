@@ -1,5 +1,6 @@
 FROM quay.io/app-sre/cincinnati:builder AS builder
 
+COPY . .
 # copy git information for built crate
 COPY .git/ ./.git/
 
