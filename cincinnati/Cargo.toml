@@ -5,7 +5,7 @@ authors = ["Alex Crawford <crawford@redhat.com>"]
 edition = "2018"
 
 [dependencies]
-actix-web = "^2.0"
+actix-web = "^3.3.2"
 commons = { path = "../commons" }
 custom_debug_derive = "^0.1.7"
 daggy = { version = "^0.6.0", features = [ "serde-1" ] }
@@ -15,7 +15,7 @@ futures-locks = "0.5.0"
 lazy_static = "^1.2.0"
 log = "^0.4.3"
 prometheus = "0.9"
-protobuf = "2.0"
+protobuf = "2.20.0"
 quay = { path = "../quay" }
 regex = "^1.1.0"
 reqwest = { version = "^0.10", features = ["gzip"] }
