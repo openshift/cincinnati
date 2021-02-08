@@ -11,11 +11,10 @@ fn codegen_protoc() {
     const SCHEMA_FILENAME: &str = "src/plugins/interface.proto";
 
     println!("Generating code from {}", SCHEMA_FILENAME);
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: &format!("src/plugins/"),
-        includes: &[],
-        input: &[SCHEMA_FILENAME],
-        customize: Default::default(),
-    })
-    .expect("protoc");
+    protoc_rust::Codegen::new()
+        .out_dir("src/plugins/")
+        .inputs(&[SCHEMA_FILENAME])
+        .customize(Default::default())
+        .run()
+        .expect("protoc");
 }

@@ -5,7 +5,7 @@ authors = ["Stefan Junker <mail@stefanjunker.de>"]
 edition = "2018"
 
 [dependencies]
-actix-web = "^2.0"
+actix-web = "^3.3.2"
 env_logger = "^0.6.0"
 anyhow = "1.0"
 thiserror = "1.0"
