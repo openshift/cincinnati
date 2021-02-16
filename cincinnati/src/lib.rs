@@ -73,6 +73,18 @@ impl Release {
             Release::Concrete(release) => Some(&mut release.metadata),
         }
     }
+
+    /// Returns the `manifestref` of a given `Release`
+    pub fn manifestref(&self) -> Result<&String, Error> {
+        let digestkey = String::from("io.openshift.upgrades.graph.release.manifestref");
+        match self {
+            Release::Concrete(release) => {
+                let digest = release.metadata.get(&digestkey);
+                Ok(digest.map(|d| d).unwrap())
+            }
+            _ => bail!("could not get manifest reference"),
+        }
+    }
 }
 
 /// Type to represent a Release with all its information.
@@ -188,10 +200,15 @@ impl Graph {
             Some(id) => {
                 let node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
                 if let Release::Concrete(_) = node {
-                    bail!(
-                        "Concrete release with the same version ({}) already exists",
-                        release.version()
-                    );
+                    // check if release digest and node digest are same
+                    if release.manifestref().unwrap() != node.manifestref().unwrap() {
+                        bail!(
+                            "mismatched manifest ref for concrete release {}: {}, {}",
+                            release.version(),
+                            release.manifestref().unwrap(),
+                            node.manifestref().unwrap()
+                        )
+                    }
                 }
                 *node = release;
                 Ok(id)
