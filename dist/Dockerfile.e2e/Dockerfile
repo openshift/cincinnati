@@ -1,7 +1,7 @@
 FROM quay.io/app-sre/cincinnati:builder AS rust_builder
 RUN hack/build_e2e.sh
 
-FROM registry.svc.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
+FROM registry.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
 RUN env GOBIN=/usr/local/bin go get -u github.com/tsenart/vegeta
 
 FROM registry.centos.org/centos/centos:7

@@ -6,9 +6,9 @@
 # * Ensures generated graph is valid
 
 # Prerequirements:
-#   * pull secret (with registry.svc.ci.openshift.org) part in `/tmp/cluster/pull-secret`
+#   * pull secret (with registry.ci.openshift.org) part in `/tmp/cluster/pull-secret`
 #   * CINCINNATI_IMAGE (optional) - image with graph-builder and policy-engine
-#   * env var IMAGE_FORMAT (e.g `registry.svc.ci.openshift.org/ci-op-ish8m5dt/stable:${component}`)
+#   * env var IMAGE_FORMAT (e.g `registry.ci.openshift.org/ci-op-ish8m5dt/stable:${component}`)
 
 # Use CI image format by default unless CINCINNATI_IMAGE is set
 if [[ ! -z "${CINCINNATI_IMAGE}" ]]; then

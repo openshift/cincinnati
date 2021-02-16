@@ -1,6 +1,6 @@
 use super::*;
 
-const DEFAULT_SCRAPE_REGISTRY: &str = "registry.svc.ci.openshift.org";
+const DEFAULT_SCRAPE_REGISTRY: &str = "registry.ci.openshift.org";
 
 use cincinnati::plugins::internal::graph_builder::commons::tests::common_init;
 use cincinnati::testing::{TestGraphBuilder, TestMetadata};

@@ -10,7 +10,7 @@ RUN dnf update -y \
 
 RUN bash -c "source /opt/app-root/etc/scl_enable && hack/build_e2e.sh"
 
-FROM registry.svc.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
+FROM registry.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
 RUN env GOBIN=/usr/local/bin go get -u github.com/tsenart/vegeta
 
 FROM registry.access.redhat.com/ubi8/ubi:latest
