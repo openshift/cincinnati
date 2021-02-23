@@ -7,14 +7,14 @@ edition = "2018"
 [dependencies]
 assert-json-diff = "1.0.0"
 chrono = "^0.4.0"
-env_logger = "^0.6.0"
+env_logger = "^0.8"
 failure = "^0.1.1"
 reqwest = "^0.10"
 serde = "^1.0.70"
 serde_derive = "^1.0.70"
 serde_json = "^1.0.22"
 test-case = "1.0.0"
-url = "^1.7.2"
+url = "^2.2"
 commons = { path = "../commons" }
 tokio = { version = "0.2.11", features = [ "fs", "stream" ] }
 prometheus-query = { path = "../prometheus-query" }

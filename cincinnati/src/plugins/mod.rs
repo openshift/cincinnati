@@ -62,7 +62,7 @@ pub mod prelude_plugin_impl {
 
     pub use async_trait::async_trait;
     pub use commons::prelude_errors::*;
-    pub use custom_debug_derive::CustomDebug;
+    pub use custom_debug_derive::Debug as CustomDebug;
     pub use futures::TryFutureExt;
     pub use log::{debug, error, info, trace, warn};
     pub use serde::{de::DeserializeOwned, Deserialize};
@@ -502,7 +502,7 @@ mod tests {
         assert_eq!(input_internal, output_internal);
     }
 
-    #[derive(custom_debug_derive::CustomDebug)]
+    #[derive(custom_debug_derive::Debug)]
     #[allow(clippy::type_complexity)]
     struct TestInternalPlugin {
         counter: AtomicUsize,
