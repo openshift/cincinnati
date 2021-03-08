@@ -78,7 +78,7 @@ fn main() -> Result<(), Error> {
             .wrap(middleware::Compress::default())
             .wrap(
                 Cors::default()
-                    .allowed_origin("*")
+                    .allow_any_origin()
                     .allowed_methods(vec!["HEAD", "GET"]),
             )
             .app_data(actix_web::web::Data::new(RegistryWrapper(registry)))
