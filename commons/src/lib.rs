@@ -108,18 +108,19 @@ pub fn validate_content_type(
     };
 
     let full_type = header::HeaderValue::from_static(content_type);
-    let top_type = content_type.split("/").next().unwrap_or("");
-    let top_type_wildcard = header::HeaderValue::from_str(&format!("{}/*", top_type));
-    assert!(
-        top_type_wildcard.is_ok(),
-        format!("could not form top-type wildcard from {}", top_type)
-    );
+    let top_type_wildcard = match content_type.split("/").next() {
+        Some(top_type) => match header::HeaderValue::from_str(&format!("{}/*", top_type)) {
+            Ok(t) => t,
+            Err(_) => return Err(GraphError::InvalidContentType),
+        },
+        None => return Err(GraphError::InvalidContentType),
+    };
 
     let acceptable_content_types: Vec<actix_web::http::HeaderValue> = vec![
         full_type,
         WILDCARD_HEADER.clone(),
         DOUBLE_WILDCARD_HEADER.clone(),
-        top_type_wildcard.unwrap(),
+        top_type_wildcard,
     ];
 
     // FIXME: this is not a full-blown Accept parser
