@@ -91,6 +91,12 @@ pub fn ensure_query_params(
     Ok(())
 }
 
+lazy_static! {
+    static ref WILDCARD_HEADER: header::HeaderValue = header::HeaderValue::from_static("*");
+    static ref DOUBLE_WILDCARD_HEADER: header::HeaderValue =
+        header::HeaderValue::from_static("*/*");
+}
+
 /// Make sure the client can accept the provided media type.
 pub fn validate_content_type(
     headers: &HeaderMap,
@@ -102,8 +108,6 @@ pub fn validate_content_type(
     };
 
     let full_type = header::HeaderValue::from_static(content_type);
-    let wildcard = header::HeaderValue::from_static("*");
-    let double_wildcard = header::HeaderValue::from_static("*/*");
     let top_type = content_type.split("/").next().unwrap_or("");
     let top_type_wildcard = header::HeaderValue::from_str(&format!("{}/*", top_type));
     assert!(
@@ -113,8 +117,8 @@ pub fn validate_content_type(
 
     let acceptable_content_types: Vec<actix_web::http::HeaderValue> = vec![
         full_type,
-        wildcard,
-        double_wildcard,
+        WILDCARD_HEADER.clone(),
+        DOUBLE_WILDCARD_HEADER.clone(),
         top_type_wildcard.unwrap(),
     ];
 
