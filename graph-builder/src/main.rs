@@ -157,15 +157,16 @@ mod tests {
     use commons::metrics::HasRegistry;
     use commons::metrics::RegistryWrapper;
     use commons::testing;
+    use graph_builder::status::{serve_liveness, serve_readiness};
     use parking_lot::RwLock;
     use prometheus::Registry;
     use std::collections::HashSet;
     use std::sync::Arc;
 
-    fn mock_state() -> State {
+    fn mock_state(is_live: bool, is_ready: bool) -> State {
         let json_graph = Arc::new(RwLock::new(String::new()));
-        let live = Arc::new(RwLock::new(false));
-        let ready = Arc::new(RwLock::new(false));
+        let live = Arc::new(RwLock::new(is_live));
+        let ready = Arc::new(RwLock::new(is_ready));
 
         let plugins = Box::leak(Box::new([]));
         let registry: &'static Registry = Box::leak(Box::new(
@@ -178,7 +179,7 @@ mod tests {
     #[test]
     fn serve_metrics_basic() -> Fallible<()> {
         let mut rt = testing::init_runtime()?;
-        let state = mock_state();
+        let state = mock_state(false, false);
 
         let registry = <dyn HasRegistry>::registry(&state);
         graph::register_metrics(registry)?;
@@ -202,6 +203,46 @@ mod tests {
         } else {
             bail!("expected bytes in body")
         };
+
+        Ok(())
+    }
+
+    #[test]
+    fn check_liveness_readiness() -> Fallible<()> {
+        let mut rt = testing::init_runtime()?;
+
+        let liveness_is_live = serve_liveness(actix_web::web::Data::new(mock_state(true, false)));
+        let resp = rt.block_on(liveness_is_live);
+        assert!(
+            resp.status().is_success(),
+            "liveness check failed. Application returned {}, expected success",
+            resp.status()
+        );
+
+        let liveness_not_live = serve_liveness(actix_web::web::Data::new(mock_state(false, false)));
+        let resp = rt.block_on(liveness_not_live);
+        assert!(
+            !resp.status().is_success(),
+            "liveness check failed. Application returned {}, expected failure",
+            resp.status()
+        );
+
+        let readiness_is_ready = serve_readiness(actix_web::web::Data::new(mock_state(true, true)));
+        let resp = rt.block_on(readiness_is_ready);
+        assert!(
+            resp.status().is_success(),
+            "readiness check failed. Application returned {}, expected success",
+            resp.status()
+        );
+
+        let readiness_not_ready =
+            serve_readiness(actix_web::web::Data::new(mock_state(true, false)));
+        let resp = rt.block_on(readiness_not_ready);
+        assert!(
+            !resp.status().is_success(),
+            "readiness check failed. Application returned {}, expected failure",
+            resp.status()
+        );
 
         Ok(())
     }
