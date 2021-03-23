@@ -162,6 +162,7 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, Error> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
 
     #[test]
     fn create_graph_tolerates_nonexistent_edges() -> Fallible<()> {
@@ -204,6 +205,55 @@ mod tests {
 
         create_graph(releases).unwrap();
 
+        Ok(())
+    }
+
+    #[test]
+    fn create_graph_duplicate_releases() -> Fallible<()> {
+        let mut valid = BTreeMap::new();
+        valid.insert(
+            "io.openshift.upgrades.graph.release.manifestref".to_string(),
+            "sha256:872227b971ddfe537yb847cb7hed7caa464b81b565e5aadd".to_string(),
+        );
+        let mut invalid = BTreeMap::new();
+        invalid.insert(
+            "io.openshift.upgrades.graph.release.manifestref".to_string(),
+            "sha256:872227b974324x2x47cb7hed7caa464b81b562r33x2323x23".to_string(),
+        );
+
+        let valid_release = Release {
+            source: "test-0.0.1".to_string(),
+            metadata: Metadata {
+                kind: MetadataKind::V0,
+                version: semver::Version::from((0, 0, 1)),
+                next: Default::default(),
+                previous: Default::default(),
+                metadata: valid,
+            },
+        };
+
+        let invalid_release = Release {
+            source: "test-0.0.1".to_string(),
+            metadata: Metadata {
+                kind: MetadataKind::V0,
+                version: semver::Version::from((0, 0, 1)),
+                next: Default::default(),
+                previous: Default::default(),
+                metadata: invalid,
+            },
+        };
+
+        let releases_no_error = vec![valid_release.clone(), valid_release.clone()];
+        let releases_error = vec![valid_release, invalid_release];
+
+        assert!(
+            create_graph(releases_no_error).is_ok(),
+            "create graph should not throw on encountering duplicate releases"
+        );
+        assert!(
+            create_graph(releases_error).is_err(),
+            "create graph should throw error on SHA sum mismatch for duplicate releases"
+        );
         Ok(())
     }
 }
