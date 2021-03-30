@@ -138,6 +138,7 @@ fn scrape_private_without_credentials_must_fail() -> Fallible<()> {
 }
 
 #[test]
+#[ignore = "broken on OCP 4.x registry"]
 fn scrape_public_with_no_release_metadata_must_not_error() -> Fallible<()> {
     let (mut runtime, _) = common_init();
 
@@ -261,6 +262,7 @@ fn scrape_public_with_first_empty_tag_must_succeed() -> Fallible<()> {
 
 #[test_case::test_case(DEFAULT_SCRAPE_REGISTRY)]
 #[test_case(&format!("{}:443", DEFAULT_SCRAPE_REGISTRY))]
+#[ignore = "broken on OCP 4.x registry"]
 // TODO: enable this when the dkregistry-rs migration to reqwest is complete
 // #[test_case(&format!("http://{}", DEFAULT_SCRAPE_REGISTRY))]
 fn scrape_public_must_succeed_with_various_registry_urls(registry: &str) {
