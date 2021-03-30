@@ -419,7 +419,7 @@ mod network_tests {
 
         let config = &format!(
             r#"
-                registry = "registry.svc.ci.openshift.org"
+                registry = "registry.ci.openshift.org"
                 repository = "cincinnati-ci-public/cincinnati-graph-data"
                 tag = "6420f7fbf3724e1e5e329ae8d1e2985973f60c14"
                 output_allowlist = [ {} ]
