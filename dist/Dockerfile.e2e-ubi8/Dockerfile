@@ -36,6 +36,7 @@ COPY --from=rust_builder /opt/app-root/src/hack/load-testing.sh /usr/local/bin/l
 COPY --from=rust_builder /opt/app-root/src/hack/vegeta.targets vegeta.targets
 COPY --from=rust_builder /opt/app-root/src/e2e/tests/testdata e2e/tests/testdata
 COPY --from=rust_builder /opt/app-root/src/dist/prepare_ci_credentials.sh dist/
+COPY --from=rust_builder /opt/app-root/src/dist/cargo_test.sh dist/
 
 ENV E2E_TESTDATA_DIR "e2e/tests/testdata"
 
