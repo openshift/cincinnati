@@ -15,6 +15,7 @@
 use crate as cincinnati;
 
 use self::cincinnati::plugins::internal::graph_builder::release::Metadata;
+use self::cincinnati::plugins::internal::graph_builder::release::MetadataKind;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
 
 use flate2::read::GzDecoder;
@@ -22,6 +23,7 @@ use futures::lock::Mutex as FuturesMutex;
 use futures::prelude::*;
 use futures::TryStreamExt;
 use log::{debug, error, trace, warn};
+use semver::Version;
 use serde::Deserialize;
 use serde_json;
 use std::fs::File;
@@ -377,6 +379,15 @@ async fn lookup_or_fetch(
             cached_metadata.clone()
         }
         None => {
+            let placeholder = Option::from(Metadata {
+                kind: MetadataKind::V0,
+                version: Version::new(0, 0, 0),
+                previous: vec![],
+                next: vec![],
+                metadata: Default::default(),
+            });
+            cache.write().await.insert(manifestref.clone(), placeholder);
+
             let metadata = find_first_release_metadata(
                 layer_digests,
                 registry_client,
