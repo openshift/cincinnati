@@ -16,8 +16,8 @@ ENV HOME="/root"
 ENV PATH="${HOME}/.cargo/bin:${PATH}"
 
 # build: Rust stable toolchain
-RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.46.0 -y && \
-  rustup install 1.43.1
+RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.50.0 -y && \
+  rustup install 1.46.0
 
 # test: code coverage
 RUN \
