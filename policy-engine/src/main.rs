@@ -25,7 +25,8 @@ mod openapi;
 
 use actix_cors::Cors;
 use actix_service::Service;
-use actix_web::{middleware, App, HttpServer};
+use actix_web::http::StatusCode;
+use actix_web::{middleware, App, HttpRequest, HttpResponse, HttpServer};
 use cincinnati::plugins::BoxedPlugin;
 use commons::metrics::{self, RegistryWrapper};
 use commons::prelude_errors::*;
@@ -118,6 +119,7 @@ fn main() -> Result<(), Error> {
                 actix_web::web::resource(&format!("{}/v1/openapi", app_prefix))
                     .route(actix_web::web::get().to(openapi::index)),
             )
+            .default_service(actix_web::web::route().to(default_response))
     })
     .keep_alive(10)
     .bind((settings.address, settings.port))?
@@ -127,6 +129,18 @@ fn main() -> Result<(), Error> {
 
     let _ = sys.run();
     Ok(())
+}
+
+// log errors in case an incorrect endpoint is called
+fn default_response(req: HttpRequest) -> HttpResponse {
+    error!(
+        "Error serving request '{}' from '{}': Incorrect Endpoint",
+        graph::format_request(&req),
+        req.peer_addr()
+            .map(|addr| addr.to_string())
+            .unwrap_or("<not available>".into())
+    );
+    HttpResponse::new(StatusCode::NOT_FOUND)
 }
 
 /// Shared application configuration (cloned per-thread).

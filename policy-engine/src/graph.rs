@@ -1,6 +1,7 @@
 //! Cincinnati graph service.
 
 use crate::AppState;
+use actix_web::http::HeaderValue;
 use actix_web::web::Query;
 use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::BoxedPlugin;
@@ -40,6 +41,15 @@ pub(crate) async fn index(
     req: HttpRequest,
     app_data: actix_web::web::Data<AppState>,
 ) -> Result<HttpResponse, GraphError> {
+    _index(&req, app_data)
+        .await
+        .map_err(|e| api_response_error(&req, e))
+}
+
+async fn _index(
+    req: &HttpRequest,
+    app_data: actix_web::web::Data<AppState>,
+) -> Result<HttpResponse, GraphError> {
     let span = get_tracer().start("index", None);
 
     V1_GRAPH_INCOMING_REQS.inc();
@@ -59,21 +69,48 @@ pub(crate) async fn index(
 
     let response = process_plugins(app_data.plugins.iter(), plugin_params)
         .instrument(span)
-        .await
-        .map_err(|e| {
-            error!(
-                "Error serving request '{}' from '{}': {:?}",
-                format!("{:?}", &req).replace("\n", " ").replace("\t", " "),
-                &req.peer_addr()
-                    .map(|addr| addr.to_string())
-                    .unwrap_or("<not available>".into()),
-                e
-            );
-            e
-        });
+        .await;
 
     timer.observe_duration();
     response
+}
+
+// logs api request error
+fn api_response_error(req: &HttpRequest, e: GraphError) -> GraphError {
+    error!(
+        "Error serving request \"{}\" from '{}': {:?}",
+        format_request(req),
+        req.peer_addr()
+            .map(|addr| addr.to_string())
+            .unwrap_or("<not available>".into()),
+        e
+    );
+    e
+}
+
+// format the request before logging. Include only details that we need.
+pub fn format_request(req: &HttpRequest) -> String {
+    let no_user_agent = HeaderValue::from_str("user-agent not available").unwrap();
+    let no_accept_type = HeaderValue::from_str("Accept value unavailable").unwrap();
+    let req_type = req.method().as_str();
+    let request = req.path();
+    let query = req.query_string();
+    let user_agent = req
+        .headers()
+        .get("user-agent")
+        .unwrap_or(&no_user_agent)
+        .to_str()
+        .unwrap();
+    let accept_type = req
+        .headers()
+        .get("accept")
+        .unwrap_or(&no_accept_type)
+        .to_str()
+        .unwrap();
+    format!(
+        "Method: '{}', Request: '{}', Query: '{}', User-Agent: '{}', Accept: '{}'",
+        req_type, request, query, user_agent, accept_type
+    )
 }
 
 async fn process_plugins<P>(
