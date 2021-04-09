@@ -104,7 +104,7 @@ pub async fn index(
     V1_GRAPH_INCOMING_REQS.inc();
 
     // Check that the client can accept JSON media type.
-    commons::ensure_content_type(req.headers(), CONTENT_TYPE)?;
+    commons::validate_content_type(req.headers(), CONTENT_TYPE)?;
 
     // Check for required client parameters.
     let mandatory_params = &app_data.mandatory_params;

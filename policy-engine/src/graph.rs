@@ -45,7 +45,7 @@ pub(crate) async fn index(
     V1_GRAPH_INCOMING_REQS.inc();
 
     // Check that the client can accept JSON media type.
-    commons::ensure_content_type(req.headers(), CONTENT_TYPE)?;
+    commons::validate_content_type(req.headers(), CONTENT_TYPE)?;
 
     // Check for required client parameters.
     let mandatory_params = &app_data.mandatory_params;
@@ -121,19 +121,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn missing_content_type() {
-        let mut rt = common_init();
-        let state = AppState::default();
-        let app_data = actix_web::web::Data::new(state);
-
-        let http_req = actix_web::test::TestRequest::get().to_http_request();
-        let graph_call = graph::index(http_req, app_data);
-        let resp = rt.block_on(graph_call).unwrap_err();
-
-        assert_eq!(resp, graph::GraphError::InvalidContentType);
-    }
-
-    #[test]
     fn missing_mandatory_params() {
         let mut rt = common_init();
         let mandatory_params = vec!["id".to_string()].into_iter().collect();
@@ -143,12 +130,7 @@ pub(crate) mod tests {
         };
         let app_data = actix_web::web::Data::new(state);
 
-        let http_req = actix_web::test::TestRequest::get()
-            .header(
-                http::header::ACCEPT,
-                http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
-            )
-            .to_http_request();
+        let http_req = actix_web::test::TestRequest::get().to_http_request();
         let graph_call = graph::index(http_req, app_data);
         let resp = rt.block_on(graph_call).unwrap_err();
 
@@ -182,10 +164,6 @@ pub(crate) mod tests {
 
         let http_req = actix_web::test::TestRequest::get()
             .uri(&format!("{}?channel=':'", "http://unused.test"))
-            .header(
-                http::header::ACCEPT,
-                http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
-            )
             .to_http_request();
 
         let graph_call = graph::index(http_req, app_data);
@@ -282,9 +260,7 @@ pub(crate) mod tests {
                     let mut pe_svc = actix_web::test::init_service(app).await;
                     let mut response = actix_web::test::call_service(
                         &mut pe_svc,
-                        actix_web::test::TestRequest::with_uri(&service_uri)
-                            .header("Accept", "application/json")
-                            .to_request(),
+                        actix_web::test::TestRequest::with_uri(&service_uri).to_request(),
                     )
                     .await;
 
