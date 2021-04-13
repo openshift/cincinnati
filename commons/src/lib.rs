@@ -6,7 +6,7 @@ extern crate actix_web;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
-extern crate serde_json;
+extern crate serde_derive;
 
 mod config;
 pub use crate::config::MergeOptions;

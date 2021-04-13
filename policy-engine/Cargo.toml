@@ -6,9 +6,9 @@ edition = "2018"
 build = "src/build.rs"
 
 [dependencies]
-actix = "^0.10"
-actix-cors = "^0.5.4"
-actix-web = "^3.3.2"
+actix = "0.11.0-beta.1"
+actix-cors = "^0.6.0-beta.1"
+actix-web = "^4.0.0-beta.3"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
 env_logger = "^0.8"
@@ -29,12 +29,12 @@ url = "^2.2"
 tempfile = "^3.1.0"
 custom_debug_derive = "^0.5"
 opentelemetry = "0.4.0"
-actix-service = "1.0.0"
+actix-service = "2.0.0-beta.4"
 
 [build-dependencies]
 built = "^0.3.2"
 
 [dev-dependencies]
-tokio = "^0.2"
+tokio = { version = "1.0", features = [ "rt-multi-thread" ] }
 twoway = "^0.2"
-mockito = "^0.28"
+mockito = "^0.29.0"

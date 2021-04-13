@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn ensure_release_remove() -> Fallible<()> {
-        let mut runtime = init_runtime()?;
+        let runtime = init_runtime()?;
 
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "release.remove".to_string();

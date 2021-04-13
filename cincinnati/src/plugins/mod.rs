@@ -417,7 +417,7 @@ where
     T: Sync + Send,
     T: 'static,
 {
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let runtime = tokio::runtime::Runtime::new()?;
 
     let timeout = match timeout {
         None => return runtime.block_on(process(plugins, initial_io)),
@@ -547,7 +547,7 @@ mod tests {
 
     #[test]
     fn process_plugins_roundtrip_external_internal() -> Fallible<()> {
-        let mut runtime = commons::testing::init_runtime()?;
+        let runtime = commons::testing::init_runtime()?;
 
         lazy_static! {
             static ref PLUGINS: Vec<BoxedPlugin> = new_plugins!(
@@ -594,7 +594,7 @@ mod tests {
 
     #[test]
     fn process_plugins_loop() -> Fallible<()> {
-        let mut runtime = commons::testing::init_runtime()?;
+        let runtime = commons::testing::init_runtime()?;
 
         lazy_static! {
             static ref PLUGINS: Vec<BoxedPlugin> = new_plugins!(

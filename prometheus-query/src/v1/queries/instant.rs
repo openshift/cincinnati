@@ -11,7 +11,7 @@ impl Client {
     /// Sends the given query to the remote API, given an optional `time` and timeout.SystemTime
     ///
     /// The `time` is measured since the UNIX_EPOCH
-    pub async fn query(
+    pub fn query(
         &self,
         query: String,
         time: Option<chrono::DateTime<chrono::Utc>>,
@@ -33,6 +33,6 @@ impl Client {
                 request_builder.query(&query).send().map_err(Into::into)
             })
             .and_then(|response| response.error_for_status().map_err(Into::into))
-            .and_then(|mut response| response.json().map_err(Into::into))
+            .and_then(|response| response.json().map_err(Into::into))
     }
 }

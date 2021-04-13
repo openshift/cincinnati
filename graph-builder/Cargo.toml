@@ -6,8 +6,8 @@ edition = "2018"
 build = "src/build.rs"
 
 [dependencies]
-actix = "^0.10"
-actix-web = "^3.3.2"
+actix = "0.11.0-beta.1"
+actix-web = "^4.0.0-beta.3"
 chrono = "^0.4.7"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
@@ -20,7 +20,7 @@ log = "^0.4.3"
 prometheus = "0.9"
 quay = { path = "../quay" }
 regex = "^1.1.0"
-reqwest = "^0.10"
+reqwest = "^0.11"
 semver = { version = "^0.11", features = [ "serde" ] }
 serde = "^1.0.70"
 serde_derive = "^1.0.70"
@@ -28,7 +28,8 @@ serde_json = "^1.0.22"
 smart-default = "^0.6"
 structopt = "^0.3"
 tar = "^0.4.16"
-tokio = { version = "0.2.11", features = [ "fs", "stream" ] }
+tokio = { version = "1.0", features = [ "fs",  "rt-multi-thread" ] }
+tokio-stream = { version = "0.1", features = ["fs"] }
 toml = "^0.5"
 url = "^2.2"
 parking_lot = "^0.11"
@@ -36,7 +37,7 @@ tempfile = "^3.1.0"
 async-trait = "^0.1"
 custom_debug_derive = "^0.5"
 opentelemetry = "0.4.0"
-actix-service = "1.0.0"
+actix-service = "2.0.0-beta.4"
 
 [build-dependencies]
 built = "^0.3.2"

@@ -30,8 +30,6 @@ fn check_slo(query: &'static str, expected: &'static str) {
         _ => panic!("PROM_TOKEN unset"),
     };
 
-    let mut runtime = commons::testing::init_runtime().unwrap();
-
     let prometheus_client = Client::builder()
         .api_base(Some(prometheus_api_base.clone()))
         .access_token(Some(prometheus_token))
@@ -39,8 +37,8 @@ fn check_slo(query: &'static str, expected: &'static str) {
         .build()
         .unwrap();
 
-    let result: QuerySuccess = match runtime
-        .block_on(prometheus_client.query(query.to_string(), None, None))
+    let result: QuerySuccess = match prometheus_client
+        .query(query.to_string(), None, None)
         .unwrap()
     {
         QueryResult::Success(query_success) => query_success,

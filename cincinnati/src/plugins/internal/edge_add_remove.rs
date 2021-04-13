@@ -340,7 +340,7 @@ mod tests {
 
     #[test]
     fn ensure_previous_remove() -> Fallible<()> {
-        let mut runtime = init_runtime()?;
+        let runtime = init_runtime()?;
 
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.remove".to_string();
@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn ensure_previous_remove_all() -> Fallible<()> {
-        let mut runtime = init_runtime()?;
+        let runtime = init_runtime()?;
 
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.remove".to_string();
@@ -450,7 +450,7 @@ mod tests {
 
     #[test]
     fn ensure_next_remove() -> Fallible<()> {
-        let mut runtime = init_runtime()?;
+        let runtime = init_runtime()?;
 
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "next.remove".to_string();
@@ -514,7 +514,7 @@ mod tests {
 
     #[test]
     fn ensure_previous_add() -> Fallible<()> {
-        let mut runtime = init_runtime()?;
+        let runtime = init_runtime()?;
 
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "previous.add".to_string();
@@ -566,7 +566,7 @@ mod tests {
 
     #[test]
     fn ensure_next_add() -> Fallible<()> {
-        let mut runtime = init_runtime()?;
+        let runtime = init_runtime()?;
 
         let key_prefix = "test_prefix".to_string();
         let key_suffix = "next.add".to_string();
@@ -629,7 +629,7 @@ mod tests {
         ) => {
             #[test]
             fn $name() -> Fallible<()> {
-                let mut runtime = init_runtime()?;
+                let runtime = init_runtime()?;
 
                 let input_metadata: Vec<(usize, MapImpl<String, String>)> = $input_metadata
                     .iter()
@@ -803,7 +803,7 @@ mod tests {
 
     #[test]
     fn edge_remove_bug() -> Fallible<()> {
-        let mut runtime = init_runtime()?;
+        let runtime = init_runtime()?;
 
         lazy_static::lazy_static! {
             static ref TEST_KEY_PREFIX: &'static str = "io.openshift.upgrades.graph";

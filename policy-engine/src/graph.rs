@@ -159,7 +159,7 @@ pub(crate) mod tests {
 
     #[test]
     fn missing_mandatory_params() {
-        let mut rt = common_init();
+        let rt = common_init();
         let mandatory_params = vec!["id".to_string()].into_iter().collect();
         let state = AppState {
             mandatory_params,
@@ -167,7 +167,12 @@ pub(crate) mod tests {
         };
         let app_data = actix_web::web::Data::new(state);
 
-        let http_req = actix_web::test::TestRequest::get().to_http_request();
+        let http_req = actix_web::test::TestRequest::get()
+            .insert_header((
+                http::header::ACCEPT,
+                http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
+            ))
+            .to_http_request();
         let graph_call = graph::index(http_req, app_data);
         let resp = rt.block_on(graph_call).unwrap_err();
 
@@ -179,7 +184,7 @@ pub(crate) mod tests {
 
     #[test]
     fn failed_plugin_execution() -> Result<(), Error> {
-        let mut rt = common_init();
+        let rt = common_init();
 
         let plugins = cincinnati::plugins::catalog::build_plugins(
             &[plugin_config!(
@@ -201,6 +206,10 @@ pub(crate) mod tests {
 
         let http_req = actix_web::test::TestRequest::get()
             .uri(&format!("{}?channel=':'", "http://unused.test"))
+            .insert_header((
+                http::header::ACCEPT,
+                http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
+            ))
             .to_http_request();
 
         let graph_call = graph::index(http_req, app_data);
@@ -255,7 +264,7 @@ pub(crate) mod tests {
             plugin_config: &[Box<dyn PluginSettings>],
             expected_result: &TestResult,
         ) -> Result<(), Error> {
-            let mut runtime = Runtime::new().unwrap();
+            let runtime = Runtime::new().unwrap();
             let service_uri_base = "/graph";
             let service_uri = format!(
                 "{}{}",
@@ -297,7 +306,9 @@ pub(crate) mod tests {
                     let mut pe_svc = actix_web::test::init_service(app).await;
                     let mut response = actix_web::test::call_service(
                         &mut pe_svc,
-                        actix_web::test::TestRequest::with_uri(&service_uri).to_request(),
+                        actix_web::test::TestRequest::with_uri(&service_uri)
+                            .insert_header(("Accept", "application/json"))
+                            .to_request(),
                     )
                     .await;
 

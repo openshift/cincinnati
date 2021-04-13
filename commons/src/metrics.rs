@@ -53,7 +53,7 @@ mod tests {
 
     #[test]
     fn serve_metrics_basic() -> Fallible<()> {
-        let mut rt = testing::init_runtime()?;
+        let rt = testing::init_runtime()?;
 
         let metrics_prefix = "cincinnati";
         let registry_wrapped = RegistryWrapper(Box::leak(Box::new(new_registry(Some(
