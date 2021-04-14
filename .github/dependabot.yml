@@ -1,0 +1,11 @@
+---
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    schedule:
+      interval: "daily"
+    reviewers:
+      - "wking"
+      - "vrutkovs"
+      - "PratikMahajan"
+      - "LalatenduMohanty"
