@@ -5,7 +5,7 @@ authors = ["Alex Crawford <crawford@redhat.com>"]
 edition = "2018"
 
 [dependencies]
-actix-web = "^4.0.0-beta.3"
+actix-web = "^4.0.0-beta.6"
 commons = { path = "../commons" }
 custom_debug_derive = "^0.5"
 daggy = { version = "^0.7.0", features = [ "serde-1" ] }
