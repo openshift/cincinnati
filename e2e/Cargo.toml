@@ -16,7 +16,7 @@ serde_json = "^1.0.22"
 test-case = "1.0.0"
 url = "^2.2"
 commons = { path = "../commons" }
-tokio = { version = "1.0", features = [ "fs", "rt-multi-thread" ] }
+tokio = { version = "1.5", features = [ "fs", "rt-multi-thread" ] }
 tokio-stream = { version = "0.1", features = ["fs"] }
 prometheus-query = { path = "../prometheus-query" }
 lazy_static = "^1.2.0"
