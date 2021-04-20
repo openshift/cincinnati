@@ -699,7 +699,7 @@ dependencies = [
  "lazy_static",
  "log",
  "mockito",
- "opentelemetry",
+ "opentelemetry 0.12.0",
  "pgp",
  "pretty_assertions",
  "prettydiff",
@@ -781,7 +781,7 @@ dependencies = [
  "lazy_static",
  "log",
  "mockito",
- "opentelemetry",
+ "opentelemetry 0.12.0",
  "opentelemetry-jaeger",
  "prometheus 0.12.0",
  "reqwest",
@@ -1431,7 +1431,7 @@ dependencies = [
  "itertools",
  "lazy_static",
  "log",
- "opentelemetry",
+ "opentelemetry 0.12.0",
  "parking_lot",
  "prometheus 0.12.0",
  "quay",
@@ -2051,12 +2051,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "opentelemetry"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "514d24875c140ed269eecc2d1b56d7b71b573716922a763c317fb1b1b4b58f15"
+dependencies = [
+ "async-trait",
+ "futures",
+ "js-sys",
+ "lazy_static",
+ "percent-encoding",
+ "pin-project 1.0.6",
+ "rand 0.8.3",
+ "thiserror",
+]
+
+[[package]]
 name = "opentelemetry-jaeger"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1785272d8815dcb265492921d80ef06fcb772b8ce5eab09b59ef6eb16f7e6a7"
 dependencies = [
- "opentelemetry",
+ "opentelemetry 0.4.0",
  "thrift",
 ]
 
@@ -2267,7 +2283,7 @@ dependencies = [
  "log",
  "mockito",
  "openapiv3",
- "opentelemetry",
+ "opentelemetry 0.12.0",
  "prometheus 0.12.0",
  "semver 0.11.0",
  "serde",
