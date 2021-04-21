@@ -67,12 +67,12 @@ backoff oc secrets link default ci-pull-secret --for=pull
 # Reconfigure monitoring operator to support user workloads
 
 # https://docs.openshift.com/container-platform/4.5/monitoring/monitoring-your-own-services.html
-backoff oc -n openshift-monitoring create configmap cluster-monitoring-config --from-literal='config.yaml={"techPreviewUserWorkload": {"enabled": true}}' -o yaml --dry-run=client > /tmp/cluster-monitoring-config.yaml
+# https://docs.openshift.com/container-platform/4.7/monitoring/enabling-monitoring-for-user-defined-projects.html
+backoff oc -n openshift-monitoring \
+        create configmap \
+        cluster-monitoring-config \
+        --from-literal='config.yaml={"enableUserWorkload": true, "techPreviewUserWorkload": {"enabled": true}}' -o yaml --dry-run=client > /tmp/cluster-monitoring-config.yaml
 backoff oc apply -f /tmp/cluster-monitoring-config.yaml
-
-# https://docs.openshift.com/container-platform/4.7/monitoring/configuring-the-monitoring-stack.html#creating-user-defined-workload-monitoring-configmap_configuring-the-monitoring-stack
-backoff oc -n openshift-user-workload-monitoring create configmap user-workload-monitoring-config --from-literal='config.yaml=' -o yaml --dry-run=client > /tmp/cluster-user-workload-monitoring-config.yaml
-backoff oc apply -f /tmp/cluster-user-workload-monitoring-config.yaml
 
 # Import observability template
 # ServiceMonitors are imported before app deployment to give Prometheus time to catch up with
