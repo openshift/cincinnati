@@ -5,7 +5,7 @@ authors = ["Vadim Rutkovsky <vrutkovs@redhat.com>"]
 edition = "2018"
 
 [dependencies]
-assert-json-diff = "1.0.0"
+assert-json-diff = "2.0.1"
 chrono = "^0.4.0"
 env_logger = "^0.8"
 failure = "^0.1.1"
