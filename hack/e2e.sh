@@ -22,6 +22,25 @@ fi
 echo "IMAGE=${IMAGE}"
 echo "IMAGE_TAG=${IMAGE_TAG}"
 
+function backoff() {
+    local max_attempts=10
+    local attempt=0
+    local failed=0
+    while true; do
+        "$@" && failed=0 || failed=1
+        if [[ $failed -eq 0 ]]; then
+            break
+        fi
+        attempt=$(( attempt + 1 ))
+        if [[ $attempt -gt $max_attempts ]]; then
+            break
+        fi
+        echo "command failed, retrying in $(( 2 ** attempt )) seconds"
+        sleep $(( 2 ** attempt ))
+    done
+    return $failed
+}
+
 # Use defined PULL_SECRET or fall back to CI location
 PULL_SECRET=${PULL_SECRET:-/var/run/secrets/ci.openshift.io/cluster-profile/pull-secret}
 
@@ -31,38 +50,38 @@ cp -Lrvf $KUBECONFIG /tmp/kubeconfig
 export KUBECONFIG=/tmp/kubeconfig
 
 # Create a new project
-oc new-project cincinnati-e2e
-oc project cincinnati-e2e
+backoff oc new-project cincinnati-e2e
+backoff oc project cincinnati-e2e
 
 # Create a dummy secret as a workaround to not having real secrets in e2e
-oc create secret generic cincinnati-credentials --from-literal=""
+backoff oc create secret generic cincinnati-credentials --from-literal=""
 
 # Use this pull secret to fetch images from CI
-oc create secret generic ci-pull-secret --from-file=.dockercfg=${PULL_SECRET} --type=kubernetes.io/dockercfg
+backoff oc create secret generic ci-pull-secret --from-file=.dockercfg=${PULL_SECRET} --type=kubernetes.io/dockercfg
 
 # Wait for default service account to appear
-for ATTEMPT in $(seq 0 5); do
-  oc get serviceaccount default && break
-  sleep 5
-done
+backoff oc get serviceaccount default
 # Allow default serviceaccount to use CI pull secret
-oc secrets link default ci-pull-secret --for=pull
+backoff oc secrets link default ci-pull-secret --for=pull
 
 # Reconfigure monitoring operator to support user workloads
 
 # https://docs.openshift.com/container-platform/4.5/monitoring/monitoring-your-own-services.html
-oc -n openshift-monitoring create configmap cluster-monitoring-config --from-literal='config.yaml={"techPreviewUserWorkload": {"enabled": true}}' -o yaml --dry-run=client > /tmp/cluster-monitoring-config.yaml
-oc apply -f /tmp/cluster-monitoring-config.yaml
+# https://docs.openshift.com/container-platform/4.7/monitoring/enabling-monitoring-for-user-defined-projects.html
+backoff oc -n openshift-monitoring \
+        create configmap \
+        cluster-monitoring-config \
+        --from-literal='config.yaml={"enableUserWorkload": true, "techPreviewUserWorkload": {"enabled": true}}' -o yaml --dry-run=client > /tmp/cluster-monitoring-config.yaml
+backoff oc apply -f /tmp/cluster-monitoring-config.yaml
 
-# https://docs.openshift.com/container-platform/4.7/monitoring/configuring-the-monitoring-stack.html#creating-user-defined-workload-monitoring-configmap_configuring-the-monitoring-stack
-oc -n openshift-user-workload-monitoring create configmap user-workload-monitoring-config --from-literal='config.yaml=' -o yaml --dry-run=client > /tmp/cluster-user-workload-monitoring-config.yaml
-oc apply -f /tmp/cluster-user-workload-monitoring-config.yaml
+# Wait for user workload monitoring is deployed
+backoff oc -n openshift-user-workload-monitoring wait --for=condition=Ready pod -l app=thanos-ruler
 
 # Import observability template
 # ServiceMonitors are imported before app deployment to give Prometheus time to catch up with
 # metrics
 # `oc new-app` would stumble on unknown monitoring.coreos.com/v1 objects, so process and create instead
-oc process -f dist/openshift/observability.yaml -p NAMESPACE="cincinnati-e2e" | oc apply -f -
+backoff oc process -f dist/openshift/observability.yaml -p NAMESPACE="cincinnati-e2e" | oc apply -f -
 
 # Export the e2e test environment variables
 E2E_TESTDATA_DIR="${E2E_TESTDATA_DIR:-e2e/tests/testdata}"
@@ -71,7 +90,7 @@ read -r E2E_METADATA_REVISION <"${E2E_TESTDATA_DIR}"/metadata_revision
 export E2E_METADATA_REVISION
 
 # Apply oc template
-oc new-app -f dist/openshift/cincinnati.yaml \
+backoff oc new-app -f dist/openshift/cincinnati.yaml \
   -p IMAGE="${IMAGE}" \
   -p IMAGE_TAG="${IMAGE_TAG}" \
   -p GB_CPU_REQUEST=50m \
@@ -118,7 +137,7 @@ oc wait --for=condition=available --timeout=10m deploymentconfig/cincinnati || {
 }
 
 # Expose services
-oc expose service cincinnati-policy-engine --port=policy-engine
+backoff oc expose service cincinnati-policy-engine --port=policy-engine
 PE_URL=$(oc get route cincinnati-policy-engine -o jsonpath='{.spec.host}')
 export GRAPH_URL="http://${PE_URL}/api/upgrades_info/v1/graph"
 
