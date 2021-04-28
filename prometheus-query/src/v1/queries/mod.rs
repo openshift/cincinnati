@@ -58,6 +58,9 @@ impl VectorResult {
     pub fn sample(&self) -> &String {
         &self.value.sample
     }
+    pub fn metric(&self) -> &serde_json::Value {
+        &self.metric
+    }
 }
 
 #[cfg(test)]
