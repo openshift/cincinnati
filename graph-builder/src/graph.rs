@@ -71,7 +71,7 @@ lazy_static! {
         "build_info",
         "Build information",
         labels!{
-            "git_commit" => match built_info::GIT_VERSION {
+            "git_commit" => match built_info::GIT_COMMIT_HASH {
                 Some(commit) => commit,
                 None => "unknown"
             },
