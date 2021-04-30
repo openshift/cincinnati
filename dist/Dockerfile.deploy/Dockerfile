@@ -14,7 +14,7 @@ FROM registry.centos.org/centos/centos:7
 ENV RUST_LOG=actix_web=error,dkregistry=error
 
 RUN yum update -y && \
-    yum install -y openssl && \
+    yum install -y openssl libgit2 && \
     yum clean all
 
 COPY --from=builder /opt/cincinnati/bin/* /usr/bin/

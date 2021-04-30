@@ -19,6 +19,10 @@ use test_case::test_case;
 #[test_case("clamp_max(cincinnati_gb_graph_upstream_scrapes_total, 1)", "1")]
 // No scrape errors
 #[test_case("cincinnati_gb_graph_upstream_errors_total", "0")]
+// Graph builder reports valid git commit
+#[test_case("cincinnati_gb_build_info{git_commit!='unknown'}", "1")]
+// Policy engine reports valid git commit
+#[test_case("cincinnati_pe_build_info{git_commit!='unknown'}", "1")]
 fn check_slo(query: &'static str, expected: &'static str) {
     let prometheus_api_base = match env::var("PROM_ENDPOINT") {
         Ok(env) => format!("{}/api/v1/query", env),
