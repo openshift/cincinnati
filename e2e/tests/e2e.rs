@@ -30,9 +30,11 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str) {
 
     let res = run_graph_query(channel, arch, &runtime);
 
-    assert_eq!(res.status().is_success(), true);
+    assert_eq!(res.status().is_success(), true, "{}", res.status());
     let text = runtime.block_on(res.text()).unwrap();
-    let actual: cincinnati::Graph = serde_json::from_str(&text).unwrap();
+    let actual: cincinnati::Graph = serde_json::from_str(&text)
+        .context(format!("Failed to parse '{}' as json", text))
+        .unwrap();
 
     if let Err(e) = cincinnati::testing::compare_graphs_verbose(
         expected,
@@ -89,5 +91,6 @@ fn run_graph_query(channel: &'static str, arch: &'static str, runtime: &Runtime)
                 .header(ORIGIN, ORIGIN_HEADER_VALUE.clone())
                 .send(),
         )
+        .context("Failed to execute Prometheus query")
         .unwrap()
 }
