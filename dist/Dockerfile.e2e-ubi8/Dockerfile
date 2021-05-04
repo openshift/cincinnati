@@ -11,7 +11,7 @@ RUN dnf update -y \
 RUN bash -c "source /opt/app-root/etc/scl_enable && hack/build_e2e.sh"
 
 FROM registry.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
-RUN env GOBIN=/usr/local/bin go get -u github.com/tsenart/vegeta
+RUN curl -L https://github.com/tsenart/vegeta/releases/download/v12.8.4/vegeta_12.8.4_linux_amd64.tar.gz| tar xvzf - -C /usr/local/bin/ vegeta
 
 FROM registry.access.redhat.com/ubi8/ubi:latest
 
