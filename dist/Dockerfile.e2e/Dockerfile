@@ -6,7 +6,7 @@ RUN yum -y install epel-release
 # build: system utilities and libraries
 RUN yum update -y && \
     yum -y groupinstall 'Development Tools' && \
-    yum -y install gcc openssl-devel jq skopeo buildah && \
+    yum -y install gcc openssl-devel protobuf-compiler jq skopeo buildah && \
     yum -y install yamllint && \
     yum -y install cmake elfutils-libelf-devel libcurl-devel binutils-devel elfutils-devel && \
     yum clean all
