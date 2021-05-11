@@ -46,7 +46,7 @@ ENV PATH="${PATH}:${HOME}/bin"
 
 # Install container tools
 RUN yum update -y && \
-    yum install -y skopeo buildah && \
+    yum install -y skopeo buildah libgit2 && \
     yum clean all
 
 COPY --from=rust_builder /opt/cincinnati/bin/e2e /usr/bin/cincinnati-e2e-test
