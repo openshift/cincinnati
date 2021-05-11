@@ -65,13 +65,11 @@ backoff oc get serviceaccount default
 backoff oc secrets link default ci-pull-secret --for=pull
 
 # Reconfigure monitoring operator to support user workloads
-
-# https://docs.openshift.com/container-platform/4.5/monitoring/monitoring-your-own-services.html
 # https://docs.openshift.com/container-platform/4.7/monitoring/enabling-monitoring-for-user-defined-projects.html
 backoff oc -n openshift-monitoring \
         create configmap \
         cluster-monitoring-config \
-        --from-literal='config.yaml={"enableUserWorkload": true, "techPreviewUserWorkload": {"enabled": true}}' -o yaml --dry-run=client > /tmp/cluster-monitoring-config.yaml
+        --from-literal='config.yaml={"enableUserWorkload": true}' -o yaml --dry-run=client > /tmp/cluster-monitoring-config.yaml
 backoff oc apply -f /tmp/cluster-monitoring-config.yaml
 
 # Wait for user workload monitoring is deployed
