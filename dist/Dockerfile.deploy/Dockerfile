@@ -6,7 +6,7 @@ RUN yum -y install epel-release
 # build: system utilities and libraries
 RUN yum update -y && \
     yum -y groupinstall 'Development Tools' && \
-    yum -y install gcc openssl-devel protobuf-compiler jq skopeo buildah libgit2 && \
+    yum -y install gcc openssl-devel protobuf-compiler jq skopeo buildah libgit2 libgit2-devel && \
     yum -y install yamllint && \
     yum -y install cmake elfutils-libelf-devel libcurl-devel binutils-devel elfutils-devel && \
     yum clean all
@@ -37,7 +37,7 @@ FROM registry.centos.org/centos/centos:7
 ENV RUST_LOG=actix_web=error,dkregistry=error
 
 RUN yum update -y && \
-    yum install -y openssl libgit2 && \
+    yum install -y openssl && \
     yum clean all
 
 COPY --from=builder /opt/cincinnati/bin/* /usr/bin/
