@@ -11,7 +11,7 @@ chrono = "^0.4.0"
 env_logger = "^0.8"
 failure = "^0.1.1"
 reqwest = { version="^0.11", features = ["blocking"] }
-serde = "^1.0.70"
+serde = "^1.0.126"
 serde_derive = "^1.0.70"
 serde_json = "^1.0.22"
 test-case = { version = "1.1.0", features = ["hamcrest_assertions"] }
