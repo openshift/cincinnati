@@ -47,7 +47,8 @@ test: format
 _test component cargoargs='--features test-net,test-net-private' rustcargs='--ignored':
 	#!/usr/bin/env bash
 	set -xe
-	(pushd {{component}} && cargo test {{cargoargs}} -- {{rustcargs}})
+	export RUST_BACKTRACE=1 RUST_LOG="graph-builder=trace,cincinnati=trace,dkregistry=trace"
+	(pushd {{component}} && cargo test -- --nocapture {{cargoargs}} -- {{rustcargs}})
 
 
 test-net-private:
@@ -81,10 +82,9 @@ run-e2e:
 
 	just \
 		registry="{{registry}}" repository="{{repository}}" \
-		run-daemons-e2e 2>&1 &
-	DAEMON_PARENTPID=$!
-	trap "kill $DAEMON_PARENTPID" EXIT
+		run-daemons-e2e > /dev/null 2>&1 &
 
+	trap "just kill-daemons" EXIT
 	# give the graph-builder time to scrape
 	sleep 180
 
@@ -206,12 +206,10 @@ run-daemons-e2e:
 	just \
 		registry="{{registry}}" repository="{{repository}}" \
 		run-graph-builder-e2e 2>&1 &
-	PG_PID=$!
 
 	just run-policy-engine 2>&1 &
-	PE_PID=$!
 
-	trap "kill $PG_PID $PE_PID" EXIT
+	trap "just kill-daemons" EXIT
 	sleep infinity
 
 get-graph port channel arch host="http://127.0.0.1":
