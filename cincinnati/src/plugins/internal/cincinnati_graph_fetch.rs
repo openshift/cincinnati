@@ -174,6 +174,7 @@ mod tests {
     use cincinnati::testing::generate_custom_graph;
     use commons::metrics::{self, RegistryWrapper};
     use commons::testing::{self, init_runtime};
+    use memchr::memmem;
     use prometheus::Registry;
 
     macro_rules! fetch_upstream_success_test {
@@ -339,15 +340,17 @@ mod tests {
             if let actix_web::body::Body::Bytes(bytes) = body {
                 assert!(!bytes.is_empty());
                 println!("{:?}", std::str::from_utf8(bytes.as_ref()));
-                assert!(twoway::find_bytes(
+                assert!(memmem::find_iter(
                     bytes.as_ref(),
-                    format!("{}_http_upstream_errors_total 0\n", &metrics_prefix).as_bytes()
+                    format!("{}_http_upstream_errors_total 0\n", &metrics_prefix).as_bytes(),
                 )
+                .next()
                 .is_some());
-                assert!(twoway::find_bytes(
+                assert!(memmem::find_iter(
                     bytes.as_ref(),
-                    format!("{}_http_upstream_requests_total 0\n", &metrics_prefix).as_bytes()
+                    format!("{}_http_upstream_requests_total 0\n", &metrics_prefix).as_bytes(),
                 )
+                .next()
                 .is_some());
             } else {
                 bail!("expected Body")

@@ -158,6 +158,7 @@ mod tests {
     use commons::metrics::RegistryWrapper;
     use commons::testing;
     use graph_builder::status::{serve_liveness, serve_readiness};
+    use memchr::memmem;
     use parking_lot::RwLock;
     use prometheus::Registry;
     use std::collections::HashSet;
@@ -195,7 +196,9 @@ mod tests {
                 assert!(!bytes.is_empty());
                 println!("{:?}", std::str::from_utf8(bytes.as_ref()));
                 assert!(
-                    twoway::find_bytes(bytes.as_ref(), b"cincinnati_gb_dummy_gauge 42\n").is_some()
+                    memmem::find_iter(bytes.as_ref(), b"cincinnati_gb_dummy_gauge 42\n")
+                        .next()
+                        .is_some()
                 );
             } else {
                 bail!("expected Body")
