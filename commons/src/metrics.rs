@@ -50,6 +50,7 @@ pub fn new_registry(prefix: Option<String>) -> Fallible<Registry> {
 mod tests {
     use super::*;
     use crate::testing;
+    use memchr::memmem;
 
     #[test]
     fn serve_metrics_basic() -> Fallible<()> {
@@ -69,10 +70,11 @@ mod tests {
         if let actix_web::body::ResponseBody::Body(body) = resp.body() {
             if let actix_web::body::Body::Bytes(bytes) = body {
                 assert!(!bytes.is_empty());
-                assert!(twoway::find_bytes(
+                assert!(memmem::find_iter(
                     bytes.as_ref(),
                     format!("{}_dummy_gauge 42\n", metrics_prefix).as_bytes()
                 )
+                .next()
                 .is_some());
             } else {
                 bail!("expected Body")
