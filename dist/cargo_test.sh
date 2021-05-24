@@ -21,7 +21,6 @@ fi
 
 declare -A executors
 executors["cargo"]="execute_native"
-executors["docker"]="execute_docker"
 
 function run_tests() {
   set -x
@@ -73,25 +72,6 @@ function run_tests() {
 
 function execute_native() {
   run_tests
-}
-
-function execute_docker() {
-  ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  source "${ABSOLUTE_PATH}/commons.sh"
-  DOCKERFILE_BUILD="$ABSOLUTE_PATH/Dockerfile.build/"
-
-  ensure_build_container "${DOCKERFILE_BUILD}"
-
-  function cleanup() {
-      set +e
-      docker_cargo_stop_all
-      if [[ ! -n "$KEEP_CARGO_OUTPUT" ]]; then
-          docker_cargo cargo clean --release
-      fi
-  }
-  trap cleanup EXIT
-
-  run_tests "docker_cargo"
 }
 
 for executor in "${!executors[@]}"; do
