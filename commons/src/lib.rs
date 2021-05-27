@@ -108,7 +108,8 @@ pub fn validate_content_type(
     let top_type_wildcard = header::HeaderValue::from_str(&format!("{}/*", top_type));
     assert!(
         top_type_wildcard.is_ok(),
-        format!("could not form top-type wildcard from {}", top_type)
+        "could not form top-type wildcard from {}",
+        top_type
     );
 
     let acceptable_content_types: Vec<actix_web::http::HeaderValue> = vec![

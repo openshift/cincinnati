@@ -99,7 +99,7 @@ mod tests {
             given_error.set_kind(interface::PluginError_Kind::INTERNAL_FAILURE);
             given_error.set_value("test succeeds on error".to_string());
             PluginResult::PluginError(given_error)
-        };
+        }
         let expected_result = callback(interface::PluginExchange::new());
 
         let plugin = Box::new(DummyWebClient {

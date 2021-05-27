@@ -395,7 +395,7 @@ mod network_tests {
     use mockito;
     use std::collections::HashSet;
 
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn openshift_secondary_metadata_extraction() -> Fallible<()> {
         let fixtures = PathBuf::from(
             "./src/plugins/internal/graph_builder/dkrv2_openshift_secondary_metadata_scraper/test_fixtures",

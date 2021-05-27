@@ -483,7 +483,7 @@ mod network_tests {
     use std::collections::HashSet;
     #[test]
     fn openshift_secondary_metadata_extraction() -> Fallible<()> {
-        let mut runtime = commons::testing::init_runtime()?;
+        let runtime = commons::testing::init_runtime()?;
 
         let tmpdir = tempfile::tempdir()?;
 
