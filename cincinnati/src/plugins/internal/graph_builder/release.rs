@@ -170,9 +170,9 @@ mod tests {
             source: "test-0.0.1".to_string(),
             metadata: Metadata {
                 kind: MetadataKind::V0,
-                version: semver::Version::from((0, 0, 1)),
+                version: semver::Version::new(0, 0, 1),
                 next: Default::default(),
-                previous: vec![semver::Version::from((0, 0, 0))],
+                previous: vec![semver::Version::new(0, 0, 0)],
                 metadata: Default::default(),
             },
         }];
@@ -190,15 +190,9 @@ mod tests {
             source: "test-0.0.1".to_string(),
             metadata: Metadata {
                 kind: MetadataKind::V0,
-                version: semver::Version::from((0, 0, 1)),
-                next: vec![
-                    semver::Version::from((0, 0, 2)),
-                    semver::Version::from((0, 0, 2)),
-                ],
-                previous: vec![
-                    semver::Version::from((0, 0, 0)),
-                    semver::Version::from((0, 0, 0)),
-                ],
+                version: semver::Version::new(0, 0, 1),
+                next: vec![semver::Version::new(0, 0, 2), semver::Version::new(0, 0, 2)],
+                previous: vec![semver::Version::new(0, 0, 0), semver::Version::new(0, 0, 0)],
                 metadata: Default::default(),
             },
         }];
@@ -225,7 +219,7 @@ mod tests {
             source: "test-0.0.1".to_string(),
             metadata: Metadata {
                 kind: MetadataKind::V0,
-                version: semver::Version::from((0, 0, 1)),
+                version: semver::Version::new(0, 0, 1),
                 next: Default::default(),
                 previous: Default::default(),
                 metadata: valid,
@@ -236,7 +230,7 @@ mod tests {
             source: "test-0.0.1".to_string(),
             metadata: Metadata {
                 kind: MetadataKind::V0,
-                version: semver::Version::from((0, 0, 1)),
+                version: semver::Version::new(0, 0, 1),
                 next: Default::default(),
                 previous: Default::default(),
                 metadata: invalid,

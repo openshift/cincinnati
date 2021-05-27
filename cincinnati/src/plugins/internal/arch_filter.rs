@@ -135,7 +135,7 @@ impl InternalPlugin for ArchFilterPlugin {
                     semver::Version::parse(&release_version)
                         .context(release_version.clone())
                         .map(|mut version| {
-                            version.build.retain(|elem| elem.to_string() != arch);
+                            version.build = semver::BuildMetadata::new(&arch).unwrap();
                             trace!("rewriting version {} ->  {}", release_version, version);
                             version.to_string()
                         })?

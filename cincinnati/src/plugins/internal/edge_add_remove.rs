@@ -320,7 +320,7 @@ fn try_annotate_semver_build(
         .get("io.openshift.upgrades.graph.release.arch")
     {
         let mut version = semver::Version::parse(version)?;
-        version.build = vec![semver::Identifier::AlphaNumeric(arch.to_string())];
+        version.build = semver::BuildMetadata::new(arch).unwrap();
         version.to_string()
     } else {
         version.to_string()

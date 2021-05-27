@@ -334,13 +334,13 @@ impl OpenshiftSecondaryMetadataParserPlugin {
         raw_metadata.iter().for_each(|(version, metadata)| {
             metadata.iter().for_each(|(key, value)| {
                 graph.find_by_fn_mut(|release| {
-                    let release_semver = semver::Version::from_str(release.version())
+                    let release_semver = semver::Version::parse(release.version())
                         .context(format!("Parsing {} as SemVer", release.version()));
                     if let Err(e) = &release_semver {
                         warn!("{}", e);
                     }
 
-                    let version_semver = semver::Version::from_str(version)
+                    let version_semver = semver::Version::parse(version)
                         .context(format!("Parsing {} as SemVer", &version));
                     if let Err(e) = &version_semver {
                         warn!("{}", e);
@@ -392,10 +392,10 @@ impl OpenshiftSecondaryMetadataParserPlugin {
         );
 
         let architectures = {
-            let mut collection = std::collections::BTreeSet::<Vec<semver::Identifier>>::new();
+            let mut collection = std::collections::BTreeSet::<semver::BuildMetadata>::new();
 
             let _ = graph.find_by_fn_mut(|release| {
-                match semver::Version::from_str(release.version()) {
+                match semver::Version::parse(release.version()) {
                     Ok(version_semver) => {
                         collection.insert(version_semver.build);
                     }
@@ -426,10 +426,9 @@ impl OpenshiftSecondaryMetadataParserPlugin {
                         vec![to]
                     } else {
                         // Special case where the "s390x" arch was encoded with '-' instead of '+'
-                        let special_case_s390x =
-                            vec![semver::Identifier::AlphaNumeric("s390x".to_string())];
+                        let special_case_s390x = semver::Prerelease::new("s390x").unwrap();
                         if to.pre == special_case_s390x {
-                            to.build = special_case_s390x;
+                            to.build = semver::BuildMetadata::new("s390x").unwrap();
                             vec![to]
                         } else {
                             // Default to blocking all architectsures
@@ -503,7 +502,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
                 .collect::<Vec<&semver::Version>>();
 
             let releases_in_channel = graph.find_by_fn_mut(|release| {
-                let release_semver = match semver::Version::from_str(release.version())
+                let release_semver = match semver::Version::parse(release.version())
                     .context(format!("Parsing {} as SemVer", release.version()))
                 {
                     Ok(semver) => semver,
