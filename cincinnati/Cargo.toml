@@ -37,7 +37,7 @@ serde_yaml = "^0.8.11"
 prettydiff = { version = "0.4", optional = true }
 opentelemetry = "0.4"
 strum = "^0.20"
-strum_macros = "^0.20"
+strum_macros = "^0.21"
 walkdir = "2.3.1"
 bytes = "^1.0"
 pgp = "^0.7.1"
