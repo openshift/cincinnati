@@ -724,7 +724,7 @@ dependencies = [
  "serde_yaml",
  "smart-default",
  "strum",
- "strum_macros",
+ "strum_macros 0.21.0",
  "tar",
  "tempfile",
  "test-case",
@@ -1096,7 +1096,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "strum",
- "strum_macros",
+ "strum_macros 0.20.1",
  "tar",
  "thiserror",
  "tokio",
@@ -2475,7 +2475,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "strum",
- "strum_macros",
+ "strum_macros 0.21.0",
  "tokio",
 ]
 
@@ -3225,6 +3225,18 @@ name = "strum_macros"
 version = "0.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee8bc6b87a5112aeeab1f4a9f7ab634fe6cbefc4850006df31267f4cfb9e3149"
+dependencies = [
+ "heck",
+ "proc-macro2 1.0.26",
+ "quote 1.0.9",
+ "syn 1.0.69",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb076d8b589fde927ec90d05920d610554ca3a4d9dddb177481cadd071a19c2e"
 dependencies = [
  "heck",
  "proc-macro2 1.0.26",
