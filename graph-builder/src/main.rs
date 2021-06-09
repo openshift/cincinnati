@@ -20,7 +20,10 @@ use commons::tracing::{get_context, get_tracer, init_tracer, set_span_tags};
 use futures::future;
 use graph_builder::{self, config, graph, status};
 use log::debug;
-use opentelemetry::api::{trace::futures::Instrument, Tracer};
+use opentelemetry::{
+    trace::{mark_span_as_active, FutureExt, Tracer},
+    Context as ot_context,
+};
 use parking_lot::RwLock;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -107,9 +110,11 @@ async fn main() -> Result<(), Error> {
             .wrap(middleware::Compress::default())
             .wrap_fn(|req, srv| {
                 let parent_context = get_context(&req);
-                let span = get_tracer().start("request", Some(parent_context));
-                set_span_tags(&req, &span);
-                srv.call(req).instrument(span)
+                let mut span = get_tracer().start_with_context("request", parent_context);
+                set_span_tags(req.path(), req.headers(), &mut span);
+                let _active_span = mark_span_as_active(span);
+                let cx = ot_context::current();
+                srv.call(req).with_context(cx)
             })
             .app_data(actix_web::web::Data::new(main_state.clone()))
             .service(
