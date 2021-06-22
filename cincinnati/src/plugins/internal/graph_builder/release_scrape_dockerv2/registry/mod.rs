@@ -405,7 +405,7 @@ async fn lookup_or_fetch(
                 // Process the manifest architecture if given
                 if let Some(arch) = arch {
                     // Encode the architecture as SemVer information
-                    metadata.version.build = vec![semver::Identifier::AlphaNumeric(arch.clone())];
+                    metadata.version.build = semver::BuildMetadata::new(&arch).unwrap();
 
                     // Attach the architecture for later processing
                     metadata
