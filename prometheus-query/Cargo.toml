@@ -9,15 +9,15 @@ edition = "2018"
 commons = { path = "../commons" }
 anyhow = "^1.0"
 futures = "^0.3"
-reqwest = "^0.9.8"
-serde = { version = "^1.0.84", features = ["derive"] }
+reqwest = "^0.11"
+serde = { version = "^1.0.126", features = ["derive"] }
 serde_derive = "^1.0.84"
 serde_json = "^1.0.34"
-strum = "^0.14.0"
-strum_macros = "^0.14.0"
+strum = "^0.21"
+strum_macros = "^0.21"
 log = "^0.4.3"
 chrono = "^0.4.0"
 
 [dev-dependencies]
-env_logger = "^0.6.0"
-tokio = "^0.1.14"
+env_logger = "^0.8"
+tokio = { version = "1.7", features = [ "rt-multi-thread" ] }

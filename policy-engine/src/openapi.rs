@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn graph_params_integration() -> Result<(), Box<dyn std::error::Error>> {
-        let mut runtime = common_init();
+        let runtime = common_init();
 
         // prepare and run the test-service
         let service_uri = "/openapi";
@@ -169,7 +169,7 @@ mod tests {
                 let mut response = actix_web::test::call_service(
                     &mut svc,
                     actix_web::test::TestRequest::with_uri(&service_uri)
-                        .header("Accept", "application/json")
+                        .insert_header(("Accept", "application/json"))
                         .to_request(),
                 )
                 .await;

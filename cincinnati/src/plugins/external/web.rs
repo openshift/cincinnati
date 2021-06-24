@@ -51,7 +51,7 @@ mod tests {
 
     #[test]
     fn detect_external_success() {
-        let mut runtime = init_runtime().unwrap();
+        let runtime = init_runtime().unwrap();
 
         fn callback(mut input: interface::PluginExchange) -> PluginResult {
             let graph: cincinnati::Graph = input.take_graph().into();
@@ -92,14 +92,14 @@ mod tests {
 
     #[test]
     fn detect_external_error() {
-        let mut runtime = init_runtime().unwrap();
+        let runtime = init_runtime().unwrap();
 
         fn callback(_: interface::PluginExchange) -> PluginResult {
             let mut given_error = interface::PluginError::new();
             given_error.set_kind(interface::PluginError_Kind::INTERNAL_FAILURE);
             given_error.set_value("test succeeds on error".to_string());
             PluginResult::PluginError(given_error)
-        };
+        }
         let expected_result = callback(interface::PluginExchange::new());
 
         let plugin = Box::new(DummyWebClient {

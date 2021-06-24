@@ -5,51 +5,54 @@ authors = ["Alex Crawford <crawford@redhat.com>"]
 edition = "2018"
 
 [dependencies]
-actix-web = "^2.0"
+actix-web = "^4.0.0-beta.3"
 commons = { path = "../commons" }
-custom_debug_derive = "^0.1.7"
-daggy = { version = "^0.6.0", features = [ "serde-1" ] }
-env_logger = "^0.6.0"
+custom_debug_derive = "^0.5"
+daggy = { version = "^0.7.0", features = [ "serde-1" ] }
+env_logger = "^0.8"
 futures = "0.3"
-futures-locks = "0.5.0"
 lazy_static = "^1.2.0"
 log = "^0.4.3"
-prometheus = "0.9"
-protobuf = "2.0"
+prometheus = "0.12"
+protobuf = "2.20.0"
 quay = { path = "../quay" }
-regex = "^1.1.0"
-reqwest = { version = "^0.10", features = ["gzip"] }
-serde = "1.0.70"
+regex = "^1.5.4"
+reqwest = { version = "^0.11", features = ["gzip"] }
+serde = "1.0.126"
 serde_derive = "1.0.70"
 serde_json = "^1.0.22"
-smart-default = "^0.5.2"
-tokio = { version = "0.2.11", features = [ "time", "fs", "stream" ] }
-toml = "^0.4.10"
-url = "^2.1.1"
-semver = { version = "^0.9.0", features = [ "serde" ] }
+smart-default = "^0.6"
+tokio = { version = "1.7", features = [ "time", "fs", "macros", "rt-multi-thread" ] }
+tokio-stream = { version = "0.1", features = ["fs"] }
+toml = "^0.5"
+url = "^2.2"
+semver = { version = "^0.11", features = [ "serde" ] }
 async-trait = "^0.1"
 tempfile = "^3.1.0"
 flate2 = "^1.0.1"
-tar = "^0.4.16"
-dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "88510fa126322bf490db7c347daddb98db50da94" }
-itertools = "^0.8.2"
+tar = "^0.4.35"
+dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "854d0da53bef5dd85b5e901123e85d43af97c74e" }
+itertools = "^0.10"
 serde_yaml = "^0.8.11"
-prettydiff = { version = "0.3.1", optional = true }
-opentelemetry = "0.4.0"
-strum = "^0.19.2"
-strum_macros = "^0.19.2"
+prettydiff = { version = "0.4", optional = true }
+opentelemetry = "0.4"
+strum = "^0.21"
+strum_macros = "^0.21"
+walkdir = "2.3.1"
+bytes = "^1.0"
+pgp = "^0.7.1"
+hamcrest2 = "0.3.0"
 
 [dev-dependencies]
-mockito = "^0.20.0"
+mockito = "^0.30.0"
 serde_json = "1.0.22"
-twoway = "^0.2"
-walkdir = "2.3.1"
-pretty_assertions = "0.6.1"
+memchr = "^2.4"
+pretty_assertions = "0.7.2"
 test-case = "1.0.0"
-prettydiff = "0.3.1"
+prettydiff = "0.4"
 
 [build-dependencies]
-protoc-rust = "2.8"
+protoc-rust = "2.24"
 
 [features]
 codegen-protoc = []

@@ -101,7 +101,10 @@
                         "type": "string"
                     },
                     "metadata": {
-                        "type": "string"
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
                     }
                 }
             },

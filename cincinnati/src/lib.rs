@@ -73,6 +73,18 @@ impl Release {
             Release::Concrete(release) => Some(&mut release.metadata),
         }
     }
+
+    /// Returns the `manifestref` of a given `Release`
+    pub fn manifestref(&self) -> Result<&String, Error> {
+        let digestkey = String::from("io.openshift.upgrades.graph.release.manifestref");
+        match self {
+            Release::Concrete(release) => {
+                let digest = release.metadata.get(&digestkey);
+                Ok(digest.map(|d| d).unwrap())
+            }
+            _ => bail!("could not get manifest reference"),
+        }
+    }
 }
 
 /// Type to represent a Release with all its information.
@@ -188,10 +200,15 @@ impl Graph {
             Some(id) => {
                 let node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
                 if let Release::Concrete(_) = node {
-                    bail!(
-                        "Concrete release with the same version ({}) already exists",
-                        release.version()
-                    );
+                    // check if release digest and node digest are same
+                    if release.manifestref().unwrap() != node.manifestref().unwrap() {
+                        bail!(
+                            "mismatched manifest ref for concrete release {}: {}, {}",
+                            release.version(),
+                            release.manifestref().unwrap(),
+                            node.manifestref().unwrap()
+                        )
+                    }
                 }
                 *node = release;
                 Ok(id)
@@ -608,83 +625,48 @@ impl Serialize for Graph {
     }
 }
 
+#[cfg(any(test, feature = "test"))]
 impl PartialEq for Graph {
     fn eq(&self, other: &Graph) -> bool {
-        use daggy::petgraph::visit::IntoNeighbors;
+        let mut releases = self
+            .dag
+            .node_references()
+            .map(|node_ref| node_ref.1)
+            .collect::<Vec<&Release>>();
+        releases.sort();
 
-        let asc_order_release_by_version = {
-            use std::cmp::Ordering::{self, *};
+        let mut releases_other = other
+            .dag
+            .node_references()
+            .map(|node_ref| node_ref.1)
+            .collect::<Vec<&Release>>();
+        releases_other.sort();
 
-            |a: &&Release, b: &&Release| -> Ordering {
-                if a.version() < b.version() {
-                    Less
-                } else if a.version() == b.version() {
-                    Equal
-                } else {
-                    Greater
-                }
-            }
+        if releases != releases_other {
+            return false;
+        }
+
+        let edges = if let Ok(edges) = self.get_edges(true) {
+            edges
+        } else {
+            return false;
         };
 
-        // Look through all nodes in self
-        self.dag.node_references().all(|node_ref| {
-            let dag_other = &other.dag;
-            let node_index = node_ref.0;
-            let release = node_ref.1;
+        let edges_other = if let Ok(edges) = other.get_edges(true) {
+            edges
+        } else {
+            return false;
+        };
 
-            // For each node in self, look through all nodes in other and find a match
-            dag_other
-                .node_references()
-                .filter(|node_ref_other| {
-                    let node_index_other = node_ref_other.0;
-                    let release_other = node_ref_other.1;
+        if edges != edges_other {
+            return false;
+        }
 
-                    // Ensure the set of neighbors of release and release_other are identical
-                    let compare_neighbors = || {
-                        let (neighbors_count, neighbors_other_count) = (
-                            self.dag.neighbors(node_index).count(),
-                            dag_other.neighbors(node_index_other).count(),
-                        );
-
-                        if neighbors_count != neighbors_other_count {
-                            return false;
-                        }
-
-                        let mut neighbors = self
-                            .dag
-                            .neighbors(node_index)
-                            .zip(dag_other.neighbors(node_index_other))
-                            .fold(
-                                Vec::with_capacity(neighbors_count * 2),
-                                |mut neighbors, (neighbor, neighbor_other)| {
-                                    neighbors.push(
-                                        self.dag.node_weight(neighbor).expect(EXPECT_NODE_WEIGHT),
-                                    );
-                                    neighbors.push(
-                                        dag_other
-                                            .node_weight(neighbor_other)
-                                            .expect(EXPECT_NODE_WEIGHT),
-                                    );
-                                    neighbors
-                                },
-                            );
-
-                        // dedup() requires consecutive sorting
-                        neighbors.sort_by(asc_order_release_by_version);
-                        neighbors.dedup();
-
-                        neighbors.len() == neighbors_count
-                    };
-
-                    release == release_other && compare_neighbors()
-                })
-                // Ensure each node in self has exactly one matching node in including its neighbors
-                .count()
-                == 1
-        })
+        true
     }
 }
 
+#[cfg(any(test, feature = "test"))]
 impl Eq for Graph {}
 
 impl From<plugins::interface::Graph> for Graph {
@@ -937,14 +919,37 @@ pub mod testing {
         }
     }
 
-    /// Compares two Graphs and gives a verbose error if not.
+    /// Settings for the `compare_graphs_verbose` fn
+    #[derive(Default)]
+    pub struct CompareGraphsVerboseSettings<'a> {
+        pub unwanted_metadata_keys: &'a [&'a str],
+        pub payload_replace_sha_by_tag_left: bool,
+        pub payload_replace_sha_by_tag_right: bool,
+        pub payload_remove_registry_and_repo: bool,
+    }
+
+    /// Compares two Graphs and gives a verbose error if not equal.
     pub fn compare_graphs_verbose(
         mut left: Graph,
         mut right: Graph,
-        unwanted_metadata_keys: &[&str],
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let removed_keys_left = remove_release_metadata(&mut left, unwanted_metadata_keys);
-        let removed_keys_right = remove_release_metadata(&mut right, unwanted_metadata_keys);
+        settings: CompareGraphsVerboseSettings,
+    ) -> Fallible<()> {
+        let removed_keys_left = remove_release_metadata(&mut left, settings.unwanted_metadata_keys);
+        let removed_keys_right =
+            remove_release_metadata(&mut right, settings.unwanted_metadata_keys);
+
+        if settings.payload_replace_sha_by_tag_left {
+            payload_replace_sha_by_tag_fn(&mut left)?;
+        }
+
+        if settings.payload_replace_sha_by_tag_right {
+            payload_replace_sha_by_tag_fn(&mut right)?;
+        }
+
+        if settings.payload_remove_registry_and_repo {
+            payload_remove_registry_and_repo(&mut left)?;
+            payload_remove_registry_and_repo(&mut right)?;
+        }
 
         if left == right {
             return Ok(());
@@ -954,8 +959,8 @@ pub mod testing {
         output.push("Graphs differ! Showing differences from left to right".into());
         output.push("-----------------------------------------------------".into());
 
-        let edges_left = right.get_edges(false)?;
-        let edges_right = left.get_edges(false)?;
+        let edges_left = left.get_edges(false)?;
+        let edges_right = right.get_edges(false)?;
         output.push("edges: ".into());
         output.push(
             prettydiff::diff_lines(
@@ -976,7 +981,7 @@ pub mod testing {
             .format(),
         );
 
-        if !unwanted_metadata_keys.is_empty() {
+        if !settings.unwanted_metadata_keys.is_empty() {
             output.push("removed metadata:".into());
             output.push(
                 prettydiff::diff_lines(
@@ -987,7 +992,7 @@ pub mod testing {
             );
         }
 
-        Err(output.join("\n").into())
+        bail!(output.join("\n"));
     }
 
     /// Removes the metadata given by the keys and returns it.
@@ -1016,6 +1021,45 @@ pub mod testing {
         });
 
         removed_metadata
+    }
+
+    /// Replace the digests by versioned tags in the release payload strings.
+    pub fn payload_replace_sha_by_tag_fn(graph: &mut Graph) -> Fallible<()> {
+        graph
+            .iter_releases_mut(|ref mut release| {
+                match release {
+                    Release::Concrete(ref mut release) => {
+                        // replace digest by tag to match expectency
+                        let version = release.version.to_string();
+                        let source_front = release.payload.split('@').next().ok_or_else(|| {
+                            Error::msg(format!("invalid version string {:?}", version))
+                        })?;
+                        release.payload = format!("{}:{}", source_front, version);
+
+                        Ok(())
+                    }
+                    Release::Abstract(ar) => panic!("unexpected Abstract release: {:?}", &ar),
+                }
+            })
+            .context("replacing the sha by the tag in the payload string")
+    }
+
+    /// Remove the registry and the repository in release payload strings.
+    pub fn payload_remove_registry_and_repo(graph: &mut Graph) -> Fallible<()> {
+        graph
+            .iter_releases_mut(|ref mut release| {
+                match release {
+                    Release::Concrete(ref mut release) => {
+                        // replace digest by tag to match expectency
+                        let version = release.version.to_string();
+                        release.payload = version;
+
+                        Ok(())
+                    }
+                    Release::Abstract(ar) => panic!("unexpected Abstract release: {:?}", &ar),
+                }
+            })
+            .context("removing registry and repo from the payload string")
     }
 }
 
@@ -1132,6 +1176,45 @@ mod tests {
             graph
         };
         assert_eq!(graph1, graph2);
+    }
+
+    #[test]
+    fn test_graph_eq_detects_exceeding_nodes() {
+        let r1 = Release::Concrete(ConcreteRelease {
+            version: String::from("1.0.0"),
+            payload: String::from("image/1.0.0"),
+            metadata: MapImpl::new(),
+        });
+        let r2 = Release::Concrete(ConcreteRelease {
+            version: String::from("2.0.0"),
+            payload: String::from("image/2.0.0"),
+            metadata: MapImpl::new(),
+        });
+
+        let r3 = Release::Concrete(ConcreteRelease {
+            version: String::from("3.0.0"),
+            payload: String::from("image/3.0.0"),
+            metadata: MapImpl::new(),
+        });
+
+        let graph1 = {
+            let mut graph = Graph::default();
+            let v1 = graph.dag.add_node(r1.clone());
+            let v2 = graph.dag.add_node(r2.clone());
+            graph.dag.add_edge(v1, v2, Empty {}).unwrap();
+
+            graph
+        };
+        let graph2 = {
+            let mut graph = Graph::default();
+            let v1 = graph.dag.add_node(r1.clone());
+            let v2 = graph.dag.add_node(r2.clone());
+            let _ = graph.dag.add_node(r3.clone());
+            graph.dag.add_edge(v1, v2, Empty {}).unwrap();
+
+            graph
+        };
+        assert_ne!(graph1, graph2);
     }
 
     #[test]

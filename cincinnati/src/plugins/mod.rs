@@ -62,7 +62,7 @@ pub mod prelude_plugin_impl {
 
     pub use async_trait::async_trait;
     pub use commons::prelude_errors::*;
-    pub use custom_debug_derive::CustomDebug;
+    pub use custom_debug_derive::Debug as CustomDebug;
     pub use futures::TryFutureExt;
     pub use log::{debug, error, info, trace, warn};
     pub use serde::{de::DeserializeOwned, Deserialize};
@@ -106,8 +106,8 @@ pub enum PluginResult {
 }
 
 /// Struct used by the ExternalPlugin trait impl's
-#[derive(Debug, PartialEq)]
-#[cfg_attr(test, derive(Clone))]
+#[derive(Debug)]
+#[cfg_attr(test, derive(Clone, PartialEq))]
 pub struct InternalIO {
     pub graph: cincinnati::Graph,
     pub parameters: HashMap<String, String>,
@@ -189,7 +189,7 @@ impl TryFrom<ExternalIO> for PluginExchange {
     type Error = Error;
 
     fn try_from(external_io: ExternalIO) -> Fallible<Self> {
-        protobuf::parse_from_bytes(&external_io.bytes)
+        protobuf::Message::parse_from_bytes(&external_io.bytes)
             .context("could not parse ExternalIO to PluginExchange")
             .map_err(Into::into)
     }
@@ -203,7 +203,7 @@ impl TryFrom<ExternalIO> for PluginError {
     type Error = Error;
 
     fn try_from(external_io: ExternalIO) -> Fallible<Self> {
-        protobuf::parse_from_bytes(&external_io.bytes)
+        protobuf::Message::parse_from_bytes(&external_io.bytes)
             .context("could not parse ExternalIO to PluginError")
             .map_err(Into::into)
     }
@@ -417,7 +417,7 @@ where
     T: Sync + Send,
     T: 'static,
 {
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let runtime = tokio::runtime::Runtime::new()?;
 
     let timeout = match timeout {
         None => return runtime.block_on(process(plugins, initial_io)),
@@ -502,7 +502,7 @@ mod tests {
         assert_eq!(input_internal, output_internal);
     }
 
-    #[derive(custom_debug_derive::CustomDebug)]
+    #[derive(custom_debug_derive::Debug)]
     #[allow(clippy::type_complexity)]
     struct TestInternalPlugin {
         counter: AtomicUsize,
@@ -547,7 +547,7 @@ mod tests {
 
     #[test]
     fn process_plugins_roundtrip_external_internal() -> Fallible<()> {
-        let mut runtime = commons::testing::init_runtime()?;
+        let runtime = commons::testing::init_runtime()?;
 
         lazy_static! {
             static ref PLUGINS: Vec<BoxedPlugin> = new_plugins!(
@@ -594,7 +594,7 @@ mod tests {
 
     #[test]
     fn process_plugins_loop() -> Fallible<()> {
-        let mut runtime = commons::testing::init_runtime()?;
+        let runtime = commons::testing::init_runtime()?;
 
         lazy_static! {
             static ref PLUGINS: Vec<BoxedPlugin> = new_plugins!(

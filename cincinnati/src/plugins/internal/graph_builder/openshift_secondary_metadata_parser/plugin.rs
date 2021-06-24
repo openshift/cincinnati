@@ -7,6 +7,7 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use std::collections::HashSet;
 
 pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
+static SUPPORTED_VERSIONS: &[&str] = &["1.0.0"];
 
 pub mod graph_data_model {
     //! This module contains the data types corresponding to the graph data files.
@@ -179,10 +180,11 @@ pub async fn deserialize_directory_files<T>(
 where
     T: DeserializeOwned,
 {
+    use futures::Stream;
     use std::sync::Arc;
     use std::sync::Mutex;
-    use tokio::stream::Stream;
-    use tokio::stream::StreamExt;
+    use tokio_stream::wrappers::ReadDirStream;
+    use tokio_stream::StreamExt;
 
     // Even though we don't use concurrent threads, the usage of async forces us
     // to guarantee that the error container is thread-safe
@@ -210,45 +212,47 @@ where
         };
     }
 
-    let mut paths = tokio::fs::read_dir(&path)
-        .await
-        .context(format!("Reading directory {:?}", &path))?
-        .filter_map(|tried_direntry| match tried_direntry {
-            Ok(direntry) => {
-                let path = direntry.path();
-                if let Some(extension) = &path.extension() {
-                    let extension_str = extension.to_str().unwrap_or_default();
-                    if extension_re.is_match(extension_str) {
-                        Some(path)
-                    } else {
-                        commit_error!(
-                            error,
-                            DeserializeDirectoryFilesError::InvalidExtension(
-                                path.clone(),
-                                extension_str.to_string(),
-                            )
-                        );
-
-                        None
-                    }
+    let mut paths = ReadDirStream::new(
+        tokio::fs::read_dir(&path)
+            .await
+            .context(format!("Reading directory {:?}", &path))?,
+    )
+    .filter_map(|tried_direntry| match tried_direntry {
+        Ok(direntry) => {
+            let path = direntry.path();
+            if let Some(extension) = &path.extension() {
+                let extension_str = extension.to_str().unwrap_or_default();
+                if extension_re.is_match(extension_str) {
+                    Some(path)
                 } else {
-                    debug!("{:?} does not have an extension", &path);
                     commit_error!(
                         error,
-                        DeserializeDirectoryFilesError::MissingExtension(path)
+                        DeserializeDirectoryFilesError::InvalidExtension(
+                            path.clone(),
+                            extension_str.to_string(),
+                        )
                     );
+
                     None
                 }
-            }
-            Err(e) => {
-                warn!("{}", e);
+            } else {
+                debug!("{:?} does not have an extension", &path);
                 commit_error!(
                     error,
-                    DeserializeDirectoryFilesError::File(path.to_path_buf(), e)
+                    DeserializeDirectoryFilesError::MissingExtension(path)
                 );
                 None
             }
-        });
+        }
+        Err(e) => {
+            warn!("{}", e);
+            commit_error!(
+                error,
+                DeserializeDirectoryFilesError::File(path.to_path_buf(), e)
+            );
+            None
+        }
+    });
 
     let mut t_vec = Vec::with_capacity(match paths.size_hint() {
         (_, Some(upper)) => upper,
@@ -292,6 +296,24 @@ impl OpenshiftSecondaryMetadataParserPlugin {
             PathBuf::from(data_dir)
         } else {
             self.settings.data_directory.clone()
+        }
+    }
+
+    async fn process_version(&self, data_dir: &PathBuf) -> Fallible<String> {
+        let path = data_dir.join("version");
+        let version = tokio::fs::read(&path)
+            .await
+            .context(format!("Reading {:?}", &path))?;
+        let string_version = String::from_utf8_lossy(&version);
+
+        if SUPPORTED_VERSIONS.contains(&string_version.trim()) {
+            Ok(string_version.into_owned())
+        } else {
+            Err(format_err!(
+                "unrecognized graph-data version {}; supported versions: {:?}",
+                string_version,
+                SUPPORTED_VERSIONS
+            ))
         }
     }
 
@@ -563,6 +585,7 @@ impl InternalPlugin for OpenshiftSecondaryMetadataParserPlugin {
     async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
         let data_dir = self.get_data_directory(&io);
 
+        self.process_version(&data_dir).await?;
         self.process_raw_metadata(&mut io.graph, &data_dir).await?;
         self.process_blocked_edges(&mut io.graph, &data_dir).await?;
         self.process_channels(&mut io.graph, &data_dir).await?;
@@ -595,7 +618,7 @@ mod tests {
     #[test_case("20200220.104838")]
     #[test_case("20200319.204124")]
     fn compare_quay_result_fixture(fixture: &str) {
-        let mut runtime = commons::testing::init_runtime().unwrap();
+        let runtime = commons::testing::init_runtime().unwrap();
 
         let fixture_directory = TEST_FIXTURE_DIR.join(fixture);
 
@@ -673,10 +696,14 @@ mod tests {
         if let Err(e) = compare_graphs_verbose(
             graph_expected,
             graph_result,
-            &[
-                "io.openshift.upgrades.graph.previous.remove",
-                "io.openshift.upgrades.graph.previous.remove_regex",
-            ],
+            cincinnati::testing::CompareGraphsVerboseSettings {
+                unwanted_metadata_keys: &[
+                    "io.openshift.upgrades.graph.previous.remove_regex",
+                    "io.openshift.upgrades.graph.previous.remove",
+                ],
+
+                ..Default::default()
+            },
         ) {
             panic!("{}", e);
         }
@@ -687,7 +714,7 @@ mod tests {
     #[test_case("missing_extension")]
     #[test_case("invalid_extension")]
     fn disallowed_errors_is_effective(disallowed_error: &str) {
-        let mut runtime = commons::testing::init_runtime().unwrap();
+        let runtime = commons::testing::init_runtime().unwrap();
 
         let fixture_directory = TEST_FIXTURE_DIR.join("invalid0");
 

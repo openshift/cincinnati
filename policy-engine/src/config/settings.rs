@@ -4,6 +4,7 @@ use super::{cli, file};
 use cincinnati::plugins::catalog::{self, PluginSettings};
 use cincinnati::plugins::BoxedPlugin;
 use commons::prelude_errors::*;
+use custom_debug_derive::Debug as CustomDebug;
 use hyper::Uri;
 use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr};

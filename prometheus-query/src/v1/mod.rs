@@ -11,7 +11,7 @@ pub struct Client {
     /// Base URL for API endpoint.
     api_base: reqwest::Url,
     /// Asynchronous reqwest client.
-    hclient: reqwest::Client,
+    hclient: reqwest::blocking::Client,
     /// Authentication token.
     token: Option<String>,
     /// Trust all certs
@@ -29,7 +29,7 @@ impl Client {
         &self,
         method: reqwest::Method,
         url_suffix: S,
-    ) -> Fallible<reqwest::RequestBuilder> {
+    ) -> Fallible<reqwest::blocking::RequestBuilder> {
         let url = self.api_base.clone().join(url_suffix.as_ref())?;
         trace!("url: '{}'", url);
         let builder = {
@@ -50,14 +50,14 @@ impl Client {
 #[derive(Clone, Debug, Default)]
 pub struct ClientBuilder {
     api_base: Option<String>,
-    hclient: Option<reqwest::Client>,
+    hclient: Option<reqwest::blocking::Client>,
     token: Option<String>,
     danger_accept_invalid_certs: Option<bool>,
 }
 
 impl ClientBuilder {
     /// Set (or reset) the HTTP client to use.
-    pub fn http_client(self, hclient: Option<reqwest::Client>) -> Self {
+    pub fn http_client(self, hclient: Option<reqwest::blocking::Client>) -> Self {
         let mut builder = self;
         builder.hclient = hclient;
         builder
@@ -88,7 +88,7 @@ impl ClientBuilder {
     pub fn build(self) -> Fallible<Client> {
         let hclient = match self.hclient {
             Some(client) => client,
-            None => reqwest::ClientBuilder::new()
+            None => reqwest::blocking::ClientBuilder::new()
                 .danger_accept_invalid_certs(self.danger_accept_invalid_certs.unwrap_or_default())
                 .build()?,
         };

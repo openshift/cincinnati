@@ -290,7 +290,7 @@ mod tests_net {
 
     #[test]
     fn metadata_fetch_from_public_quay_succeeds() -> Fallible<()> {
-        let mut runtime = init_runtime()?;
+        let runtime = init_runtime()?;
 
         let manifestrefs: HashMap<usize, &str> = [
             (0, ""),
@@ -349,7 +349,7 @@ mod tests_net {
     #[test]
     #[ignore = "currently broken on CI"]
     fn metadata_fetch_from_private_quay_succeeds() -> Fallible<()> {
-        let mut runtime = init_runtime()?;
+        let runtime = init_runtime()?;
 
         let token_file = std::env::var("CINCINNATI_TEST_QUAY_API_TOKEN_PATH")
             .expect("CINCINNATI_TEST_QUAY_API_TOKEN_PATH missing");

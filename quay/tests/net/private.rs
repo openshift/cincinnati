@@ -13,7 +13,7 @@ fn common_init() -> (Runtime, Option<String>) {
 #[test]
 #[ignore = "currently broken on CI"]
 fn test_wrong_auth() {
-    let (mut rt, _) = common_init();
+    let (rt, _) = common_init();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
 
     let client = quay::v1::Client::builder()
@@ -34,7 +34,7 @@ fn test_wrong_auth() {
 #[test]
 #[ignore = "currently broken on CI"]
 fn test_stream_active_tags() {
-    let (mut rt, token) = common_init();
+    let (rt, token) = common_init();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
     let expected = vec!["0.0.1", "0.0.0"];
 
@@ -58,7 +58,7 @@ fn test_stream_active_tags() {
 #[test]
 #[ignore = "currently broken on CI"]
 fn test_get_labels() {
-    let (mut rt, token) = common_init();
+    let (rt, token) = common_init();
     let repo = "redhat/openshift-cincinnati-test-private-manual";
     let tag_name = "0.0.0";
 
