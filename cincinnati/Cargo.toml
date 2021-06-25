@@ -5,7 +5,7 @@ authors = ["Alex Crawford <crawford@redhat.com>"]
 edition = "2018"
 
 [dependencies]
-actix-web = "^4.0.0-beta.3"
+actix-web = "^4.0.0-beta.5"
 commons = { path = "../commons" }
 custom_debug_derive = "^0.5"
 daggy = { version = "^0.7.0", features = [ "serde-1" ] }
@@ -35,7 +35,7 @@ dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "854d
 itertools = "^0.10"
 serde_yaml = "^0.8.11"
 prettydiff = { version = "0.4", optional = true }
-opentelemetry = "0.4"
+opentelemetry = "0.14.0"
 strum = "^0.21"
 strum_macros = "^0.21"
 walkdir = "2.3.1"

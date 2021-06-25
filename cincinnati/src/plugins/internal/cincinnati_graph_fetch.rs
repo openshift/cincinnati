@@ -11,8 +11,12 @@ use self::cincinnati::CONTENT_TYPE;
 
 use commons::prelude_errors::*;
 use commons::tracing::{get_tracer, set_context};
-use opentelemetry::api::{Span, Tracer};
+use opentelemetry::{
+    trace::{mark_span_as_active, Tracer},
+    Context as ot_context,
+};
 
+use commons::prelude_errors::Context;
 use commons::GraphError;
 use prometheus::Counter;
 use reqwest;
@@ -117,9 +121,10 @@ impl CincinnatiGraphFetchPlugin {
         let mut headers = HeaderMap::new();
         headers.insert(ACCEPT, HeaderValue::from_static(CONTENT_TYPE));
         {
-            let span = get_tracer().get_active_span();
-            set_context(span.get_context(), &mut headers)
-                .context("failed to set the tracing context")?;
+            let span = get_tracer().start("");
+            let _active_span = mark_span_as_active(span);
+            let cx = ot_context::current();
+            set_context(cx, &mut headers).context("failed to set the tracing context")?;
         }
 
         trace!("getting graph from upstream at {}", self.upstream);

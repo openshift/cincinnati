@@ -1,10 +1,16 @@
 //! Tracing service.
 
-use opentelemetry::api::{
-    Carrier, HttpTextFormat, Key, Provider, Span, SpanContext, TraceContextPropagator,
+use opentelemetry::{
+    global,
+    propagation::{Extractor, Injector, TextMapPropagator},
+    sdk::{
+        propagation::TraceContextPropagator,
+        trace::{Config, Sampler, TracerProvider as sdk_tracerprovider},
+    },
+    trace::{Span, TracerProvider},
+    Context, Key,
 };
-use opentelemetry::{global, sdk};
-use opentelemetry_jaeger::{Exporter, Process};
+
 use std::collections::HashMap;
 
 use actix_web::dev::ServiceRequest;
@@ -21,61 +27,68 @@ pub fn init_tracer(name: &'static str, maybe_agent_endpoint: Option<String>) -> 
         Some(s) => s,
     };
 
-    let exporter = Exporter::builder()
+    let exporter = opentelemetry_jaeger::new_pipeline()
         .with_agent_endpoint(agent_endpoint)
-        .with_process(Process {
-            service_name: name.to_string(),
-            tags: vec![Key::new("exporter").string("jaeger")],
-        })
-        .init()?;
+        .with_service_name(name.to_string())
+        .with_tags(vec![Key::new("exporter").string("jaeger")])
+        .init_exporter()?;
 
-    let provider = sdk::Provider::builder()
+    let provider = sdk_tracerprovider::builder()
         .with_simple_exporter(exporter)
-        .with_config(sdk::Config {
-            default_sampler: Box::new(sdk::Sampler::Always),
+        .with_config(Config {
+            sampler: Box::new(Sampler::AlwaysOn),
             ..Default::default()
         })
         .build();
-    global::set_provider(provider);
+    global::set_tracer_provider(provider);
 
     Ok(())
 }
 
 /// get_tracer returns an instance of global tracer
 pub fn get_tracer() -> global::BoxedTracer {
-    global::trace_provider().get_tracer("")
+    global::tracer_provider().get_tracer("", None)
 }
 
 struct HttpHeaderMapCarrier<'a>(&'a http::HeaderMap);
-impl<'a> Carrier for HttpHeaderMapCarrier<'a> {
-    fn get(&self, key: &'static str) -> Option<&str> {
+impl<'a> Extractor for HttpHeaderMapCarrier<'a> {
+    fn get(&self, key: &str) -> Option<&str> {
         self.0.get(key).and_then(|value| value.to_str().ok())
     }
-
-    fn set(&mut self, _key: &'static str, _value: String) {
+    fn keys(&self) -> Vec<&str> {
+        unimplemented!()
+    }
+}
+impl<'a> Injector for HttpHeaderMapCarrier<'a> {
+    fn set(&mut self, _key: &str, _value: String) {
         unimplemented!()
     }
 }
 
 struct ClientHeaderMapCarrier(HashMap<String, String>);
-impl Carrier for ClientHeaderMapCarrier {
-    fn get(&self, key: &'static str) -> Option<&str> {
+impl Extractor for ClientHeaderMapCarrier {
+    fn get(&self, key: &str) -> Option<&str> {
         self.0.get(key).map(|s| s.as_str())
     }
 
-    fn set(&mut self, key: &'static str, value: String) {
+    fn keys(&self) -> Vec<&str> {
+        unimplemented!()
+    }
+}
+impl Injector for ClientHeaderMapCarrier {
+    fn set(&mut self, key: &str, value: String) {
         self.0.insert(key.to_string(), value);
     }
 }
 
 /// Return the parent context for the request if specific headers found.
-pub fn get_context(req: &ServiceRequest) -> SpanContext {
+pub fn get_context(req: &ServiceRequest) -> Context {
     let propagator = TraceContextPropagator::new();
     propagator.extract(&HttpHeaderMapCarrier(&req.headers()))
 }
 
 /// Inject context data into headers
-pub fn set_context(context: SpanContext, headers: &mut HeaderMap) -> crate::errors::Fallible<()> {
+pub fn set_context(context: Context, headers: &mut HeaderMap) -> crate::errors::Fallible<()> {
     use std::str::FromStr;
 
     let mut carrier = {
@@ -91,7 +104,7 @@ pub fn set_context(context: SpanContext, headers: &mut HeaderMap) -> crate::erro
     };
 
     let propagator = TraceContextPropagator::new();
-    propagator.inject(context, &mut carrier);
+    propagator.inject_context(&context, &mut carrier);
 
     for (name, value) in carrier.0 {
         headers.insert(HeaderName::from_str(&name)?, HeaderValue::from_str(&value)?);
@@ -101,9 +114,10 @@ pub fn set_context(context: SpanContext, headers: &mut HeaderMap) -> crate::erro
 }
 
 /// Add span attributes from servicerequest
-pub fn set_span_tags(req: &ServiceRequest, span: &dyn Span) {
-    span.set_attribute(Key::new("path").string(req.path()));
-    req.headers().iter().for_each(|(k, v)| {
-        span.set_attribute(Key::new(format!("header.{}", k)).bytes(v.as_bytes().to_vec()))
+pub fn set_span_tags(req_path: &str, headers: &http::header::HeaderMap, span: &mut dyn Span) {
+    span.set_attribute(Key::new("path").string(req_path.to_string()));
+    headers.iter().for_each(|(k, v)| {
+        let value = v.to_str().unwrap().to_string();
+        span.set_attribute(Key::new(format!("header.{}", k)).string(value))
     });
 }

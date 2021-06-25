@@ -32,7 +32,10 @@ use commons::metrics::{self, RegistryWrapper};
 use commons::prelude_errors::*;
 use commons::tracing::{get_tracer, init_tracer, set_span_tags};
 use futures::future;
-use opentelemetry::api::{trace::futures::Instrument, Tracer};
+use opentelemetry::{
+    trace::{mark_span_as_active, FutureExt, Tracer},
+    Context as ot_context,
+};
 use prometheus::{labels, opts, Counter, Registry};
 use std::collections::HashSet;
 
@@ -101,9 +104,11 @@ async fn main() -> Result<(), Error> {
         let app_prefix = state.path_prefix.clone();
         App::new()
             .wrap_fn(|req, srv| {
-                let span = get_tracer().start("request", None);
-                set_span_tags(&req, &span);
-                srv.call(req).instrument(span)
+                let mut span = get_tracer().start("request");
+                set_span_tags(req.path(), req.headers(), &mut span);
+                let _active_span = mark_span_as_active(span);
+                let cx = ot_context::current();
+                srv.call(req).with_context(cx)
             })
             .wrap(
                 Cors::default()

@@ -21,7 +21,7 @@ use commons::metrics::HasRegistry;
 use commons::tracing::get_tracer;
 use commons::{Fallible, GraphError};
 use lazy_static;
-use opentelemetry::api::Tracer;
+use opentelemetry::trace::{mark_span_as_active, Tracer};
 pub use parking_lot::RwLock;
 use prometheus::{self, histogram_opts, labels, opts, Counter, Gauge, Histogram, IntGauge};
 use serde_json;
@@ -99,7 +99,8 @@ pub async fn index(
     req: HttpRequest,
     app_data: actix_web::web::Data<State>,
 ) -> Result<HttpResponse, GraphError> {
-    let _ = get_tracer().start("index", None);
+    let span = get_tracer().start("index");
+    let _active_span = mark_span_as_active(span);
 
     V1_GRAPH_INCOMING_REQS.inc();
 
