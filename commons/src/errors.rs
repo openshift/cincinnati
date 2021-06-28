@@ -1,4 +1,5 @@
 use actix_web::http;
+use actix_web::web;
 use actix_web::HttpResponse;
 use prometheus::{IntCounterVec, Opts, Registry};
 use thiserror::Error;
@@ -89,13 +90,19 @@ impl actix_web::error::ResponseError for GraphError {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct ErrorMessage {
+    kind: String,
+    value: String,
+}
+
 impl GraphError {
     /// Return the HTTP JSON error response.
     pub fn as_json_error(&self) -> HttpResponse {
         let code = self.status_code();
-        let json_body = json!({
-            "kind": self.kind(),
-            "value": self.value(),
+        let json_body = web::Json(ErrorMessage {
+            kind: self.kind(),
+            value: self.value(),
         });
         HttpResponse::build(code).json(json_body)
     }

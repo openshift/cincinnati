@@ -9,6 +9,7 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use tokio::sync::Mutex as FuturesMutex;
 
 pub static DEFAULT_OUTPUT_WHITELIST: &[&str] = &[
+    "version",
     "channels/.+\\.ya+ml",
     "blocked-edges/.+\\.ya+ml",
     "raw/metadata.json",
@@ -482,7 +483,7 @@ mod network_tests {
     use std::collections::HashSet;
     #[test]
     fn openshift_secondary_metadata_extraction() -> Fallible<()> {
-        let mut runtime = commons::testing::init_runtime()?;
+        let runtime = commons::testing::init_runtime()?;
 
         let tmpdir = tempfile::tempdir()?;
 

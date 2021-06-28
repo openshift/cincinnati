@@ -6,7 +6,7 @@ extern crate actix_web;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
-extern crate serde_json;
+extern crate serde_derive;
 
 mod config;
 pub use crate::config::MergeOptions;
@@ -91,21 +91,39 @@ pub fn ensure_query_params(
     Ok(())
 }
 
-/// Make sure client requested a valid content type.
-pub fn ensure_content_type(
+/// Make sure the client can accept the provided media type.
+pub fn validate_content_type(
     headers: &HeaderMap,
     content_type: &'static str,
 ) -> Result<(), GraphError> {
-    let content_json = header::HeaderValue::from_static(content_type);
+    let header_value = match headers.get(header::ACCEPT) {
+        None => return Ok(()),
+        Some(v) => v,
+    };
 
-    if !headers
-        .get(header::ACCEPT)
-        .map(|accept| accept == content_json)
-        .unwrap_or(false)
-    {
-        Err(GraphError::InvalidContentType)
-    } else {
+    let full_type = header::HeaderValue::from_static(content_type);
+    let wildcard = header::HeaderValue::from_static("*");
+    let double_wildcard = header::HeaderValue::from_static("*/*");
+    let top_type = content_type.split("/").next().unwrap_or("");
+    let top_type_wildcard = header::HeaderValue::from_str(&format!("{}/*", top_type));
+    assert!(
+        top_type_wildcard.is_ok(),
+        "could not form top-type wildcard from {}",
+        top_type
+    );
+
+    let acceptable_content_types: Vec<actix_web::http::HeaderValue> = vec![
+        full_type,
+        wildcard,
+        double_wildcard,
+        top_type_wildcard.unwrap(),
+    ];
+
+    // FIXME: this is not a full-blown Accept parser
+    if acceptable_content_types.iter().any(|c| c == header_value) {
         Ok(())
+    } else {
+        Err(GraphError::InvalidContentType)
     }
 }
 
@@ -152,10 +170,21 @@ mod tests {
     }
 
     #[test]
-    fn test_ensure_content_type() {
+    fn test_validate_content_type() {
         let mut headers = actix_web::http::HeaderMap::new();
-        headers.insert(header::ACCEPT, "application/json".parse().unwrap());
-        ensure_content_type(&headers, "application/json").unwrap();
-        ensure_content_type(&headers, "text/html").unwrap_err();
+        validate_content_type(&headers, "application/json").unwrap(); // if the request leaves Accept empty, we can return whatever we want
+        headers.insert(
+            header::ACCEPT,
+            //"application/json, text/*; q=0.2".parse().unwrap(), // prefer JSON, but also accept any text/* after an 80% markdown in quality.  FIXME: needs a smarter parser in validate_content_type
+            "application/json".parse().unwrap(),
+        );
+        validate_content_type(&headers, "application/json").unwrap();
+        headers.insert(
+            // FIXME: drop once validate_content_type gets a smarter parser and the previous insert can include the text/* entry
+            header::ACCEPT,
+            "text/*".parse().unwrap(),
+        );
+        validate_content_type(&headers, "text/plain").unwrap();
+        validate_content_type(&headers, "image/png").unwrap_err();
     }
 }

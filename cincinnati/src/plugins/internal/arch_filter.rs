@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn plugin_filters_by_arch_and_strips_suffixes() -> Fallible<()> {
-        let mut runtime = init_runtime()?;
+        let runtime = init_runtime()?;
 
         let input_metadata: TestMetadata = vec![
             (

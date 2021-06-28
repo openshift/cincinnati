@@ -10,6 +10,9 @@ use self::cincinnati::plugins::BoxedPlugin;
 use super::internal::arch_filter::ArchFilterPlugin;
 use super::internal::channel_filter::ChannelFilterPlugin;
 use super::internal::cincinnati_graph_fetch::CincinnatiGraphFetchPlugin;
+use super::internal::dkrv2_openshift_secondary_metadata_scraper::{
+    DkrV2OpenshiftSecondaryMetadataScraperPlugin, DkrV2OpenshiftSecondaryMetadataScraperSettings,
+};
 use super::internal::edge_add_remove::EdgeAddRemovePlugin;
 use super::internal::github_openshift_secondary_metadata_scraper::{
     GithubOpenshiftSecondaryMetadataScraperPlugin, GithubOpenshiftSecondaryMetadataScraperSettings,
@@ -60,6 +63,9 @@ pub fn deserialize_config(cfg: toml::Value) -> Fallible<Box<dyn PluginSettings>>
         }
         OpenshiftSecondaryMetadataParserPlugin::PLUGIN_NAME => {
             OpenshiftSecondaryMetadataParserSettings::deserialize_config(cfg)
+        }
+        DkrV2OpenshiftSecondaryMetadataScraperPlugin::PLUGIN_NAME => {
+            DkrV2OpenshiftSecondaryMetadataScraperSettings::deserialize_config(cfg)
         }
         x => bail!("unknown plugin '{}'", x),
     }

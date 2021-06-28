@@ -7,9 +7,6 @@ set -ex
 ABSOLUTE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${ABSOLUTE_PATH}/commons.sh"
 
-DOCKERFILE_BUILD="$ABSOLUTE_PATH/Dockerfile.build/"
-ensure_build_container "${DOCKERFILE_BUILD}"
-
 DOCKERFILE_DEPLOY="$ABSOLUTE_PATH/Dockerfile.deploy/Dockerfile"
 
 docker build -t "${IMAGE}:${IMAGE_TAG}" -f $DOCKERFILE_DEPLOY .

@@ -5,18 +5,21 @@ authors = ["Vadim Rutkovsky <vrutkovs@redhat.com>"]
 edition = "2018"
 
 [dependencies]
-assert-json-diff = "1.0.0"
+anyhow = "^1.0"
+assert-json-diff = "2.0.1"
 chrono = "^0.4.0"
-env_logger = "^0.6.0"
+env_logger = "^0.8"
 failure = "^0.1.1"
-reqwest = "^0.10"
-serde = "^1.0.70"
+reqwest = { version="^0.11", features = ["blocking"] }
+serde = "^1.0.126"
 serde_derive = "^1.0.70"
 serde_json = "^1.0.22"
-test-case = "1.0.0"
-url = "^1.7.2"
+test-case = { version = "1.1.0", features = ["hamcrest_assertions"] }
+hamcrest2 = "0.3.0"
+url = "^2.2"
 commons = { path = "../commons" }
-tokio = { version = "0.2.11", features = [ "fs", "stream" ] }
+tokio = { version = "1.7", features = [ "fs", "rt-multi-thread" ] }
+tokio-stream = { version = "0.1", features = ["fs"] }
 prometheus-query = { path = "../prometheus-query" }
 lazy_static = "^1.2.0"
 cincinnati = { path = "../cincinnati", features = ["test"] }

@@ -132,13 +132,12 @@ The Graph API defines the interface exposed by implementations of Graph Builders
 
 ### Request ###
 
-HTTP GET requests are used to fetch the DAG from the Graph API endpoint. Requests can be made to `/v1/graph` and must include the following in the header:
-
-```
-Accept: application/json
-```
+HTTP GET requests are used to fetch the DAG from the Graph API endpoint. Requests can be made to `/v1/graph` and, if an [`Accept` header][http-accept] is set, it must allow [the `application/json` media type][json-media-type].
 
 Clients may provide additional parameters as URL query parameters in the request. The contract for those parameters is defined by the client and Policy Engine implementation.
+
+[http-accept]: https://tools.ietf.org/html/rfc7231#section-5.3.2
+[json-media-type]: https://tools.ietf.org/html/rfc8259#section-1.2
 
 ### Response ###
 

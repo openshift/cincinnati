@@ -1,6 +1,7 @@
 //! Cincinnati graph service.
 
 use crate::AppState;
+use actix_web::http::HeaderValue;
 use actix_web::web::Query;
 use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::BoxedPlugin;
@@ -40,12 +41,21 @@ pub(crate) async fn index(
     req: HttpRequest,
     app_data: actix_web::web::Data<AppState>,
 ) -> Result<HttpResponse, GraphError> {
+    _index(&req, app_data)
+        .await
+        .map_err(|e| api_response_error(&req, e))
+}
+
+async fn _index(
+    req: &HttpRequest,
+    app_data: actix_web::web::Data<AppState>,
+) -> Result<HttpResponse, GraphError> {
     let span = get_tracer().start("index", None);
 
     V1_GRAPH_INCOMING_REQS.inc();
 
     // Check that the client can accept JSON media type.
-    commons::ensure_content_type(req.headers(), CONTENT_TYPE)?;
+    commons::validate_content_type(req.headers(), CONTENT_TYPE)?;
 
     // Check for required client parameters.
     let mandatory_params = &app_data.mandatory_params;
@@ -59,21 +69,48 @@ pub(crate) async fn index(
 
     let response = process_plugins(app_data.plugins.iter(), plugin_params)
         .instrument(span)
-        .await
-        .map_err(|e| {
-            error!(
-                "Error serving request '{}' from '{}': {:?}",
-                format!("{:?}", &req).replace("\n", " ").replace("\t", " "),
-                &req.peer_addr()
-                    .map(|addr| addr.to_string())
-                    .unwrap_or("<not available>".into()),
-                e
-            );
-            e
-        });
+        .await;
 
     timer.observe_duration();
     response
+}
+
+// logs api request error
+fn api_response_error(req: &HttpRequest, e: GraphError) -> GraphError {
+    error!(
+        "Error serving request \"{}\" from '{}': {:?}",
+        format_request(req),
+        req.peer_addr()
+            .map(|addr| addr.to_string())
+            .unwrap_or("<not available>".into()),
+        e
+    );
+    e
+}
+
+// format the request before logging. Include only details that we need.
+pub fn format_request(req: &HttpRequest) -> String {
+    let no_user_agent = HeaderValue::from_str("user-agent not available").unwrap();
+    let no_accept_type = HeaderValue::from_str("Accept value unavailable").unwrap();
+    let req_type = req.method().as_str();
+    let request = req.path();
+    let query = req.query_string();
+    let user_agent = req
+        .headers()
+        .get("user-agent")
+        .unwrap_or(&no_user_agent)
+        .to_str()
+        .unwrap();
+    let accept_type = req
+        .headers()
+        .get("accept")
+        .unwrap_or(&no_accept_type)
+        .to_str()
+        .unwrap();
+    format!(
+        "Method: '{}', Request: '{}', Query: '{}', User-Agent: '{}', Accept: '{}'",
+        req_type, request, query, user_agent, accept_type
+    )
 }
 
 async fn process_plugins<P>(
@@ -121,21 +158,8 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn missing_content_type() {
-        let mut rt = common_init();
-        let state = AppState::default();
-        let app_data = actix_web::web::Data::new(state);
-
-        let http_req = actix_web::test::TestRequest::get().to_http_request();
-        let graph_call = graph::index(http_req, app_data);
-        let resp = rt.block_on(graph_call).unwrap_err();
-
-        assert_eq!(resp, graph::GraphError::InvalidContentType);
-    }
-
-    #[test]
     fn missing_mandatory_params() {
-        let mut rt = common_init();
+        let rt = common_init();
         let mandatory_params = vec!["id".to_string()].into_iter().collect();
         let state = AppState {
             mandatory_params,
@@ -144,10 +168,10 @@ pub(crate) mod tests {
         let app_data = actix_web::web::Data::new(state);
 
         let http_req = actix_web::test::TestRequest::get()
-            .header(
+            .insert_header((
                 http::header::ACCEPT,
                 http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
-            )
+            ))
             .to_http_request();
         let graph_call = graph::index(http_req, app_data);
         let resp = rt.block_on(graph_call).unwrap_err();
@@ -160,7 +184,7 @@ pub(crate) mod tests {
 
     #[test]
     fn failed_plugin_execution() -> Result<(), Error> {
-        let mut rt = common_init();
+        let rt = common_init();
 
         let plugins = cincinnati::plugins::catalog::build_plugins(
             &[plugin_config!(
@@ -182,10 +206,10 @@ pub(crate) mod tests {
 
         let http_req = actix_web::test::TestRequest::get()
             .uri(&format!("{}?channel=':'", "http://unused.test"))
-            .header(
+            .insert_header((
                 http::header::ACCEPT,
                 http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
-            )
+            ))
             .to_http_request();
 
         let graph_call = graph::index(http_req, app_data);
@@ -240,7 +264,7 @@ pub(crate) mod tests {
             plugin_config: &[Box<dyn PluginSettings>],
             expected_result: &TestResult,
         ) -> Result<(), Error> {
-            let mut runtime = Runtime::new().unwrap();
+            let runtime = Runtime::new().unwrap();
             let service_uri_base = "/graph";
             let service_uri = format!(
                 "{}{}",
@@ -283,7 +307,7 @@ pub(crate) mod tests {
                     let mut response = actix_web::test::call_service(
                         &mut pe_svc,
                         actix_web::test::TestRequest::with_uri(&service_uri)
-                            .header("Accept", "application/json")
+                            .insert_header(("Accept", "application/json"))
                             .to_request(),
                     )
                     .await;

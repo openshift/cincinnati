@@ -2,7 +2,7 @@ use commons::prelude_errors::*;
 use prometheus_query::v1::queries::{QueryData, QueryResult, VectorResult};
 use prometheus_query::v1::Client;
 
-#[cfg(feature = "test-e2e-prom-query")]
+// #[tokio::test]
 #[test]
 fn query_prometheus() -> Fallible<()> {
     let api_base = std::env::var("PROM_ENDPOINT").context("PROM_ENDPOINT not set")?;
@@ -30,16 +30,13 @@ fn query_prometheus() -> Fallible<()> {
             _ => panic!("expected result"),
         };
 
-    let mut runtime = commons::testing::init_runtime().unwrap();
-
-    let mut result: Vec<VectorResult> =
-        match runtime.block_on(client.query(query.to_string(), None, None))? {
-            QueryResult::Success(query_success) => match query_success.data() {
-                QueryData::Vector(vector) => vector.to_vec(),
-                _ => panic!("expected vector"),
-            },
-            _ => panic!("expected result"),
-        };
+    let mut result: Vec<VectorResult> = match client.query(query.to_string(), None, None)? {
+        QueryResult::Success(query_success) => match query_success.data() {
+            QueryData::Vector(vector) => vector.to_vec(),
+            _ => panic!("expected vector"),
+        },
+        _ => panic!("expected result"),
+    };
 
     fn sort_by_version(a: &VectorResult, b: &VectorResult) -> std::cmp::Ordering {
         let a = a.sample().clone();

@@ -23,12 +23,15 @@ mod config;
 mod graph;
 mod openapi;
 
+use actix_cors::Cors;
 use actix_service::Service;
-use actix_web::{middleware, App, HttpServer};
+use actix_web::http::StatusCode;
+use actix_web::{middleware, App, HttpRequest, HttpResponse, HttpServer};
 use cincinnati::plugins::BoxedPlugin;
 use commons::metrics::{self, RegistryWrapper};
 use commons::prelude_errors::*;
 use commons::tracing::{get_tracer, init_tracer, set_span_tags};
+use futures::future;
 use opentelemetry::api::{trace::futures::Instrument, Tracer};
 use prometheus::{labels, opts, Counter, Registry};
 use std::collections::HashSet;
@@ -47,7 +50,7 @@ lazy_static! {
         "build_info",
         "Build information",
         labels! {
-            "git_commit" => match built_info::GIT_VERSION {
+            "git_commit" => match built_info::GIT_COMMIT_HASH {
                 Some(commit) => commit,
                 None => "unknown"
             },
@@ -56,9 +59,8 @@ lazy_static! {
     .unwrap();
 }
 
-fn main() -> Result<(), Error> {
-    let sys = actix::System::new("policy-engine");
-
+#[actix_web::main]
+async fn main() -> Result<(), Error> {
     let settings = config::AppSettings::assemble()?;
     env_logger::Builder::from_default_env()
         .filter(Some(module_path!()), settings.verbosity)
@@ -72,7 +74,7 @@ fn main() -> Result<(), Error> {
     ))?));
     graph::register_metrics(registry)?;
     registry.register(Box::new(BUILD_INFO.clone()))?;
-    HttpServer::new(move || {
+    let metrics_server = HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
             .app_data(actix_web::web::Data::new(RegistryWrapper(registry)))
@@ -95,7 +97,7 @@ fn main() -> Result<(), Error> {
         plugins: Box::leak(Box::new(plugins)),
     };
 
-    HttpServer::new(move || {
+    let main_server = HttpServer::new(move || {
         let app_prefix = state.path_prefix.clone();
         App::new()
             .wrap_fn(|req, srv| {
@@ -103,6 +105,11 @@ fn main() -> Result<(), Error> {
                 set_span_tags(&req, &span);
                 srv.call(req).instrument(span)
             })
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allowed_methods(vec!["HEAD", "GET"]),
+            )
             .app_data(actix_web::web::Data::<AppState>::new(state.clone()))
             .service(
                 actix_web::web::resource(&format!("{}/v1/graph", app_prefix))
@@ -112,6 +119,7 @@ fn main() -> Result<(), Error> {
                 actix_web::web::resource(&format!("{}/v1/openapi", app_prefix))
                     .route(actix_web::web::get().to(openapi::index)),
             )
+            .default_service(actix_web::web::route().to(default_response))
     })
     .keep_alive(10)
     .bind((settings.address, settings.port))?
@@ -119,8 +127,20 @@ fn main() -> Result<(), Error> {
 
     BUILD_INFO.inc();
 
-    let _ = sys.run();
+    future::try_join(metrics_server, main_server).await?;
     Ok(())
+}
+
+// log errors in case an incorrect endpoint is called
+fn default_response(req: HttpRequest) -> HttpResponse {
+    error!(
+        "Error serving request '{}' from '{}': Incorrect Endpoint",
+        graph::format_request(&req),
+        req.peer_addr()
+            .map(|addr| addr.to_string())
+            .unwrap_or("<not available>".into())
+    );
+    HttpResponse::new(StatusCode::NOT_FOUND)
 }
 
 /// Shared application configuration (cloned per-thread).
