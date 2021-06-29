@@ -350,7 +350,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
                         (Ok(release_semver), Ok(version_semver))
                             if release_semver == version_semver =>
                         {
-                            release.get_metadata_mut().map(|metadata| {
+                            Some(&mut release.metadata).map(|metadata| {
                                 metadata
                                     .entry((*key).to_string())
                                     .and_modify(|previous_add| {
@@ -551,8 +551,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
         // Sort the channels as some tests and consumers might already depend on
         // the sorted output which existed in the hack util which is replaced by this plugin.
         let sorted_releases = graph.find_by_fn_mut(|release| {
-            release
-                .get_metadata_mut()
+            Some(&mut release.metadata)
                 .map(|metadata| {
                     metadata.entry(channels_key.clone()).and_modify(|channels| {
                         let mut channels_split = channels.split(',').collect::<Vec<_>>();

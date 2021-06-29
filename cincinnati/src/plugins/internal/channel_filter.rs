@@ -72,16 +72,12 @@ impl InternalPlugin for ChannelFilterPlugin {
         let to_remove = {
             graph
                 .find_by_fn_mut(|release| {
-                    match release {
-                        cincinnati::Release::Concrete(concrete_release) => concrete_release
-                            .metadata
-                            .get_mut(&format!("{}.{}", self.key_prefix, self.key_suffix))
-                            .map_or(true, |values| {
-                                !values.split(',').any(|value| value.trim() == channel)
-                            }),
-                        // remove if it's not a ConcreteRelease
-                        _ => true,
-                    }
+                    release
+                        .metadata
+                        .get_mut(&format!("{}.{}", self.key_prefix, self.key_suffix))
+                        .map_or(true, |values| {
+                            !values.split(',').any(|value| value.trim() == channel)
+                        })
                 })
                 .into_iter()
                 .map(|(release_id, version)| {
