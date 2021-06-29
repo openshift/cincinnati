@@ -302,10 +302,9 @@ impl Graph {
         self.dag
             .node_references()
             .filter(|nr| {
-                if let release = nr.weight() {
-                    if let Some(found_value) = release.metadata.get(key) {
-                        return found_value == value;
-                    }
+                let release = nr.weight();
+                if let Some(found_value) = release.metadata.get(key) {
+                    return found_value == value;
                 }
                 false
             })
@@ -319,15 +318,15 @@ impl Graph {
         self.dag
             .node_references()
             .filter_map(|nr| {
-                if let release = nr.weight() {
-                    if let Some(value) = release.metadata.get(key) {
-                        return Some((
-                            ReleaseId(nr.id()),
-                            release.version.to_owned(),
-                            value.to_owned(),
-                        ));
-                    }
+                let release = nr.weight();
+                if let Some(value) = release.metadata.get(key) {
+                    return Some((
+                        ReleaseId(nr.id()),
+                        release.version.to_owned(),
+                        value.to_owned(),
+                    ));
                 }
+
                 None
             })
             .collect()
@@ -933,17 +932,15 @@ pub mod testing {
     ) -> MapImpl<String, MapImpl<String, String>> {
         let mut removed_metadata = MapImpl::<String, MapImpl<String, String>>::new();
 
-        let _ = graph.iter_releases_mut(|mut release| {
+        let _ = graph.iter_releases_mut(|release| {
             for key in keys {
                 let key = (*key).to_string();
 
-                if let rel = &mut release {
-                    if let Some(removed_value) = rel.metadata.remove(&key) {
-                        removed_metadata
-                            .entry(release.version().to_string())
-                            .or_default()
-                            .insert(key, removed_value);
-                    }
+                if let Some(removed_value) = release.metadata.remove(&key) {
+                    removed_metadata
+                        .entry(release.version().to_string())
+                        .or_default()
+                        .insert(key, removed_value);
                 }
             }
 
@@ -1230,7 +1227,8 @@ mod tests {
         let expected_metadata_value = "changed";
 
         let result = graph.find_by_fn_mut(|release| {
-            *release.metadata.get_mut(&metadata_key).unwrap() == expected_metadata_value.to_string()
+            *release.metadata.get_mut(&metadata_key).unwrap() = expected_metadata_value.to_string();
+            true
         });
 
         assert_eq!(expected, result);

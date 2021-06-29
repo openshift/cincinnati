@@ -113,9 +113,7 @@ mod tests {
             },
         }];
 
-        let mut graph = create_graph(releases).unwrap();
-
-        assert_eq!(graph.prune_abstract(), 1);
+        create_graph(releases).unwrap();
 
         Ok(())
     }
