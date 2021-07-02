@@ -96,14 +96,13 @@ The policy engine client API conforms to the [Cincinnati Graph API](cincinnati.m
 
 HTTP GET requests are used to fetch updates from the policy engine. Requests are made to `/v1/graph` and must include the following URL parameters:
 
-
-|   Key   | Optional | Description                                                 |
-|:-------:|:--------:|:------------------------------------------------------------|
-| version | required | the version number of the currently installed cluster       |
-| channel | required | the name of the channel to which this cluster is subscribed |
-|   id    | required | the unique identifier (UUID v4) of the cluster              |
-|    *    | optional | any other parameters will be passed to upstream requests    |
-
+|   Key   | Optional | Description                                                                                |
+|:-------:|:--------:|:-------------------------------------------------------------------------------------------|
+| arch    | optional | [the architecture identifier][image-config-properties] for the currently installed cluster |
+| version | required | the version number of the currently installed cluster                                      |
+| channel | required | the name of the channel to which this cluster is subscribed                                |
+|   id    | required | the unique identifier (UUID v4) of the cluster                                             |
+|    *    | optional | any other parameters will be passed to upstream requests                                   |
 
 ##### Example ######
 
@@ -140,3 +139,5 @@ The image field references the Update Image which contains the actual update to 
 The Update Image is a container image consisting of a series of Kubernetes manifests describing the Second-Level Operators (SLOs), the `release-metadata` file required by Cincinnati, and a manifest specific to OpenShift. In the future, this image may be expanded to include other assets.
 
 The OpenShift manifest describes the format of the Update Image and provides a cryptographic signature of the surrounding image. The details of this manifest have not yet been finalized.
+
+[image-config-properties]: https://github.com/opencontainers/image-spec/blob/v1.0.1/config.md#properties
