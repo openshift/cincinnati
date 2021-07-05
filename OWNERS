@@ -3,6 +3,5 @@
 
 approvers:
   - cincinnati-approvers
-  - app-sre
 reviewers:
   - cincinnati-reviewers
