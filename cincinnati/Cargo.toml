@@ -34,7 +34,7 @@ tar = "^0.4.35"
 dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "854d0da53bef5dd85b5e901123e85d43af97c74e" }
 itertools = "^0.10"
 serde_yaml = "^0.8.11"
-prettydiff = { version = "0.4", optional = true }
+prettydiff = { version = "0.5", optional = true }
 opentelemetry = "0.14.0"
 strum = "^0.21"
 strum_macros = "^0.21"
@@ -49,7 +49,7 @@ serde_json = "1.0.22"
 memchr = "^2.4"
 pretty_assertions = "0.7.2"
 test-case = "1.2.0"
-prettydiff = "0.4"
+prettydiff = "0.5"
 
 [build-dependencies]
 protoc-rust = "2.24"
