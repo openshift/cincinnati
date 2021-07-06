@@ -181,6 +181,9 @@ pub fn run(settings: &config::AppSettings, state: &State) -> ! {
 
     BUILD_INFO.inc();
 
+    // Store amount of nodes in the graph for metrics
+    let mut nodes_count: i64;
+
     loop {
         // Store scrape duration value. It would be used for initial scrape gauge or scrape histogram
         let scrape_value: f64;
@@ -207,25 +210,28 @@ pub fn run(settings: &config::AppSettings, state: &State) -> ! {
         );
         UPSTREAM_SCRAPES.inc();
 
-        let internal_io = match scrape {
-            Ok(internal_io) => internal_io,
-            Err(err) => {
-                UPSTREAM_ERRORS.inc();
-                err.chain().for_each(|cause| error!("{}", cause));
-                continue;
-            }
-        };
+        {
+            let internal_io = match scrape {
+                Ok(internal_io) => internal_io,
+                Err(err) => {
+                    UPSTREAM_ERRORS.inc();
+                    err.chain().for_each(|cause| error!("{}", cause));
+                    continue;
+                }
+            };
 
-        let json_graph = match serde_json::to_string(&internal_io.graph) {
-            Ok(json) => json,
-            Err(err) => {
-                UPSTREAM_ERRORS.inc();
-                error!("Failed to serialize graph: {}", err);
-                continue;
-            }
-        };
+            let json_graph = match serde_json::to_string(&internal_io.graph) {
+                Ok(json) => json,
+                Err(err) => {
+                    UPSTREAM_ERRORS.inc();
+                    error!("Failed to serialize graph: {}", err);
+                    continue;
+                }
+            };
 
-        *state.json.write() = json_graph;
+            *state.json.write() = json_graph;
+            nodes_count = internal_io.graph.releases_count() as i64;
+        }
 
         // Record scrape duration
         scrape_value = scrape_timer.stop_and_discard();
@@ -240,8 +246,7 @@ pub fn run(settings: &config::AppSettings, state: &State) -> ! {
 
         GRAPH_LAST_SUCCESSFUL_REFRESH.set(chrono::Utc::now().timestamp() as i64);
 
-        let nodes_count = internal_io.graph.releases_count();
-        GRAPH_FINAL_RELEASES.set(nodes_count as i64);
+        GRAPH_FINAL_RELEASES.set(nodes_count);
         debug!("graph update completed, {} valid releases", nodes_count);
     }
 }
