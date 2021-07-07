@@ -15,7 +15,7 @@ prometheus = "0.12"
 serde = "^1.0.126"
 serde_json = "^1.0.34"
 serde_derive = "^1.0.123"
-tokio = { version = "1.7", features = [ "rt-multi-thread" ] }
+tokio = { version = "1.8", features = [ "rt-multi-thread" ] }
 url = "^2.2"
 futures = "^0.3"
 opentelemetry = "0.14.0"
