@@ -113,12 +113,17 @@ impl ReleaseScrapeDockerv2Plugin {
             .context(format!("Parsing {} as Registry", &settings.registry))?;
 
         if let Some(credentials_path) = &settings.credentials_path {
-            let (username, password) =
-                registry::read_credentials(Some(&credentials_path), &registry.host_port_string())
-                    .context(format!(
-                    "Reading registry credentials from {:?}",
-                    credentials_path
-                ))?;
+            let (username, password) = registry::read_credentials(
+                Some(&credentials_path),
+                &registry.host_port_string(),
+            )
+            .unwrap_or_else(|err| {
+                warn!(
+                    "Error reading registry credentials from {:?}. Access to {:?} will be unauthenticated: {} ",
+                    credentials_path, &registry.host_port_string() ,err
+                );
+                return (None, None);
+            });
 
             settings.username = username;
             settings.password = password;
