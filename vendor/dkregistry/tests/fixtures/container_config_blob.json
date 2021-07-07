@@ -1,0 +1,62 @@
+{
+  "id": "",
+  "created": "2019-08-16T14:50:54Z",
+  "container_config": {},
+  "docker_version": "1.13.1",
+  "config": {
+    "Hostname": "9998c79647f2",
+    "User": "0",
+    "Env": [
+      "SOURCE_GIT_COMMIT=2f83693a1d3e9bc9dab21b391753bd77059b927f",
+      "SOURCE_DATE_EPOCH=1565029548",
+      "BUILD_VERSION=v4.1.12",
+      "SOURCE_GIT_URL=https://github.com/openshift/cluster-version-operator",
+      "SOURCE_GIT_TAG=v1.0.0-39-g2f83693",
+      "BUILD_RELEASE=201908150609",
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "container=oci"
+    ],
+    "Entrypoint": [
+      "/usr/bin/cluster-version-operator"
+    ],
+    "Labels": {
+      "io.openshift.release": "4.1.12",
+      "io.openshift.release.base-image-digest": "sha256:d74123c77f84e45ec557e4c5da4c6502bed9e1cdd793c42ac4ca1697f0e6a683"
+    }
+  },
+  "architecture": "amd64",
+  "size": 100242846,
+  "rootfs": {
+    "type": "layers",
+    "diff_ids": [
+      "sha256:917b65ce8d46f2e3eb27a8142aa9f58c1df7a26b4a5e7fbbd5abe90d7a7e151a",
+      "sha256:1c80afac2adcba909ce19c46760abd0e110796605fcadf96ae3899ae8f14c093",
+      "sha256:efd85c364a71e87d7f40ff15540372202f55968d91e929cab700504f522e6a3a",
+      "sha256:c2bdc0dc4600c88c443aac45b7182976ce8719389507ab0578b80ae6e2646b17",
+      "sha256:edce5600042eeebe9c261fcac5e7e7c27ea3f8057f24b0a9a191d43954fba5e8",
+      "sha256:178d5603d137def1ddf906c2e526eca2b39a38ef6da87211af62ccd1f41ec5fe"
+    ]
+  },
+  "history": [
+    {
+      "created": "2019-08-16T14:50:54Z",
+      "comment": "Release image for OpenShift"
+    },
+    {
+      "created": "2019-08-16T14:50:54Z"
+    },
+    {
+      "created": "2019-08-16T14:50:54Z"
+    },
+    {
+      "created": "2019-08-16T14:50:54Z"
+    },
+    {
+      "created": "2019-08-16T14:50:54Z"
+    },
+    {
+      "created": "2019-08-16T14:50:54Z"
+    }
+  ],
+  "os": "linux"
+}

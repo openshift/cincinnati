@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -exuo pipefail
+
+cargo fmt -- --check
+cargo audit --deny warnings
+cargo clippy --all-targets -- -D warnings
+cargo test
+cargo doc --no-deps
