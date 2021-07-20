@@ -115,10 +115,10 @@ impl ReleaseScrapeDockerv2Plugin {
         if let Some(credentials_path) = &settings.credentials_path {
             let (username, password) =
                 registry::read_credentials(Some(&credentials_path), &registry.host_port_string())
-                    .context(format!(
-                    "Reading registry credentials from {:?}",
-                    credentials_path
-                ))?;
+                    .unwrap_or_else(|err| {
+                        warn!("Error Reading registry credentials from {:?}, Setting credentials to 'None': {} ", credentials_path, err);
+                        return (None, None);
+                    });
 
             settings.username = username;
             settings.password = password;
