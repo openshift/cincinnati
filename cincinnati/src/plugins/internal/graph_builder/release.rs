@@ -18,7 +18,7 @@ use self::cincinnati::MapImpl;
 
 use commons::prelude_errors::*;
 use itertools::Itertools;
-use log::{trace, warn};
+use log::trace;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -31,11 +31,11 @@ pub struct Release {
 
 impl Into<cincinnati::Release> for Release {
     fn into(self) -> cincinnati::Release {
-        cincinnati::Release::Concrete(cincinnati::ConcreteRelease {
+        cincinnati::Release {
             version: self.metadata.version.to_string(),
             payload: self.source,
             metadata: self.metadata.metadata,
-        })
+        }
     }
 }
 
@@ -90,71 +90,7 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, Error> 
             ))
         })
         .collect::<Vec<Fallible<_>>>()
-        .into_iter()
-        .try_for_each(|result| {
-            let (next, previous, current_build, current) = result?;
-
-            previous
-                .into_iter()
-                .map(|mut previous| {
-                    previous.build = current_build.clone();
-                    previous
-                })
-                .try_for_each(|version| -> Fallible<()> {
-                    let previous = match graph.find_by_version(&version.to_string()) {
-                        Some(id) => id,
-                        None => {
-                            warn!("Adding abstract release for {}", version.to_string());
-                            graph.add_release(cincinnati::Release::Abstract(
-                                cincinnati::AbstractRelease {
-                                    version: version.to_string(),
-                                },
-                            ))?
-                        }
-                    };
-
-                    if let Err(e) = graph.add_edge(&previous, &current) {
-                        if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeAlreadyExists>()
-                        {
-                            warn!("{}", eae);
-                        } else {
-                            return Err(e);
-                        }
-                    };
-
-                    Ok(())
-                })?;
-
-            next.into_iter()
-                .map(|mut next| {
-                    next.build = current_build.clone();
-                    next
-                })
-                .try_for_each(|version| -> Fallible<()> {
-                    let next = match graph.find_by_version(&version.to_string()) {
-                        Some(id) => id,
-                        None => {
-                            warn!("Adding abstract release for {}", version.to_string());
-                            graph.add_release(cincinnati::Release::Abstract(
-                                cincinnati::AbstractRelease {
-                                    version: version.to_string(),
-                                },
-                            ))?
-                        }
-                    };
-
-                    if let Err(e) = graph.add_edge(&&current, &next) {
-                        if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeAlreadyExists>()
-                        {
-                            warn!("{:?}", eae);
-                        } else {
-                            return Err(e);
-                        }
-                    };
-
-                    Ok(())
-                })
-        })?;
+        .into_iter();
 
     Ok(graph)
 }
@@ -177,9 +113,7 @@ mod tests {
             },
         }];
 
-        let mut graph = create_graph(releases).unwrap();
-
-        assert_eq!(graph.prune_abstract(), 1);
+        create_graph(releases).unwrap();
 
         Ok(())
     }

@@ -49,60 +49,30 @@ pub struct Graph {
     dag: Dag<Release, Empty>,
 }
 
-/// Wrapper enum for the concrete and abstract release types.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
-#[serde(untagged)]
-pub enum Release {
-    Concrete(ConcreteRelease),
-    Abstract(AbstractRelease),
-}
-
-impl Release {
-    /// Return the version string of a given `Release`.
-    pub fn version(&self) -> &str {
-        match self {
-            Release::Abstract(release) => &release.version,
-            Release::Concrete(release) => &release.version,
-        }
-    }
-
-    /// Get a mutable borrow of the release metadata if any
-    pub fn get_metadata_mut(&mut self) -> Option<&mut MapImpl<String, String>> {
-        match self {
-            Release::Abstract(_) => None,
-            Release::Concrete(release) => Some(&mut release.metadata),
-        }
-    }
-
-    /// Returns the `manifestref` of a given `Release`
-    pub fn manifestref(&self) -> Result<&String, Error> {
-        let digestkey = String::from("io.openshift.upgrades.graph.release.manifestref");
-        match self {
-            Release::Concrete(release) => {
-                let digest = release.metadata.get(&digestkey);
-                Ok(digest.map(|d| d).unwrap())
-            }
-            _ => bail!("could not get manifest reference"),
-        }
-    }
-}
-
 /// Type to represent a Release with all its information.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
-pub struct ConcreteRelease {
+pub struct Release {
     pub version: String,
     pub payload: String,
     pub metadata: MapImpl<String, String>,
 }
 
-/// Abtract release only storing a version.
-///
-/// It can be used for adding an edge between an existing and a non-existing
-/// release, and is expected to later be filled up with a `ConcreteRelease` once
-/// the graph is completed.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
-pub struct AbstractRelease {
-    pub version: String,
+impl Release {
+    /// Return the version string of a given `Release`.
+    pub fn version(&self) -> &str {
+        &self.version
+    }
+
+    /// Get a mutable borrow of the release metadata if any
+    pub fn get_metadata_mut(&mut self) -> Option<&mut MapImpl<String, String>> {
+        Some(&mut self.metadata)
+    }
+    /// Returns the `manifestref` of a given `Release`
+    pub fn manifestref(&self) -> Result<&String, Error> {
+        let digestkey = String::from("io.openshift.upgrades.graph.release.manifestref");
+        let digest = self.metadata.get(&digestkey);
+        Ok(digest.map(|d| d).unwrap())
+    }
 }
 
 /// Abstraction over a node in the graph representing a `Release`
@@ -199,17 +169,16 @@ impl Graph {
         match self.find_by_version(&release.version()) {
             Some(id) => {
                 let node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
-                if let Release::Concrete(_) = node {
-                    // check if release digest and node digest are same
-                    if release.manifestref().unwrap() != node.manifestref().unwrap() {
-                        bail!(
-                            "mismatched manifest ref for concrete release {}: {}, {}",
-                            release.version(),
-                            release.manifestref().unwrap(),
-                            node.manifestref().unwrap()
-                        )
-                    }
+                // check if release digest and node digest are same
+                if release.manifestref().unwrap() != node.manifestref().unwrap() {
+                    bail!(
+                        "mismatched manifest ref for release {}: {}, {}",
+                        release.version(),
+                        release.manifestref().unwrap(),
+                        node.manifestref().unwrap()
+                    )
                 }
+
                 *node = release;
                 Ok(id)
             }
@@ -333,10 +302,9 @@ impl Graph {
         self.dag
             .node_references()
             .filter(|nr| {
-                if let Release::Concrete(release) = nr.weight() {
-                    if let Some(found_value) = release.metadata.get(key) {
-                        return found_value == value;
-                    }
+                let release = nr.weight();
+                if let Some(found_value) = release.metadata.get(key) {
+                    return found_value == value;
                 }
                 false
             })
@@ -350,15 +318,15 @@ impl Graph {
         self.dag
             .node_references()
             .filter_map(|nr| {
-                if let Release::Concrete(release) = nr.weight() {
-                    if let Some(value) = release.metadata.get(key) {
-                        return Some((
-                            ReleaseId(nr.id()),
-                            release.version.to_owned(),
-                            value.to_owned(),
-                        ));
-                    }
+                let release = nr.weight();
+                if let Some(value) = release.metadata.get(key) {
+                    return Some((
+                        ReleaseId(nr.id()),
+                        release.version.to_owned(),
+                        value.to_owned(),
+                    ));
                 }
+
                 None
             })
             .collect()
@@ -370,7 +338,7 @@ impl Graph {
         release_id: &ReleaseId,
     ) -> Result<&mut MapImpl<String, String>, Error> {
         match self.dag.node_weight_mut(release_id.0) {
-            Some(Release::Concrete(release)) => Ok(&mut release.metadata),
+            Some(release) => Ok(&mut release.metadata),
             _ => bail!("could not get metadata reference"),
         }
     }
@@ -432,28 +400,6 @@ impl Graph {
             .count()
     }
 
-    /// Prune the graph from all abstract releases
-    ///
-    /// Return the number of pruned releases
-    pub fn prune_abstract(&mut self) -> usize {
-        let to_remove: Vec<daggy::NodeIndex> = self
-            .dag
-            .node_references()
-            .filter_map(|nr| {
-                if let Release::Abstract(_) = nr.weight() {
-                    Some(nr.0)
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        to_remove
-            .iter()
-            .filter(|ni| self.dag.remove_node(**ni).is_some())
-            .count()
-    }
-
     /// Iterates over all releases mutably
     ///
     /// f is able to mutate the release as it receives a mutable borrow.
@@ -466,12 +412,9 @@ impl Graph {
             .try_for_each(|mut nw| f(&mut nw))
     }
 
-    /// Get the edges expressed as version -> versions; optionally include edges from/to `Release::Abstract`.
+    /// Get the edges expressed as version
     #[cfg(any(test, feature = "test"))]
-    pub fn get_edges(
-        &self,
-        include_abstract: bool,
-    ) -> Result<MapImpl<String, SetImpl<String>>, Error> {
+    pub fn get_edges(&self) -> Result<MapImpl<String, SetImpl<String>>, Error> {
         let mut edges: MapImpl<String, SetImpl<String>> = Default::default();
 
         self.dag
@@ -486,11 +429,6 @@ impl Graph {
                         let source_version = source.version().to_string();
                         let target_version = target.version().to_string();
 
-                        if include_abstract
-                            || match (source, target) {
-                                (Release::Concrete(_), Release::Concrete(_)) => true,
-                                _ => false,
-                            }
                         {
                             edges
                                 .entry(source_version)
@@ -646,13 +584,13 @@ impl PartialEq for Graph {
             return false;
         }
 
-        let edges = if let Ok(edges) = self.get_edges(true) {
+        let edges = if let Ok(edges) = self.get_edges() {
             edges
         } else {
             return false;
         };
 
-        let edges_other = if let Ok(edges) = other.get_edges(true) {
+        let edges_other = if let Ok(edges) = other.get_edges() {
             edges
         } else {
             return false;
@@ -675,13 +613,11 @@ impl From<plugins::interface::Graph> for Graph {
 
         // Convert nodes
         for node in graph.take_nodes().into_iter() {
-            graph_converted
-                .dag
-                .add_node(Release::Concrete(ConcreteRelease {
-                    version: node.version,
-                    payload: node.payload,
-                    metadata: node.metadata.into_iter().collect(),
-                }));
+            graph_converted.dag.add_node(Release {
+                version: node.version,
+                payload: node.payload,
+                metadata: node.metadata.into_iter().collect(),
+            });
         }
 
         // Convert edges
@@ -702,7 +638,7 @@ impl From<plugins::interface::Graph> for Graph {
 
 impl From<Graph> for plugins::interface::Graph {
     fn from(graph: Graph) -> Self {
-        use crate::Release::{Abstract, Concrete};
+        // use crate::Release;
         use daggy::petgraph::visit::IntoNeighborsDirected;
         use daggy::petgraph::Direction;
 
@@ -717,16 +653,10 @@ impl From<Graph> for plugins::interface::Graph {
 
             // Convert and push node
             let mut node_converted = plugins::interface::Graph_Node::new();
-            match release {
-                Concrete(concrete_release) => {
-                    // TODO(steveeJ): avoid cloning all release content
-                    node_converted.set_version(concrete_release.version.clone());
-                    node_converted
-                        .set_metadata(concrete_release.metadata.clone().into_iter().collect());
-                    node_converted.set_payload(concrete_release.payload.clone());
-                }
-                Abstract(_) => panic!("found Abstract release type"),
-            }
+            // TODO(pratikmahajan): avoid cloning all release content
+            node_converted.set_version(release.version.clone());
+            node_converted.set_metadata(release.metadata.clone().into_iter().collect());
+            node_converted.set_payload(release.payload.clone());
             nodes_converted.push(node_converted);
 
             // find neighbors and push edges
@@ -755,21 +685,21 @@ pub mod testing {
 
     pub fn generate_graph() -> Graph {
         let mut graph = Graph::default();
-        let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+        let v1 = graph.dag.add_node(Release {
             version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
             metadata: MapImpl::new(),
-        }));
-        let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+        });
+        let v2 = graph.dag.add_node(Release {
             version: String::from("2.0.0"),
             payload: String::from("image/2.0.0"),
             metadata: MapImpl::new(),
-        }));
-        let v3 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+        });
+        let v3 = graph.dag.add_node(Release {
             version: String::from("3.0.0"),
             payload: String::from("image/3.0.0"),
             metadata: MapImpl::new(),
-        }));
+        });
         graph.dag.add_edge(v1, v2, Empty {}).unwrap();
         graph.dag.add_edge(v2, v3, Empty {}).unwrap();
         graph.dag.add_edge(v1, v3, Empty {}).unwrap();
@@ -853,11 +783,11 @@ pub mod testing {
                         }
                     );
 
-                    let release = Release::Concrete(ConcreteRelease {
+                    let release = Release {
                         version,
                         payload,
                         metadata,
-                    });
+                    };
                     graph.dag.add_node(release)
                 })
                 .collect();
@@ -959,8 +889,8 @@ pub mod testing {
         output.push("Graphs differ! Showing differences from left to right".into());
         output.push("-----------------------------------------------------".into());
 
-        let edges_left = left.get_edges(false)?;
-        let edges_right = right.get_edges(false)?;
+        let edges_left = left.get_edges()?;
+        let edges_right = right.get_edges()?;
         output.push("edges: ".into());
         output.push(
             prettydiff::diff_lines(
@@ -1002,17 +932,15 @@ pub mod testing {
     ) -> MapImpl<String, MapImpl<String, String>> {
         let mut removed_metadata = MapImpl::<String, MapImpl<String, String>>::new();
 
-        let _ = graph.iter_releases_mut(|mut release| {
+        let _ = graph.iter_releases_mut(|release| {
             for key in keys {
                 let key = (*key).to_string();
 
-                if let Release::Concrete(concrete_release) = &mut release {
-                    if let Some(removed_value) = concrete_release.metadata.remove(&key) {
-                        removed_metadata
-                            .entry(release.version().to_string())
-                            .or_default()
-                            .insert(key, removed_value);
-                    }
+                if let Some(removed_value) = release.metadata.remove(&key) {
+                    removed_metadata
+                        .entry(release.version().to_string())
+                        .or_default()
+                        .insert(key, removed_value);
                 }
             }
 
@@ -1027,19 +955,15 @@ pub mod testing {
     pub fn payload_replace_sha_by_tag_fn(graph: &mut Graph) -> Fallible<()> {
         graph
             .iter_releases_mut(|ref mut release| {
-                match release {
-                    Release::Concrete(ref mut release) => {
-                        // replace digest by tag to match expectency
-                        let version = release.version.to_string();
-                        let source_front = release.payload.split('@').next().ok_or_else(|| {
-                            Error::msg(format!("invalid version string {:?}", version))
-                        })?;
-                        release.payload = format!("{}:{}", source_front, version);
+                // replace digest by tag to match expectency
+                let version = release.version.to_string();
+                let source_front =
+                    release.payload.split('@').next().ok_or_else(|| {
+                        Error::msg(format!("invalid version string {:?}", version))
+                    })?;
+                release.payload = format!("{}:{}", source_front, version);
 
-                        Ok(())
-                    }
-                    Release::Abstract(ar) => panic!("unexpected Abstract release: {:?}", &ar),
-                }
+                Ok(())
             })
             .context("replacing the sha by the tag in the payload string")
     }
@@ -1048,16 +972,11 @@ pub mod testing {
     pub fn payload_remove_registry_and_repo(graph: &mut Graph) -> Fallible<()> {
         graph
             .iter_releases_mut(|ref mut release| {
-                match release {
-                    Release::Concrete(ref mut release) => {
-                        // replace digest by tag to match expectency
-                        let version = release.version.to_string();
-                        release.payload = version;
+                // replace digest by tag to match expectency
+                let version = release.version.to_string();
+                release.payload = version;
 
-                        Ok(())
-                    }
-                    Release::Abstract(ar) => panic!("unexpected Abstract release: {:?}", &ar),
-                }
+                Ok(())
             })
             .context("removing registry and repo from the payload string")
     }
@@ -1096,32 +1015,32 @@ mod tests {
     fn test_graph_eq_false_for_unequal_graphs() {
         let graph1 = {
             let mut graph = Graph::default();
-            let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+            let v1 = graph.dag.add_node(Release {
                 version: String::from("1.0.0"),
                 payload: String::from("image/1.0.0"),
                 metadata: MapImpl::new(),
-            }));
-            let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+            });
+            let v2 = graph.dag.add_node(Release {
                 version: String::from("2.0.0"),
                 payload: String::from("image/2.0.0"),
                 metadata: MapImpl::new(),
-            }));
+            });
             graph.dag.add_edge(v1, v2, Empty {}).unwrap();
 
             graph
         };
         let graph2 = {
             let mut graph = Graph::default();
-            let v3 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+            let v3 = graph.dag.add_node(Release {
                 version: String::from("3.0.0"),
                 payload: String::from("image/3.0.0"),
                 metadata: MapImpl::new(),
-            }));
-            let v2 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
+            });
+            let v2 = graph.dag.add_node(Release {
                 version: String::from("2.0.0"),
                 payload: String::from("image/2.0.0"),
                 metadata: MapImpl::new(),
-            }));
+            });
             graph.dag.add_edge(v2, v3, Empty {}).unwrap();
 
             graph
@@ -1136,22 +1055,22 @@ mod tests {
 
     #[test]
     fn test_graph_eq_is_agnostic_to_node_and_edge_order() {
-        let r1 = Release::Concrete(ConcreteRelease {
+        let r1 = Release {
             version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
             metadata: MapImpl::new(),
-        });
-        let r2 = Release::Concrete(ConcreteRelease {
+        };
+        let r2 = Release {
             version: String::from("2.0.0"),
             payload: String::from("image/2.0.0"),
             metadata: MapImpl::new(),
-        });
+        };
 
-        let r3 = Release::Concrete(ConcreteRelease {
+        let r3 = Release {
             version: String::from("3.0.0"),
             payload: String::from("image/3.0.0"),
             metadata: MapImpl::new(),
-        });
+        };
 
         let graph1 = {
             let mut graph = Graph::default();
@@ -1180,22 +1099,22 @@ mod tests {
 
     #[test]
     fn test_graph_eq_detects_exceeding_nodes() {
-        let r1 = Release::Concrete(ConcreteRelease {
+        let r1 = Release {
             version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
             metadata: MapImpl::new(),
-        });
-        let r2 = Release::Concrete(ConcreteRelease {
+        };
+        let r2 = Release {
             version: String::from("2.0.0"),
             payload: String::from("image/2.0.0"),
             metadata: MapImpl::new(),
-        });
+        };
 
-        let r3 = Release::Concrete(ConcreteRelease {
+        let r3 = Release {
             version: String::from("3.0.0"),
             payload: String::from("image/3.0.0"),
             metadata: MapImpl::new(),
-        });
+        };
 
         let graph1 = {
             let mut graph = Graph::default();
@@ -1307,13 +1226,9 @@ mod tests {
         let metadata_key = format!("{}.{}", &prefix, &suffix);
         let expected_metadata_value = "changed";
 
-        let result = graph.find_by_fn_mut(|release| match release {
-            Release::Concrete(concrete_release) => {
-                *concrete_release.metadata.get_mut(&metadata_key).unwrap() =
-                    expected_metadata_value.to_string();
-                true
-            }
-            _ => true,
+        let result = graph.find_by_fn_mut(|release| {
+            *release.metadata.get_mut(&metadata_key).unwrap() = expected_metadata_value.to_string();
+            true
         });
 
         assert_eq!(expected, result);
