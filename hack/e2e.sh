@@ -19,8 +19,7 @@ else
   IMAGE_TAG="deploy"
 fi
 
-echo "IMAGE=${IMAGE}"
-echo "IMAGE_TAG=${IMAGE_TAG}"
+echo "IMAGE=${IMAGE}:${IMAGE_TAG}
 
 function backoff() {
     local max_attempts=10
@@ -90,7 +89,6 @@ export E2E_METADATA_REVISION
 # Apply oc template
 backoff oc new-app -f dist/openshift/cincinnati.yaml \
   -p IMAGE="${IMAGE}" \
-  -p IMAGE_TAG="${IMAGE_TAG}" \
   -p GB_CPU_REQUEST=50m \
   -p PE_CPU_REQUEST=50m \
   -p RUST_BACKTRACE="1" \
