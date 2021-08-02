@@ -45,6 +45,7 @@ function backoff() {
 PULL_SECRET=${PULL_SECRET:-/var/run/secrets/ci.openshift.io/cluster-profile/pull-secret}
 
 set -euo pipefail
+set -x
 # Copy KUBECONFIG so that it can be mutated
 cp -Lrvf $KUBECONFIG /tmp/kubeconfig
 export KUBECONFIG=/tmp/kubeconfig
@@ -54,7 +55,7 @@ backoff oc new-project cincinnati-e2e
 backoff oc project cincinnati-e2e
 
 # Create a dummy secret as a workaround to not having real secrets in e2e
-backoff oc create secret generic cincinnati-credentials --from-literal=""
+backoff oc create secret generic cincinnati-credentials --from-literal="foo=bar"
 
 # Use this pull secret to fetch images from CI
 backoff oc create secret generic ci-pull-secret --from-file=.dockercfg=${PULL_SECRET} --type=kubernetes.io/dockercfg

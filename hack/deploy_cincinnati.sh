@@ -12,7 +12,7 @@ export IMAGE_TAG=90efacd
 oc new-project cincinnati
 
 # Create a dummy secret as a workaround to not having real secrets
-oc create secret generic cincinnati-credentials --from-literal=""
+oc create secret generic cincinnati-credentials --from-literal="foo=bar"
 
 
 # Apply oc template
