@@ -55,7 +55,7 @@ backoff oc new-project cincinnati-e2e
 backoff oc project cincinnati-e2e
 
 # Create a dummy secret as a workaround to not having real secrets in e2e
-backoff oc create secret generic cincinnati-credentials --from-literal=""
+backoff oc create secret generic cincinnati-credentials --from-literal="foo=bar"
 
 # Use this pull secret to fetch images from CI
 backoff oc create secret generic ci-pull-secret --from-file=.dockercfg=${PULL_SECRET} --type=kubernetes.io/dockercfg
