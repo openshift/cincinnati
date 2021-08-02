@@ -45,6 +45,7 @@ function backoff() {
 PULL_SECRET=${PULL_SECRET:-/var/run/secrets/ci.openshift.io/cluster-profile/pull-secret}
 
 set -euo pipefail
+set -x
 # Copy KUBECONFIG so that it can be mutated
 cp -Lrvf $KUBECONFIG /tmp/kubeconfig
 export KUBECONFIG=/tmp/kubeconfig
