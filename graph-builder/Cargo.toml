@@ -27,7 +27,7 @@ serde_derive = "^1.0.70"
 serde_json = "^1.0.66"
 smart-default = "^0.6"
 structopt = "^0.3"
-tar = "^0.4.35"
+tar = "^0.4.36"
 tokio = { version = "1.9", features = [ "fs",  "rt-multi-thread" ] }
 tokio-stream = { version = "0.1", features = ["fs"] }
 toml = "^0.5"
