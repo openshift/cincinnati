@@ -6,7 +6,7 @@ COPY .git/ ./.git/
 USER 0
 RUN dnf update -y \
     && dnf install -y jq rust cargo \
-    && dnf install -y openssl-devel \
+    && dnf install -y openssl-devel nettle-devel \
     && dnf clean all
 
 RUN hack/build_e2e.sh

@@ -8,7 +8,7 @@ RUN yum update -y && \
     yum -y groupinstall 'Development Tools' && \
     yum -y install gcc openssl-devel protobuf-compiler jq skopeo buildah libgit2 && \
     yum -y install yamllint && \
-    yum -y install cmake elfutils-libelf-devel libcurl-devel binutils-devel elfutils-devel && \
+    yum -y install cmake elfutils-libelf-devel libcurl-devel binutils-devel elfutils-devel nettle-devel && \
     yum clean all
 
 ENV HOME="/root"

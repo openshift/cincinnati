@@ -5,7 +5,8 @@ COPY . .
 COPY .git/ ./.git/
 
 USER 0
-RUN bash -c "source /opt/app-root/etc/scl_enable && cargo build --release" \
+RUN dnf install -y nettle-devel \
+    && bash -c "source /opt/app-root/etc/scl_enable && cargo build --release" \
     && mkdir -p /opt/cincinnati/bin \
     && cp -rvf target/release/graph-builder /opt/cincinnati/bin \
     && cp -rvf target/release/policy-engine /opt/cincinnati/bin
