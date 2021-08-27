@@ -1,20 +1,20 @@
 /// Tiny crate to verify message signature and format
 use self::cincinnati::plugins::prelude::*;
 use crate as cincinnati;
-use bytes::Buf;
 use bytes::Bytes;
 use futures::TryFutureExt;
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json;
-use std::fs::{read_dir, File};
+use std::fs::read_dir;
+use std::io::copy;
 use std::ops::Range;
 use std::path::PathBuf;
 use url::Url;
 
-use pgp::composed::message::Message;
-use pgp::composed::signed_key::SignedPublicKey;
-use pgp::Deserializable;
+use sequoia_openpgp::parse::{stream::*, Parse};
+use sequoia_openpgp::policy::StandardPolicy as P;
+use sequoia_openpgp::{Cert, Error, KeyHandle, Result};
 
 // Signature format
 #[derive(Deserialize)]
@@ -34,7 +34,7 @@ struct Signature {
 }
 
 /// Keyring is a collection of public keys
-pub type Keyring = Vec<SignedPublicKey>;
+pub type Keyring = Vec<Cert>;
 
 // CVO has maxSignatureSearch = 10 in pkg/verify/verify.go
 pub static MAX_SIGNATURES: u64 = 10;
@@ -48,12 +48,9 @@ pub fn load_public_keys(public_keys_dir: &PathBuf) -> Fallible<Keyring> {
             None => continue,
             Some(p) => p,
         };
-        let file = File::open(path).context(format!("Reading {}", path_str))?;
-        let (pubkey, _) =
-            SignedPublicKey::from_armor_single(file).context(format!("Parsing {}", path_str))?;
-        match pubkey.verify() {
-            Err(err) => return Err(format_err!("{:?}", err)),
-            Ok(_) => result.push(pubkey),
+        match Cert::from_file(path) {
+            Err(err) => return Err(format_err!("Error parsing {} {:?}", path_str, err)),
+            Ok(c) => result.push(c),
         };
     }
     Ok(result)
@@ -78,26 +75,62 @@ pub async fn fetch_url(http_client: &Client, base_url: &Url, sha: &str, i: u64) 
     }
 }
 
+// This fetches keys and computes the validity of the verification.
+struct Helper {
+    keyring: Keyring,
+}
+impl VerificationHelper for Helper {
+    fn get_certs(&mut self, _: &[KeyHandle]) -> Result<Vec<Cert>> {
+        Ok(self.keyring.clone())
+    }
+
+    fn check(&mut self, structure: MessageStructure) -> Result<()> {
+        let mut good = false;
+        for (i, layer) in structure.into_iter().enumerate() {
+            match (i, layer) {
+                // First, we are interested in signatures over the
+                // data, i.e. level 0 signatures.
+                (0, MessageLayer::SignatureGroup { results }) => {
+                    // Finally, given a VerificationResult, which only says
+                    // whether the signature checks out mathematically, we apply
+                    // our policy.
+                    match results.into_iter().next() {
+                        Some(Ok(_)) => good = true,
+                        Some(Err(e)) => return Err(Error::from(e).into()),
+                        None => return Err(format_err!("No signature")),
+                    }
+                }
+                _ => return Err(format_err!("Unexpected message structure")),
+            }
+        }
+
+        if good {
+            Ok(()) // Good signature.
+        } else {
+            Err(format_err!("Signature verification failed"))
+        }
+    }
+}
+
 /// Verify that signature is valid and contains expected digest
 pub async fn verify_signature(
     public_keys: &Keyring,
     body: Bytes,
     expected_digest: &str,
 ) -> Fallible<()> {
-    let msg = Message::from_bytes(body.reader()).context("Parsing message")?;
-
-    // Verify signature using provided public keys
-    if !public_keys.iter().any(|ref k| msg.verify(k).is_ok()) {
-        return Err(format_err!("No matching key found to decrypt {:#?}", msg));
-    }
-
-    // Deserialize the message
-    let contents = match msg.get_content().context("Reading contents")? {
-        None => return Err(format_err!("Empty message received")),
-        Some(m) => m,
+    let p = &P::new();
+    let mut plaintext = Vec::new();
+    let helper = Helper {
+        keyring: public_keys.to_vec(),
     };
+    let mut verifier = VerifierBuilder::from_bytes(&body)?.with_policy(p, None, helper)?;
+
+    // Verify the message signature
+    copy(&mut verifier, &mut plaintext).context("Parsing message")?;
+
+    // Check that message has valid contents
     let signature: Signature =
-        serde_json::from_slice(&contents).context("Deserializing message")?;
+        serde_json::from_slice(&plaintext).context("Deserializing message")?;
     let message_digest = signature.critical.image.digest;
     if message_digest == expected_digest {
         Ok(())
