@@ -19,7 +19,7 @@ use std::collections::HashMap;
 lazy_static! {
     static ref V1_GRAPH_INCOMING_REQS: Counter = Counter::new(
         "v1_graph_incoming_requests_total",
-        "Total number of incoming HTTP client request to /v1/graph"
+        "Total number of incoming HTTP client request to /graph"
     )
     .unwrap();
     // Histogram with custom bucket values for serving latency metric (in seconds), values are picked based on monthly data

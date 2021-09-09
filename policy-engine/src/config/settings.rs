@@ -11,7 +11,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use structopt::StructOpt;
 
 /// Default URL to upstream graph provider.
-pub static DEFAULT_UPSTREAM_URL: &str = "http://localhost:8080/v1/graph";
+pub static DEFAULT_UPSTREAM_URL: &str = "http://localhost:8080/graph";
 
 /// Runtime application settings (validated config).
 #[derive(CustomDebug, SmartDefault)]

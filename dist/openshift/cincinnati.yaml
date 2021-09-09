@@ -219,7 +219,7 @@ objects:
       gb.rust_backtrace: "${RUST_BACKTRACE}"
       pe.address: "0.0.0.0"
       pe.status.address: "0.0.0.0"
-      pe.upstream: "http://localhost:8080/v1/graph"
+      pe.upstream: "http://localhost:8080/graph"
       pe.log.verbosity: ${{PE_LOG_VERBOSITY}}
       pe.mandatory_client_parameters: "channel"
       pe.rust_backtrace: "${RUST_BACKTRACE}"

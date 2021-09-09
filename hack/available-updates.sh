@@ -1,6 +1,6 @@
 #!/bin/sh
 
-UPSTREAM="${UPSTREAM:-https://api.openshift.com/api/upgrades_info/v1/graph}"
+UPSTREAM="${UPSTREAM:-https://api.openshift.com/api/upgrades_info/graph}"
 CHANNEL="${CHANNEL:-stable-4.7}"
 ARCH="${ARCH:-amd64}"
 VERSION="$1"

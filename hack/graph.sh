@@ -6,7 +6,7 @@
 #
 # For example:
 #
-#   curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel=prerelease-4.1' | graph.sh | dot -Tsvg >graph.svg
+#   curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/graph?channel=prerelease-4.1' | graph.sh | dot -Tsvg >graph.svg
 set -e
 
 JQ_SCRIPT='"digraph Upgrades {\n  labelloc=t;\n  rankdir=BT;" as $header |

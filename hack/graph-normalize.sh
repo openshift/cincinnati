@@ -6,7 +6,7 @@
 #
 # For example:
 #
-#   curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel=prerelease-4.1' | graph-normalize.sh
+#   curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/graph?channel=prerelease-4.1' | graph-normalize.sh
 set -e
 
 JQ_SCRIPT='

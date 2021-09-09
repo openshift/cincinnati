@@ -61,7 +61,7 @@ docker run -d --rm \
   \
   -vvv \
   --address 0.0.0.0 --port "${CINCINNATI_PE_PORT}" \
-  --upstream "http://$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CINCINNATI_GB}):"${CINCINNATI_GB_PORT}"/v1/graph" \
+  --upstream "http://$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CINCINNATI_GB}):"${CINCINNATI_GB_PORT}"/graph" \
   2>&1 >/dev/null
 
 # Test the policy engine endpoint, which depends on the graph builder being available
@@ -69,7 +69,7 @@ TIMEOUT="${TIMEOUT:-30}"
 echo Trying to reach the policy-engine with a timeout of ${TIMEOUT} seconds...
 jq=$(which jq || echo cat)
 for attempt in $(seq 0 ${TIMEOUT}); do
-    statuscode=$(curl --silent --output "${CURL_OUT}" --write-out "%{http_code}" --header 'Accept:application/json' "http://localhost:"${CINCINNATI_PE_PORT}"/v1/graph")
+    statuscode=$(curl --silent --output "${CURL_OUT}" --write-out "%{http_code}" --header 'Accept:application/json' "http://localhost:"${CINCINNATI_PE_PORT}"/graph")
     if test "$statuscode" -eq 200; then
         echo "Got graph:"
         $jq < "${CURL_OUT}"

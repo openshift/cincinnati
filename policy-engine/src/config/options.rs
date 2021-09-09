@@ -39,7 +39,7 @@ pub struct ServiceOptions {
     #[structopt(name = "service_port", long = "service.port")]
     pub port: Option<u16>,
 
-    /// Namespace prefix for all service endpoints (e.g. '/<prefix>/v1/graph')
+    /// Namespace prefix for all service endpoints (e.g. '/<prefix>/graph')
     #[structopt(long = "service.path_prefix", parse(from_str = parse_path_prefix))]
     #[serde(default = "Option::default", deserialize_with = "de_path_prefix")]
     pub path_prefix: Option<String>,

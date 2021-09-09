@@ -94,7 +94,7 @@ The policy engine client API conforms to the [Cincinnati Graph API](cincinnati.m
 
 #### Request ####
 
-HTTP GET requests are used to fetch updates from the policy engine. Requests are made to `/v1/graph` and must include the following URL parameters:
+HTTP GET requests are used to fetch updates from the policy engine. Requests are made to `/graph` and must include the following URL parameters:
 
 |   Key   | Optional | Description                                                                                |
 |:-------:|:--------:|:-------------------------------------------------------------------------------------------|
@@ -109,7 +109,7 @@ HTTP GET requests are used to fetch updates from the policy engine. Requests are
 An OpenShift cluster on the fast channel:
 
 ```
-/v1/graph?version=4.0.3&channel=fast&id=ceb3b0bb-c689-4db9-bb6a-0122237e33fd
+/graph?version=4.0.3&channel=fast&id=ceb3b0bb-c689-4db9-bb6a-0122237e33fd
 ```
 
 

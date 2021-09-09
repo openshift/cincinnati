@@ -4,7 +4,7 @@
 # It uses vegeta - `go get -u github.com/tsenart/vegeta`
 
 # PE_URL=$(oc -n cincinnati-e2e get route cincinnati-policy-engine -o jsonpath='{.spec.host}')
-# export GRAPH_URL="http://${PE_URL}/api/upgrades_info/v1/graph"
+# export GRAPH_URL="http://${PE_URL}/api/upgrades_info/graph"
 
 
 TMP_DIR=$(mktemp -d)

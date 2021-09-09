@@ -81,7 +81,7 @@ mod tests {
         let mut settings = AppSettings::default();
         assert_eq!(
             settings.upstream,
-            hyper::Uri::from_static("http://localhost:8080/v1/graph")
+            hyper::Uri::from_static("http://localhost:8080/graph")
         );
 
         let args = vec!["argv0", "--upstream.cincinnati.url", upstream];

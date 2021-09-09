@@ -21,7 +21,7 @@ lazy_static! {
     static ref V1_GRAPH_ERRORS: IntCounterVec = IntCounterVec::new(
         Opts::new(
             "v1_graph_response_errors_total",
-            "Error responses on /v1/graph"
+            "Error responses on /graph"
         ),
         &["code", "kind"]
     )
@@ -40,7 +40,7 @@ pub fn register_metrics(registry: &Registry) -> Fallible<()> {
 }
 
 #[derive(Debug, Error, Eq, PartialEq)]
-/// Error that can be returned by `/v1/graph` endpoint.
+/// Error that can be returned by `/graph` endpoint.
 pub enum GraphError {
     /// Failed to deserialize JSON.
     #[error("failed to deserialize JSON: {}", _0)]

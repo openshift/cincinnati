@@ -10,6 +10,64 @@
     },
     "servers": [],
     "paths": {
+        "/graph": {
+            "get": {
+                "summary": "Get the update graph",
+                "operationId": "getGraph",
+                "responses": {
+                    "200": {
+                        "description": "An update graph",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Graph"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad client request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
+                    "406": {
+                        "description": "Invalid Content-Type",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Generic graph error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/graph": {
             "get": {
                 "summary": "Get the update graph",

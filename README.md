@@ -17,7 +17,7 @@ export CINCINNATI_REPO="redhat/openshift-cincinnati-test-public-manual"
 ```console
 cargo run --package graph-builder -- --service.address 0.0.0.0 --upstream.registry.url "${CINCINNATI_REGISTRY}" --upstream.registry.repository "${CINCINNATI_REPO}" &
 cargo run --package policy-engine -- --service.address 0.0.0.0 &
- curl --verbose --header 'Accept:application/json' http://localhost:8081/v1/graph\?channel=a
+ curl --verbose --header 'Accept:application/json' http://localhost:8081/graph\?channel=a
 {
     "nodes":
     [{

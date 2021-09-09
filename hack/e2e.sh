@@ -138,7 +138,7 @@ oc wait --for=condition=available --timeout=10m deploymentconfig/cincinnati || {
 # Expose services
 backoff oc expose service cincinnati-policy-engine --port=policy-engine
 PE_URL=$(oc get route cincinnati-policy-engine -o jsonpath='{.spec.host}')
-export GRAPH_URL="http://${PE_URL}/api/upgrades_info/v1/graph"
+export GRAPH_URL="http://${PE_URL}/api/upgrades_info/graph"
 
 # Wait for route to become available
 DELAY=10

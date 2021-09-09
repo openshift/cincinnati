@@ -1,4 +1,4 @@
-//! Plugin which implements fetching a Cincinnati graph via HTTP from a `/v1/graph`-compliant endpoint.
+//! Plugin which implements fetching a Cincinnati graph via HTTP from a `/graph`-compliant endpoint.
 //!
 //! Instead of processing the input graph, this plugin fetches a graph from a
 //! remote endpoint, which makes it effectively discard any given input graph.
@@ -24,7 +24,7 @@ use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use std::time::Duration;
 
 /// Default URL to upstream graph provider.
-pub static DEFAULT_UPSTREAM_URL: &str = "http://localhost:8080/v1/graph";
+pub static DEFAULT_UPSTREAM_URL: &str = "http://localhost:8080/graph";
 
 /// Default graph-builder connection timeout in seconds.
 pub static DEFAULT_TIMEOUT_SECS: u64 = 30;
@@ -40,7 +40,7 @@ struct CincinnatiGraphFetchSettings {
     timeout: u64,
 }
 
-/// Graph fetcher for Cincinnati `/v1/graph` endpoints.
+/// Graph fetcher for Cincinnati `/graph` endpoints.
 #[derive(CustomDebug)]
 pub struct CincinnatiGraphFetchPlugin {
     /// The upstream from which to fetch the graph
