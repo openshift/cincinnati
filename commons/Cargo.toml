@@ -22,7 +22,7 @@ opentelemetry = "0.14.0"
 opentelemetry-jaeger = "0.13.0"
 reqwest = "^0.11"
 thrift = "0.15"
-actix-service = "^2.0.0-beta.5"
+actix-service = "^2.0.0"
 hamcrest2 = "0.3.0"
 
 [dev-dependencies]
