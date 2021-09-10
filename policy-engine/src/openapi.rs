@@ -1,5 +1,5 @@
 use crate::AppState;
-use actix_web::HttpResponse;
+use actix_web::{dev::Response, HttpResponse};
 use commons::prelude_errors::*;
 use openapiv3::{OpenAPI, ReferenceOr};
 use std::collections::HashSet;
@@ -29,6 +29,7 @@ pub(crate) fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
 
     serde_json::to_string(&spec_object)
         .context("Could not serialize OpenAPI object")
+        .map(Response::from)
         .map(HttpResponse::from)
         .unwrap_or_else(|e| {
             error!("{:?}", e);
@@ -166,7 +167,7 @@ mod tests {
         let body_future: Box<dyn Future<Output = Result<_, Box<dyn Error>>> + Unpin> =
             Box::new(Box::pin(async {
                 let mut svc = actix_web::test::init_service(app.app_data(data)).await;
-                let mut response = actix_web::test::call_service(
+                let response = actix_web::test::call_service(
                     &mut svc,
                     actix_web::test::TestRequest::with_uri(&service_uri)
                         .insert_header(("Accept", "application/json"))
@@ -178,16 +179,11 @@ mod tests {
                     return Err(format!("unexpected statuscode:{}", response.status()).into());
                 };
 
-                let body = match response.take_body() {
-                    actix_web::dev::ResponseBody::Body(b) => match b {
-                        actix_web::dev::Body::Bytes(bytes) => bytes,
-                        unknown => {
-                            return Err(format!("expected byte body, got '{:?}'", unknown).into())
-                        }
-                    },
-                    _ => return Err("expected body response".into()),
-                };
-                Ok(std::str::from_utf8(&body)?.to_owned())
+                if let actix_web::body::AnyBody::Bytes(bytes) = response.into_body() {
+                    Ok(std::str::from_utf8(&bytes)?.to_owned())
+                } else {
+                    return Err(format!("expected bytes in body").into());
+                }
             }));
 
         let body = runtime.block_on(body_future)?;
