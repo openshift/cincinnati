@@ -73,9 +73,6 @@ backoff oc -n openshift-monitoring \
         --from-literal='config.yaml={"enableUserWorkload": true}' -o yaml --dry-run=client > /tmp/cluster-monitoring-config.yaml
 backoff oc apply -f /tmp/cluster-monitoring-config.yaml
 
-# Wait for user workload monitoring is deployed
-backoff oc -n openshift-user-workload-monitoring wait --for=condition=Ready pod -l app=thanos-ruler
-
 # Import observability template
 # ServiceMonitors are imported before app deployment to give Prometheus time to catch up with
 # metrics
