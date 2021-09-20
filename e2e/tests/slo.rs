@@ -64,7 +64,7 @@ fn check_slo_numeric(query: &'static str) -> i32 {
 
 // Minimal serve duration is less than 1s
 #[test_case(
-    "histogram_quantile(0.90, sum(cincinnati_pe_v1_graph_serve_duration_seconds_bucket) by (le))"
+    "histogram_quantile(0.90, sum(cincinnati_pe_graph_serve_duration_seconds_bucket) by (le))"
      => is less_than(0.5)
 )]
 fn check_slo_float(query: &'static str) -> f32 {

@@ -88,14 +88,14 @@ objects:
             - record: component:slo_latency:5s
               expr: |
                 histogram_quantile(0.99,
-                  cincinnati_pe_v1_graph_serve_duration_seconds_bucket{
+                  cincinnati_pe_graph_serve_duration_seconds_bucket{
                     namespace="${NAMESPACE}",job="cincinnati-policy-engine"})
               labels:
                 component: policyengine
                 service: cincinnati
             # policy engine error rate
             - record: component:slo_upstream_error_rate:1m
-              expr: rate(cincinnati_pe_v1_graph_response_errors_total{namespace="${NAMESPACE}",code="500"}[1m])
+              expr: rate(cincinnati_pe_graph_response_errors_total{namespace="${NAMESPACE}",code="500"}[1m])
               labels:
                 component: policyengine
                 service: cincinnati

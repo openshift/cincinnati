@@ -18,10 +18,10 @@ pub mod prelude {
 pub use prelude::*;
 
 lazy_static! {
-    static ref V1_GRAPH_ERRORS: IntCounterVec = IntCounterVec::new(
+    static ref GRAPH_ERRORS: IntCounterVec = IntCounterVec::new(
         Opts::new(
-            "v1_graph_response_errors_total",
-            "Error responses on /graph"
+            "graph_response_errors_total",
+            "Error responses for graph endpoints"
         ),
         &["code", "kind"]
     )
@@ -35,12 +35,12 @@ pub static MISSING_APPSTATE_PANIC_MSG: &str =
 
 /// Register relevant metrics to a prometheus registry.
 pub fn register_metrics(registry: &Registry) -> Fallible<()> {
-    registry.register(Box::new(V1_GRAPH_ERRORS.clone()))?;
+    registry.register(Box::new(GRAPH_ERRORS.clone()))?;
     Ok(())
 }
 
 #[derive(Debug, Error, Eq, PartialEq)]
-/// Error that can be returned by `/graph` endpoint.
+/// Error that can be returned by graph endpoint.
 pub enum GraphError {
     /// Failed to deserialize JSON.
     #[error("failed to deserialize JSON: {}", _0)]
@@ -83,7 +83,7 @@ impl actix_web::error::ResponseError for GraphError {
     fn error_response(&self) -> HttpResponse {
         let code = self.status_code();
         let kind = self.kind();
-        V1_GRAPH_ERRORS
+        GRAPH_ERRORS
             .with_label_values(&[code.as_str(), &kind])
             .inc();
         self.as_json_error()

@@ -23,7 +23,9 @@ use commons::{Fallible, GraphError};
 use lazy_static;
 use opentelemetry::trace::{mark_span_as_active, Tracer};
 pub use parking_lot::RwLock;
-use prometheus::{self, histogram_opts, labels, opts, Counter, Gauge, Histogram, IntGauge};
+use prometheus::{
+    self, histogram_opts, labels, opts, Counter, Gauge, Histogram, IntCounterVec, IntGauge, Opts,
+};
 use serde_json;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -62,9 +64,10 @@ lazy_static! {
         vec![5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 15.0, 20.0, 30.0 ]
     ))
     .unwrap();
-    static ref V1_GRAPH_INCOMING_REQS: Counter = Counter::new(
-        "v1_graph_incoming_requests_total",
-        "Total number of incoming HTTP client request to /graph"
+    static ref GRAPH_INCOMING_REQS: IntCounterVec = IntCounterVec::new(
+        Opts::new("graph_incoming_requests_total",
+        "Total number of incoming HTTP client request"),
+        &["endpoint"]
     )
     .unwrap();
     static ref BUILD_INFO: Counter = Counter::with_opts(opts!(
@@ -89,7 +92,7 @@ pub fn register_metrics(registry: &prometheus::Registry) -> Fallible<()> {
     registry.register(Box::new(UPSTREAM_SCRAPES.clone()))?;
     registry.register(Box::new(GRAPH_UPSTREAM_INITIAL_SCRAPE.clone()))?;
     registry.register(Box::new(UPSTREAM_SCRAPES_DURATION.clone()))?;
-    registry.register(Box::new(V1_GRAPH_INCOMING_REQS.clone()))?;
+    registry.register(Box::new(GRAPH_INCOMING_REQS.clone()))?;
     registry.register(Box::new(BUILD_INFO.clone()))?;
     Ok(())
 }
@@ -102,7 +105,8 @@ pub async fn index(
     let span = get_tracer().start("index");
     let _active_span = mark_span_as_active(span);
 
-    V1_GRAPH_INCOMING_REQS.inc();
+    let path = req.uri().path();
+    GRAPH_INCOMING_REQS.with_label_values(&[path]).inc();
 
     // Check that the client can accept JSON media type.
     commons::validate_content_type(req.headers(), CONTENT_TYPE)?;
