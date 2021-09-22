@@ -1,0 +1,20 @@
+#!/bin/bash
+
+function publish() {
+    cargo fetch
+    cargo hack publish --no-dev-deps --allow-dirty --dry-run
+    echo ok?
+    read
+    echo sure
+    read
+    cargo hack publish --no-dev-deps --allow-dirty
+}
+
+cargo check
+
+for pkg in $@; do
+    cd $pkg;
+    pwd;
+    publish;
+    cd ..;
+done
