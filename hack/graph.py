@@ -8,7 +8,7 @@ from typing import Dict, List
 
 def run():
     parser = argparse.ArgumentParser(description=f'Output digraph data for Cincinnati json',
-                                     usage="curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.5'  | ./graph.py --include-hotfixes | dot -Tsvg >graph.svg")
+                                     usage="curl -sH 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/graph?channel=stable-4.5'  | ./graph.py --include-hotfixes | dot -Tsvg >graph.svg")
     parser.add_argument('--include-hotfixes', dest='hotfixes', action='store_true')
     parser.set_defaults(hotfixes=False)
     args = parser.parse_args()

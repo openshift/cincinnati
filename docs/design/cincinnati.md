@@ -132,7 +132,7 @@ The Graph API defines the interface exposed by implementations of Graph Builders
 
 ### Request ###
 
-HTTP GET requests are used to fetch the DAG from the Graph API endpoint. Requests can be made to `/v1/graph` and, if an [`Accept` header][http-accept] is set, it must allow [the `application/json` media type][json-media-type].
+HTTP GET requests are used to fetch the DAG from the Graph API endpoint. Requests can be made to `/graph` and, if an [`Accept` header][http-accept] is set, it must allow [the `application/json` media type][json-media-type].
 
 Clients may provide additional parameters as URL query parameters in the request. The contract for those parameters is defined by the client and Policy Engine implementation.
 
@@ -141,7 +141,7 @@ Clients may provide additional parameters as URL query parameters in the request
 
 ### Response ###
 
-The response to the `/v1/graph` endpoint is a JSON representation of the release graph. Each of the releases are represented in an entry in the top-level `nodes` array. Each of these entries includes the release version label, a payload identifier and any metadata according to the following schema:
+The response to the `/graph` endpoint is a JSON representation of the release graph. Each of the releases are represented in an entry in the top-level `nodes` array. Each of these entries includes the release version label, a payload identifier and any metadata according to the following schema:
 
 |   Key    | Optional | Description                                                                             |
 |:--------:|:--------:|:----------------------------------------------------------------------------------------|
@@ -153,7 +153,7 @@ The transitions between releases are represented as an array in the top-level `e
 
 ### Errors ###
 
-Errors on the `/v1/graph` endpoint are returned to the client as JSON objects, with a 4xx or 5xx HTTP status code.
+Errors on the `/graph` endpoint are returned to the client as JSON objects, with a 4xx or 5xx HTTP status code.
 Error values carry a type identifier and a textual description, according to the folloowing schema:
 
 |  Key   | Optional | Description                                                  |
@@ -218,7 +218,7 @@ Determining valid graph traversals can be tricky to do by hand. The following [`
 The following will fetch the graph from the remote endpoint and determine the set of versions to which OpenShift version 4.2.13 can transition in the stable-4.2 channel:
 
 ```console
-$ curl --silent --header 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/v1/graph?arch=amd64&channel=stable-4.2' | jq '. as $graph | $graph.nodes | map(.version == "4.2.13") | index(true) as $orig | $graph.edges | map(select(.[0] == $orig)[1]) | map($graph.nodes[.])'
+$ curl --silent --header 'Accept:application/json' 'https://api.openshift.com/api/upgrades_info/graph?arch=amd64&channel=stable-4.2' | jq '. as $graph | $graph.nodes | map(.version == "4.2.13") | index(true) as $orig | $graph.edges | map(select(.[0] == $orig)[1]) | map($graph.nodes[.])'
 ```
 
 Sample output:

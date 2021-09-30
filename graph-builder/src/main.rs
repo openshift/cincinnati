@@ -118,7 +118,12 @@ async fn main() -> Result<(), Error> {
             })
             .app_data(actix_web::web::Data::new(main_state.clone()))
             .service(
+                // keeping this for backward compatibility
                 actix_web::web::resource(&format!("{}/v1/graph", app_prefix.clone()))
+                    .route(actix_web::web::get().to(graph::index)),
+            )
+            .service(
+                actix_web::web::resource(&format!("{}/graph", app_prefix.clone()))
                     .route(actix_web::web::get().to(graph::index)),
             )
     })

@@ -67,7 +67,7 @@ run-ci-tests:
 run-e2e-test-only filter="e2e":
 	#!/usr/bin/env bash
 	set -e
-	export GRAPH_URL='http://127.0.0.1:8081/{{path_prefix}}v1/graph'
+	export GRAPH_URL='http://127.0.0.1:8081/{{path_prefix}}graph'
 	export E2E_METADATA_REVISION="$(just metadata_reference_revision)"
 
 	# we need to use the parent-directory here because the test runs in the graph-builder directory
@@ -184,7 +184,7 @@ run-graph-builder-e2e:
 run-policy-engine:
 	#!/usr/bin/env bash
 	export RUST_BACKTRACE=1 RUST_LOG="policy_engine=trace,cincinnati=trace,actix=trace,actix_web=trace"
-	cargo run --package policy-engine -- -vvvv --service.address 0.0.0.0 --service.path_prefix {{path_prefix}} --upstream.cincinnati.url 'http://127.0.0.1:8080/{{path_prefix}}v1/graph' --service.mandatory_client_parameters='channel' --service.tracing_endpoint "{{default_tracing_endpoint}}"
+	cargo run --package policy-engine -- -vvvv --service.address 0.0.0.0 --service.path_prefix {{path_prefix}} --upstream.cincinnati.url 'http://127.0.0.1:8080/{{path_prefix}}graph' --service.mandatory_client_parameters='channel' --service.tracing_endpoint "{{default_tracing_endpoint}}"
 
 kill-daemons:
 	pkill graph-builder
@@ -213,7 +213,7 @@ run-daemons-e2e:
 	sleep infinity
 
 get-graph port channel arch host="http://127.0.0.1":
-	curl --header 'Accept:application/json' {{host}}:{{port}}/{{path_prefix}}v1/graph?channel='{{channel}}'\&arch='{{arch}}' | jq .
+	curl --header 'Accept:application/json' {{host}}:{{port}}/{{path_prefix}}graph?channel='{{channel}}'\&arch='{{arch}}' | jq .
 
 get-graph-gb:
 	just get-graph 8080 "" ""
@@ -228,7 +228,7 @@ get-graph-pe-production channel='stable-4.0' arch='amd64':
 	just get-graph 443 "{{channel}}" "{{arch}}" https://api.openshift.com
 
 get-openapi host port:
-	curl --header 'Accept:application/json' {{host}}:{{port}}/{{path_prefix}}v1/openapi | jq .
+	curl --header 'Accept:application/json' {{host}}:{{port}}/{{path_prefix}}openapi | jq .
 
 get-openapi-staging:
 	just get-openapi https://api.stage.openshift.com 443

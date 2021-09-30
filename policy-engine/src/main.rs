@@ -117,11 +117,16 @@ async fn main() -> Result<(), Error> {
             )
             .app_data(actix_web::web::Data::<AppState>::new(state.clone()))
             .service(
+                // keeping this for backward compatibility
                 actix_web::web::resource(&format!("{}/v1/graph", app_prefix))
                     .route(actix_web::web::get().to(graph::index)),
             )
             .service(
-                actix_web::web::resource(&format!("{}/v1/openapi", app_prefix))
+                actix_web::web::resource(&format!("{}/graph", app_prefix))
+                    .route(actix_web::web::get().to(graph::index)),
+            )
+            .service(
+                actix_web::web::resource(&format!("{}/openapi", app_prefix))
                     .route(actix_web::web::get().to(openapi::index)),
             )
             .default_service(actix_web::web::route().to(default_response))

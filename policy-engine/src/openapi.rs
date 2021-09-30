@@ -20,7 +20,7 @@ pub(crate) fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
         };
 
     // Add mandatory parameters to the `graph` endpoint.
-    if let Some(path) = spec_object.paths.get_mut("/v1/graph") {
+    if let Some(path) = spec_object.paths.get_mut("/graph") {
         add_mandatory_params(path, &app_data.mandatory_params);
     }
 
@@ -125,7 +125,7 @@ mod tests {
         let mut spec: OpenAPI = serde_json::from_str(SPEC).expect("couldn't parse JSON file");
 
         {
-            let mut graph_path = spec.paths.get_mut("/v1/graph").unwrap();
+            let mut graph_path = spec.paths.get_mut("/graph").unwrap();
             add_mandatory_params(&mut graph_path, &params);
         }
         let output = serde_json::to_string(&spec).unwrap();
@@ -196,8 +196,8 @@ mod tests {
         let spec: openapiv3::OpenAPI = serde_json::from_str(&body)?;
         let v1_graph: &openapiv3::ReferenceOr<openapiv3::PathItem> = spec
             .paths
-            .get(&format!("{}/v1/graph", path_prefix))
-            .ok_or("could not find /v1/graph endpoint in openapi spec")?;
+            .get(&format!("{}/graph", path_prefix))
+            .ok_or("could not find /graph endpoint in openapi spec")?;
 
         let v1_graph_mandatory_params_result: HashSet<String> = match v1_graph {
             ReferenceOr::Item(item) => item
