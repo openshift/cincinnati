@@ -67,7 +67,7 @@ lazy_static! {
     static ref GRAPH_INCOMING_REQS: IntCounterVec = IntCounterVec::new(
         Opts::new("graph_incoming_requests_total",
         "Total number of incoming HTTP client request"),
-        &["endpoint"]
+        &["uri_path"]
     )
     .unwrap();
     static ref BUILD_INFO: Counter = Counter::with_opts(opts!(
