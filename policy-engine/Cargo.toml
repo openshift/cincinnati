@@ -17,7 +17,7 @@ hyper = "^0.14"
 lazy_static = "^1.2.0"
 log = "^0.4.3"
 openapiv3 = "0.5"
-prometheus = "0.12"
+prometheus = "0.13"
 semver = { version = "^0.11", features = [ "serde" ] }
 serde = "^1.0.130"
 serde_derive = "^1.0.70"
@@ -35,6 +35,6 @@ actix-service = "2.0.0-beta.4"
 built = { version = "^0.5.1", features = [ "git2" ]}
 
 [dev-dependencies]
-tokio = { version = "1.11", features = [ "rt-multi-thread" ] }
+tokio = { version = "1.12", features = [ "rt-multi-thread" ] }
 memchr = "^2.4"
 mockito = "^0.30.0"

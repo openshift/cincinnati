@@ -11,11 +11,11 @@ anyhow = "1.0"
 thiserror = "1.0"
 lazy_static = "^1.2.0"
 log = "^0.4.6"
-prometheus = "0.12"
+prometheus = "0.13"
 serde = "^1.0.130"
 serde_json = "^1.0.68"
 serde_derive = "^1.0.123"
-tokio = { version = "1.11", features = [ "rt-multi-thread" ] }
+tokio = { version = "1.12", features = [ "rt-multi-thread" ] }
 url = "^2.2"
 futures = "^0.3"
 opentelemetry = "0.14.0"
