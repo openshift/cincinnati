@@ -13,7 +13,7 @@ env_logger = "^0.9"
 futures = "0.3"
 lazy_static = "^1.2.0"
 log = "^0.4.3"
-prometheus = "0.12"
+prometheus = "0.13"
 protobuf = "2.20.0"
 quay = { path = "../quay" }
 regex = "^1.5.4"
