@@ -27,7 +27,7 @@ use std::time::Duration;
 pub static DEFAULT_UPSTREAM_URL: &str = "http://localhost:8080/graph";
 
 /// Default graph-builder connection timeout in seconds.
-pub static DEFAULT_TIMEOUT_SECS: u64 = 30;
+pub static DEFAULT_TIMEOUT_SECS: u64 = 10;
 
 /// Plugin settings.
 #[derive(Clone, CustomDebug, Deserialize, SmartDefault)]
