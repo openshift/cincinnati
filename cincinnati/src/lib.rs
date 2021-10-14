@@ -75,12 +75,16 @@ impl Release {
     }
 
     /// Returns the `manifestref` of a given `Release`
-    pub fn manifestref(&self) -> Result<&String, Error> {
+    pub fn manifestref(&self) -> Result<String, Error> {
         let digestkey = String::from("io.openshift.upgrades.graph.release.manifestref");
         match self {
             Release::Concrete(release) => {
                 let digest = release.metadata.get(&digestkey);
-                Ok(digest.map(|d| d).unwrap())
+                let manifestref = match digest.map(|d| d) {
+                    Some(manifestref) => manifestref.clone(),
+                    None => String::from("no manifestref for release"),
+                };
+                Ok(manifestref)
             }
             _ => bail!("could not get manifest reference"),
         }
