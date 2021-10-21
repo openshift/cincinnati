@@ -100,7 +100,7 @@ backoff oc new-app -f dist/openshift/cincinnati.yaml \
       name = "release-scrape-dockerv2"
       registry = "${E2E_SCRAPE_REGISTRY:-quay.io}"
       repository = "${E2E_SCRAPE_REPOSITORY:-openshift-release-dev/ocp-release}"
-      fetch_concurrency = 128
+      fetch_concurrency = 16
 
       [[plugin_settings]]
       name = "github-secondary-metadata-scrape"
