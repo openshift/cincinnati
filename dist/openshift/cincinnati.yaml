@@ -68,15 +68,15 @@ objects:
                 httpGet:
                   path: /liveness
                   port: ${{GB_STATUS_PORT}}
-                initialDelaySeconds: 30
-                periodSeconds: 10
+                initialDelaySeconds: 60
+                periodSeconds: 30
                 timeoutSeconds: 3
               readinessProbe:
                 httpGet:
                   path: /readiness
                   port: ${{GB_STATUS_PORT}}
-                initialDelaySeconds: 30
-                periodSeconds: 10
+                initialDelaySeconds: 60
+                periodSeconds: 30
                 timeoutSeconds: 3
               resources:
                 limits:
@@ -146,8 +146,8 @@ objects:
               livenessProbe:
                 tcpSocket:
                   port: ${{PE_PORT}}
-                initialDelaySeconds: 30
-                periodSeconds: 10
+                initialDelaySeconds: 60
+                periodSeconds: 30
                 timeoutSeconds: 3
               resources:
                 limits:
