@@ -1,11 +1,14 @@
-FROM registry.redhat.io/rhel8/rust-toolset:1.47.0 as builder
+FROM registry.access.redhat.com/ubi8/ubi:latest as builder
 WORKDIR /opt/app-root/src/
 COPY . .
 # copy git information for built crate
 COPY .git/ ./.git/
-
 USER 0
-RUN bash -c "source /opt/app-root/etc/scl_enable && cargo build --release" \
+RUN dnf update -y \
+    && dnf install -y jq rust cargo \
+    && dnf install -y openssl-devel \
+    && dnf clean all \
+    && cargo build --release \
     && mkdir -p /opt/cincinnati/bin \
     && cp -rvf target/release/graph-builder /opt/cincinnati/bin \
     && cp -rvf target/release/policy-engine /opt/cincinnati/bin
