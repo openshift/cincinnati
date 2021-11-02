@@ -120,7 +120,7 @@ PE_URL=$(oc get route e2e-policy-engine-route -o jsonpath='{.spec.host}')
 export GRAPH_URL="https://${PE_URL}/api/upgrades_info/graph"
 
 # Wait for route to become available
-backoff test "$(curl -s -o /dev/null -w "%{http_code}" --header 'Accept:application/json' "${GRAPH_URL}?channel=a")" = "200"
+backoff test "$(curl -ks -o /dev/null -w "%{http_code}" --header 'Accept:application/json' "${GRAPH_URL}?channel=a")" = "200"
 
 # Wait for cincinnati metrics to be recorded
 # Find out the token Prometheus uses from its serviceaccount secrets
