@@ -8,7 +8,7 @@ edition = "2018"
 actix-web = "^4.0.0-beta.5"
 commons = { path = "../commons" }
 custom_debug_derive = "^0.5"
-daggy = { version = "^0.7.0", features = [ "serde-1" ] }
+daggy = { version = "^0.8.0", features = [ "serde-1" ] }
 env_logger = "^0.9"
 futures = "0.3"
 lazy_static = "^1.2.0"
