@@ -751,6 +751,7 @@ impl From<Graph> for plugins::interface::Graph {
 #[cfg(any(test, feature = "test"))]
 pub mod testing {
     use super::*;
+    use crate::plugins::internal::versioned_graph::VersionedGraph;
 
     pub fn generate_graph() -> Graph {
         let mut graph = Graph::default();
@@ -925,6 +926,22 @@ pub mod testing {
         pub payload_replace_sha_by_tag_left: bool,
         pub payload_replace_sha_by_tag_right: bool,
         pub payload_remove_registry_and_repo: bool,
+    }
+
+    /// Compares two Versioned Graphs and gives a verbose error if not equal
+    pub fn compare_versioned_graphs_verbose(
+        versioned_left: VersionedGraph,
+        versioned_right: VersionedGraph,
+        settings: CompareGraphsVerboseSettings,
+    ) -> Fallible<()> {
+        if versioned_left.version != versioned_right.version {
+            bail!(
+                "graph version mismatch left: {}, right {}",
+                versioned_left.version,
+                versioned_right.version
+            )
+        }
+        return compare_graphs_verbose(versioned_left.graph, versioned_right.graph, settings);
     }
 
     /// Compares two Graphs and gives a verbose error if not equal.
