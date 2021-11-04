@@ -6,6 +6,7 @@ pub mod cincinnati_graph_fetch;
 pub mod edge_add_remove;
 pub mod metadata_fetch_quay;
 pub mod node_remove;
+pub mod versioned_graph;
 
 mod graph_builder;
 

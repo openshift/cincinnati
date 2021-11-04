@@ -43,8 +43,7 @@ pub use std::collections::BTreeMap as MapImpl;
 pub use std::collections::BTreeSet as SetImpl;
 
 /// Graph type which stores `Release` as node-weights and `Empty` as edge-weights.
-#[derive(Debug, Default)]
-#[cfg_attr(any(test, feature = "test"), derive(Clone))]
+#[derive(Debug, Default, Clone)]
 pub struct Graph {
     dag: Dag<Release, Empty>,
 }
