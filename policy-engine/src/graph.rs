@@ -311,7 +311,7 @@ pub(crate) mod tests {
             let body_future: Box<dyn core::future::Future<Output = Result<_, Error>> + Unpin> =
                 Box::new(Box::pin(async {
                     let mut pe_svc = actix_web::test::init_service(app).await;
-                    let mut response = actix_web::test::call_service(
+                    let response = actix_web::test::call_service(
                         &mut pe_svc,
                         actix_web::test::TestRequest::with_uri(&service_uri)
                             .insert_header(("Accept", "application/json"))
@@ -323,14 +323,10 @@ pub(crate) mod tests {
                         bail!("unexpected statuscode:{}", response.status());
                     };
 
-                    match response.take_body() {
-                        actix_web::dev::ResponseBody::Body(b) => match b {
-                            actix_web::dev::Body::Bytes(bytes) => {
-                                Ok(std::str::from_utf8(&bytes)?.to_owned())
-                            }
-                            unknown => bail!("expected byte body, got '{:?}'", unknown),
-                        },
-                        _ => bail!("expected body response"),
+                    if let actix_web::body::AnyBody::Bytes(bytes) = response.into_body() {
+                        Ok(std::str::from_utf8(&bytes)?.to_owned())
+                    } else {
+                        bail!("expected bytes in body")
                     }
                 }));
 

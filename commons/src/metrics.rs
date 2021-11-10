@@ -31,7 +31,7 @@ where
     let mut buf = vec![];
     match tenc.encode(&metrics, &mut buf) {
         Ok(()) => HttpResponse::Ok().body(buf),
-        Err(e) => HttpResponse::InternalServerError().message_body(format!("{}", e).into()),
+        Err(e) => HttpResponse::InternalServerError().body(format!("{}", e)),
     }
 }
 
@@ -67,18 +67,14 @@ mod tests {
         let resp = rt.block_on(metrics_call);
 
         assert_eq!(resp.status(), 200);
-        if let actix_web::body::ResponseBody::Body(body) = resp.body() {
-            if let actix_web::body::Body::Bytes(bytes) = body {
-                assert!(!bytes.is_empty());
-                assert!(memmem::find_iter(
-                    bytes.as_ref(),
-                    format!("{}_dummy_gauge 42\n", metrics_prefix).as_bytes()
-                )
-                .next()
-                .is_some());
-            } else {
-                bail!("expected Body")
-            }
+        if let actix_web::body::AnyBody::Bytes(bytes) = resp.body() {
+            assert!(!bytes.is_empty());
+            assert!(memmem::find_iter(
+                bytes.as_ref(),
+                format!("{}_dummy_gauge 42\n", metrics_prefix).as_bytes()
+            )
+            .next()
+            .is_some());
         } else {
             bail!("expected bytes in body")
         };

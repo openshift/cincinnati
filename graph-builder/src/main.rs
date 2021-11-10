@@ -201,18 +201,14 @@ mod tests {
         let resp = rt.block_on(metrics_call);
 
         assert_eq!(resp.status(), 200);
-        if let actix_web::body::ResponseBody::Body(body) = resp.body() {
-            if let actix_web::body::Body::Bytes(bytes) = body {
-                assert!(!bytes.is_empty());
-                println!("{:?}", std::str::from_utf8(bytes.as_ref()));
-                assert!(
-                    memmem::find_iter(bytes.as_ref(), b"cincinnati_gb_dummy_gauge 42\n")
-                        .next()
-                        .is_some()
-                );
-            } else {
-                bail!("expected Body")
-            }
+        if let actix_web::body::AnyBody::Bytes(bytes) = resp.body() {
+            assert!(!bytes.is_empty());
+            println!("{:?}", std::str::from_utf8(bytes.as_ref()));
+            assert!(
+                memmem::find_iter(bytes.as_ref(), b"cincinnati_gb_dummy_gauge 42\n")
+                    .next()
+                    .is_some()
+            );
         } else {
             bail!("expected bytes in body")
         };
