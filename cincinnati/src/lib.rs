@@ -17,7 +17,9 @@ extern crate serde_derive;
 
 #[macro_use]
 pub mod plugins;
+mod conditional_edges;
 
+use crate::conditional_edges::*;
 use commons::prelude_errors::*;
 use daggy::petgraph::visit::{IntoNodeReferences, NodeRef};
 use daggy::{Dag, EdgeIndex, Walker};
@@ -43,9 +45,10 @@ pub use std::collections::BTreeMap as MapImpl;
 pub use std::collections::BTreeSet as SetImpl;
 
 /// Graph type which stores `Release` as node-weights and `Empty` as edge-weights.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Graph {
     dag: Dag<Release, Empty>,
+    conditional_edges: Option<Vec<ConditionalEdge>>,
 }
 
 /// Wrapper enum for the concrete and abstract release types.
@@ -184,6 +187,15 @@ pub mod errors {
     #[derive(Debug, Fail, Eq, PartialEq)]
     #[error("NodeWeight with index {} is missing", 0)]
     pub struct NodeWeightMissing(pub(crate) usize);
+}
+
+impl Default for Graph {
+    fn default() -> Self {
+        Graph {
+            dag: Default::default(),
+            conditional_edges: Some(vec![]),
+        }
+    }
 }
 
 impl Graph {
@@ -521,6 +533,8 @@ impl<'a> Deserialize<'a> for Graph {
         enum Field {
             Edges,
             Nodes,
+            #[serde(rename = "conditionalEdges")]
+            ConditionalEdges,
         }
 
         struct GraphVisitor;
@@ -538,6 +552,7 @@ impl<'a> Deserialize<'a> for Graph {
             {
                 let mut edges: Option<Vec<(daggy::NodeIndex, daggy::NodeIndex)>> = None;
                 let mut nodes: Option<Vec<Release>> = None;
+                let mut conditional_edges: Option<Vec<ConditionalEdge>> = None;
                 while let Some(key) = map.next_key()? {
                     match key {
                         Field::Edges => {
@@ -552,12 +567,20 @@ impl<'a> Deserialize<'a> for Graph {
                             }
                             nodes = Some(map.next_value()?);
                         }
+                        Field::ConditionalEdges => {
+                            if conditional_edges.is_some() {
+                                return Err(de::Error::duplicate_field("conditionalEdges"));
+                            }
+                            conditional_edges = Some(map.next_value()?);
+                        }
                     }
                 }
                 let edges = edges.ok_or_else(|| de::Error::missing_field("edges"))?;
                 let nodes = nodes.ok_or_else(|| de::Error::missing_field("nodes"))?;
+                let conditional_edges: Vec<ConditionalEdge> = conditional_edges.unwrap_or(vec![]);
                 let mut graph = Graph {
                     dag: Dag::with_capacity(nodes.len(), edges.len()),
+                    conditional_edges: Some(Vec::with_capacity(conditional_edges.len())),
                 };
                 let mut versions = collections::HashSet::with_capacity(nodes.len());
                 for node in nodes {
@@ -583,11 +606,21 @@ impl<'a> Deserialize<'a> for Graph {
                     .map_err(|_| {
                         de::Error::invalid_value(serde::de::Unexpected::StructVariant, &self)
                     })?;
+
+                graph
+                    .conditional_edges
+                    .as_mut()
+                    .unwrap()
+                    .extend(conditional_edges);
                 Ok(graph)
             }
         }
 
-        deserializer.deserialize_struct("Graph", &["nodes", "edges"], GraphVisitor)
+        deserializer.deserialize_struct(
+            "Graph",
+            &["nodes", "edges", "conditional_edges"],
+            GraphVisitor,
+        )
     }
 }
 
@@ -620,6 +653,9 @@ impl Serialize for Graph {
         let mut state = serializer.serialize_struct("Graph", 2)?;
         state.serialize_field("nodes", &Nodes(&self.dag.raw_nodes()))?;
         state.serialize_field("edges", &Edges(&self.dag.raw_edges()))?;
+        if self.conditional_edges.is_some() {
+            state.serialize_field("conditionalEdges", &self.conditional_edges)?;
+        }
         state.end()
     }
 }
