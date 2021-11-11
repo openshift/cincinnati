@@ -26,17 +26,19 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str) {
         .unwrap();
     let runtime = commons::testing::init_runtime().unwrap();
 
-    let expected: cincinnati::Graph = serde_json::from_str(testdata).unwrap();
+    let expected: cincinnati::plugins::internal::versioned_graph::VersionedGraph =
+        serde_json::from_str(testdata).unwrap();
 
     let res = run_graph_query(channel, arch, &runtime);
 
     assert_eq!(res.status().is_success(), true, "{}", res.status());
     let text = runtime.block_on(res.text()).unwrap();
-    let actual: cincinnati::Graph = serde_json::from_str(&text)
-        .context(format!("Failed to parse '{}' as json", text))
-        .unwrap();
+    let actual: cincinnati::plugins::internal::versioned_graph::VersionedGraph =
+        serde_json::from_str(&text)
+            .context(format!("Failed to parse '{}' as json", text))
+            .unwrap();
 
-    if let Err(e) = cincinnati::testing::compare_graphs_verbose(
+    if let Err(e) = cincinnati::testing::compare_versioned_graphs_verbose(
         expected,
         actual,
         cincinnati::testing::CompareGraphsVerboseSettings {

@@ -1,10 +1,11 @@
 //! Cincinnati graph service.
 
 use crate::AppState;
-use actix_web::http::HeaderValue;
+use actix_web::http::{header, HeaderValue};
 use actix_web::web::Query;
 use actix_web::{HttpRequest, HttpResponse};
-use cincinnati::plugins::BoxedPlugin;
+use cincinnati::plugins::internal::versioned_graph::VersionedGraph;
+use cincinnati::plugins::{BoxedPlugin, InternalIO};
 use cincinnati::CONTENT_TYPE;
 use commons::tracing::get_tracer;
 use commons::{self, Fallible, GraphError};
@@ -60,16 +61,26 @@ async fn _index(
     let path = req.uri().path();
     GRAPH_INCOMING_REQS.with_label_values(&[path]).inc();
 
-    // Check that the client can accept JSON media type.
-    commons::validate_content_type(req.headers(), CONTENT_TYPE)?;
+    let accept_default = header::HeaderValue::from_static(CONTENT_TYPE);
+
+    let accept_versions: Vec<actix_web::http::HeaderValue> = commons::CINCINNATI_VERSION
+        .keys()
+        .map(|val| header::HeaderValue::from_static(val))
+        .collect();
+
+    // Check that the client can accept media type.
+    let content_type: String =
+        commons::validate_content_type(req.headers(), accept_versions, accept_default)?;
 
     // Check for required client parameters.
     let mandatory_params = &app_data.mandatory_params;
     commons::ensure_query_params(mandatory_params, req.query_string())?;
 
-    let plugin_params = Query::<HashMap<String, String>>::from_query(req.query_string())
+    let mut plugin_params = Query::<HashMap<String, String>>::from_query(req.query_string())
         .map(|query| query.into_inner())
         .map_err(|e| commons::GraphError::InvalidParams(e.to_string()))?;
+
+    plugin_params.insert(String::from("content_type"), content_type);
 
     let timer = GRAPH_SERVE_HIST.start_timer();
 
@@ -141,12 +152,27 @@ where
         Err(other_error) => GraphError::FailedPluginExecution(other_error.to_string()),
     })?;
 
-    let graph_json = serde_json::to_string(&internal_io.graph)
+    let versioned_graph = add_version_information(&internal_io);
+
+    let graph_json = serde_json::to_string(&versioned_graph)
         .map_err(|e| GraphError::FailedJsonOut(e.to_string()))?;
 
+    let content_type = match &internal_io.parameters.get("content_type") {
+        Some(version) => *version,
+        None => *commons::MIN_CINCINNATI_VERSION,
+    };
     Ok(HttpResponse::Ok()
-        .content_type(CONTENT_TYPE)
+        .content_type(content_type)
         .body(graph_json))
+}
+
+/// add version information to the graph json
+fn add_version_information(io: &InternalIO) -> VersionedGraph {
+    let span = get_tracer().start("version_append");
+    let _active_span = mark_span_as_active(span);
+    log::trace!("versioning the graph");
+    let versioned_graph = VersionedGraph::versioned_graph(io).unwrap();
+    versioned_graph
 }
 
 #[cfg(test)]
