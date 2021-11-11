@@ -18,7 +18,7 @@ WORKDIR ${HOME}
 
 # build: Rust stable toolchain
 RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.56.0 -y && \
-  rustup install 1.52.0
+  rustup install 1.54.0
 
 RUN \
   mkdir -p $HOME/.cargo/git/ && \
