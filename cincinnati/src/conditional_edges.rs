@@ -44,3 +44,10 @@ pub struct ClusterCondition {
 struct PromQLClusterCondition {
     promql: String,
 }
+
+impl ConditionalEdge {
+    /// gets the mutable vector of edges
+    pub fn mut_edges(&mut self) -> &mut Vec<ConditionalUpdateEdge> {
+        &mut self.edges
+    }
+}
