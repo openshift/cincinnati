@@ -16,7 +16,7 @@ async-stream = "0.3"
 
 [dev-dependencies]
 env_logger = "^0.9"
-tokio = { version = "1.13", features = [ "rt-multi-thread" ] }
+tokio = { version = "1.14", features = [ "rt-multi-thread" ] }
 
 [features]
 test-net = []
