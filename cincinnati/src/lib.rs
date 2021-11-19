@@ -799,8 +799,12 @@ pub mod testing {
     use super::*;
     use crate::plugins::internal::versioned_graph::VersionedGraph;
 
-    pub fn generate_graph() -> Graph {
+    pub fn generate_graph(include_conditional_edge: bool) -> Graph {
         let mut graph = Graph::default();
+
+        if !include_conditional_edge {
+            graph.conditional_edges = None;
+        }
         let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
@@ -1136,7 +1140,7 @@ mod tests {
 
     #[test]
     fn serialize_graph() {
-        let graph = generate_graph();
+        let graph = generate_graph(false);
         assert_eq!(
             serde_json::to_string(&graph).unwrap(),
             r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#
@@ -1144,8 +1148,17 @@ mod tests {
     }
 
     #[test]
+    fn serialize_graph_with_conditional_edges() {
+        let graph = generate_graph(true);
+        assert_eq!(
+            serde_json::to_string(&graph).unwrap(),
+            r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]],"conditionalEdges":[]}"#
+        );
+    }
+
+    #[test]
     fn deserialize_graph() {
-        let json = r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#;
+        let json = r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]],"conditionalEdges":[]}"#;
 
         let de: Graph = serde_json::from_str(json).unwrap();
         assert_eq!(de.releases_count(), 3);
@@ -1193,7 +1206,7 @@ mod tests {
 
     #[test]
     fn test_graph_eq_true_for_equal_graphs() {
-        assert_eq!(generate_graph(), generate_graph())
+        assert_eq!(generate_graph(false), generate_graph(false))
     }
 
     #[test]
@@ -1281,10 +1294,10 @@ mod tests {
 
     #[test]
     fn roundtrip_conversion_from_graph_via_plugin_interface() {
-        let graph_plugin_interface: plugins::interface::Graph = generate_graph().into();
+        let graph_plugin_interface: plugins::interface::Graph = generate_graph(false).into();
         let graph_native_converted: Graph = graph_plugin_interface.into();
 
-        assert_eq!(generate_graph(), graph_native_converted);
+        assert_eq!(generate_graph(false), graph_native_converted);
     }
 
     fn get_test_metadata_fn_mut(key_prefix: &str, key_suffix: &str) -> TestMetadata {

@@ -73,7 +73,7 @@ mod tests {
         });
 
         let input_internal = InternalIO {
-            graph: generate_graph(),
+            graph: generate_graph(false),
             parameters: [("hello".to_string(), "plugin".to_string())]
                 .iter()
                 .cloned()
@@ -107,7 +107,7 @@ mod tests {
         });
 
         let input_internal = InternalIO {
-            graph: generate_graph(),
+            graph: generate_graph(false),
             parameters: [("hello".to_string(), "plugin".to_string())]
                 .iter()
                 .cloned()
