@@ -1,6 +1,8 @@
 //! This plugin adds and removes Edges from Nodes based on metadata labels.
 
 use crate as cincinnati;
+use crate::conditional_edges::{ConditionalEdge, ConditionalUpdateEdge, ConditionalUpdateRisk};
+use std::collections::HashMap;
 
 use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
@@ -20,6 +22,10 @@ pub struct EdgeAddRemovePlugin {
     /// If true causes the removal of all processed metadata from the releases.
     #[default(false)]
     pub remove_consumed_metadata: bool,
+
+    /// Include conditional edges to the graph
+    #[default(true)]
+    pub include_conditional_edges: bool,
 }
 
 #[async_trait]
@@ -29,6 +35,9 @@ impl InternalPlugin for EdgeAddRemovePlugin {
     async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
         let mut graph = io.graph;
         self.add_edges(&mut graph)?;
+        if self.include_conditional_edges {
+            self.add_conditional_edges(&mut graph)?;
+        }
         self.remove_edges(&mut graph)?;
 
         Ok(InternalIO {
@@ -302,6 +311,116 @@ impl EdgeAddRemovePlugin {
                 Ok(())
             })?;
 
+        Ok(())
+    }
+
+    /// Add conditional edges specified by the metadata.
+    ///
+    /// this replaces the regex in edge regex with conditional edges and the risks associated.
+    fn add_conditional_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
+        let mut edge_risk_map: HashMap<ConditionalUpdateEdge, Vec<ConditionalUpdateRisk>> =
+            HashMap::new();
+        graph
+            .conditional_edges
+            .as_ref()
+            .unwrap()
+            .iter()
+            .try_for_each(|ce| -> Fallible<()> {
+                let to_string = &ce.edge_regex.to;
+                let from_regex_string = &ce.edge_regex.from;
+
+                let from_regex = regex::Regex::new(from_regex_string)
+                    .context(format!("Parsing {} as Regex", from_regex_string))?;
+
+                let risk = ce.risks.clone();
+
+                let to = graph.find_by_version_vec(&to_string);
+                to.iter().try_for_each(|(to, to_version)| -> Fallible<()> {
+                    if from_regex_string == ".*" {
+                        let froms: Vec<String> = graph
+                            .previous_releases(to)
+                            .map(|(_, _, release)| release.version().to_string())
+                            .collect();
+                        trace!(
+                            "adding conditional edge by regex for '{}': {:?}",
+                            to_version,
+                            froms
+                        );
+                        froms.iter().for_each(|from| {
+                            let e = ConditionalUpdateEdge {
+                                from: from.to_string(),
+                                to: to_version.clone(),
+                            };
+                            match edge_risk_map.get_mut(&e) {
+                                None => {
+                                    edge_risk_map.insert(e.clone(), risk.clone());
+                                }
+                                Some(risks) => risks.append(&mut risk.clone()),
+                            }
+                        });
+                    } else {
+                        let froms: Vec<String> = graph
+                            .previous_releases(to)
+                            .map(|(_, _, release)| release.version().to_string())
+                            .collect();
+                        debug!(
+                            "adding conditional edge by regex for '{}': {:?}",
+                            to_version, froms
+                        );
+                        froms
+                            .iter()
+                            .for_each(|from| match from_regex.is_match(from) {
+                                true => {
+                                    debug!(
+                                        "Regex '{}' matches version '{}'",
+                                        &from_regex,
+                                        from.to_string(),
+                                    );
+                                    let e = ConditionalUpdateEdge {
+                                        from: from.to_string(),
+                                        to: to_version.clone(),
+                                    };
+                                    match edge_risk_map.get_mut(&e) {
+                                        None => {
+                                            edge_risk_map.insert(e.clone(), risk.clone());
+                                        }
+                                        Some(risks) => risks.append(&mut risk.clone()),
+                                    }
+                                }
+                                _ => {}
+                            });
+                    }
+                    Ok(())
+                })?;
+                Ok(())
+            })?;
+
+        let mut risk_edge_map: HashMap<Vec<ConditionalUpdateRisk>, Vec<ConditionalUpdateEdge>> =
+            HashMap::new();
+
+        edge_risk_map.iter().for_each(
+            |(edge, risks): (&ConditionalUpdateEdge, &Vec<ConditionalUpdateRisk>)| {
+                match risk_edge_map.get_mut(risks) {
+                    None => {
+                        risk_edge_map.insert(risks.clone(), vec![edge.clone()]);
+                    }
+                    Some(edges) => edges.push(edge.clone()),
+                }
+            },
+        );
+
+        let mut conditional_edges: Vec<ConditionalEdge> = vec![];
+        risk_edge_map.iter().for_each(
+            |(risks, edges): (&Vec<ConditionalUpdateRisk>, &Vec<ConditionalUpdateEdge>)| {
+                let conditional_edge = ConditionalEdge {
+                    edge_regex: Default::default(),
+                    edges: edges.clone(),
+                    risks: risks.clone(),
+                };
+                conditional_edges.push(conditional_edge);
+            },
+        );
+        graph.conditional_edges = Some(conditional_edges);
         Ok(())
     }
 }

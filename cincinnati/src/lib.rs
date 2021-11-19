@@ -261,6 +261,16 @@ impl Graph {
             .map(|nr| ReleaseId(nr.id()))
     }
 
+    /// Returns tuples of ReleaseId and its version String for releases for which
+    /// version_regex match returns true.
+    pub fn find_by_version_vec(&self, version: &str) -> Vec<(ReleaseId, String)> {
+        self.dag
+            .node_references()
+            .filter(|nr| nr.weight().version().to_string().contains(version))
+            .map(|nr| (ReleaseId(nr.id()), nr.weight().version().to_string()))
+            .collect()
+    }
+
     /// Returns a Release for the given &ReleaseId
     pub fn find_by_releaseid(&self, id: &ReleaseId) -> Fallible<&Release> {
         self.dag
