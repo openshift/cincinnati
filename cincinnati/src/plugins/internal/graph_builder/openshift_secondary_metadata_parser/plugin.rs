@@ -455,13 +455,38 @@ impl OpenshiftSecondaryMetadataParserPlugin {
                                 &to.to_string()
                             )) {
                                 Ok(metadata) => {
-                                    metadata.insert(
-                                        format!(
-                                            "{}.{}",
-                                            self.settings.key_prefix, "previous.remove_regex"
-                                        ),
-                                        blocked_edge.from.to_string(),
-                                    );
+                                    match metadata.get(&format!(
+                                        "{}.{}",
+                                        self.settings.key_prefix, "previous.remove_regex"
+                                    )) {
+                                        None => {
+                                            metadata.insert(
+                                                format!(
+                                                    "{}.{}",
+                                                    self.settings.key_prefix,
+                                                    "previous.remove_regex"
+                                                ),
+                                                blocked_edge.from.to_string(),
+                                            );
+                                        }
+                                        Some(value) => {
+                                            if value == ".*" {
+                                                warn!(
+                                                    "not replacing `.*` with {}",
+                                                    blocked_edge.from.to_string()
+                                                );
+                                            } else {
+                                                metadata.insert(
+                                                    format!(
+                                                        "{}.{}",
+                                                        self.settings.key_prefix,
+                                                        "previous.remove_regex"
+                                                    ),
+                                                    blocked_edge.from.to_string(),
+                                                );
+                                            }
+                                        }
+                                    }
                                 }
                                 Err(e) => warn!("{}", e),
                             };
