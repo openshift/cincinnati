@@ -1,0 +1,3 @@
+to: 4.7.9
+from: 4\.6\..*
+# Authentication operator's endpoints controller fails to close connections, causing intermittent apiserver and authentication cluster operator instability and high memory usage by the router.  A regression since 4.6, eventually fixed in 4.7.11 https://bugzilla.redhat.com/show_bug.cgi?id=1941840

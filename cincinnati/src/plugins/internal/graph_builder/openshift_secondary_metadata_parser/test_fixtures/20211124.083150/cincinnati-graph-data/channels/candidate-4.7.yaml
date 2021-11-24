@@ -1,0 +1,204 @@
+name: candidate-4.7
+tombstones:
+# Did not fix 4.6.9 OVS regression https://bugzilla.redhat.com/show_bug.cgi?id=1914284
+- 4.6.10
+# 4.6.24 introduced a regression in registry ca-trust handling: https://bugzilla.redhat.com/show_bug.cgi?id=1949040#c4
+- 4.6.24
+# Shares an errata with a later release
+- 4.6.33
+# 4.6.37 regressed on proxy handling https://bugzilla.redhat.com/show_bug.cgi?id=1978041
+- 4.6.37
+# 4.7.10 installer segfaults on install-config serviceEndpoints https://bugzilla.redhat.com/show_bug.cgi?id=1958420
+- 4.7.10
+# 4.7.14 moved monitoring to hard-anti-affinity, and that can conflict with volume affinity https://bugzilla.redhat.com/show_bug.cgi?id=1967614
+- 4.7.14
+# 4.7.15 OVN EgressFirewall doesn't work well as expected https://bugzilla.redhat.com/show_bug.cgi?id=1970322
+- 4.7.15
+# 4.7.17 MCO does not cordone nodes on upgrade https://bugzilla.redhat.com/show_bug.cgi?id=1973006
+- 4.7.17
+# 4.7.20 unspecified behavior change
+- 4.7.20
+# 4.7.25 has a CRI-O path issue for born-before-4.6 clusters: https://bugzilla.redhat.com/show_bug.cgi?id=1995785
+- 4.7.25
+# 4.7.26 has a networking issue with vSphere clusters running HW14 and later. SDN Packet loss resulting in service unavailability.  https://bugzilla.redhat.com/show_bug.cgi?id=1987108
+- 4.7.26
+# 4.7.35 lacks metadata errata URIs for s390x and ppc64le
+- 4.7.35
+versions:
+- 4.6.50
+
+- 4.6.49
+
+- 4.6.48
+
+- 4.6.47
+
+- 4.6.46
+
+- 4.6.45
+
+- 4.6.44
+
+- 4.6.43
+
+- 4.6.42
+
+- 4.6.41
+
+- 4.6.40
+
+- 4.6.39
+
+- 4.6.38
+
+- 4.6.37
+
+- 4.6.36
+
+- 4.6.35
+
+- 4.6.34
+
+- 4.6.33
+
+- 4.6.32
+
+- 4.6.31
+
+- 4.6.30
+
+- 4.6.29
+
+- 4.6.28
+
+- 4.6.27
+
+- 4.6.26
+
+- 4.6.25
+
+- 4.6.24
+
+- 4.6.23
+
+- 4.6.22
+
+- 4.6.21
+
+- 4.6.20
+
+- 4.6.19
+
+- 4.6.18
+
+- 4.6.17
+
+- 4.6.16
+
+- 4.6.15
+
+- 4.6.13
+
+- 4.6.12
+
+- 4.6.10
+
+- 4.6.9
+- 4.6.8
+- 4.6.6
+- 4.6.4
+- 4.6.3
+- 4.6.1
+- 4.7.0-fc.0
+
+- 4.7.0-fc.1
+
+- 4.7.0-fc.2
+
+- 4.7.0-fc.3
+
+- 4.7.0-fc.4
+
+- 4.7.0-fc.5
+
+- 4.7.0-rc.1
+
+- 4.7.0-rc.2
+
+- 4.7.0-rc.3
+
+- 4.7.0
+
+- 4.7.1
+
+- 4.7.2
+
+- 4.7.3
+
+- 4.7.4
+
+- 4.7.5
+
+- 4.7.6
+
+- 4.7.7
+
+- 4.7.8
+
+- 4.7.9
+
+- 4.7.10
+
+- 4.7.11
+
+- 4.7.12
+
+- 4.7.13
+
+- 4.7.14
+
+- 4.7.15
+
+- 4.7.16
+
+- 4.7.17
+
+- 4.7.18
+
+- 4.7.19
+
+- 4.7.20
+
+- 4.7.21
+
+- 4.7.22
+
+- 4.7.23
+
+- 4.7.24
+
+- 4.7.25
+
+- 4.7.26
+
+- 4.7.28
+
+- 4.7.29
+
+- 4.7.30
+
+- 4.7.31
+
+- 4.7.32
+
+- 4.7.33
+
+- 4.7.34
+
+- 4.7.35
+
+- 4.7.36
+
+- 4.7.37
+
+- 4.7.38

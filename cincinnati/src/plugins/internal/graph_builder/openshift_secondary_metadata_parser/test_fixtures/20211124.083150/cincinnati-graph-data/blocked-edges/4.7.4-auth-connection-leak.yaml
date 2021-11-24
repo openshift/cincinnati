@@ -1,0 +1,9 @@
+to: 4.7.4
+from: 4\.6\..*
+url: https://bugzilla.redhat.com/show_bug.cgi?id=1941840#c33
+name: AuthOAuthProxyLeakedConnections
+message: On clusters with a Proxy configured, the authentication operator may keep many oauth-server connections open, resulting in high memory consumption by the authentication operator and router pods.
+matchingRules:
+- type: PromQL
+  promql:
+    promql: max(cluster_proxy_enabled{type=~"https?"})

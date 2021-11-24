@@ -1,0 +1,4 @@
+to: 4.6.1
+from: 4\.5\..*
+# Need 4.5.16+ to upgrade to 4.6 for Create a drop-in file for cri-o’s default_capabilities https://bugzilla.redhat.com/show_bug.cgi?id=1856529
+# cluster-authentication-operator false positive halts upgrades without nodes labeled workers https://bugzilla.redhat.com/show_bug.cgi?id=1893803

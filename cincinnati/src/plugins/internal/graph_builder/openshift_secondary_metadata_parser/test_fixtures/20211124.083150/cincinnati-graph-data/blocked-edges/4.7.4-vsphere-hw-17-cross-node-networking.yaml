@@ -1,0 +1,12 @@
+to: 4.7.4
+from: 4\.6\..*
+url: https://access.redhat.com/solutions/5896081
+name: VSphereHW14CrossNodeNetworkingError
+message: Clusters on vSphere Virtual Hardware Version 14 and later may experience cross-node networking issues.
+matchingRules:
+- type: PromQL
+  promql:
+    promql: |
+      cluster_infrastructure_provider{type=~"VSphere|None"}
+      or
+      0 * cluster_infrastructure_provider

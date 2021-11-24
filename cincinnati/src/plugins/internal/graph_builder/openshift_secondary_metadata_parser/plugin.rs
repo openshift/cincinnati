@@ -679,6 +679,7 @@ mod tests {
 
     #[test_case("20200220.104838")]
     #[test_case("20200319.204124")]
+    #[test_case("20211124.083150")]
     fn compare_quay_result_fixture(fixture: &str) {
         let runtime = commons::testing::init_runtime().unwrap();
 

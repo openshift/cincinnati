@@ -1,0 +1,7 @@
+to: 4.3.0
+from: .*
+# 4.2 -> 4.3 updates occasionally hit PodIP vs. PodIPs, https://bugzilla.redhat.com/show_bug.cgi?id=1816302
+# 4.2 -> 4.3 updates hit TargetDown for cluster-autoscaler-operator, fixed in 4.3.5, https://bugzilla.redhat.com/show_bug.cgi?id=1801300
+# 4.2 -> 4.3 updates occasionally hit RequiredPoolsFailed, fixed in 4.2.18 and rc.0, but not in 4.2.16: https://bugzilla.redhat.com/show_bug.cgi?id=1782152 https://bugzilla.redhat.com/show_bug.cgi?id=1782149
+# 4.2 -> 4.3 updates on GCP occasionally have unreachable workloads: https://bugzilla.redhat.com/show_bug.cgi?id=1793635
+# 4.3 -> 4.3 updates on GCP occasionally have kube-apiserver-operator panics, fixed in 4.3.5, https://bugzilla.redhat.com/show_bug.cgi?id=1809296

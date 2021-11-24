@@ -1,0 +1,12 @@
+to: 4.7.4
+from: .*
+url: https://bugzilla.redhat.com/show_bug.cgi?id=1942207#c3
+name: VSphereNodeNameChanges
+message: vSphere clusters leveraging the vSphere cloud provider may lose node names which can have serious impacts on the stability of the control plane and workloads.
+matchingRules:
+- type: PromQL
+  promql:
+    promql: |
+      cluster_infrastructure_provider{type=~"VSphere|None"}
+      or
+      0 * cluster_infrastructure_provider

@@ -1,0 +1,5 @@
+to: 4.7.20
+from: .*
+# unspecified behavior change
+# Release was tombstoned in candidate-* channels, but accidentally promoted to fast-4.8 channel
+

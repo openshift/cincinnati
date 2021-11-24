@@ -1,0 +1,164 @@
+name: candidate-4.8
+tombstones:
+# 4.7.10 installer segfaults on install-config serviceEndpoints https://bugzilla.redhat.com/show_bug.cgi?id=1958420
+- 4.7.10
+# 4.7.14 moved monitoring to hard-anti-affinity, and that can conflict with volume affinity https://bugzilla.redhat.com/show_bug.cgi?id=1967614
+- 4.7.14
+# 4.7.15 OVN EgressFirewall doesn't work well as expected https://bugzilla.redhat.com/show_bug.cgi?id=1970322
+- 4.7.15
+# 4.7.17 MCO does not cordone nodes on upgrade https://bugzilla.redhat.com/show_bug.cgi?id=1973006
+- 4.7.17
+# 4.7.20 unspecified behavior change
+- 4.7.20
+# 4.7.25 has a CRI-O path issue for born-before-4.6 clusters: https://bugzilla.redhat.com/show_bug.cgi?id=1995785
+- 4.7.25
+# 4.7.26 has a networking issue with vSphere clusters running HW14 and later. SDN Packet loss resulting in service unavailability.  https://bugzilla.redhat.com/show_bug.cgi?id=1987108
+- 4.7.26
+# 4.7.35 lacks metadata errata URIs for s390x and ppc64le
+- 4.7.35
+# 4.8.0 unspecified behavior change
+- 4.8.0
+# 4.8.1 s390x missed a kernel bump that went into the other platforms; rerolling as 4.8.2
+- 4.8.1
+# 4.8.6 has a CRI-O path issue for born-before-4.6 clusters: https://bugzilla.redhat.com/show_bug.cgi?id=1995785
+- 4.8.6
+# 4.8.7 has a networking issue with vSphere clusters running HW14 and later. SDN Packet loss resulting in service unavailability.  https://bugzilla.redhat.com/show_bug.cgi?id=1987108
+- 4.8.7
+# 4.8.16's amd64 build only has baked-in update edges from 4.7.35
+- 4.8.16
+versions:
+- 4.7.38
+
+- 4.7.37
+
+- 4.7.36
+
+- 4.7.35
+
+- 4.7.34
+
+- 4.7.33
+
+- 4.7.32
+
+- 4.7.31
+
+- 4.7.30
+
+- 4.7.29
+
+- 4.7.28
+
+- 4.7.26
+
+- 4.7.25
+
+- 4.7.24
+
+- 4.7.23
+
+- 4.7.22
+
+- 4.7.21
+
+- 4.7.20
+
+- 4.7.19
+
+- 4.7.18
+
+- 4.7.17
+
+- 4.7.16
+
+- 4.7.15
+
+- 4.7.14
+
+- 4.7.13
+
+- 4.7.12
+
+- 4.7.11
+
+- 4.7.10
+
+- 4.7.9
+
+- 4.7.8
+
+- 4.7.7
+- 4.7.6
+- 4.7.5
+- 4.7.4
+- 4.7.3
+- 4.7.2
+- 4.7.1
+- 4.7.0
+- 4.8.0-fc.0
+
+- 4.8.0-fc.1
+
+- 4.8.0-fc.2
+
+- 4.8.0-fc.3
+
+- 4.8.0-fc.5
+
+- 4.8.0-fc.7
+
+- 4.8.0-fc.8
+
+- 4.8.0-fc.9
+
+- 4.8.0-rc.0
+
+- 4.8.0-rc.1
+
+- 4.8.0-rc.2
+
+- 4.8.0-rc.3
+
+- 4.8.0
+
+- 4.8.1
+
+- 4.8.2
+
+- 4.8.3
+
+- 4.8.4
+
+- 4.8.5
+
+- 4.8.6
+
+- 4.8.7
+
+- 4.8.9
+
+- 4.8.10
+
+- 4.8.11
+
+- 4.8.12
+
+- 4.8.13
+
+- 4.8.14
+
+- 4.8.15
+
+- 4.8.16
+
+- 4.8.17
+
+- 4.8.18
+
+- 4.8.19
+
+- 4.8.20
+
+- 4.8.21
+
+- 4.8.22

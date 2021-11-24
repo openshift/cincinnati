@@ -1,0 +1,4 @@
+to: 4.7.14
+from: .*
+# moved monitoring to hard-anti-affinity, and that can conflict with volume affinity https://bugzilla.redhat.com/show_bug.cgi?id=1967614
+# Release was tombstoned in candidate-* channels, but accidentally promoted to fast-4.8 channel
