@@ -5,6 +5,6 @@ metadata:
   name: e2e
   namespace: openshift-update-service
 spec:
-  graphDataImage: 'registry.ci.openshift.org/ocp/4.10:cincinnati-graph-data-container'
+  graphDataImage: 'registry.ci.openshift.org/cincinnati-ci-public/cincinnati-graph-data:stable'
   releases: quay.io/openshift-release-dev/ocp-release
   replicas: 2
