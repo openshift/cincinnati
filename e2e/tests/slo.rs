@@ -45,9 +45,6 @@ fn check_slo_exact(query: &'static str) -> String {
     get_query_result_string(query).sample().to_string()
 }
 
-// Service reports at all times
-#[test_case(r#"min_over_time(up{job="cincinnati-policy-engine"}[1h])"# => 1)]
-#[test_case(r#"min_over_time(up{job="cincinnati-graph-builder"}[1h])"# => 1)]
 // No scrape errors
 #[test_case("cincinnati_gb_graph_upstream_errors_total" => is less_than(1))]
 // No upstream errors

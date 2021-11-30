@@ -18,7 +18,7 @@ objects:
           - ${NAMESPACE}
       selector:
         matchLabels:
-          app: cincinnati-graph-builder
+          app: e2e-graph-builder
   - apiVersion: monitoring.coreos.com/v1
     kind: ServiceMonitor
     metadata:
@@ -33,7 +33,7 @@ objects:
           - ${NAMESPACE}
       selector:
         matchLabels:
-          app: cincinnati-policy-engine
+          app: e2e-policy-engine
   - apiVersion: monitoring.coreos.com/v1
     kind: PrometheusRule
     metadata:
@@ -45,7 +45,7 @@ objects:
           rules:
             # graph builder is up
             - record: component:slo_availability:5s
-              expr: sum(up{namespace="${NAMESPACE}",job="cincinnati-graph-builder"})
+              expr: sum(up{namespace="${NAMESPACE}",job="e2e-graph-builder"})
               labels:
                 component: graphbuilder
                 service: cincinnati
@@ -80,7 +80,7 @@ objects:
           rules:
             # policy engine is up
             - record: component:slo_availability:5s
-              expr: sum(up{job="cincinnati-policy-engine"})
+              expr: sum(up{namespace="${NAMESPACE}",job="e2e-policy-engine"})
               labels:
                 component: policyengine
                 service: cincinnati
@@ -139,7 +139,7 @@ objects:
               expr: |
                 increase(
                   kube_pod_container_status_restarts_total{
-                    namespace="${NAMESPACE}",container="cincinnati-policy-engine"}[5m]
+                    namespace="${NAMESPACE}",container="policy-engine"}[5m]
                 ) > 1
               for: 5m
               labels:
@@ -150,4 +150,4 @@ objects:
 
 parameters:
   - name: NAMESPACE
-    value: "cincinnati-e2e"
+    value: "openshift-update-service"

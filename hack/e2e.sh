@@ -51,8 +51,8 @@ cp -Lrvf $KUBECONFIG /tmp/kubeconfig
 export KUBECONFIG=/tmp/kubeconfig
 
 # Create a new project
-backoff oc new-project cincinnati-e2e
-backoff oc project cincinnati-e2e
+backoff oc create namespace openshift-update-service
+backoff oc project openshift-update-service
 
 # Create a dummy secret as a workaround to not having real secrets in e2e
 backoff oc create secret generic cincinnati-credentials --from-literal="foo=bar"
@@ -80,7 +80,7 @@ backoff oc -n openshift-user-workload-monitoring wait --for=condition=Ready pod 
 # ServiceMonitors are imported before app deployment to give Prometheus time to catch up with
 # metrics
 # `oc new-app` would stumble on unknown monitoring.coreos.com/v1 objects, so process and create instead
-backoff oc process -f dist/openshift/observability.yaml -p NAMESPACE="cincinnati-e2e" | oc apply -f -
+backoff oc process -f dist/openshift/observability.yaml -p NAMESPACE="openshift-update-service" | oc apply -f -
 
 # Export the e2e test environment variables
 E2E_TESTDATA_DIR="${E2E_TESTDATA_DIR:-e2e/tests/testdata}"
@@ -88,67 +88,39 @@ export E2E_TESTDATA_DIR
 read -r E2E_METADATA_REVISION <"${E2E_TESTDATA_DIR}"/metadata_revision
 export E2E_METADATA_REVISION
 
-# Apply oc template
-backoff oc new-app -f dist/openshift/cincinnati.yaml \
-  -p IMAGE="${IMAGE}" \
-  -p IMAGE_TAG="${IMAGE_TAG}" \
-  -p GB_CPU_REQUEST=50m \
-  -p PE_CPU_REQUEST=50m \
-  -p RUST_BACKTRACE="1" \
-  -p GB_PLUGIN_SETTINGS="$(cat <<-EOF
-      [[plugin_settings]]
-      name = "release-scrape-dockerv2"
-      registry = "${E2E_SCRAPE_REGISTRY:-quay.io}"
-      repository = "${E2E_SCRAPE_REPOSITORY:-openshift-release-dev/ocp-release}"
-      fetch_concurrency = 16
+# Install operator group
+# Install OSUS operator
+backoff oc apply -f dist/openshift/operator-group.yaml
 
-      [[plugin_settings]]
-      name = "github-secondary-metadata-scrape"
-      github_org = "openshift"
-      github_repo = "cincinnati-graph-data"
-      reference_revision = "${E2E_METADATA_REVISION}"
-      output_directory = "/tmp/cincinnati-graph-data"
+# Install OSUS operator
+backoff oc apply -f dist/openshift/subscription.yaml
 
-      [[plugin_settings]]
-      name = "openshift-secondary-metadata-parse"
+# Set custom image
+backoff oc patch subscription cincinnati-operator -n openshift-update-service --type=merge \
+  --patch="{\"spec\": {\"config\": {\"env\": [{\"name\": \"RELATED_IMAGE_OPERAND\", \"value\": \"${CINCINNATI_IMAGE}\"}] }}}"
+# Run operand
+backoff oc apply -f dist/openshift/operand.yaml
 
-      [[plugin_settings]]
-      name = "edge-add-remove"
-EOF
-)" \
-  -p ENVIRONMENT_SECRETS="{}" \
-  -p REPLICAS="2" \
-  ;
-
-# Wait for dc to rollout
-oc wait --for=condition=available --timeout=20m deploymentconfig/cincinnati || {
+backoff oc -n openshift-update-service wait --for=condition=Ready pod -l app=e2e || {
     status=$?
     set +e -x
 
     # Print various information about the deployment
+    oc describe operators/cincinnati-operator.openshift-update-service -n openshift-update-service
     oc get events
-    oc describe deploymentconfig/cincinnati
-    oc get configmap/cincinnati-configs -o yaml
-    oc describe pods --selector='app=cincinnati'
-    oc logs --all-containers=true --timestamps=true --selector='app=cincinnati'
+    oc describe deployment/e2e
+    oc describe pods --selector='app=e2e'
+    oc logs --all-containers=true --timestamps=true --selector='app=e2e'
 
     exit $status
 }
 
 # Expose services
-backoff oc expose service cincinnati-policy-engine --port=policy-engine
-PE_URL=$(oc get route cincinnati-policy-engine -o jsonpath='{.spec.host}')
-export GRAPH_URL="http://${PE_URL}/api/upgrades_info/graph"
+PE_URL=$(oc get route e2e-policy-engine-route -o jsonpath='{.spec.host}')
+export GRAPH_URL="https://${PE_URL}/api/upgrades_info/graph"
 
 # Wait for route to become available
-DELAY=10
-for i in $(seq 1 10); do
-  CODE=$(curl -s -o /dev/null -w "%{http_code}" --header 'Accept:application/json' "${GRAPH_URL}?channel=a")
-  if [ "${CODE}" == "200" ]; then
-    break
-  fi
-  sleep ${DELAY}
-done
+backoff test "$(curl -ks -o /dev/null -w "%{http_code}" --header 'Accept:application/json' "${GRAPH_URL}?channel=a")" = "200"
 
 # Wait for cincinnati metrics to be recorded
 # Find out the token Prometheus uses from its serviceaccount secrets
