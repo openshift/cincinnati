@@ -23,7 +23,7 @@ echo "IMAGE=${IMAGE}"
 echo "IMAGE_TAG=${IMAGE_TAG}"
 
 function backoff() {
-    local max_attempts=10
+    local max_attempts=60
     local attempt=0
     local failed=0
     while true; do
@@ -35,8 +35,8 @@ function backoff() {
         if [[ $attempt -gt $max_attempts ]]; then
             break
         fi
-        echo "command failed, retrying in $(( 2 ** attempt )) seconds"
-        sleep $(( 2 ** attempt ))
+        echo "command failed, retrying in 10 seconds"
+        sleep 10
     done
     return $failed
 }
@@ -88,18 +88,13 @@ export E2E_TESTDATA_DIR
 read -r E2E_METADATA_REVISION <"${E2E_TESTDATA_DIR}"/metadata_revision
 export E2E_METADATA_REVISION
 
-# Install operator group
-# Install OSUS operator
-backoff oc apply -f dist/openshift/operator-group.yaml
-
-# Install OSUS operator
-backoff oc apply -f dist/openshift/subscription.yaml
-
-# Set custom image
-backoff oc patch subscription cincinnati-operator -n openshift-update-service --type=merge \
-  --patch="{\"spec\": {\"config\": {\"env\": [{\"name\": \"RELATED_IMAGE_OPERAND\", \"value\": \"${CINCINNATI_IMAGE}\"}] }}}"
-# Run operand
-backoff oc apply -f dist/openshift/operand.yaml
+# Render the template and apply subscription/operand
+oc process -f dist/openshift/cincinnati.yaml \
+  -p IMAGE="${IMAGE}" \
+  -p IMAGE_TAG="${IMAGE_TAG}" \
+  -p REPLICAS=2 \
+  > /tmp/manifests.yaml
+backoff oc apply -f /tmp/manifests.yaml
 
 backoff oc -n openshift-update-service wait --for=condition=Ready pod -l app=e2e || {
     status=$?
