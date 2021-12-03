@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: Template
+metadata:
+  name: cincinnati
+objects:
+  - apiVersion: operators.coreos.com/v1
+    kind: OperatorGroup
+    metadata:
+      name: openshift-update-service
+      annotations:
+        olm.providedAPIs: ''
+    spec: {}
+  - apiVersion: operators.coreos.com/v1alpha1
+    kind: Subscription
+    metadata:
+      labels:
+        operators.coreos.com/cincinnati-operator.openshift-update-service: ''
+      name: cincinnati-operator
+    spec:
+      channel: v1
+      installPlanApproval: Automatic
+      name: cincinnati-operator
+      source: redhat-operators
+      sourceNamespace: openshift-marketplace
+      config:
+        env:
+          - name: RELATED_IMAGE_OPERAND
+            value: "${IMAGE}:${IMAGE_TAG}"
+  - apiVersion: updateservice.operator.openshift.io/v1
+    kind: UpdateService
+    metadata:
+      name: e2e
+    spec:
+      graphDataImage: ${GRAPHDATA_IMAGE}
+      releases: quay.io/openshift-release-dev/ocp-release
+      replicas: ${{REPLICAS}}
+parameters:
+  - name: IMAGE
+    value: "quay.io/app-sre/cincinnati"
+    displayName: cincinnati image
+    description: cincinnati docker image. Defaults to quay.io/app-sre/cincinnati
+  - name: IMAGE_TAG
+    value: "latest"
+    displayName: cincinnati version
+    description: cincinnati version which defaults to latest
+  - name: GRAPHDATA_IMAGE
+    value: "registry.ci.openshift.org/cincinnati-ci-public/cincinnati-graph-data:stable"
+    description: cincinnati-graph-data image pullspec
+  - name: REPLICAS
+    value: "2"
+  - name: GB_LOG_VERBOSITY
+    value: "vvv"
+    displayName: Graph builder log verbosity. Deprecated
+  - name: PE_LOG_VERBOSITY
+    value: "vv"
+    displayName: Policy engine log verbosity. Deprecated
+  - name: PE_MEMORY_LIMIT
+    value: "1G"
+    displayName: Policy engine memory limit. Deprecated

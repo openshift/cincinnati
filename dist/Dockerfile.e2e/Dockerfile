@@ -51,6 +51,7 @@ COPY --from=rust_builder /opt/cincinnati/bin/prometheus_query /usr/bin/cincinnat
 COPY --from=rust_builder /opt/cincinnati/bin/slo /usr/bin/cincinnati-e2e-slo
 COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/hack/e2e.sh hack/
 COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/dist/openshift/cincinnati.yaml dist/openshift/
+COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/dist/openshift/cincinnati-e2e.yaml dist/openshift/
 COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/dist/openshift/observability.yaml dist/openshift/
 COPY --from=golang_builder /usr/local/bin/vegeta /usr/bin
 COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/hack/load-testing.sh /usr/local/bin/load-testing.sh
