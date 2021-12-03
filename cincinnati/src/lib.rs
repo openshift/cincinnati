@@ -77,10 +77,10 @@ impl Release {
     pub fn manifestref(&self) -> Result<&String, Error> {
         let digestkey = String::from("io.openshift.upgrades.graph.release.manifestref");
         match self {
-            Release::Concrete(release) => {
-                let digest = release.metadata.get(&digestkey);
-                Ok(digest.map(|d| d).unwrap())
-            }
+            Release::Concrete(release) => match release.metadata.get(&digestkey) {
+                Some(d) => Ok(d),
+                None => bail!("could not get manifest reference"),
+            },
             _ => bail!("could not get manifest reference"),
         }
     }
@@ -194,18 +194,21 @@ impl Graph {
     where
         R: Into<Release>,
     {
+        let missing_manifest_ref = String::from("none");
         let release = release.into();
         match self.find_by_version(&release.version()) {
             Some(id) => {
                 let node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
                 if let Release::Concrete(_) = node {
                     // check if release digest and node digest are same
-                    if release.manifestref().unwrap() != node.manifestref().unwrap() {
+                    if release.manifestref().unwrap_or(&missing_manifest_ref)
+                        != node.manifestref().unwrap_or(&missing_manifest_ref)
+                    {
                         bail!(
                             "mismatched manifest ref for concrete release {}: {}, {}",
                             release.version(),
-                            release.manifestref().unwrap(),
-                            node.manifestref().unwrap()
+                            release.manifestref().unwrap_or(&missing_manifest_ref),
+                            node.manifestref().unwrap_or(&missing_manifest_ref)
                         )
                     }
                 }
