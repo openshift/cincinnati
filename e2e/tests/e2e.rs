@@ -12,14 +12,20 @@ lazy_static::lazy_static! {
     static ref ORIGIN_HEADER_VALUE: HeaderValue = HeaderValue::from_str("example.com").unwrap();
 }
 
-#[test_case("stable-4.2", "amd64")]
-#[test_case("stable-4.2", "s390x")]
-#[test_case("stable-4.3", "amd64")]
-#[test_case("stable-4.3", "s390x")]
-fn e2e_channel_success(channel: &'static str, arch: &'static str) {
+#[test_case("stable-4.2", "amd64", "application/json")]
+#[test_case("stable-4.2", "amd64", "*/*")]
+#[test_case("stable-4.2", "s390x", "application/json")]
+#[test_case("stable-4.2", "s390x", "application/*")]
+#[test_case("stable-4.3", "amd64", "application/json")]
+#[test_case("stable-4.3", "amd64", "application/vnd.redhat.cincinnati.v1+json")]
+#[test_case("stable-4.3", "s390x", "application/json")]
+fn e2e_channel_success(channel: &'static str, arch: &'static str, header: &'static str) {
+    let version = match header {
+        _ => "v1",
+    };
     let testdata_path = format!(
-        "{}/{}_{}_{}.json",
-        *TESTDATA_DIR, *METADATA_REVISION, channel, arch,
+        "{}/{}_{}_{}_{}.json",
+        *TESTDATA_DIR, *METADATA_REVISION, channel, arch, version
     );
     let testdata = &std::fs::read_to_string(&testdata_path)
         .context(format!("reading {}", &testdata_path))
@@ -29,7 +35,7 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str) {
     let expected: cincinnati::plugins::internal::versioned_graph::VersionedGraph =
         serde_json::from_str(testdata).unwrap();
 
-    let res = run_graph_query(channel, arch, &runtime);
+    let res = run_graph_query(channel, arch, header, &runtime);
 
     assert_eq!(res.status().is_success(), true, "{}", res.status());
     let text = runtime.block_on(res.text()).unwrap();
@@ -54,10 +60,10 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str) {
     }
 }
 
-#[test_case("stable-4.3", "amd64")]
-fn e2e_cors_headers(channel: &'static str, arch: &'static str) {
+#[test_case("stable-4.3", "amd64", "application/vnd.redhat.cincinnati.v1+json")]
+fn e2e_cors_headers(channel: &'static str, arch: &'static str, header: &'static str) {
     let runtime = commons::testing::init_runtime().unwrap();
-    let res = run_graph_query(channel, arch, &runtime);
+    let res = run_graph_query(channel, arch, header, &runtime);
     let origin_value = res.headers().get("access-control-allow-origin").unwrap();
     assert_eq!(
         origin_value
@@ -68,7 +74,12 @@ fn e2e_cors_headers(channel: &'static str, arch: &'static str) {
 }
 
 /// runs the graph query and returns the response
-fn run_graph_query(channel: &'static str, arch: &'static str, runtime: &Runtime) -> Response {
+fn run_graph_query(
+    channel: &'static str,
+    arch: &'static str,
+    header: &'static str,
+    runtime: &Runtime,
+) -> Response {
     let graph_base_url = match env::var("GRAPH_URL") {
         Ok(env) => env,
         _ => panic!("GRAPH_URL unset"),
@@ -89,7 +100,7 @@ fn run_graph_query(channel: &'static str, arch: &'static str, runtime: &Runtime)
                 .build()
                 .unwrap()
                 .get(&graph_url.to_string())
-                .header(ACCEPT, HeaderValue::from_static("application/json"))
+                .header(ACCEPT, HeaderValue::from_static(header))
                 .header(ORIGIN, ORIGIN_HEADER_VALUE.clone())
                 .send(),
         )
