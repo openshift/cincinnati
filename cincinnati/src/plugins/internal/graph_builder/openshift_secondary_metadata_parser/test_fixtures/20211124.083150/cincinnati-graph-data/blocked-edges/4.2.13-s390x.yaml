@@ -1,0 +1,4 @@
+to: 4.2.13-s390x
+from: .*
+# 4.2.13 cpuinfo panic in node-exporter on s390x, fixed in 4.2.16, https://bugzilla.redhat.com/show_bug.cgi?id=1789260
+# 4.1 -> 4.2 -> 4.3 updates hit TargetDown for ingress-operator, fixed in 4.2.21, https://bugzilla.redhat.com/show_bug.cgi?id=1801300

@@ -1,0 +1,45 @@
+name: stable-4.1
+feeder:
+  name: prerelease-4.1
+  errata: public
+  filter: 4\.[0-9]+\.[0-9]+(.*hotfix.*)?
+versions:
+- 4.1.0
+- 4.1.1
+- 4.1.2
+- 4.1.3
+- 4.1.4
+- 4.1.6
+- 4.1.7
+- 4.1.8
+- 4.1.9
+- 4.1.10
+- 4.1.11
+- 4.1.13
+- 4.1.14
+- 4.1.15
+- 4.1.16
+- 4.1.17
+- 4.1.18
+- 4.1.20
+- 4.1.21
+- 4.1.22
+- 4.1.23
+- 4.1.24
+- 4.1.25
+- 4.1.26
+- 4.1.27
+- 4.1.28
+- 4.1.29
+- 4.1.30
+- 4.1.31
+# no 4.1.32 because we didn't cut a release in the week after 4.1.31
+# no 4.1.33 because we didn't cut a release in the week after 4.1.32
+- 4.1.34
+# no 4.1.35 because we didn't cut a release in the week after 4.1.34
+# no 4.1.36 because we didn't cut a release in the week after 4.1.35
+# no 4.1.37 because of https://bugzilla.redhat.com/show_bug.cgi?id=1810393 (Jenkins webconsole 403 Forbidden)
+- 4.1.38
+# no 4.1.39 because we didn't cut a release in the week after 4.1.38
+# no 4.1.40 because we didn't cut a release in the week after 4.1.39
+- 4.1.41

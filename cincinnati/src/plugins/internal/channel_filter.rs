@@ -3,6 +3,7 @@
 //! and the value must match the regex specified at CHANNEL_VALIDATION_REGEX_STR
 
 use crate as cincinnati;
+use std::collections::HashSet;
 
 use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
@@ -41,6 +42,25 @@ impl ChannelFilterPlugin {
 
         Ok(Box::new(plugin))
     }
+
+    /// Takes a HashSet of release names and removes the corresponding conditional edges
+    /// containing the releases.  
+    pub fn remove_conditional_edges(
+        &self,
+        ce: &mut Vec<cincinnati::ConditionalEdge>,
+        releases: HashSet<String>,
+    ) -> Fallible<i32> {
+        let mut edges_removed: usize = 0;
+        ce.into_iter()
+            .for_each(|ce: &mut cincinnati::ConditionalEdge| {
+                let total_edges = ce.edges.len();
+                ce.edges
+                    .retain(|e| !releases.contains(&e.from) && !releases.contains(&e.to));
+                edges_removed += total_edges - ce.edges.len();
+            });
+        ce.retain(|ce| !ce.edges.is_empty());
+        Ok(edges_removed as i32)
+    }
 }
 
 /// Regex for channel label validation.
@@ -68,8 +88,9 @@ impl InternalPlugin for ChannelFilterPlugin {
         };
 
         let mut graph = internal_io.graph;
+        let mut releases_version: HashSet<String> = HashSet::new();
 
-        let to_remove = {
+        let to_remove: Vec<ReleaseId> = {
             graph
                 .find_by_fn_mut(|release| {
                     match release {
@@ -86,15 +107,24 @@ impl InternalPlugin for ChannelFilterPlugin {
                 .into_iter()
                 .map(|(release_id, version)| {
                     trace!("queuing '{}' for removal", version);
+                    releases_version.insert(version);
                     release_id
                 })
                 .collect()
         };
 
         // remove all matches from the Graph
-        let removed = graph.remove_releases(to_remove);
+        let removed = graph.remove_releases(to_remove.clone());
+        let removed_ce = self.remove_conditional_edges(
+            &mut graph.conditional_edges.as_mut().unwrap(),
+            releases_version,
+        )?;
 
-        trace!("removed {} releases", removed);
+        trace!(
+            "removed {} releases and {} conditional edges",
+            removed,
+            removed_ce
+        );
 
         Ok(InternalIO {
             graph,

@@ -17,7 +17,9 @@ extern crate serde_derive;
 
 #[macro_use]
 pub mod plugins;
+mod conditional_edges;
 
+use crate::conditional_edges::*;
 use commons::prelude_errors::*;
 use daggy::petgraph::visit::{IntoNodeReferences, NodeRef};
 use daggy::{Dag, EdgeIndex, Walker};
@@ -43,9 +45,10 @@ pub use std::collections::BTreeMap as MapImpl;
 pub use std::collections::BTreeSet as SetImpl;
 
 /// Graph type which stores `Release` as node-weights and `Empty` as edge-weights.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Graph {
     dag: Dag<Release, Empty>,
+    conditional_edges: Option<Vec<ConditionalEdge>>,
 }
 
 /// Wrapper enum for the concrete and abstract release types.
@@ -186,6 +189,15 @@ pub mod errors {
     pub struct NodeWeightMissing(pub(crate) usize);
 }
 
+impl Default for Graph {
+    fn default() -> Self {
+        Graph {
+            dag: Default::default(),
+            conditional_edges: Some(vec![]),
+        }
+    }
+}
+
 impl Graph {
     /// Add a release to the graph.
     ///
@@ -250,6 +262,16 @@ impl Graph {
             .node_references()
             .find(|nr| nr.weight().version() == version)
             .map(|nr| ReleaseId(nr.id()))
+    }
+
+    /// Returns tuples of ReleaseId and its version String for releases for which
+    /// version_regex match returns true.
+    pub fn find_by_version_vec(&self, version: &str) -> Vec<(ReleaseId, String)> {
+        self.dag
+            .node_references()
+            .filter(|nr| nr.weight().version().to_string().contains(version))
+            .map(|nr| (ReleaseId(nr.id()), nr.weight().version().to_string()))
+            .collect()
     }
 
     /// Returns a Release for the given &ReleaseId
@@ -524,6 +546,8 @@ impl<'a> Deserialize<'a> for Graph {
         enum Field {
             Edges,
             Nodes,
+            #[serde(rename = "conditionalEdges")]
+            ConditionalEdges,
         }
 
         struct GraphVisitor;
@@ -541,6 +565,7 @@ impl<'a> Deserialize<'a> for Graph {
             {
                 let mut edges: Option<Vec<(daggy::NodeIndex, daggy::NodeIndex)>> = None;
                 let mut nodes: Option<Vec<Release>> = None;
+                let mut conditional_edges: Option<Vec<ConditionalEdge>> = None;
                 while let Some(key) = map.next_key()? {
                     match key {
                         Field::Edges => {
@@ -555,12 +580,20 @@ impl<'a> Deserialize<'a> for Graph {
                             }
                             nodes = Some(map.next_value()?);
                         }
+                        Field::ConditionalEdges => {
+                            if conditional_edges.is_some() {
+                                return Err(de::Error::duplicate_field("conditionalEdges"));
+                            }
+                            conditional_edges = Some(map.next_value()?);
+                        }
                     }
                 }
                 let edges = edges.ok_or_else(|| de::Error::missing_field("edges"))?;
                 let nodes = nodes.ok_or_else(|| de::Error::missing_field("nodes"))?;
+                let conditional_edges: Vec<ConditionalEdge> = conditional_edges.unwrap_or(vec![]);
                 let mut graph = Graph {
                     dag: Dag::with_capacity(nodes.len(), edges.len()),
+                    conditional_edges: Some(Vec::with_capacity(conditional_edges.len())),
                 };
                 let mut versions = collections::HashSet::with_capacity(nodes.len());
                 for node in nodes {
@@ -586,11 +619,21 @@ impl<'a> Deserialize<'a> for Graph {
                     .map_err(|_| {
                         de::Error::invalid_value(serde::de::Unexpected::StructVariant, &self)
                     })?;
+
+                graph
+                    .conditional_edges
+                    .as_mut()
+                    .unwrap()
+                    .extend(conditional_edges);
                 Ok(graph)
             }
         }
 
-        deserializer.deserialize_struct("Graph", &["nodes", "edges"], GraphVisitor)
+        deserializer.deserialize_struct(
+            "Graph",
+            &["nodes", "edges", "conditional_edges"],
+            GraphVisitor,
+        )
     }
 }
 
@@ -623,6 +666,9 @@ impl Serialize for Graph {
         let mut state = serializer.serialize_struct("Graph", 2)?;
         state.serialize_field("nodes", &Nodes(&self.dag.raw_nodes()))?;
         state.serialize_field("edges", &Edges(&self.dag.raw_edges()))?;
+        if self.conditional_edges.is_some() {
+            state.serialize_field("conditionalEdges", &self.conditional_edges)?;
+        }
         state.end()
     }
 }
@@ -756,8 +802,12 @@ pub mod testing {
     use super::*;
     use crate::plugins::internal::versioned_graph::VersionedGraph;
 
-    pub fn generate_graph() -> Graph {
+    pub fn generate_graph(include_conditional_edge: bool) -> Graph {
         let mut graph = Graph::default();
+
+        if !include_conditional_edge {
+            graph.conditional_edges = None;
+        }
         let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
@@ -1093,7 +1143,7 @@ mod tests {
 
     #[test]
     fn serialize_graph() {
-        let graph = generate_graph();
+        let graph = generate_graph(false);
         assert_eq!(
             serde_json::to_string(&graph).unwrap(),
             r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#
@@ -1101,8 +1151,17 @@ mod tests {
     }
 
     #[test]
+    fn serialize_graph_with_conditional_edges() {
+        let graph = generate_graph(true);
+        assert_eq!(
+            serde_json::to_string(&graph).unwrap(),
+            r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]],"conditionalEdges":[]}"#
+        );
+    }
+
+    #[test]
     fn deserialize_graph() {
-        let json = r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#;
+        let json = r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]],"conditionalEdges":[]}"#;
 
         let de: Graph = serde_json::from_str(json).unwrap();
         assert_eq!(de.releases_count(), 3);
@@ -1150,7 +1209,7 @@ mod tests {
 
     #[test]
     fn test_graph_eq_true_for_equal_graphs() {
-        assert_eq!(generate_graph(), generate_graph())
+        assert_eq!(generate_graph(false), generate_graph(false))
     }
 
     #[test]
@@ -1238,10 +1297,10 @@ mod tests {
 
     #[test]
     fn roundtrip_conversion_from_graph_via_plugin_interface() {
-        let graph_plugin_interface: plugins::interface::Graph = generate_graph().into();
+        let graph_plugin_interface: plugins::interface::Graph = generate_graph(false).into();
         let graph_native_converted: Graph = graph_plugin_interface.into();
 
-        assert_eq!(generate_graph(), graph_native_converted);
+        assert_eq!(generate_graph(false), graph_native_converted);
     }
 
     fn get_test_metadata_fn_mut(key_prefix: &str, key_suffix: &str) -> TestMetadata {

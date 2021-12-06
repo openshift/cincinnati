@@ -1,0 +1,4 @@
+to: 4.7.10
+from: .*
+# installer segfaults on install-config serviceEndpoints https://bugzilla.redhat.com/show_bug.cgi?id=1958420
+# Release was tombstoned in candidate-* channel, but accidentally promoted to fast-4.8 channel

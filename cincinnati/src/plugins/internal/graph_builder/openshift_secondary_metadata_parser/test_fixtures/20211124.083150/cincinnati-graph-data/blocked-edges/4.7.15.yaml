@@ -1,0 +1,4 @@
+to: 4.7.15
+from: .*
+# OVN EgressFirewall doesn't work well as expected https://bugzilla.redhat.com/show_bug.cgi?id=1970322
+# Release was tombstoned in candidate-4.7 channel, but accidentally promoted to fast-4.8 channel

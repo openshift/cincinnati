@@ -1,0 +1,8 @@
+# Upgrading any release to 4.2.23 will enable automated service ca
+# rotation without unique ca serial numbers. This will result in
+# condition reported in the linked bz, and only be recoverable by
+# manual service ca rotation.
+#
+# Reference: https://bugzilla.redhat.com/show_bug.cgi?id=1810036 https://bugzilla.redhat.com/show_bug.cgi?id=1801573
+to: 4.2.23
+from: .*

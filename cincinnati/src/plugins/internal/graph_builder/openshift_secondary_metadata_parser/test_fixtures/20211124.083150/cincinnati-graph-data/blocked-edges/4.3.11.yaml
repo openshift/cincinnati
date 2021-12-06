@@ -1,0 +1,7 @@
+to: 4.3.11
+from: .*
+# 4.3.11 container images were built multi-arch, but we have not started releasing multi-arch images for 4.3.x yet.
+# Hence the images are rebuilt as 4.3.12. However 4.3.12 release image does not have metadata to update from 4.3.11.
+# 4.3.11 is only released in candidate-4.3 so we should stop edges to it as there are no outgoing edges available for now.
+# BugZilla: https://bugzilla.redhat.com/show_bug.cgi?id=1823378
+# 4.3.8 - 4.3.12 block updates on mutated SCCs at the intersection of https://bugzilla.redhat.com/show_bug.cgi?id=1821905 https://bugzilla.redhat.com/show_bug.cgi?id=1820231

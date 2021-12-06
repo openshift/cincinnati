@@ -1,0 +1,4 @@
+to: 4.5.1
+from: .*
+# RHCOS 4.5 image is unable to boot with SecureBoot enabled https://bugzilla.redhat.com/show_bug.cgi?id=1856501
+# Containers fails to launch when nodes hit this issue https://bugzilla.redhat.com/show_bug.cgi?id=1857224

@@ -51,6 +51,53 @@ impl ArchFilterPlugin {
 
         Ok(Box::new(plugin))
     }
+
+    /// Takes the arch identifier and removes all the conditional edges that does not contain
+    /// the provided arch identifier.
+    pub fn remove_conditional_edges(
+        &self,
+        ce: &mut Vec<cincinnati::ConditionalEdge>,
+        arch: String,
+    ) -> Fallible<i32> {
+        let mut edges_removed: usize = 0;
+        ce.into_iter()
+            .for_each(|ce: &mut cincinnati::ConditionalEdge| {
+                let total_edges = ce.edges.len();
+                ce.edges
+                    .retain(|e| e.from.contains(&arch) && e.to.contains(&arch));
+                edges_removed += total_edges - ce.edges.len();
+            });
+        ce.retain(|ce| !ce.edges.is_empty());
+        Ok(edges_removed as i32)
+    }
+
+    /// Remove the arch identifier from the conditional edges.
+    pub fn rm_conditional_edges_arch_identifier(
+        &self,
+        vce: &mut Vec<cincinnati::ConditionalEdge>,
+        arch: String,
+    ) -> Fallible<()> {
+        vce.into_iter()
+            .for_each(|ce: &mut cincinnati::ConditionalEdge| {
+                ce.mut_edges().into_iter().for_each(|e| {
+                    e.from = self.remove_arch_info(&e.from, arch.clone()).unwrap();
+                    e.to = self.remove_arch_info(&e.to, arch.clone()).unwrap();
+                });
+            });
+
+        Ok(())
+    }
+
+    /// gets the string and arch identifier and removes the arch identifier from the string
+    fn remove_arch_info(&self, v: &String, arch: String) -> Result<String, Error> {
+        semver::Version::parse(v)
+            .context(v.clone())
+            .map(|mut version| {
+                version.build.retain(|elem| elem.to_string() != arch);
+                trace!("CE: rewriting version {} -> {}", v, version);
+                version.to_string()
+            })
+    }
 }
 
 /// Evaluate an architecture from the given "arch" parameters.
@@ -123,8 +170,16 @@ impl InternalPlugin for ArchFilterPlugin {
 
         // remove all matches from the Graph
         let removed = graph.remove_releases(to_remove);
+        let removed_ce: i32 = self.remove_conditional_edges(
+            &mut graph.conditional_edges.as_mut().unwrap(),
+            arch.clone(),
+        )?;
 
-        trace!("removed {} releases", removed);
+        trace!(
+            "removed {} releases and {} conditional edges",
+            removed,
+            removed_ce
+        );
 
         // remove the build suffix from the version
         graph
@@ -149,7 +204,10 @@ impl InternalPlugin for ArchFilterPlugin {
                 Ok(())
             })
             .map_err(|e| GraphError::ArchVersionError(e.to_string()))?;
-
+        self.rm_conditional_edges_arch_identifier(
+            &mut graph.conditional_edges.as_mut().unwrap(),
+            arch.clone(),
+        )?;
         Ok(InternalIO {
             graph,
             parameters: internal_io.parameters,

@@ -1,0 +1,76 @@
+name: fast-4.2
+feeder:
+  name: candidate-4.2
+  errata: public
+  filter: 4\.[0-9]+\.[0-9]+(.*hotfix.*|\+amd64|-s390x)?
+tombstones:
+- 4.2.10-s390x
+versions:
+- 4.1.20
+- 4.1.21
+- 4.1.22
+- 4.1.23
+- 4.1.24
+- 4.1.25
+- 4.1.26
+- 4.1.27
+- 4.1.28
+- 4.1.29
+- 4.1.30
+- 4.1.31
+# no 4.1.32 because we didn't cut a release in the week after 4.1.31
+# no 4.1.33 because we didn't cut a release in the week after 4.1.32
+- 4.1.34
+# no 4.1.35 because we didn't cut a release in the week after 4.1.34
+# no 4.1.36 because we didn't cut a release in the week after 4.1.35
+# no 4.1.37 because of https://bugzilla.redhat.com/show_bug.cgi?id=1810393 (Jenkins webconsole 403 Forbidden)
+- 4.1.38
+# no 4.1.39 because we didn't cut a release in the week after 4.1.38
+# no 4.1.40 because we didn't cut a release in the week after 4.1.39
+- 4.1.41
+- 4.2.0
+- 4.2.1
+- 4.2.2
+# no 4.2.3 because it was rolled into 4.2.4
+- 4.2.4
+# no 4.2.5 because it was cut missing some intended update sources
+# no 4.2.6 because it pulled in CI-built images due to due to release job modification for multi-arch
+- 4.2.7
+- 4.2.8
+- 4.2.9
+- 4.2.10
+- 4.2.10-s390x
+# - 4.2.11 failed to run tests, we never officially released it, but we accidentally
+# put it in a channel! (same for s390x)   Now we shouldn't pull it, just in case
+# someone is on it
+- 4.2.11
+- 4.2.11-s390x
+- 4.2.12
+- 4.2.12-s390x
+- 4.2.13
+- 4.2.13-s390x
+- 4.2.14+amd64
+# not 4.2.14-s390x because of https://bugzilla.redhat.com/show_bug.cgi?id=1789260
+# not 4.2.15 because 4.2.16 was built with the same errata URI
+- 4.2.16
+# not 4.2.17 because we had a long quiet time after 4.2.16 with no releases
+- 4.2.18
+- 4.2.19
+- 4.2.20
+- 4.2.21
+- 4.2.22
+- 4.2.23
+# No 4.2.24 because of the service CA rotation issue: https://bugzilla.redhat.com/show_bug.cgi?id=1810036 https://bugzilla.redhat.com/show_bug.cgi?id=1801573
+- 4.2.25
+- 4.2.26
+- 4.2.27
+- 4.2.28
+- 4.2.29
+
+- 4.2.33
+
+- 4.2.34
+
+- 4.2.36
+
+- 4.2.0-0.hotfix-2020-09-19-234758

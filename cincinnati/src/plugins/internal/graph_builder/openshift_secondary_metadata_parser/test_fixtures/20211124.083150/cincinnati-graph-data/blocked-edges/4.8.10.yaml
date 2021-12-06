@@ -1,0 +1,4 @@
+to: 4.8.10
+from: 4[.]7[.].*
+# Internal registry is rejecting the container creation due to sha256 layer mismatch when CephFS is used for the PV https://bugzilla.redhat.com/show_bug.cgi?id=1999591#c23
+# SDN egress IP instability https://bugzilla.redhat.com/show_bug.cgi?id=2008987#c51

@@ -1,0 +1,5 @@
+to: 4.6.4
+from: 4\.5\..*
+# We fixed 35 bugs in 4.6.6 and we're 48hrs after 4.6.6 went to stable channel so lets funnel everyone there
+# Specific fixes of note are:
+# Fixed 50% storage space increase regression in prometheus https://bugzilla.redhat.com/show_bug.cgi?id=1889711

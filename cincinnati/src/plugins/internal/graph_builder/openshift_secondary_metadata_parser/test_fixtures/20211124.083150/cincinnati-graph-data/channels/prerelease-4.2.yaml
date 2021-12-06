@@ -1,0 +1,5 @@
+name: prerelease-4.2
+versions:
+- 4.2.0-rc.0
+- 4.2.0-rc.1
+- 4.2.0-rc.5
