@@ -89,7 +89,7 @@ read -r E2E_METADATA_REVISION <"${E2E_TESTDATA_DIR}"/metadata_revision
 export E2E_METADATA_REVISION
 
 # Render the template and apply subscription/operand
-oc process -f dist/openshift/cincinnati.yaml \
+oc process -f dist/openshift/cincinnati-e2e.yaml \
   -p IMAGE="${IMAGE}" \
   -p IMAGE_TAG="${IMAGE_TAG}" \
   -p REPLICAS=2 \
