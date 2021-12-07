@@ -31,7 +31,7 @@ async-trait = "^0.1"
 tempfile = "^3.1.0"
 flate2 = "^1.0.22"
 tar = "^0.4.37"
-dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "854d0da53bef5dd85b5e901123e85d43af97c74e" }
+dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "0b1dbf63b2b74919d210819a490c18de3bd4e947" }
 itertools = "^0.10"
 serde_yaml = "^0.8.21"
 prettydiff = { version = "0.5", optional = true }
