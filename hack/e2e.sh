@@ -19,8 +19,13 @@ else
   IMAGE_TAG="deploy"
 fi
 
+if [[ ! -z "${GRAPHDATA_IMAGE}" ]]; then
+GRAPHDATA_IMAGE=$(echo "${GRAPHDATA_IMAGE}" | cut -d ':' -f2)
+fi
+
 echo "IMAGE=${IMAGE}"
 echo "IMAGE_TAG=${IMAGE_TAG}"
+echo "GRAPHDATA_IMAGE=${GRAPHDATA_IMAGE}"
 
 function backoff() {
     local max_attempts=60
@@ -92,6 +97,7 @@ export E2E_METADATA_REVISION
 oc process -f dist/openshift/cincinnati-e2e.yaml \
   -p IMAGE="${IMAGE}" \
   -p IMAGE_TAG="${IMAGE_TAG}" \
+  -p GRAPHDATA_IMAGE="${GRAPHDATA_IMAGE}" \
   -p REPLICAS=2 \
   > /tmp/manifests.yaml
 backoff oc apply -f /tmp/manifests.yaml
