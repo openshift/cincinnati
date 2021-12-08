@@ -34,6 +34,8 @@ use std::string::String;
 use std::sync::Arc;
 use tar::Archive;
 
+use dkregistry::mediatypes::MediaTypes::{ManifestV2S1Signed, ManifestV2S2};
+
 /// Module for the release cache
 pub mod cache {
     use super::cincinnati::plugins::internal::graph_builder::release::Metadata;
@@ -209,7 +211,11 @@ pub async fn new_registry_client(
     let client = {
         let client_builder = dkregistry::v2::Client::configure()
             .registry(&registry.host_port_string())
-            .insecure_registry(registry.insecure);
+            .insecure_registry(registry.insecure)
+            .accepted_types(Some(vec![
+                (ManifestV2S2, None),
+                (ManifestV2S1Signed, Some(0.8)),
+            ]));
         let scope = format!("repository:{}:pull", &repo);
 
         if username.is_some() && password.is_some() {
