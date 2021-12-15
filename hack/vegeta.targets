@@ -1,9 +1,22 @@
 # valid request
-GET GRAPH_URL?channel=stable-4.2&arch=amd64
+GET GRAPH_URL?channel=stable-4.7&arch=amd64
 Accept: application/json
 
-GET GRAPH_URL?channel=stable-4.3&arch=amd64
+GET GRAPH_URL?channel=stable-4.8&arch=amd64
 Accept: application/json
 
-GET GRAPH_URL?channel=fast-4.3&arch=amd64
+GET GRAPH_URL?channel=fast-4.9&arch=amd64
 Accept: application/json
+
+#invalid targets:
+#wrong channel
+GET GRAPH_URL?channel=fast-4+9&arch=amd64
+Accept: application/json
+
+#wrong arch
+GET GRAPH_URL?channel=fast-4.9&arch=arrgh64
+Accept: application/json
+
+# bad Accept header
+GET GRAPH_URL?channel=fast-4.9&arch=amd64
+Accept: app/anything-really
