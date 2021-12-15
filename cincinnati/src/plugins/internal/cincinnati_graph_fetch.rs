@@ -12,10 +12,11 @@ use self::cincinnati::CONTENT_TYPE;
 use commons::prelude_errors::*;
 use commons::tracing::{get_tracer, set_context};
 use opentelemetry::{
-    trace::{mark_span_as_active, Tracer},
-    Context as ot_context,
+    trace::{get_active_span, mark_span_as_active, Tracer},
+    Context as ot_context, Key,
 };
 
+use cached::{proc_macro::cached, Return};
 use commons::prelude_errors::Context;
 use commons::GraphError;
 use prometheus::Counter;
@@ -114,6 +115,38 @@ impl CincinnatiGraphFetchPlugin {
     }
 }
 
+// Cache successful responses, ignoring input, invalidating after 60 seconds
+#[cached(
+    size = 1,
+    time = 60,
+    key = "bool",
+    convert = r#"{ true }"#,
+    sync_writes = true,
+    with_cached_flag = true,
+    result = true
+)]
+async fn cached_graph(
+    client: &reqwest::Client,
+    upstream: &String,
+    headers: HeaderMap,
+) -> Fallible<Return<crate::Graph>, GraphError> {
+    let res = client
+        .get(upstream)
+        .headers(headers)
+        .send()
+        .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
+        .await?;
+
+    if !res.status().is_success() {
+        return Err(GraphError::FailedUpstreamFetch(res.status().to_string()).into());
+    }
+    let graph = res
+        .json()
+        .map_err(|e| GraphError::FailedJsonIn(e.to_string()))
+        .await?;
+    Ok(Return::new(graph))
+}
+
 impl CincinnatiGraphFetchPlugin {
     async fn do_run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
         // extract current trace ID from headers
@@ -128,31 +161,16 @@ impl CincinnatiGraphFetchPlugin {
         }
 
         trace!("getting graph from upstream at {}", self.upstream);
-        self.http_upstream_reqs.inc();
-
-        let res = self
-            .client
-            .get(&self.upstream)
-            .headers(headers)
-            .send()
-            .map_err(|e| GraphError::FailedUpstreamFetch(e.to_string()))
-            .await?;
-
-        if !res.status().is_success() {
-            return Err(GraphError::FailedUpstreamFetch(res.status().to_string()).into());
+        let call_result = cached_graph(&self.client, &self.upstream, headers).await?;
+        // Increase request counter only if actual call was made
+        if !call_result.was_cached {
+            self.http_upstream_reqs.inc();
         }
-
-        let body = res
-            // TODO(steveeJ): find a way to make this fail in a test
-            .bytes()
-            .map_err(move |e| GraphError::FailedUpstreamFetch(e.to_string()))
-            .await?;
-
-        let graph =
-            serde_json::from_slice(&body).map_err(|e| GraphError::FailedJsonIn(e.to_string()))?;
-
+        get_active_span(|span| {
+            span.set_attribute(Key::new("cached").bool(call_result.was_cached));
+        });
         Ok(InternalIO {
-            graph,
+            graph: call_result.value,
             parameters: io.parameters,
         })
     }
