@@ -50,12 +50,12 @@ COPY --from=rust_builder /opt/cincinnati/bin/e2e /usr/bin/cincinnati-e2e-test
 COPY --from=rust_builder /opt/cincinnati/bin/prometheus_query /usr/bin/cincinnati-prometheus_query-test
 COPY --from=rust_builder /opt/cincinnati/bin/slo /usr/bin/cincinnati-e2e-slo
 COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/hack/e2e.sh hack/
+COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/hack/vegeta.targets hack/
 COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/dist/openshift/cincinnati.yaml dist/openshift/
 COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/dist/openshift/cincinnati-e2e.yaml dist/openshift/
 COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/dist/openshift/observability.yaml dist/openshift/
+COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/dist/openshift/load-testing.yaml dist/openshift/
 COPY --from=golang_builder /usr/local/bin/vegeta /usr/bin
-COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/hack/load-testing.sh /usr/local/bin/load-testing.sh
-COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/hack/vegeta.targets vegeta.targets
 COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/e2e/tests/testdata e2e/tests/testdata
 COPY --from=rust_builder /go/src/github.com/openshift/cincinnati/dist/prepare_ci_credentials.sh dist/
 

@@ -1,0 +1,35 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-testing
+  namespace: openshift-update-service
+spec:
+  parallelism: 7
+  completions: 100
+  selector: {}
+  template:
+    metadata:
+      name: vegeta
+    spec:
+      volumes:
+        - name: config-volume
+          configMap:
+            name: vegeta-config
+      containers:
+        - name: vegeta
+          image: quay.io/cloud-bulldozer/vegeta:latest
+          command:
+            - vegeta
+            - attack
+            - -insecure
+            - -format=http
+            - -workers=100
+            - -max-workers=1000
+            - -rate=10000
+            - -duration=60s
+            - -targets=/etc/config/vegeta.targets
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+      restartPolicy: Never
