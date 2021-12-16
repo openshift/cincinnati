@@ -44,7 +44,7 @@ fn get_query_result_string(query: &'static str) -> VectorResult {
 // No scrape errors
 #[test_case("cincinnati_gb_graph_upstream_errors_total" => is less_than(1))]
 // No upstream errors
-#[test_case("cincinnati_pe_http_upstream_errors_total" => is less_than(1))]
+#[test_case("cincinnati_pe_http_upstream_errors_total{code!~\"4xx\"}" => is less_than(1))]
 // At least one scrape has been performed
 #[test_case("cincinnati_gb_graph_upstream_scrapes_total" => is greater_than_or_equal_to(1))]
 fn check_slo_numeric(query: &'static str) -> i32 {
