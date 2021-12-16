@@ -4,10 +4,38 @@ kind: Template
 metadata:
   name: cincinnati-observability
 objects:
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: Role
+    metadata:
+      name: prometheus-k8s-cincinnati
+    rules:
+      - apiGroups:
+          - ""
+        resources:
+          - services
+          - endpoints
+          - pods
+        verbs:
+          - get
+          - list
+          - watch
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: prometheus-k8s-cincinnati
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: Role
+      name: prometheus-k8s-cincinnati
+    subjects:
+      - kind: ServiceAccount
+        name: prometheus-k8s
+        namespace: openshift-monitoring
   - apiVersion: monitoring.coreos.com/v1
     kind: ServiceMonitor
     metadata:
       name: cincinnati-graph-builder
+      namespace: ${MONITORING_NAMESPACE}
     spec:
       endpoints:
         - interval: 5s
@@ -23,6 +51,7 @@ objects:
     kind: ServiceMonitor
     metadata:
       name: cincinnati-policy-engine
+      namespace: ${MONITORING_NAMESPACE}
     spec:
       endpoints:
         - interval: 5s
@@ -146,8 +175,8 @@ objects:
                 service: cincinnati
                 component: policyengine
                 severity: warning
-
-
 parameters:
   - name: NAMESPACE
     value: "openshift-update-service"
+  - name: MONITORING_NAMESPACE
+    value: "openshift-monitoring"

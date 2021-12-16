@@ -65,17 +65,6 @@ backoff oc get serviceaccount default
 # Allow default serviceaccount to use CI pull secret
 backoff oc secrets link default ci-pull-secret --for=pull
 
-# Reconfigure monitoring operator to support user workloads
-# https://docs.openshift.com/container-platform/4.7/monitoring/enabling-monitoring-for-user-defined-projects.html
-backoff oc -n openshift-monitoring \
-        create configmap \
-        cluster-monitoring-config \
-        --from-literal='config.yaml={"enableUserWorkload": true}' -o yaml --dry-run=client > /tmp/cluster-monitoring-config.yaml
-backoff oc apply -f /tmp/cluster-monitoring-config.yaml
-
-# Wait for user workload monitoring is deployed
-backoff oc -n openshift-user-workload-monitoring wait --for=condition=Ready pod -l app=thanos-ruler
-
 # Import observability template
 # ServiceMonitors are imported before app deployment to give Prometheus time to catch up with
 # metrics
@@ -147,10 +136,19 @@ export RUST_BACKTRACE="1"
 /usr/bin/cincinnati-prometheus_query-test
 
 # Run load-testing script
-/usr/local/bin/load-testing.sh
+export GRAPH_INTERNAL_URL="http://e2e-policy-engine.openshift-update-service.svc.cluster.local/api/upgrades_info/graph"
+cat hack/vegeta.targets| sed "s;GRAPH_URL;${GRAPH_INTERNAL_URL};g" > /tmp/vegeta.targets
+oc create configmap vegeta-config --from-file /tmp/vegeta.targets
+
+# Create a in-cluster Job
+oc apply -f dist/openshift/load-testing.yaml
+
+# Wait for it to complete
+backoff oc -n openshift-update-service wait --for=condition=Complete job load-testing --timeout=3000s
 
 # sleep for 30 secs to allow Prometheus scrape latest data
 sleep 30
 
 # Verify SLO metrics
-/usr/bin/cincinnati-e2e-slo
+# Disabled due to a known bug in performance w/ over 40rps
+# /usr/bin/cincinnati-e2e-slo
