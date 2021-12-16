@@ -144,7 +144,7 @@ oc create configmap vegeta-config --from-file /tmp/vegeta.targets
 oc apply -f dist/openshift/load-testing.yaml
 
 # Wait for it to complete
-backoff oc -n openshift-update-service wait --for=condition=Complete job load-testing --timeout=3000s
+backoff oc -n openshift-update-service wait --for=condition=Complete job load-testing --timeout=900s
 
 # sleep for 30 secs to allow Prometheus scrape latest data
 sleep 30
