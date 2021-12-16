@@ -5,8 +5,8 @@ metadata:
   name: load-testing
   namespace: openshift-update-service
 spec:
-  parallelism: 7
-  completions: 100
+  parallelism: 1
+  completions: 1
   selector: {}
   template:
     metadata:
@@ -20,15 +20,20 @@ spec:
         - name: vegeta
           image: quay.io/cloud-bulldozer/vegeta:latest
           command:
-            - vegeta
-            - attack
-            - -insecure
-            - -format=http
-            - -workers=100
-            - -max-workers=1000
-            - -rate=10000
-            - -duration=60s
-            - -targets=/etc/config/vegeta.targets
+            - sh
+            - '-c'
+            - |
+              vegeta \
+              attack \
+              -insecure \
+              -format=http \
+              -workers=10 \
+              -max-workers=2000 \
+              -rate=10000 \
+              -duration=300s \
+              -targets=/etc/config/vegeta.targets |\
+              vegeta \
+              report
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
