@@ -8,6 +8,7 @@ use custom_debug_derive::Debug as CustomDebug;
 use hyper::Uri;
 use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr};
+use std::time::Duration;
 use structopt::StructOpt;
 
 /// Default URL to upstream graph provider.
@@ -51,6 +52,22 @@ pub struct AppSettings {
 
     /// Jaeger host and port for tracing support
     pub tracing_endpoint: Option<String>,
+
+    /// Actix-web maximum number of pending connections, defaults to 2048: https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.backlog
+    #[default(10)]
+    pub backlog: u32,
+    /// Actix-web per-worker number of concurrent connections, defaults to 25000: https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.max_connections
+    #[default(10)]
+    pub max_connections: usize,
+    /// Actix-web maximum per-worker concurrent connection establish process, defaults to 256: https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.max_connections
+    #[default(64)]
+    pub max_connection_rate: usize,
+    /// Actix-web server keepalive, defaults to 5s: https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.keep_alive
+    #[default(None)]
+    pub keep_alive: Option<Duration>,
+    /// Actix-web server client timeout for first request, defaults to 5s: https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.client_timeout
+    #[default(Duration::new(5, 0))]
+    pub client_timeout: Duration,
 }
 
 impl AppSettings {

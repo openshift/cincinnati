@@ -5,6 +5,7 @@ use commons::prelude_errors::*;
 use commons::{de_path_prefix, parse_params_set, parse_path_prefix, MergeOptions};
 use std::collections::HashSet;
 use std::net::IpAddr;
+use std::time::Duration;
 
 /// Status service options.
 #[derive(Debug, Deserialize, Serialize, StructOpt)]
@@ -54,6 +55,17 @@ pub struct ServiceOptions {
     /// Optional tracing endpoint
     #[structopt(name = "tracing_endpoint", long = "service.tracing_endpoint")]
     pub tracing_endpoint: Option<String>,
+
+    #[structopt(name = "backlog", long = "service.backlog")]
+    pub backlog: Option<u32>,
+    #[structopt(name = "max_connections", long = "service.max_connections")]
+    pub max_connections: Option<usize>,
+    #[structopt(name = "max_connection_rate", long = "service.max_connection_rate")]
+    pub max_connection_rate: Option<usize>,
+    #[structopt(name = "keep_alive", long = "service.keep_alive")]
+    pub keep_alive: Option<u64>,
+    #[structopt(name = "client_timeout", long = "service.client_timeout")]
+    pub client_timeout: Option<u64>,
 }
 
 impl MergeOptions<Option<ServiceOptions>> for AppSettings {
@@ -63,6 +75,16 @@ impl MergeOptions<Option<ServiceOptions>> for AppSettings {
             assign_if_some!(self.port, service.port);
             assign_if_some!(self.path_prefix, service.path_prefix);
             assign_if_some!(self.tracing_endpoint, service.tracing_endpoint);
+            assign_if_some!(self.backlog, service.backlog);
+            assign_if_some!(self.max_connections, service.max_connections);
+            assign_if_some!(self.max_connection_rate, service.max_connection_rate);
+            self.keep_alive = match service.keep_alive {
+                Some(x) => Some(Duration::new(x, 0)),
+                None => None,
+            };
+            if let Some(duration) = service.client_timeout {
+                self.client_timeout = Duration::new(duration, 0);
+            }
             if let Some(params) = service.mandatory_client_parameters {
                 self.mandatory_client_parameters.extend(params);
             }

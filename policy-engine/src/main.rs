@@ -38,7 +38,6 @@ use opentelemetry::{
 };
 use prometheus::{labels, opts, Counter, Registry};
 use std::collections::HashSet;
-use std::time::Duration;
 
 #[allow(dead_code)]
 /// Build info
@@ -129,7 +128,11 @@ async fn main() -> Result<(), Error> {
             )
             .default_service(actix_web::web::route().to(default_response))
     })
-    .keep_alive(Duration::new(10, 0))
+    .backlog(settings.backlog)
+    .max_connections(settings.max_connections)
+    .max_connection_rate(settings.max_connection_rate)
+    .keep_alive(settings.keep_alive)
+    .client_request_timeout(settings.client_timeout)
     .bind((settings.address, settings.port))?
     .run();
 
