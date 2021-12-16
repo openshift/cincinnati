@@ -55,7 +55,7 @@ fn check_slo_numeric(query: &'static str) -> i32 {
         .unwrap()
 }
 
-// Minimal serve duration is less than 1s
+// 90% of requests are served in less than 0.5 seconds
 #[test_case(
     "histogram_quantile(0.90, sum(cincinnati_pe_graph_serve_duration_seconds_bucket) by (le))"
      => is less_than(0.5)
