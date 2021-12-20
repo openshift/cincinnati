@@ -60,9 +60,9 @@ dependencies = [
 
 [[package]]
 name = "actix-http"
-version = "3.0.0-beta.14"
+version = "3.0.0-beta.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "055b723746f19534fc5c9a210788686542986d6f1b9cb2900a297bb4c6619f3b"
+checksum = "6294c508c1413346857838356f53f45dbfd257ea31dca19470d9ce78750a7d37"
 dependencies = [
  "actix-codec",
  "actix-rt",
@@ -78,7 +78,7 @@ dependencies = [
  "encoding_rs",
  "flate2",
  "futures-core",
- "futures-util",
+ "futures-task",
  "h2",
  "http",
  "httparse",
@@ -89,7 +89,6 @@ dependencies = [
  "log",
  "mime",
  "percent-encoding",
- "pin-project",
  "pin-project-lite",
  "rand 0.8.3",
  "sha-1",
@@ -109,9 +108,9 @@ dependencies = [
 
 [[package]]
 name = "actix-router"
-version = "0.5.0-beta.2"
+version = "0.5.0-beta.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36b95ce0d76d1aa2f98b681702807475ade0f99bd4552546a6843a966d42ea3d"
+checksum = "ddd9f117b910fbcce6e9f45092ffd4ff017785a346d09e2d4fd049f4e20384f4"
 dependencies = [
  "bytestring",
  "firestorm",
@@ -134,9 +133,9 @@ dependencies = [
 
 [[package]]
 name = "actix-server"
-version = "2.0.0-beta.9"
+version = "2.0.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "411dd3296dd317ff5eff50baa13f31923ea40ec855dd7f2d3ed8639948f0195f"
+checksum = "78c9b22794b8af1c2e02434873ef858f2a7db40dbbf861ce77a04cd81ac6b767"
 dependencies = [
  "actix-rt",
  "actix-service",
@@ -144,7 +143,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "log",
- "mio",
+ "mio 0.8.0",
  "num_cpus",
  "socket2",
  "tokio",
@@ -173,9 +172,9 @@ dependencies = [
 
 [[package]]
 name = "actix-web"
-version = "4.0.0-beta.13"
+version = "4.0.0-beta.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1657eb2ed5e8ef246b6e951bafb38644ca433042a65a44f02e5601083b71b895"
+checksum = "4609cf57246040316642d4dc4c03d7f3d4a083a892122829dbd9e6ec8db7cd67"
 dependencies = [
  "actix-codec",
  "actix-http",
@@ -191,7 +190,6 @@ dependencies = [
  "cfg-if 1.0.0",
  "cookie",
  "derive_more",
- "either",
  "encoding_rs",
  "futures-core",
  "futures-util",
@@ -214,9 +212,9 @@ dependencies = [
 
 [[package]]
 name = "actix-web-codegen"
-version = "0.5.0-beta.5"
+version = "0.5.0-beta.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfe80a8828fa88a0420dc8fdd4c16b8207326c917f17701881b063eadc2a8d3b"
+checksum = "30a90b7f6c2fde9a1fe3df4da758c2c3c9d620dfa3eae4da0b6925dc0a13444a"
 dependencies = [
  "actix-router",
  "proc-macro2",
@@ -1842,6 +1840,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mio"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba272f85fa0b41fc91872be579b3bbe0f56b792aa361a380eb669469f68dafb2"
+dependencies = [
+ "libc",
+ "log",
+ "miow",
+ "ntapi",
+ "winapi",
+]
+
+[[package]]
 name = "miow"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3387,7 +3398,7 @@ dependencies = [
  "bytes",
  "libc",
  "memchr",
- "mio",
+ "mio 0.7.11",
  "num_cpus",
  "once_cell",
  "parking_lot",
