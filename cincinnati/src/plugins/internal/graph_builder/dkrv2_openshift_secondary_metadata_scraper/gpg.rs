@@ -78,6 +78,7 @@ pub async fn fetch_url(http_client: &Client, base_url: &Url, sha: &str, i: u64) 
     }
 }
 
+#[allow(clippy::ptr_arg)]
 /// Verify that signature is valid and contains expected digest
 pub async fn verify_signature(
     public_keys: &Keyring,
@@ -109,6 +110,7 @@ pub async fn verify_signature(
     }
 }
 
+#[allow(clippy::ptr_arg)]
 /// Generate URLs for signature store and attempt to find a valid signature
 pub async fn verify_signatures_for_digest(
     client: &Client,
