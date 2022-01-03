@@ -41,6 +41,7 @@ fn get_query_result_string(query: &'static str) -> VectorResult {
     return vector_data.get(0).unwrap().clone();
 }
 
+#[allow(dead_code)]
 fn check_slo_exact(query: &'static str) -> String {
     get_query_result_string(query).sample().to_string()
 }

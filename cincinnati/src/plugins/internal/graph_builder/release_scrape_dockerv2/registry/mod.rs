@@ -515,12 +515,14 @@ async fn find_first_release_metadata(
     Ok(None)
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct Tags {
     name: String,
     tags: Vec<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct Manifest {
     #[serde(rename = "schemaVersion")]
@@ -534,6 +536,7 @@ struct Manifest {
 
 #[derive(Debug, Deserialize)]
 struct Layer {
+    #[allow(dead_code)]
     #[serde(rename = "blobSum")]
     blob_sum: String,
 }

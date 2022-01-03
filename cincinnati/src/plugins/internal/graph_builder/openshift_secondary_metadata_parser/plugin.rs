@@ -101,6 +101,7 @@ mod state {
     use std::sync::Arc;
     use tokio::sync::RwLock as FuturesRwLock;
 
+    #[allow(dead_code)]
     #[derive(Debug, Default)]
     pub struct StateData {
         sha: Option<String>,
@@ -150,6 +151,7 @@ impl OpenshiftSecondaryMetadataParserSettings {
 pub struct OpenshiftSecondaryMetadataParserPlugin {
     settings: OpenshiftSecondaryMetadataParserSettings,
 
+    #[allow(dead_code)]
     // Stores the result of the last run
     state: state::State,
 }
