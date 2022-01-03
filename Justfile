@@ -20,6 +20,9 @@ metadata_reference_revision:
 format:
 	cargo fmt --all
 
+clippy:
+	cargo clippy --all-targets --all-features
+
 commit +args="": format
 	git commit {{args}}
 
