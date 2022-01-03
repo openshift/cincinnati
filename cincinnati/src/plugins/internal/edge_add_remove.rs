@@ -32,7 +32,7 @@ pub struct EdgeAddRemovePlugin {
 impl InternalPlugin for EdgeAddRemovePlugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
-    async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
+    async fn run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
         let mut graph = io.graph;
         self.add_edges(&mut graph)?;
         if self.include_conditional_edges {
@@ -94,7 +94,7 @@ impl EdgeAddRemovePlugin {
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).remove=(<Version>,)*<Version>`
     /// If the value equals a single `REMOVE_ALL_EDGES_VALUE` all edges at the given direction are removed.
-    fn remove_edges(&self, mut graph: &mut cincinnati::Graph) -> Fallible<()> {
+    fn remove_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
         macro_rules! handle_remove_edge {
             ($from:ident, $to:ident) => {
                 if let Err(e) = graph.remove_edge(&$from, &$to) {
@@ -103,7 +103,7 @@ impl EdgeAddRemovePlugin {
                         continue;
                     };
                     bail!(e)
-                };
+                }
             };
         }
 
@@ -130,8 +130,7 @@ impl EdgeAddRemovePlugin {
                     }
 
                     for from_version in from_csv.split(',').map(str::trim) {
-                        let from_version =
-                            try_annotate_semver_build(&mut graph, from_version, &to)?;
+                        let from_version = try_annotate_semver_build(graph, from_version, &to)?;
 
                         if let Some(from) = graph.find_by_version(&from_version) {
                             info!("[{}]: removing previous {}", to_version, from_version);
@@ -215,7 +214,7 @@ impl EdgeAddRemovePlugin {
                     }
 
                     for to_version in to_csv.split(',').map(str::trim) {
-                        let to_version = try_annotate_semver_build(&mut graph, to_version, &from)?;
+                        let to_version = try_annotate_semver_build(graph, to_version, &from)?;
                         if let Some(to) = graph.find_by_version(&to_version) {
                             info!("[{}]: removing next {}", from_version, to_version);
                             handle_remove_edge!(from, to)
@@ -236,7 +235,7 @@ impl EdgeAddRemovePlugin {
     /// Add next and previous releases specified by metadata.
     ///
     /// The labels are assumed to have the syntax `<prefix>.(previous|next).add=(<Version>,)*<Version>`
-    fn add_edges(&self, mut graph: &mut cincinnati::Graph) -> Fallible<()> {
+    fn add_edges(&self, graph: &mut cincinnati::Graph) -> Fallible<()> {
         macro_rules! handle_add_edge {
             ($direction:expr, $from:ident, $to:ident, $from_string:ident, $to_string:ident) => {
                 if let Err(e) = graph.add_edge(&$from, &$to) {
@@ -262,7 +261,7 @@ impl EdgeAddRemovePlugin {
 
                 for from_version in from_csv.split(',').map(str::trim) {
                     let from_version_annotated =
-                        try_annotate_semver_build(&mut graph, from_version, &to)?;
+                        try_annotate_semver_build(graph, from_version, &to)?;
 
                     if let Some(from) = graph.find_by_version(&from_version_annotated) {
                         info!(
@@ -292,8 +291,7 @@ impl EdgeAddRemovePlugin {
                 }
 
                 for to_version in to_csv.split(',').map(str::trim) {
-                    let to_version_annotated =
-                        try_annotate_semver_build(&mut graph, to_version, &from)?;
+                    let to_version_annotated = try_annotate_semver_build(graph, to_version, &from)?;
 
                     if let Some(to) = graph.find_by_version(&to_version_annotated) {
                         info!(
@@ -334,7 +332,7 @@ impl EdgeAddRemovePlugin {
 
                 let risk = ce.risks.clone();
 
-                let to = graph.find_by_version_vec(&to_string);
+                let to = graph.find_by_version_vec(to_string);
                 to.iter().try_for_each(|(to, to_version)| -> Fallible<()> {
                     if from_regex_string == ".*" {
                         let froms: Vec<String> = graph
@@ -367,28 +365,25 @@ impl EdgeAddRemovePlugin {
                             "adding conditional edge by regex for '{}': {:?}",
                             to_version, froms
                         );
-                        froms
-                            .iter()
-                            .for_each(|from| match from_regex.is_match(from) {
-                                true => {
-                                    debug!(
-                                        "Regex '{}' matches version '{}'",
-                                        &from_regex,
-                                        from.to_string(),
-                                    );
-                                    let e = ConditionalUpdateEdge {
-                                        from: from.to_string(),
-                                        to: to_version.clone(),
-                                    };
-                                    match edge_risk_map.get_mut(&e) {
-                                        None => {
-                                            edge_risk_map.insert(e.clone(), risk.clone());
-                                        }
-                                        Some(risks) => risks.append(&mut risk.clone()),
+                        froms.iter().for_each(|from| {
+                            if let true = from_regex.is_match(from) {
+                                debug!(
+                                    "Regex '{}' matches version '{}'",
+                                    &from_regex,
+                                    from.to_string(),
+                                );
+                                let e = ConditionalUpdateEdge {
+                                    from: from.to_string(),
+                                    to: to_version.clone(),
+                                };
+                                match edge_risk_map.get_mut(&e) {
+                                    None => {
+                                        edge_risk_map.insert(e.clone(), risk.clone());
                                     }
+                                    Some(risks) => risks.append(&mut risk.clone()),
                                 }
-                                _ => {}
-                            });
+                            }
+                        });
                     }
                     Ok(())
                 })?;
@@ -478,9 +473,7 @@ mod tests {
                 .collect(),
             ),
         ]
-        .iter()
-        .cloned()
-        .collect();
+        .to_vec();
 
         let input_graph: cincinnati::Graph = generate_custom_graph(
             "image",
@@ -498,7 +491,7 @@ mod tests {
             ..Default::default()
         });
         let future_processed_graph = plugin.run_internal(InternalIO {
-            graph: input_graph.clone(),
+            graph: input_graph,
             parameters: Default::default(),
         });
 
@@ -533,9 +526,7 @@ mod tests {
             ),
             (3, [].iter().cloned().collect()),
         ]
-        .iter()
-        .cloned()
-        .collect();
+        .to_vec();
 
         let input_graph: cincinnati::Graph = generate_custom_graph(
             "image",
@@ -597,9 +588,7 @@ mod tests {
             ),
             (2, [].iter().cloned().collect()),
         ]
-        .iter()
-        .cloned()
-        .collect();
+        .to_vec();
 
         let input_graph: cincinnati::Graph = generate_custom_graph(
             "image",
@@ -652,9 +641,7 @@ mod tests {
                 .collect(),
             ),
         ]
-        .iter()
-        .cloned()
-        .collect();
+        .to_vec();
 
         let input_graph: cincinnati::Graph =
             generate_custom_graph("image", metadata.clone(), Some(vec![(0, 1)]));
@@ -705,9 +692,7 @@ mod tests {
             (2, [].iter().cloned().collect()),
             (3, [].iter().cloned().collect()),
         ]
-        .iter()
-        .cloned()
-        .collect();
+        .to_vec();
 
         let input_graph: cincinnati::Graph = generate_custom_graph("image", metadata.clone(), None);
 

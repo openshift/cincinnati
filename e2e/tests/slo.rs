@@ -18,7 +18,7 @@ fn get_query_result_string(query: &'static str) -> VectorResult {
     };
 
     let prometheus_client = Client::builder()
-        .api_base(Some(prometheus_api_base.clone()))
+        .api_base(Some(prometheus_api_base))
         .access_token(Some(prometheus_token))
         .accept_invalid_certs(Some(true))
         .build()

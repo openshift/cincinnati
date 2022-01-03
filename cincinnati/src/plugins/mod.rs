@@ -131,9 +131,9 @@ where
     T: TryInto<PluginIO> + TryFrom<PluginIO>,
     T: Sync + Send,
 {
-    async fn run(self: &Self, t: T) -> Fallible<T>;
+    async fn run(&self, t: T) -> Fallible<T>;
 
-    fn get_name(self: &Self) -> &'static str;
+    fn get_name(&self) -> &'static str;
 }
 
 /// Trait to be implemented by internal plugins with their native IO type
@@ -141,9 +141,9 @@ where
 pub trait InternalPlugin {
     const PLUGIN_NAME: &'static str;
 
-    async fn run_internal(self: &Self, input: InternalIO) -> Fallible<InternalIO>;
+    async fn run_internal(&self, input: InternalIO) -> Fallible<InternalIO>;
 
-    fn get_name(self: &Self) -> &'static str {
+    fn get_name(&self) -> &'static str {
         Self::PLUGIN_NAME
     }
 }
@@ -159,9 +159,9 @@ where
 {
     const PLUGIN_NAME: &'static str;
 
-    async fn run_external(self: &Self, input: ExternalIO) -> Fallible<ExternalIO>;
+    async fn run_external(&self, input: ExternalIO) -> Fallible<ExternalIO>;
 
-    fn get_name(self: &Self) -> &'static str {
+    fn get_name(&self) -> &'static str {
         Self::PLUGIN_NAME
     }
 }
@@ -345,7 +345,7 @@ where
     T: InternalPlugin,
     T: Sync + Send + Debug,
 {
-    async fn run(self: &Self, plugin_io: PluginIO) -> Fallible<PluginIO> {
+    async fn run(&self, plugin_io: PluginIO) -> Fallible<PluginIO> {
         let internal_io: InternalIO = plugin_io.try_into()?;
 
         Ok(self.0.run_internal(internal_io).await?.into())
@@ -364,7 +364,7 @@ where
     T: ExternalPlugin,
     T: Sync + Send + Debug,
 {
-    async fn run(self: &Self, plugin_io: PluginIO) -> Fallible<PluginIO> {
+    async fn run(&self, plugin_io: PluginIO) -> Fallible<PluginIO> {
         let external_io: ExternalIO = plugin_io.try_into()?;
 
         Ok(self.0.run_external(external_io).await?.into())
@@ -480,7 +480,7 @@ mod tests {
 
         let mut original_error = interface::PluginError::new();
         original_error.set_kind(kind);
-        original_error.set_value(value.clone());
+        original_error.set_value(value);
 
         let expected_result = PluginResult::PluginError(original_error.clone());
 
@@ -495,7 +495,7 @@ mod tests {
     fn convert_roundtrip_internalio_externalio() {
         let graph = generate_graph(false);
         let input_internal = InternalIO {
-            graph: graph.clone(),
+            graph,
             parameters: [("hello".to_string(), "plugin".to_string())]
                 .iter()
                 .cloned()
@@ -521,7 +521,7 @@ mod tests {
     impl InternalPlugin for TestInternalPlugin {
         const PLUGIN_NAME: &'static str = "test_internal_plugin";
 
-        async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
+        async fn run_internal(&self, mut io: InternalIO) -> Fallible<InternalIO> {
             if let Some(inner_fn) = &self.inner_fn {
                 inner_fn()?;
             }
@@ -546,7 +546,7 @@ mod tests {
     impl ExternalPlugin for TestExternalPlugin {
         const PLUGIN_NAME: &'static str = "test_internal_plugin";
 
-        async fn run_external(self: &Self, io: ExternalIO) -> Fallible<ExternalIO> {
+        async fn run_external(&self, io: ExternalIO) -> Fallible<ExternalIO> {
             Ok(io)
         }
     }
@@ -586,10 +586,8 @@ mod tests {
             .collect(),
         };
 
-        let plugins_future = super::process(
-            PLUGINS.iter(),
-            PluginIO::InternalIO(initial_internalio.clone()),
-        );
+        let plugins_future =
+            super::process(PLUGINS.iter(), PluginIO::InternalIO(initial_internalio));
 
         let result_internalio: InternalIO = runtime.block_on(plugins_future)?;
 

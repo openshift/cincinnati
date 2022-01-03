@@ -114,7 +114,7 @@ impl ReleaseScrapeDockerv2Plugin {
 
         if let Some(credentials_path) = &settings.credentials_path {
             let (username, password) = registry::read_credentials(
-                Some(&credentials_path),
+                Some(credentials_path),
                 &registry.host_port_string(),
             )
             .unwrap_or_else(|err| {
@@ -122,7 +122,7 @@ impl ReleaseScrapeDockerv2Plugin {
                     "Error reading registry credentials from {:?}. Access to {:?} will be unauthenticated: {} ",
                     credentials_path, &registry.host_port_string() ,err
                 );
-                return (None, None);
+                (None, None)
             });
 
             settings.username = username;
@@ -142,7 +142,7 @@ impl ReleaseScrapeDockerv2Plugin {
 impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
-    async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
+    async fn run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
         let releases = registry::fetch_releases(
             &self.registry,
             &self.settings.repository,

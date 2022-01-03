@@ -70,7 +70,7 @@ mod tests {
             ]
             "#;
 
-        let branches = serde_json::from_str::<Vec<Branch>>(&json).unwrap();
+        let branches = serde_json::from_str::<Vec<Branch>>(json).unwrap();
 
         let branches_expected = vec![Branch {
                 name: "master".to_string(),

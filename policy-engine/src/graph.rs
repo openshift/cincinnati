@@ -14,7 +14,6 @@ use opentelemetry::{
     Context as ot_context,
 };
 use prometheus::{histogram_opts, Histogram, IntCounterVec, Opts, Registry};
-use serde_json;
 use std::collections::HashMap;
 
 lazy_static! {
@@ -35,7 +34,7 @@ lazy_static! {
 
 /// Register relevant metrics to a prometheus registry.
 pub(crate) fn register_metrics(registry: &Registry) -> Fallible<()> {
-    commons::register_metrics(&registry)?;
+    commons::register_metrics(registry)?;
     registry.register(Box::new(GRAPH_INCOMING_REQS.clone()))?;
     registry.register(Box::new(GRAPH_SERVE_HIST.clone()))?;
     Ok(())
@@ -100,7 +99,7 @@ fn api_response_error(req: &HttpRequest, e: GraphError) -> GraphError {
         format_request(req),
         req.peer_addr()
             .map(|addr| addr.to_string())
-            .unwrap_or("<not available>".into()),
+            .unwrap_or_else(|| "<not available>".into()),
         e
     );
     e
@@ -171,8 +170,7 @@ fn add_version_information(io: &InternalIO) -> VersionedGraph {
     let span = get_tracer().start("version_append");
     let _active_span = mark_span_as_active(span);
     log::trace!("versioning the graph");
-    let versioned_graph = VersionedGraph::versioned_graph(io).unwrap();
-    versioned_graph
+    VersionedGraph::versioned_graph(io).unwrap()
 }
 
 #[cfg(test)]
@@ -183,7 +181,6 @@ pub(crate) mod tests {
     use actix_web::body::MessageBody;
     use actix_web::http;
     use cincinnati::plugins::prelude::*;
-    use mockito;
     use tokio::runtime::Runtime;
 
     pub(crate) fn common_init() -> Runtime {
@@ -337,9 +334,9 @@ pub(crate) mod tests {
 
             let body_future: Box<dyn core::future::Future<Output = Result<_, Error>> + Unpin> =
                 Box::new(Box::pin(async {
-                    let mut pe_svc = actix_web::test::init_service(app).await;
+                    let pe_svc = actix_web::test::init_service(app).await;
                     let response = actix_web::test::call_service(
-                        &mut pe_svc,
+                        &pe_svc,
                         actix_web::test::TestRequest::with_uri(&service_uri)
                             .insert_header(("Accept", "application/json"))
                             .to_request(),
@@ -455,9 +452,9 @@ pub(crate) mod tests {
         .iter()
         .try_for_each(|test_param| {
             run_test(
-                &test_param.mandatory_params,
-                &test_param.passed_params,
-                &test_param.plugin_config,
+                test_param.mandatory_params,
+                test_param.passed_params,
+                test_param.plugin_config,
                 &test_param.expected_result,
             )
             .map_err(|e| format_err!("test '{}' failed: {}", test_param.name, e))

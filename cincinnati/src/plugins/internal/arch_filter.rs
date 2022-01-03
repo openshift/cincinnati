@@ -60,7 +60,7 @@ impl ArchFilterPlugin {
         arch: String,
     ) -> Fallible<i32> {
         let mut edges_removed: usize = 0;
-        ce.into_iter()
+        ce.iter_mut()
             .for_each(|ce: &mut cincinnati::ConditionalEdge| {
                 let total_edges = ce.edges.len();
                 ce.edges
@@ -77,9 +77,9 @@ impl ArchFilterPlugin {
         vce: &mut Vec<cincinnati::ConditionalEdge>,
         arch: String,
     ) -> Fallible<()> {
-        vce.into_iter()
+        vce.iter_mut()
             .for_each(|ce: &mut cincinnati::ConditionalEdge| {
-                ce.mut_edges().into_iter().for_each(|e| {
+                ce.mut_edges().iter_mut().for_each(|e| {
                     e.from = self.remove_arch_info(&e.from, arch.clone()).unwrap();
                     e.to = self.remove_arch_info(&e.to, arch.clone()).unwrap();
                 });
@@ -89,9 +89,9 @@ impl ArchFilterPlugin {
     }
 
     /// gets the string and arch identifier and removes the arch identifier from the string
-    fn remove_arch_info(&self, v: &String, arch: String) -> Result<String, Error> {
+    fn remove_arch_info(&self, v: &str, arch: String) -> Result<String, Error> {
         semver::Version::parse(v)
-            .context(v.clone())
+            .context(v.to_string())
             .map(|mut version| {
                 version.build.retain(|elem| elem.to_string() != arch);
                 trace!("CE: rewriting version {} -> {}", v, version);
@@ -110,7 +110,7 @@ fn infer_arch(arch: Option<String>, default_arch: String) -> Result<String, Grap
                     arch, ARCH_VALIDATION_REGEX_STR
                 )));
             };
-            Ok(arch.to_string())
+            Ok(arch)
         }
         None => {
             debug!(
@@ -128,14 +128,14 @@ static ARCH_VALIDATION_REGEX_STR: &str = r"^[0-9a-z]+$";
 
 lazy_static! {
     static ref ARCH_VALIDATION_REGEX_RE: regex::Regex =
-        regex::Regex::new(&ARCH_VALIDATION_REGEX_STR).expect("could not create regex");
+        regex::Regex::new(ARCH_VALIDATION_REGEX_STR).expect("could not create regex");
 }
 
 #[async_trait]
 impl InternalPlugin for ArchFilterPlugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
-    async fn run_internal(self: &Self, internal_io: InternalIO) -> Fallible<InternalIO> {
+    async fn run_internal(&self, internal_io: InternalIO) -> Fallible<InternalIO> {
         let arch = infer_arch(
             internal_io.parameters.get("arch").map(|s| s.to_string()),
             self.default_arch.clone(),
@@ -170,10 +170,8 @@ impl InternalPlugin for ArchFilterPlugin {
 
         // remove all matches from the Graph
         let removed = graph.remove_releases(to_remove);
-        let removed_ce: i32 = self.remove_conditional_edges(
-            &mut graph.conditional_edges.as_mut().unwrap(),
-            arch.clone(),
-        )?;
+        let removed_ce: i32 =
+            self.remove_conditional_edges(graph.conditional_edges.as_mut().unwrap(), arch.clone())?;
 
         trace!(
             "removed {} releases and {} conditional edges",
@@ -205,7 +203,7 @@ impl InternalPlugin for ArchFilterPlugin {
             })
             .map_err(|e| GraphError::ArchVersionError(e.to_string()))?;
         self.rm_conditional_edges_arch_identifier(
-            &mut graph.conditional_edges.as_mut().unwrap(),
+            graph.conditional_edges.as_mut().unwrap(),
             arch.clone(),
         )?;
         Ok(InternalIO {
@@ -270,7 +268,7 @@ mod tests {
         ];
         let input_edges = Some(vec![(0, 1), (2, 3)]);
         let input_graph: cincinnati::Graph =
-            generate_custom_graph("image", input_metadata.clone(), input_edges.to_owned());
+            generate_custom_graph("image", input_metadata, input_edges);
 
         // filter by arm64
         let expected_metadata: TestMetadata = vec![
@@ -280,7 +278,7 @@ mod tests {
         let expected_edges = Some(vec![(0, 1)]);
 
         let expected_graph: cincinnati::Graph =
-            generate_custom_graph("image", expected_metadata, expected_edges.to_owned());
+            generate_custom_graph("image", expected_metadata, expected_edges);
 
         let plugin = Box::new(ArchFilterPlugin {
             key_prefix: "release".to_string(),
@@ -288,7 +286,7 @@ mod tests {
             default_arch: "amd64".to_string(),
         });
         let future_processed_graph = plugin.run_internal(InternalIO {
-            graph: input_graph.clone(),
+            graph: input_graph,
             parameters: [("arch", "arm64")]
                 .iter()
                 .map(|(k, v)| (k.to_string(), v.to_string()))

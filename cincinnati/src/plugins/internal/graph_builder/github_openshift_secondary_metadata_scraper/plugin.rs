@@ -235,7 +235,7 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
 
         let json = std::str::from_utf8(&bytes).context("Parsing body as string")?;
 
-        let branches = serde_json::from_str::<Vec<github_v3::Branch>>(&json)
+        let branches = serde_json::from_str::<Vec<github_v3::Branch>>(json)
             .context(format!("Parsing {} to Vec<Branch>", &json))?;
 
         let latest_commit = branches
@@ -247,7 +247,7 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
                     None
                 }
             })
-            .nth(0)
+            .next()
             .ok_or_else(|| {
                 format_err!(format!(
                     "{}/{} does not have branch {}: {:#?}",
@@ -273,7 +273,7 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
             url: github_v3::commit_url(
                 &self.settings.github_org,
                 &self.settings.github_repo,
-                &revision,
+                revision,
             ),
             sha: revision.to_owned(),
         }
@@ -447,7 +447,7 @@ impl PluginSettings for GithubOpenshiftSecondaryMetadataScraperSettings {
 impl InternalPlugin for GithubOpenshiftSecondaryMetadataScraperPlugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
-    async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
+    async fn run_internal(&self, mut io: InternalIO) -> Fallible<InternalIO> {
         io.parameters.insert(
             GRAPH_DATA_DIR_PARAM_KEY.to_string(),
             self.data_dir
@@ -541,7 +541,7 @@ mod network_tests {
             // ensure all files match the configured regexes
             extracted_paths.iter().for_each(|path| {
                 assert!(
-                    regexes.iter().any(|re| re.is_match(&path)),
+                    regexes.iter().any(|re| re.is_match(path)),
                     "{} doesn't match any of the regexes: {:#?}",
                     path,
                     regexes

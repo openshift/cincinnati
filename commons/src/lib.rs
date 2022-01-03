@@ -123,7 +123,7 @@ pub fn validate_content_type(
     let mut top_types: Vec<HeaderValue> = content_type
         .iter()
         .map(|ct| {
-            let top_type = ct.to_str().unwrap_or("").split("/").next().unwrap_or("");
+            let top_type = ct.to_str().unwrap_or("").split('/').next().unwrap_or("");
             let top_type_wildcard = HeaderValue::from_str(&format!("{}/*", top_type));
             assert!(
                 top_type_wildcard.is_ok(),
@@ -144,7 +144,7 @@ pub fn validate_content_type(
         return if header_value
             .to_str()
             .unwrap_or("")
-            .split("/")
+            .split('/')
             .any(|i| i == "*")
         {
             Ok(HeaderValue::to_str(&accept_default)
@@ -273,8 +273,7 @@ mod tests {
         // and defaults to `application/json`
         headers.insert(ACCEPT, "application/json".parse().unwrap());
         let version =
-            validate_content_type(&headers, all_supported_versions, accept_default.clone())
-                .unwrap();
+            validate_content_type(&headers, all_supported_versions, accept_default).unwrap();
         // Server returns the response with content_type `application/json`
         assert_eq!(version, "application/json");
 

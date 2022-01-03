@@ -208,7 +208,7 @@ impl Graph {
     {
         let missing_manifest_ref = String::from("none");
         let release = release.into();
-        match self.find_by_version(&release.version()) {
+        match self.find_by_version(release.version()) {
             Some(id) => {
                 let node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
                 if let Release::Concrete(_) = node {
@@ -253,7 +253,7 @@ impl Graph {
     pub fn add_edges(&mut self, indices: MapImpl<ReleaseId, ReleaseId>) -> Result<(), Error> {
         indices
             .iter()
-            .try_fold((), |_, (from, to)| self.add_edge(&from, &to).map(|_| ()))
+            .try_fold((), |_, (from, to)| self.add_edge(from, to).map(|_| ()))
     }
 
     /// Returns a Some(ReleaseId) if the version exists in the graph, None otherwise.
@@ -431,17 +431,7 @@ impl Graph {
     /// This is required because `daggy::Dag::remove_node()` shifts the NodeIndices
     /// and therefore invalidates all the ones which are higher than the removed one.
     pub fn remove_releases(&mut self, mut to_remove: Vec<ReleaseId>) -> usize {
-        to_remove.sort_by(|a, b| {
-            use std::cmp::Ordering::*;
-
-            if a.0 < b.0 {
-                Less
-            } else if a.0 == b.0 {
-                Equal
-            } else {
-                Greater
-            }
-        });
+        to_remove.sort_by(|a, b| a.0.cmp(&b.0));
 
         self.remove_nodes(to_remove.into_iter().map(|ri| ri.0).collect())
     }
@@ -481,13 +471,11 @@ impl Graph {
     /// Iterates over all releases mutably
     ///
     /// f is able to mutate the release as it receives a mutable borrow.
-    pub fn iter_releases_mut<F>(&mut self, mut f: F) -> Result<(), Error>
+    pub fn iter_releases_mut<F>(&mut self, f: F) -> Result<(), Error>
     where
         F: FnMut(&mut Release) -> Result<(), Error>,
     {
-        self.dag
-            .node_weights_mut()
-            .try_for_each(|mut nw| f(&mut nw))
+        self.dag.node_weights_mut().try_for_each(f)
     }
 
     /// Get the edges expressed as version -> versions; optionally include edges from/to `Release::Abstract`.
@@ -511,10 +499,10 @@ impl Graph {
                         let target_version = target.version().to_string();
 
                         if include_abstract
-                            || match (source, target) {
-                                (Release::Concrete(_), Release::Concrete(_)) => true,
-                                _ => false,
-                            }
+                            || matches!(
+                                (source, target),
+                                (Release::Concrete(_), Release::Concrete(_))
+                            )
                         {
                             edges
                                 .entry(source_version)
@@ -590,7 +578,7 @@ impl<'a> Deserialize<'a> for Graph {
                 }
                 let edges = edges.ok_or_else(|| de::Error::missing_field("edges"))?;
                 let nodes = nodes.ok_or_else(|| de::Error::missing_field("nodes"))?;
-                let conditional_edges: Vec<ConditionalEdge> = conditional_edges.unwrap_or(vec![]);
+                let conditional_edges: Vec<ConditionalEdge> = conditional_edges.unwrap_or_default();
                 let mut graph = Graph {
                     dag: Dag::with_capacity(nodes.len(), edges.len()),
                     conditional_edges: Some(Vec::with_capacity(conditional_edges.len())),
@@ -664,8 +652,8 @@ impl Serialize for Graph {
         }
 
         let mut state = serializer.serialize_struct("Graph", 2)?;
-        state.serialize_field("nodes", &Nodes(&self.dag.raw_nodes()))?;
-        state.serialize_field("edges", &Edges(&self.dag.raw_edges()))?;
+        state.serialize_field("nodes", &Nodes(self.dag.raw_nodes()))?;
+        state.serialize_field("edges", &Edges(self.dag.raw_edges()))?;
         if self.conditional_edges.is_some() {
             state.serialize_field("conditionalEdges", &self.conditional_edges)?;
         }
@@ -994,7 +982,7 @@ pub mod testing {
                 versioned_right.version
             )
         }
-        return compare_graphs_verbose(versioned_left.graph, versioned_right.graph, settings);
+        compare_graphs_verbose(versioned_left.graph, versioned_right.graph, settings)
     }
 
     /// Compares two Graphs and gives a verbose error if not equal.
@@ -1024,9 +1012,10 @@ pub mod testing {
             return Ok(());
         }
 
-        let mut output: Vec<String> = vec![];
-        output.push("Graphs differ! Showing differences from left to right".into());
-        output.push("-----------------------------------------------------".into());
+        let mut output: Vec<String> = vec![
+            "Graphs differ! Showing differences from left to right".into(),
+            "-----------------------------------------------------".into(),
+        ];
 
         let edges_left = left.get_edges(false)?;
         let edges_right = right.get_edges(false)?;
@@ -1244,9 +1233,9 @@ mod tests {
         };
         let graph2 = {
             let mut graph = Graph::default();
-            let v3 = graph.dag.add_node(r3.clone());
-            let v2 = graph.dag.add_node(r2.clone());
-            let v1 = graph.dag.add_node(r1.clone());
+            let v3 = graph.dag.add_node(r3);
+            let v2 = graph.dag.add_node(r2);
+            let v1 = graph.dag.add_node(r1);
             graph.dag.add_edge(v2, v3, Empty {}).unwrap();
             graph.dag.add_edge(v1, v2, Empty {}).unwrap();
             graph.dag.add_edge(v1, v3, Empty {}).unwrap();
@@ -1285,9 +1274,9 @@ mod tests {
         };
         let graph2 = {
             let mut graph = Graph::default();
-            let v1 = graph.dag.add_node(r1.clone());
-            let v2 = graph.dag.add_node(r2.clone());
-            let _ = graph.dag.add_node(r3.clone());
+            let v1 = graph.dag.add_node(r1);
+            let v2 = graph.dag.add_node(r2);
+            let _ = graph.dag.add_node(r3);
             graph.dag.add_edge(v1, v2, Empty {}).unwrap();
 
             graph
@@ -1369,7 +1358,7 @@ mod tests {
     #[test]
     fn find_by_fn_mut_ensure_mutate_metadata() {
         let (prefix, suffix) = ("prefix", "suffix");
-        let metadata = get_test_metadata_fn_mut(&prefix, &suffix);
+        let metadata = get_test_metadata_fn_mut(prefix, suffix);
         let mut graph = generate_custom_graph("image", metadata, Some(vec![]));
 
         let expected = vec![(0, "0.0.0"), (1, "1.0.0"), (2, "2.0.0"), (3, "3.0.0")]

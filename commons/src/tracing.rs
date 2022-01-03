@@ -84,7 +84,7 @@ impl Injector for ClientHeaderMapCarrier {
 /// Return the parent context for the request if specific headers found.
 pub fn get_context(req: &ServiceRequest) -> Context {
     let propagator = TraceContextPropagator::new();
-    propagator.extract(&HttpHeaderMapCarrier(&req.headers()))
+    propagator.extract(&HttpHeaderMapCarrier(req.headers()))
 }
 
 /// Inject context data into headers

@@ -19,7 +19,7 @@ where
 
     let first_line = BufReader::new(file)
         .lines()
-        .nth(0)
+        .next()
         .ok_or_else(|| format_err!("empty credentials."))?;
 
     let token = first_line?.trim_end().to_string();

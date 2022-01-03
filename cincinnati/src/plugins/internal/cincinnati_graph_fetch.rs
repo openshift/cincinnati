@@ -127,7 +127,7 @@ impl CincinnatiGraphFetchPlugin {
 )]
 async fn cached_graph(
     client: &reqwest::Client,
-    upstream: &String,
+    upstream: &str,
     headers: HeaderMap,
 ) -> Fallible<Return<crate::Graph>, GraphError> {
     let res = client
@@ -138,7 +138,7 @@ async fn cached_graph(
         .await?;
 
     if !res.status().is_success() {
-        return Err(GraphError::FailedUpstreamFetch(res.status().to_string()).into());
+        return Err(GraphError::FailedUpstreamFetch(res.status().to_string()));
     }
     let graph = res
         .json()
@@ -148,7 +148,7 @@ async fn cached_graph(
 }
 
 impl CincinnatiGraphFetchPlugin {
-    async fn do_run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
+    async fn do_run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
         // extract current trace ID from headers
         // this is required to make graph-builder trace a child of police-engine request
         let mut headers = HeaderMap::new();
@@ -180,7 +180,7 @@ impl CincinnatiGraphFetchPlugin {
 impl InternalPlugin for CincinnatiGraphFetchPlugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
-    async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
+    async fn run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
         self.do_run_internal(io)
             .map_err(move |e| {
                 error!("error fetching graph: {}", e);

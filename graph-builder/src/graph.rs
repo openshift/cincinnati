@@ -75,10 +75,7 @@ lazy_static! {
         "build_info",
         "Build information",
         labels!{
-            "git_commit" => match built_info::GIT_COMMIT_HASH {
-                Some(commit) => commit,
-                None => "unknown"
-            },
+            "git_commit" => built_info::GIT_COMMIT_HASH.unwrap_or("unknown"),
         }
     ))
     .unwrap();
@@ -86,7 +83,7 @@ lazy_static! {
 
 /// Register relevant metrics to a prometheus registry.
 pub fn register_metrics(registry: &prometheus::Registry) -> Fallible<()> {
-    commons::register_metrics(&registry)?;
+    commons::register_metrics(registry)?;
     registry.register(Box::new(GRAPH_FINAL_RELEASES.clone()))?;
     registry.register(Box::new(GRAPH_LAST_SUCCESSFUL_REFRESH.clone()))?;
     registry.register(Box::new(UPSTREAM_ERRORS.clone()))?;

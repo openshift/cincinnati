@@ -39,7 +39,7 @@ mod tests {
     impl ExternalPlugin for DummyWebClient {
         const PLUGIN_NAME: &'static str = "dummy-web-client";
 
-        async fn run_external(self: &Self, io: ExternalIO) -> Fallible<ExternalIO> {
+        async fn run_external(&self, io: ExternalIO) -> Fallible<ExternalIO> {
             let input: interface::PluginExchange = io.try_into()?;
 
             match (self.callback)(input) {
@@ -114,7 +114,7 @@ mod tests {
                 .collect(),
         };
 
-        let input: ExternalIO = input_internal.clone().try_into().unwrap();
+        let input: ExternalIO = input_internal.try_into().unwrap();
 
         let future_output_result_external = plugin.run_external(input);
 

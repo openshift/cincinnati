@@ -49,9 +49,9 @@ pub struct Label {
     pub source_type: String,
 }
 
-impl Into<(String, String)> for Label {
-    fn into(self) -> (String, String) {
-        (self.key, self.value)
+impl From<Label> for (String, String) {
+    fn from(l: Label) -> (String, String) {
+        (l.key, l.value)
     }
 }
 
