@@ -170,7 +170,7 @@ fn add_version_information(io: &InternalIO) -> VersionedGraph {
     let span = get_tracer().start("version_append");
     let _active_span = mark_span_as_active(span);
     log::trace!("versioning the graph");
-    VersionedGraph::versioned_graph(io).unwrap()
+    VersionedGraph::new(io).unwrap()
 }
 
 #[cfg(test)]
