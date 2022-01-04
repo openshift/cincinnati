@@ -20,7 +20,7 @@ pub(crate) fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
         };
 
     // Add mandatory parameters to the `graph` endpoint.
-    if let Some(path) = spec_object.paths.get_mut("/graph") {
+    if let Some(path) = spec_object.paths.paths.get_mut("/graph") {
         add_mandatory_params(path, &app_data.mandatory_params);
     }
 
@@ -38,14 +38,16 @@ pub(crate) fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
 }
 
 fn rewrite_paths(paths: openapiv3::Paths, path_prefix: &str) -> openapiv3::Paths {
-    paths
+    let mut new_paths = paths.clone();
+    new_paths.paths = paths
         .into_iter()
         .map(|(path, path_item)| {
             let new_path = format!("{}{}", path_prefix, &path);
             trace!("Rewrote path {} -> {} ", &path, &new_path);
             (new_path, path_item)
         })
-        .collect()
+        .collect();
+    new_paths
 }
 
 // Add mandatory parameters to the `graph` endpoint.
@@ -126,7 +128,7 @@ mod tests {
         let mut spec: OpenAPI = serde_json::from_str(SPEC).expect("couldn't parse JSON file");
 
         {
-            let mut graph_path = spec.paths.get_mut("/graph").unwrap();
+            let mut graph_path = spec.paths.paths.get_mut("/graph").unwrap();
             add_mandatory_params(&mut graph_path, &params);
         }
         let output = serde_json::to_string(&spec).unwrap();
@@ -191,6 +193,7 @@ mod tests {
         // parse the response and extract the required parameters
         let spec: openapiv3::OpenAPI = serde_json::from_str(&body)?;
         let v1_graph: &openapiv3::ReferenceOr<openapiv3::PathItem> = spec
+            .paths
             .paths
             .get(&format!("{}/graph", path_prefix))
             .ok_or("could not find /graph endpoint in openapi spec")?;
