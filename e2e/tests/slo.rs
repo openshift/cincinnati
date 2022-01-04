@@ -41,12 +41,26 @@ fn get_query_result_string(query: &'static str) -> VectorResult {
     return vector_data.get(0).unwrap().clone();
 }
 
+// No GB/PE restarts
+#[test_case("kube_pod_container_status_restarts_total{container=~'(graph-builder|policy-engine)'}" => "0")]
+// Crashes due to liveness checks
+#[test_case("kube_pod_container_status_last_terminated_reason{container=~'(graph-builder|policy-engine)', reason='Completed'}" => "0")]
+// Crashes due to OOM
+#[test_case("kube_pod_container_status_last_terminated_reason{container=~'(graph-builder|policy-engine)', reason='OOMKilled'}" => "0")]
+fn check_slo_exact(query: &'static str) -> String {
+    get_query_result_string(query).sample().to_string()
+}
+
 // No scrape errors
 #[test_case("cincinnati_gb_graph_upstream_errors_total" => is less_than(1))]
 // No upstream errors
-#[test_case("cincinnati_pe_http_upstream_errors_total{code!~\"4xx\"}" => is less_than(1))]
+#[test_case("cincinnati_pe_http_upstream_errors_total" => is less_than(1))]
 // At least one scrape has been performed
 #[test_case("cincinnati_gb_graph_upstream_scrapes_total" => is greater_than_or_equal_to(1))]
+// At least 100 rps is served
+#[test_case("sum(rate(cincinnati_pe_graph_incoming_requests_total[5m]))" => is greater_than(100))]
+// No upstream errors
+#[test_case("cincinnati_pe_graph_response_errors_total{code!~'4.+'}" => is less_than(1))]
 fn check_slo_numeric(query: &'static str) -> i32 {
     get_query_result_string(query)
         .sample()
