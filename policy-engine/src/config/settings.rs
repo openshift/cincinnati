@@ -54,13 +54,13 @@ pub struct AppSettings {
     pub tracing_endpoint: Option<String>,
 
     /// Actix-web maximum number of pending connections, defaults to 2048: https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.backlog
-    #[default(10)]
+    #[default(100)]
     pub backlog: u32,
     /// Actix-web per-worker number of concurrent connections, defaults to 25000: https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.max_connections
-    #[default(10)]
+    #[default(150)]
     pub max_connections: usize,
     /// Actix-web maximum per-worker concurrent connection establish process, defaults to 256: https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.max_connections
-    #[default(64)]
+    #[default(128)]
     pub max_connection_rate: usize,
     /// Actix-web server keepalive, defaults to 5s: https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.keep_alive
     #[default(None)]
