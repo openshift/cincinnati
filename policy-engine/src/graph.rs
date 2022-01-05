@@ -151,7 +151,8 @@ where
         Err(other_error) => GraphError::FailedPluginExecution(other_error.to_string()),
     })?;
 
-    let versioned_graph = add_version_information(&internal_io);
+    let versioned_graph = add_version_information(&internal_io)
+        .map_err(|e| GraphError::FailedPluginExecution(e.to_string()))?;
 
     let graph_json = serde_json::to_string(&versioned_graph)
         .map_err(|e| GraphError::FailedJsonOut(e.to_string()))?;
@@ -160,17 +161,18 @@ where
         Some(version) => *version,
         None => *commons::MIN_CINCINNATI_VERSION,
     };
+    log::trace!("graph prepared");
     Ok(HttpResponse::Ok()
         .content_type(content_type)
         .body(graph_json))
 }
 
 /// add version information to the graph json
-fn add_version_information(io: &InternalIO) -> VersionedGraph {
+fn add_version_information(io: &InternalIO) -> Fallible<VersionedGraph> {
     let span = get_tracer().start("version_append");
     let _active_span = mark_span_as_active(span);
     log::trace!("versioning the graph");
-    VersionedGraph::new(io).unwrap()
+    VersionedGraph::new(io)
 }
 
 #[cfg(test)]
