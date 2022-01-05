@@ -38,7 +38,7 @@ fn get_query_result_string(query: &'static str) -> VectorResult {
         _ => panic!("expected vector"),
     };
     assert_ne!(vector_data.len(), 0, "the vector contains 0 elements");
-    return vector_data.get(0).unwrap().clone();
+    return vector_data.last().unwrap().clone();
 }
 
 // No GB/PE restarts
