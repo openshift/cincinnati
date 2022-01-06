@@ -24,7 +24,7 @@ pub mod prelude_errors {
     pub use crate::errors::prelude::*;
 }
 
-use actix_web::http::{header, HeaderMap};
+use actix_web::http::header::{HeaderMap, HeaderValue, ACCEPT};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use url::form_urlencoded;
@@ -106,10 +106,10 @@ pub fn ensure_query_params(
 /// Make sure the client can accept the provided media type.
 pub fn validate_content_type(
     headers: &HeaderMap,
-    mut content_type: Vec<actix_web::http::HeaderValue>,
-    accept_default: actix_web::http::HeaderValue,
+    mut content_type: Vec<HeaderValue>,
+    accept_default: HeaderValue,
 ) -> Result<String, GraphError> {
-    let header_value = match headers.get(header::ACCEPT) {
+    let header_value = match headers.get(ACCEPT) {
         None => {
             let minimum_version = MIN_CINCINNATI_VERSION.to_string();
             return Ok(minimum_version);
@@ -117,14 +117,14 @@ pub fn validate_content_type(
         Some(v) => v,
     };
 
-    let wildcard = header::HeaderValue::from_static("*");
-    let double_wildcard = header::HeaderValue::from_static("*/*");
+    let wildcard = HeaderValue::from_static("*");
+    let double_wildcard = HeaderValue::from_static("*/*");
 
-    let mut top_types: Vec<actix_web::http::HeaderValue> = content_type
+    let mut top_types: Vec<HeaderValue> = content_type
         .iter()
         .map(|ct| {
             let top_type = ct.to_str().unwrap_or("").split("/").next().unwrap_or("");
-            let top_type_wildcard = header::HeaderValue::from_str(&format!("{}/*", top_type));
+            let top_type_wildcard = HeaderValue::from_str(&format!("{}/*", top_type));
             assert!(
                 top_type_wildcard.is_ok(),
                 "could not form top-type wildcard from {}",
@@ -134,7 +134,7 @@ pub fn validate_content_type(
         })
         .collect();
 
-    let mut acceptable_content_types: Vec<actix_web::http::HeaderValue> =
+    let mut acceptable_content_types: Vec<HeaderValue> =
         vec![wildcard, double_wildcard, accept_default.clone()];
     acceptable_content_types.append(&mut content_type);
     acceptable_content_types.append(&mut top_types);
@@ -147,12 +147,12 @@ pub fn validate_content_type(
             .split("/")
             .any(|i| i == "*")
         {
-            Ok(header::HeaderValue::to_str(&accept_default)
+            Ok(HeaderValue::to_str(&accept_default)
                 .unwrap()
                 .parse()
                 .unwrap())
         } else {
-            match header::HeaderValue::to_str(header_value) {
+            match HeaderValue::to_str(header_value) {
                 Ok(a) => Ok(a.parse().unwrap()),
                 Err(_e) => Ok(MIN_CINCINNATI_VERSION.to_string()),
             }
@@ -207,15 +207,15 @@ mod tests {
     #[test]
     fn test_validate_content_type() {
         let most_recent_version = "application/vnd.redhat.cincinnati.v1+json";
-        let all_supported_versions: Vec<actix_web::http::HeaderValue> = CINCINNATI_VERSION
+        let all_supported_versions: Vec<HeaderValue> = CINCINNATI_VERSION
             .keys()
-            .map(|val| header::HeaderValue::from_static(val))
+            .map(|val| HeaderValue::from_static(val))
             .collect();
 
         // Test for empty header
         // No accept value provided with header, server accepts `application/json` and defaults to `application/json`
-        let mut headers = actix_web::http::HeaderMap::new();
-        let accept_default = header::HeaderValue::from_str("application/json").unwrap();
+        let mut headers = HeaderMap::new();
+        let accept_default = HeaderValue::from_str("application/json").unwrap();
         let version = validate_content_type(
             &headers,
             vec![accept_default.clone()],
@@ -227,7 +227,7 @@ mod tests {
         // Support old clients with older cincinnati config.
         // `application/json` provided with header, server accepts `application/json` and defaults to `application/json`
         headers.insert(
-            header::ACCEPT,
+            ACCEPT,
             //"application/json, text/*; q=0.2".parse().unwrap(), // prefer JSON, but also accept any text/* after an 80% markdown in quality.  FIXME: needs a smarter parser in validate_content_type
             "application/json".parse().unwrap(),
         );
@@ -240,7 +240,7 @@ mod tests {
         assert_eq!(version, "application/json");
 
         // `application/*` provided with header, server accepts `application/json` and defaults to `application/json`
-        headers.insert(header::ACCEPT, "application/*".parse().unwrap());
+        headers.insert(ACCEPT, "application/*".parse().unwrap());
         let version = validate_content_type(
             &headers,
             vec![accept_default.clone()],
@@ -251,15 +251,14 @@ mod tests {
 
         // Incompatible Accept header
         // `image/png` provided with header, server accepts `application/json` and defaults to `application/json`
-        let image_type: Vec<actix_web::http::HeaderValue> =
-            vec![header::HeaderValue::from_str("image/png").unwrap()];
+        let image_type: Vec<HeaderValue> = vec![HeaderValue::from_str("image/png").unwrap()];
         //server should throw error on non-supported ACCEPT
         validate_content_type(&headers, image_type, accept_default.clone()).unwrap_err();
 
         // Check latest version with all accepted version types
         // `most_recent_version` provided with header, server accepts
         // `all_supported_versions` and defaults to `application/json`
-        headers.insert(header::ACCEPT, most_recent_version.parse().unwrap());
+        headers.insert(ACCEPT, most_recent_version.parse().unwrap());
         let version = validate_content_type(
             &headers,
             all_supported_versions.clone(),
@@ -272,7 +271,7 @@ mod tests {
         // Support old clients with proactive negotiation config.
         // `application/json` provided with header, server accepts `all_supported_versions`
         // and defaults to `application/json`
-        headers.insert(header::ACCEPT, "application/json".parse().unwrap());
+        headers.insert(ACCEPT, "application/json".parse().unwrap());
         let version =
             validate_content_type(&headers, all_supported_versions, accept_default.clone())
                 .unwrap();
@@ -283,10 +282,10 @@ mod tests {
         //`text/*` provided with header, server accepts `text/plain` and defaults to `text/plain`
         headers.insert(
             // FIXME: drop once validate_content_type gets a smarter parser and the previous insert can include the text/* entry
-            header::ACCEPT,
+            ACCEPT,
             "text/*".parse().unwrap(),
         );
-        let accept_default = header::HeaderValue::from_str("text/plain").unwrap();
+        let accept_default = HeaderValue::from_str("text/plain").unwrap();
         let version = validate_content_type(
             &headers,
             vec![accept_default.clone()],

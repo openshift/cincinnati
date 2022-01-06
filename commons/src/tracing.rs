@@ -14,7 +14,7 @@ use opentelemetry::{
 use std::collections::HashMap;
 
 use actix_web::dev::ServiceRequest;
-use actix_web::http;
+use actix_web::http::header::HeaderMap as HttpHeaderMap;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 
 use crate::prelude_errors::*;
@@ -50,7 +50,7 @@ pub fn get_tracer() -> global::BoxedTracer {
     global::tracer_provider().get_tracer("", None)
 }
 
-struct HttpHeaderMapCarrier<'a>(&'a http::HeaderMap);
+struct HttpHeaderMapCarrier<'a>(&'a HttpHeaderMap);
 impl<'a> Extractor for HttpHeaderMapCarrier<'a> {
     fn get(&self, key: &str) -> Option<&str> {
         self.0.get(key).and_then(|value| value.to_str().ok())
@@ -114,7 +114,7 @@ pub fn set_context(context: Context, headers: &mut HeaderMap) -> crate::errors::
 }
 
 /// Add span attributes from servicerequest
-pub fn set_span_tags(req_path: &str, headers: &http::header::HeaderMap, span: &mut dyn Span) {
+pub fn set_span_tags(req_path: &str, headers: &HttpHeaderMap, span: &mut dyn Span) {
     span.set_attribute(Key::new("path").string(req_path.to_string()));
     headers.iter().for_each(|(k, v)| {
         let value = v.to_str().unwrap().to_string();

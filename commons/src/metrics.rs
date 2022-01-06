@@ -50,6 +50,7 @@ pub fn new_registry(prefix: Option<String>) -> Fallible<Registry> {
 mod tests {
     use super::*;
     use crate::testing;
+    use actix_web::body::MessageBody;
     use memchr::memmem;
 
     #[test]
@@ -67,7 +68,7 @@ mod tests {
         let resp = rt.block_on(metrics_call);
 
         assert_eq!(resp.status(), 200);
-        if let actix_web::body::AnyBody::Bytes(bytes) = resp.body() {
+        if let Ok(bytes) = resp.into_body().try_into_bytes() {
             assert!(!bytes.is_empty());
             assert!(memmem::find_iter(
                 bytes.as_ref(),

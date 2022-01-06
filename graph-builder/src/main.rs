@@ -164,6 +164,7 @@ fn ensure_registered_metrics(
 mod tests {
     use super::*;
     use ::graph_builder::graph::{self, State};
+    use actix_web::body::MessageBody;
     use commons::metrics::HasRegistry;
     use commons::metrics::RegistryWrapper;
     use commons::testing;
@@ -201,7 +202,7 @@ mod tests {
         let resp = rt.block_on(metrics_call);
 
         assert_eq!(resp.status(), 200);
-        if let actix_web::body::AnyBody::Bytes(bytes) = resp.body() {
+        if let Ok(bytes) = resp.into_body().try_into_bytes() {
             assert!(!bytes.is_empty());
             println!("{:?}", std::str::from_utf8(bytes.as_ref()));
             assert!(

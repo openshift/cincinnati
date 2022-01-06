@@ -1,7 +1,7 @@
 //! Cincinnati graph service.
 
 use crate::AppState;
-use actix_web::http::{header, HeaderValue};
+use actix_web::http::header;
 use actix_web::web::Query;
 use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::internal::versioned_graph::VersionedGraph;
@@ -63,7 +63,7 @@ async fn _index(
 
     let accept_default = header::HeaderValue::from_static(CONTENT_TYPE);
 
-    let accept_versions: Vec<actix_web::http::HeaderValue> = commons::CINCINNATI_VERSION
+    let accept_versions: Vec<header::HeaderValue> = commons::CINCINNATI_VERSION
         .keys()
         .map(|val| header::HeaderValue::from_static(val))
         .collect();
@@ -108,8 +108,8 @@ fn api_response_error(req: &HttpRequest, e: GraphError) -> GraphError {
 
 // format the request before logging. Include only details that we need.
 pub fn format_request(req: &HttpRequest) -> String {
-    let no_user_agent = HeaderValue::from_str("user-agent not available").unwrap();
-    let no_accept_type = HeaderValue::from_str("Accept value unavailable").unwrap();
+    let no_user_agent = header::HeaderValue::from_str("user-agent not available").unwrap();
+    let no_accept_type = header::HeaderValue::from_str("Accept value unavailable").unwrap();
     let req_type = req.method().as_str();
     let request = req.path();
     let query = req.query_string();
@@ -180,6 +180,7 @@ pub(crate) mod tests {
 
     use crate::graph;
     use crate::AppState;
+    use actix_web::body::MessageBody;
     use actix_web::http;
     use cincinnati::plugins::prelude::*;
     use mockito;
@@ -349,7 +350,7 @@ pub(crate) mod tests {
                         bail!("unexpected statuscode:{}", response.status());
                     };
 
-                    if let actix_web::body::AnyBody::Bytes(bytes) = response.into_body() {
+                    if let Ok(bytes) = response.into_body().try_into_bytes() {
                         Ok(std::str::from_utf8(&bytes)?.to_owned())
                     } else {
                         bail!("expected bytes in body")
