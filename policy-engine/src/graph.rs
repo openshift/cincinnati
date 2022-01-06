@@ -180,6 +180,7 @@ pub(crate) mod tests {
 
     use crate::graph;
     use crate::AppState;
+    use actix_web::body::MessageBody;
     use actix_web::http;
     use cincinnati::plugins::prelude::*;
     use mockito;
@@ -349,7 +350,7 @@ pub(crate) mod tests {
                         bail!("unexpected statuscode:{}", response.status());
                     };
 
-                    if let actix_web::body::AnyBody::Bytes(bytes) = response.into_body() {
+                    if let Ok(bytes) = response.into_body().try_into_bytes() {
                         Ok(std::str::from_utf8(&bytes)?.to_owned())
                     } else {
                         bail!("expected bytes in body")

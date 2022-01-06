@@ -30,6 +30,7 @@ pub(crate) fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
     serde_json::to_string(&spec_object)
         .context("Could not serialize OpenAPI object")
         .map(Response::from)
+        .map(Response::map_into_boxed_body)
         .map(HttpResponse::from)
         .unwrap_or_else(|e| {
             error!("{:?}", e);
@@ -94,6 +95,7 @@ fn add_mandatory_params(path: &mut ReferenceOr<openapiv3::PathItem>, reqs: &Hash
 mod tests {
     use super::*;
     use crate::graph::tests::common_init;
+    use actix_web::body::MessageBody;
     use core::future::Future;
     use std::error::Error;
 
@@ -181,7 +183,7 @@ mod tests {
                     return Err(format!("unexpected statuscode:{}", response.status()).into());
                 };
 
-                if let actix_web::body::AnyBody::Bytes(bytes) = response.into_body() {
+                if let Ok(bytes) = response.into_body().try_into_bytes() {
                     Ok(std::str::from_utf8(&bytes)?.to_owned())
                 } else {
                     return Err(format!("expected bytes in body").into());
