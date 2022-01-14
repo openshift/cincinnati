@@ -41,11 +41,6 @@ fn get_query_result_string(query: &'static str) -> VectorResult {
     return vector_data.get(0).unwrap().clone();
 }
 
-#[allow(dead_code)]
-fn check_slo_exact(query: &'static str) -> String {
-    get_query_result_string(query).sample().to_string()
-}
-
 // No scrape errors
 #[test_case("cincinnati_gb_graph_upstream_errors_total" => is less_than(1))]
 // No upstream errors

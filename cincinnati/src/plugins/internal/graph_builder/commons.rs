@@ -18,11 +18,4 @@ pub mod tests {
             registry::cache::new(),
         )
     }
-
-    #[allow(dead_code)]
-    pub fn remove_metadata_by_key(releases: &mut Vec<release::Release>, key: &str) {
-        for release in releases.iter_mut() {
-            release.metadata.metadata.remove(key);
-        }
-    }
 }
