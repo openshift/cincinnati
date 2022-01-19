@@ -14,6 +14,7 @@ pub struct Client {
     hclient: reqwest::blocking::Client,
     /// Authentication token.
     token: Option<String>,
+    #[allow(dead_code)]
     /// Trust all certs
     danger_accept_invalid_certs: Option<bool>,
 }

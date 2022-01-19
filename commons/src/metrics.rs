@@ -62,7 +62,7 @@ mod tests {
             metrics_prefix.to_string(),
         ))?)));
 
-        testing::dummy_gauge(&registry_wrapped.0, 42.0)?;
+        testing::dummy_gauge(registry_wrapped.0, 42.0)?;
 
         let metrics_call = serve::<RegistryWrapper>(actix_web::web::Data::new(registry_wrapped));
         let resp = rt.block_on(metrics_call);

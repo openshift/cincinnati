@@ -9,8 +9,10 @@ use reqwest::Method;
 /// API result with paginated repository tags.
 #[derive(Debug, Deserialize)]
 pub(crate) struct PaginatedTags {
+    #[allow(dead_code)]
     /// Pagination flag.
     pub(crate) has_additional: bool,
+    #[allow(dead_code)]
     /// Pagination index.
     pub(crate) page: u32,
     /// List of tags in current page.

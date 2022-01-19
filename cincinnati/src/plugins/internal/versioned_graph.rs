@@ -13,7 +13,7 @@ pub struct VersionedGraph {
 impl VersionedGraph {
     pub const PLUGIN_NAME: &'static str = "versioned-graph";
 
-    pub fn versioned_graph(io: &InternalIO) -> Fallible<VersionedGraph> {
+    pub fn new(io: &InternalIO) -> Fallible<VersionedGraph> {
         let min_version = match CINCINNATI_VERSION.get(*MIN_CINCINNATI_VERSION) {
             Some(version) => *version,
             None => bail!("error parsing minimum cincinnati version"),
@@ -57,7 +57,7 @@ mod tests {
             generate_custom_graph("image", metadata, None)
         };
 
-        let versioned_graph = VersionedGraph::versioned_graph(&InternalIO {
+        let versioned_graph = VersionedGraph::new(&InternalIO {
             graph: input_graph,
             parameters: Default::default(),
         })
@@ -79,7 +79,7 @@ mod tests {
         let mut plugin_params: HashMap<String, String> = HashMap::new();
         plugin_params.insert(String::from("version"), "application/json".to_string());
 
-        let versioned_graph = VersionedGraph::versioned_graph(&InternalIO {
+        let versioned_graph = VersionedGraph::new(&InternalIO {
             graph: input_graph,
             parameters: plugin_params,
         })
@@ -101,7 +101,7 @@ mod tests {
         let mut plugin_params: HashMap<String, String> = HashMap::new();
         plugin_params.insert(String::from("version"), MIN_CINCINNATI_VERSION.to_string());
 
-        let versioned_graph = VersionedGraph::versioned_graph(&InternalIO {
+        let versioned_graph = VersionedGraph::new(&InternalIO {
             graph: input_graph,
             parameters: plugin_params,
         })

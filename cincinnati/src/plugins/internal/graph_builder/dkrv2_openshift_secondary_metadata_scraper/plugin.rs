@@ -181,11 +181,11 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 
         if let Some(credentials_path) = &settings.credentials_path {
             let (username, password) =
-                registry::read_credentials(Some(&credentials_path), &registry.host_port_string())
+                registry::read_credentials(Some(credentials_path), &registry.host_port_string())
                     .context(format!(
-                    "Reading registry credentials from {:?}",
-                    credentials_path
-                ))?;
+                        "Reading registry credentials from {:?}",
+                        credentials_path
+                    ))?;
 
             settings.username = username;
             settings.password = password;
@@ -218,7 +218,7 @@ impl PluginSettings for DkrV2OpenshiftSecondaryMetadataScraperSettings {
 impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
-    async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
+    async fn run_internal(&self, mut io: InternalIO) -> Fallible<InternalIO> {
         let registry_client = registry::new_registry_client(
             &self.registry,
             &self.settings.repository,
@@ -244,7 +244,7 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
             let public_keys = self.settings.public_keys_path.as_ref().unwrap();
             let base_url = Url::parse(self.settings.signature_baseurl.as_str()).unwrap();
 
-            let keyring = gpg::load_public_keys(&public_keys)?;
+            let keyring = gpg::load_public_keys(public_keys)?;
             gpg::verify_signatures_for_digest(&self.http_client, &base_url, &keyring, &reference)
                 .await?;
         }
@@ -260,7 +260,7 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
             use futures::TryStreamExt;
             layers
                 .iter()
-                .map(|layer| registry_client.get_blob(&self.settings.repository, &layer))
+                .map(|layer| registry_client.get_blob(&self.settings.repository, layer))
                 .collect::<futures::stream::FuturesOrdered<_>>()
                 .try_collect::<Vec<_>>()
                 .await?
@@ -329,7 +329,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         P: AsRef<Path>,
         P: std::fmt::Debug,
     {
-        dkregistry::render::unpack(&layers_blobs, data_dir.as_ref())?;
+        dkregistry::render::unpack(layers_blobs, data_dir.as_ref())?;
         trace!(
             "Unpacked {}/{} with {} layers to {:?}",
             self.settings.registry,
@@ -361,7 +361,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
                         && !self
                             .output_allowlist
                             .iter()
-                            .any(|re| re.is_match(&path_stripped_str))
+                            .any(|re| re.is_match(path_stripped_str))
                     {
                         let ty = entry.file_type();
                         if ty.is_file() || ty.is_symlink() {
@@ -491,7 +491,7 @@ mod network_tests {
             // ensure all files match the configured regexes
             extracted_paths.iter().for_each(|path| {
                 assert!(
-                    regexes.iter().any(|re| re.is_match(&path)),
+                    regexes.iter().any(|re| re.is_match(path)),
                     "{} doesn't match any of the regexes: {:#?}",
                     path,
                     regexes

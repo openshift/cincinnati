@@ -198,7 +198,7 @@ pub fn read_credentials(
     credentials_path.map_or(Ok((None, None)), |path| {
         let file = File::open(&path).context(format!("could not open '{:?}'", path))?;
 
-        Ok(dkregistry::get_credentials(file, &registry_host).map_err(|e| format_err!("{}", e))?)
+        dkregistry::get_credentials(file, registry_host).map_err(|e| format_err!("{}", e))
     })
 }
 
@@ -301,7 +301,7 @@ pub async fn fetch_releases(
             };
 
             let layers_digests = manifest
-                .layers_digests(arch.as_ref().map(String::as_str))
+                .layers_digests(arch.as_deref())
                 .map_err(|e| format_err!("{}", e))
                 .context(format!(
                     "[{}] could not get layers_digests from manifest",
@@ -382,7 +382,7 @@ async fn lookup_or_fetch(
                 &tag,
                 &manifestref
             );
-            cached_metadata.clone()
+            cached_metadata
         }
         None => {
             let placeholder = Option::from(Metadata {
@@ -515,12 +515,14 @@ async fn find_first_release_metadata(
     Ok(None)
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct Tags {
     name: String,
     tags: Vec<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct Manifest {
     #[serde(rename = "schemaVersion")]
@@ -534,6 +536,7 @@ struct Manifest {
 
 #[derive(Debug, Deserialize)]
 struct Layer {
+    #[allow(dead_code)]
     #[serde(rename = "blobSum")]
     blob_sum: String,
 }

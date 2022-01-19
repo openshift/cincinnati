@@ -6,6 +6,7 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 
 use crate::conditional_edges::{ConditionalEdge, ConditionalUpdateEdge, ConditionalUpdateRisk};
 use std::collections::HashSet;
+use std::path::Path;
 
 pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
 static SUPPORTED_VERSIONS: &[&str] = &["1.0.0", "1.1.0"];
@@ -100,6 +101,7 @@ mod state {
     use std::sync::Arc;
     use tokio::sync::RwLock as FuturesRwLock;
 
+    #[allow(dead_code)]
     #[derive(Debug, Default)]
     pub struct StateData {
         sha: Option<String>,
@@ -149,6 +151,7 @@ impl OpenshiftSecondaryMetadataParserSettings {
 pub struct OpenshiftSecondaryMetadataParserPlugin {
     settings: OpenshiftSecondaryMetadataParserSettings,
 
+    #[allow(dead_code)]
     // Stores the result of the last run
     state: state::State,
 }
@@ -187,7 +190,7 @@ pub enum DeserializeDirectoryFilesError {
 }
 
 pub async fn deserialize_directory_files<T>(
-    path: &PathBuf,
+    path: &Path,
     extension_re: regex::Regex,
     disallowed_errors: &HashSet<DeserializeDirectoryFilesErrorDiscriminants>,
 ) -> Fallible<Vec<T>>
@@ -313,7 +316,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
         }
     }
 
-    async fn process_version(&self, data_dir: &PathBuf) -> Fallible<String> {
+    async fn process_version(&self, data_dir: &Path) -> Fallible<String> {
         let path = data_dir.join("version");
         let version = tokio::fs::read(&path)
             .await
@@ -334,7 +337,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
     async fn process_raw_metadata(
         &self,
         graph: &mut cincinnati::Graph,
-        data_dir: &PathBuf,
+        data_dir: &Path,
     ) -> Fallible<()> {
         let path = data_dir.join("raw/metadata.json");
         let json = tokio::fs::read(&path)
@@ -386,7 +389,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
     async fn process_blocked_edges(
         &self,
         graph: &mut cincinnati::Graph,
-        data_dir: &PathBuf,
+        data_dir: &Path,
     ) -> Fallible<()> {
         let blocked_edges_dir = data_dir.join(BLOCKED_EDGES_DIR);
         let blocked_edges: Vec<graph_data_model::BlockedEdge> = deserialize_directory_files(
@@ -495,7 +498,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
     async fn process_conditional_edges(
         &self,
         graph: &mut cincinnati::Graph,
-        data_dir: &PathBuf,
+        data_dir: &Path,
     ) -> Fallible<()> {
         let blocked_edges_dir = data_dir.join(BLOCKED_EDGES_DIR);
         let conditional_edges: Vec<graph_data_model::ConditionalEdgeYaml> =
@@ -541,7 +544,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
     async fn process_channels(
         &self,
         graph: &mut cincinnati::Graph,
-        data_dir: &PathBuf,
+        data_dir: &Path,
     ) -> Fallible<()> {
         let channels_dir = data_dir.join(CHANNELS_DIR);
         let channels: Vec<graph_data_model::Channel> = deserialize_directory_files(
@@ -618,7 +621,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
                         let mut channels_split = channels.split(',').collect::<Vec<_>>();
                         // this has to match the sorting at
                         // https://github.com/openshift/cincinnati-graph-data/blob/5fc8dd0825b42369de8070ecba2ae0c49d0a99d9/hack/graph-util.py#L187
-                        channels_split.sort_by(|a, b| a.cmp(b));
+                        channels_split.sort_unstable();
                         channels_split.sort_by(|a, b| {
                             let a_split: Vec<&str> = a.splitn(2, '-').collect();
                             let b_split: Vec<&str> = b.splitn(2, '-').collect();
@@ -642,7 +645,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
 impl InternalPlugin for OpenshiftSecondaryMetadataParserPlugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
-    async fn run_internal(self: &Self, mut io: InternalIO) -> Fallible<InternalIO> {
+    async fn run_internal(&self, mut io: InternalIO) -> Fallible<InternalIO> {
         let data_dir = self.get_data_directory(&io);
 
         self.process_version(&data_dir).await?;

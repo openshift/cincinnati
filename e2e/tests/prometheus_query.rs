@@ -39,16 +39,7 @@ fn query_prometheus() -> Fallible<()> {
     };
 
     fn sort_by_version(a: &VectorResult, b: &VectorResult) -> std::cmp::Ordering {
-        let a = a.sample().clone();
-        let b = b.sample().clone();
-
-        if a < b {
-            std::cmp::Ordering::Less
-        } else if a > b {
-            std::cmp::Ordering::Greater
-        } else {
-            std::cmp::Ordering::Equal
-        }
+        a.sample().cmp(b.sample())
     }
 
     expected_result.sort_by(sort_by_version);

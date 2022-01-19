@@ -53,10 +53,7 @@ lazy_static! {
         "build_info",
         "Build information",
         labels! {
-            "git_commit" => match built_info::GIT_COMMIT_HASH {
-                Some(commit) => commit,
-                None => "unknown"
-            },
+            "git_commit" => built_info::GIT_COMMIT_HASH.unwrap_or("unknown"),
         }
     ))
     .unwrap();
@@ -148,7 +145,7 @@ fn default_response(req: HttpRequest) -> HttpResponse {
         graph::format_request(&req),
         req.peer_addr()
             .map(|addr| addr.to_string())
-            .unwrap_or("<not available>".into())
+            .unwrap_or_else(|| "<not available>".into())
     );
     HttpResponse::new(StatusCode::NOT_FOUND)
 }

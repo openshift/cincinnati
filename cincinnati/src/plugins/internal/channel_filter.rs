@@ -51,7 +51,7 @@ impl ChannelFilterPlugin {
         releases: HashSet<String>,
     ) -> Fallible<i32> {
         let mut edges_removed: usize = 0;
-        ce.into_iter()
+        ce.iter_mut()
             .for_each(|ce: &mut cincinnati::ConditionalEdge| {
                 let total_edges = ce.edges.len();
                 ce.edges
@@ -68,23 +68,24 @@ static CHANNEL_VALIDATION_REGEX_STR: &str = r"^[0-9a-z\-\.]+$";
 
 lazy_static! {
     static ref CHANNEL_VALIDATION_REGEX_RE: regex::Regex =
-        regex::Regex::new(&CHANNEL_VALIDATION_REGEX_STR).expect("could not create regex");
+        regex::Regex::new(CHANNEL_VALIDATION_REGEX_STR).expect("could not create regex");
 }
 
 #[async_trait]
 impl InternalPlugin for ChannelFilterPlugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
-    async fn run_internal(self: &Self, internal_io: InternalIO) -> Fallible<InternalIO> {
+    async fn run_internal(&self, internal_io: InternalIO) -> Fallible<InternalIO> {
         let channel = get_multiple_values!(internal_io.parameters, "channel")
             .map_err(|e| GraphError::MissingParams(vec![e.to_string()]))?
             .clone();
 
         if !CHANNEL_VALIDATION_REGEX_RE.is_match(&channel) {
-            Err(GraphError::InvalidParams(format!(
+            return Err(GraphError::InvalidParams(format!(
                 "channel '{}' does not match regex '{}'",
                 channel, CHANNEL_VALIDATION_REGEX_STR
-            )))?;
+            ))
+            .into());
         };
 
         let mut graph = internal_io.graph;
@@ -114,9 +115,9 @@ impl InternalPlugin for ChannelFilterPlugin {
         };
 
         // remove all matches from the Graph
-        let removed = graph.remove_releases(to_remove.clone());
+        let removed = graph.remove_releases(to_remove);
         let removed_ce = self.remove_conditional_edges(
-            &mut graph.conditional_edges.as_mut().unwrap(),
+            graph.conditional_edges.as_mut().unwrap(),
             releases_version,
         )?;
 
@@ -243,9 +244,7 @@ mod tests {
                 ),
                 (4, [].iter().cloned().collect()),
             ]
-            .iter()
-            .cloned()
-            .collect()
+            .to_vec()
         }
 
         struct Datum {
@@ -290,9 +289,7 @@ mod tests {
                             .collect(),
                         ),
                     ]
-                    .iter()
-                    .cloned()
-                    .collect();
+                    .to_vec();
 
                     generate_custom_graph("image", metadata, None)
                 },
@@ -331,9 +328,7 @@ mod tests {
                             .collect(),
                         ),
                     ]
-                    .iter()
-                    .cloned()
-                    .collect();
+                    .to_vec();
 
                     generate_custom_graph("image", metadata, None)
                 },
@@ -392,9 +387,7 @@ mod tests {
                             .collect(),
                         ),
                     ]
-                    .iter()
-                    .cloned()
-                    .collect();
+                    .to_vec();
 
                     generate_custom_graph("image", metadata, None)
                 },

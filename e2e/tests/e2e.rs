@@ -20,9 +20,7 @@ lazy_static::lazy_static! {
 #[test_case("stable-4.3", "amd64", "application/vnd.redhat.cincinnati.v1+json")]
 #[test_case("stable-4.3", "s390x", "application/json")]
 fn e2e_channel_success(channel: &'static str, arch: &'static str, header: &'static str) {
-    let version = match header {
-        _ => "v1",
-    };
+    let version = "v1";
     let testdata_path = format!(
         "{}/{}_{}_{}_{}.json",
         *TESTDATA_DIR, *METADATA_REVISION, channel, arch, version
@@ -37,7 +35,7 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str, header: &'stat
 
     let res = run_graph_query(channel, arch, header, &runtime);
 
-    assert_eq!(res.status().is_success(), true, "{}", res.status());
+    assert!(res.status().is_success(), "{}", res.status());
     let text = runtime.block_on(res.text()).unwrap();
     let actual: cincinnati::plugins::internal::versioned_graph::VersionedGraph =
         serde_json::from_str(&text)

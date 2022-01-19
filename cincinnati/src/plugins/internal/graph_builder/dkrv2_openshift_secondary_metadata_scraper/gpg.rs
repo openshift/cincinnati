@@ -9,7 +9,7 @@ use serde::Deserialize;
 use serde_json;
 use std::fs::{read_dir, File};
 use std::ops::Range;
-use std::path::PathBuf;
+use std::path::Path;
 use url::Url;
 
 use pgp::composed::message::Message;
@@ -40,7 +40,7 @@ pub type Keyring = Vec<SignedPublicKey>;
 pub static MAX_SIGNATURES: u64 = 10;
 
 /// Create a Keyring from a dir of public keys
-pub fn load_public_keys(public_keys_dir: &PathBuf) -> Fallible<Keyring> {
+pub fn load_public_keys(public_keys_dir: &Path) -> Fallible<Keyring> {
     let mut result: Keyring = vec![];
     for entry in read_dir(public_keys_dir).context("Reading public keys dir")? {
         let path = &entry?.path();
@@ -78,6 +78,7 @@ pub async fn fetch_url(http_client: &Client, base_url: &Url, sha: &str, i: u64) 
     }
 }
 
+#[allow(clippy::ptr_arg)]
 /// Verify that signature is valid and contains expected digest
 pub async fn verify_signature(
     public_keys: &Keyring,
@@ -109,6 +110,7 @@ pub async fn verify_signature(
     }
 }
 
+#[allow(clippy::ptr_arg)]
 /// Generate URLs for signature store and attempt to find a valid signature
 pub async fn verify_signatures_for_digest(
     client: &Client,

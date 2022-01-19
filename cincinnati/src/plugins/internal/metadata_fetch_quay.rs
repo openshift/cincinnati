@@ -84,7 +84,7 @@ impl QuayMetadataFetchPlugin {
 
         let client: quay::v1::Client = quay::v1::Client::builder()
             .access_token(api_token)
-            .api_base(Some(api_base.to_string()))
+            .api_base(Some(api_base))
             .build()?;
 
         Ok(Self {
@@ -100,7 +100,7 @@ impl QuayMetadataFetchPlugin {
 impl InternalPlugin for QuayMetadataFetchPlugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
-    async fn run_internal(self: &Self, io: InternalIO) -> Fallible<InternalIO> {
+    async fn run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
         let (mut graph, parameters) = (io.graph, io.parameters);
 
         trace!("fetching metadata from quay labels...");
@@ -283,9 +283,7 @@ mod tests_net {
                 .collect(),
             ),
         ]
-        .iter()
-        .cloned()
-        .collect()
+        .to_vec()
     }
 
     #[test]

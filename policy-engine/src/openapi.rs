@@ -108,7 +108,7 @@ mod tests {
         let spec_object: OpenAPI = serde_json::from_str(SPEC).expect("couldn't parse JSON file");
 
         let paths_before = spec_object.paths;
-        let paths_after = rewrite_paths(paths_before.clone(), &prefix);
+        let paths_after = rewrite_paths(paths_before.clone(), prefix);
 
         paths_before.iter().zip(paths_after.iter()).for_each(
             |((path_before, _), (path_after, _))| {
@@ -130,8 +130,8 @@ mod tests {
         let mut spec: OpenAPI = serde_json::from_str(SPEC).expect("couldn't parse JSON file");
 
         {
-            let mut graph_path = spec.paths.paths.get_mut("/graph").unwrap();
-            add_mandatory_params(&mut graph_path, &params);
+            let graph_path = spec.paths.paths.get_mut("/graph").unwrap();
+            add_mandatory_params(graph_path, &params);
         }
         let output = serde_json::to_string(&spec).unwrap();
 
@@ -170,10 +170,10 @@ mod tests {
         // call the service and get the response body
         let body_future: Box<dyn Future<Output = Result<_, Box<dyn Error>>> + Unpin> =
             Box::new(Box::pin(async {
-                let mut svc = actix_web::test::init_service(app.app_data(data)).await;
+                let svc = actix_web::test::init_service(app.app_data(data)).await;
                 let response = actix_web::test::call_service(
-                    &mut svc,
-                    actix_web::test::TestRequest::with_uri(&service_uri)
+                    &svc,
+                    actix_web::test::TestRequest::with_uri(service_uri)
                         .insert_header(("Accept", "application/json"))
                         .to_request(),
                 )
@@ -186,7 +186,7 @@ mod tests {
                 if let Ok(bytes) = response.into_body().try_into_bytes() {
                     Ok(std::str::from_utf8(&bytes)?.to_owned())
                 } else {
-                    return Err(format!("expected bytes in body").into());
+                    Err("expected bytes in body".into())
                 }
             }));
 

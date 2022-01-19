@@ -29,12 +29,12 @@ pub struct Release {
     pub metadata: Metadata,
 }
 
-impl Into<cincinnati::Release> for Release {
-    fn into(self) -> cincinnati::Release {
+impl From<Release> for cincinnati::Release {
+    fn from(r: Release) -> cincinnati::Release {
         cincinnati::Release::Concrete(cincinnati::ConcreteRelease {
-            version: self.metadata.version.to_string(),
-            payload: self.source,
-            metadata: self.metadata.metadata,
+            version: r.metadata.version.to_string(),
+            payload: r.source,
+            metadata: r.metadata.metadata,
         })
     }
 }
@@ -143,7 +143,7 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, Error> 
                         }
                     };
 
-                    if let Err(e) = graph.add_edge(&&current, &next) {
+                    if let Err(e) = graph.add_edge(&current, &next) {
                         if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeAlreadyExists>()
                         {
                             warn!("{:?}", eae);
