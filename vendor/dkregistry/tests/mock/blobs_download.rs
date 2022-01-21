@@ -23,7 +23,7 @@ fn test_blobs_has_layer() {
         .with_header("Docker-Content-Digest", binary_digest)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -49,7 +49,7 @@ fn test_blobs_hasnot_layer() {
     let addr = mockito::server_address().to_string();
     let _m = mock("HEAD", ep.as_str()).with_status(404).create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -80,7 +80,7 @@ fn get_blobs_succeeds_with_consistent_layer() -> Fallible<()> {
         .with_body(blob)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -113,7 +113,7 @@ fn get_blobs_fails_with_inconsistent_layer() -> Fallible<()> {
         .with_body(blob2)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)

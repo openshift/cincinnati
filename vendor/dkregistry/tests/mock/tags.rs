@@ -20,7 +20,7 @@ fn test_tags_simple() {
         .with_body(tags)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -65,7 +65,7 @@ fn test_tags_paginate() {
         .with_body(tags_p2)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -100,7 +100,7 @@ fn test_tags_404() {
         .with_header("Content-Type", "application/json")
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -129,7 +129,7 @@ fn test_tags_missing_header() {
         .with_body(tags)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)

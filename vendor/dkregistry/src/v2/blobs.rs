@@ -1,6 +1,5 @@
 use crate::errors::{Error, Result};
 use crate::v2::*;
-use reqwest;
 use reqwest::{Method, StatusCode};
 
 impl Client {

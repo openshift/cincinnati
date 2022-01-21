@@ -31,7 +31,7 @@ fn test_dockerio_base() {
         None => return,
     };
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(false)
@@ -48,7 +48,7 @@ fn test_dockerio_base() {
 
 #[test]
 fn test_dockerio_insecure() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(true)
@@ -65,7 +65,7 @@ fn test_dockerio_insecure() {
 
 #[test]
 fn test_dockerio_anonymous_auth() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let image = "library/alpine";
     let version = "latest";
     let login_scope = format!("repository:{}:pull", image);

@@ -30,7 +30,8 @@ fn debug_print_generated(ast: &DeriveInput, toks: &TokenStream) {
 
 /// Converts strings to enum variants based on their name.
 ///
-/// auto-derives `std::str::FromStr` on the enum. Each variant of the enum will match on it's own name.
+/// auto-derives `std::str::FromStr` on the enum (for Rust 1.34 and above, std::convert::TryFrom<&str>
+/// will be derived as well). Each variant of the enum will match on it's own name.
 /// This can be overridden using `serialize="DifferentName"` or `to_string="DifferentName"`
 /// on the attribute as shown below.
 /// Multiple deserializations can be added to the same variant. If the variant contains additional data,
@@ -43,7 +44,7 @@ fn debug_print_generated(ast: &DeriveInput, toks: &TokenStream) {
 /// variant. There is an option to match on different case conversions through the
 /// `#[strum(serialize_all = "snake_case")]` type attribute.
 ///
-/// See the [Additional Attributes](https://docs.rs/strum/0.21/strum/additional_attributes/index.html)
+/// See the [Additional Attributes](https://docs.rs/strum/0.22/strum/additional_attributes/index.html)
 /// Section for more information on using this feature.
 ///
 /// # Example howto use EnumString
@@ -191,6 +192,10 @@ pub fn variant_names(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 }
 
 #[proc_macro_derive(AsStaticStr, attributes(strum))]
+#[deprecated(
+    since = "0.22.0",
+    note = "please use `#[derive(IntoStaticStr)]` instead"
+)]
 pub fn as_static_str(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast = syn::parse_macro_input!(input as DeriveInput);
 
@@ -270,6 +275,10 @@ pub fn into_static_str(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 /// let yellow = Color::Yellow;
 /// assert_eq!(String::from("Yellow"), yellow.to_string());
 /// ```
+#[deprecated(
+    since = "0.22.0",
+    note = "please use `#[derive(Display)]` instead. See issue https://github.com/Peternator7/strum/issues/132"
+)]
 #[proc_macro_derive(ToString, attributes(strum))]
 pub fn to_string(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast = syn::parse_macro_input!(input as DeriveInput);
@@ -368,6 +377,91 @@ pub fn enum_iter(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let toks =
         macros::enum_iter::enum_iter_inner(&ast).unwrap_or_else(|err| err.to_compile_error());
+    debug_print_generated(&ast, &toks);
+    toks.into()
+}
+
+/// Add a function to enum that allows accessing variants by its discriminant
+///
+/// This macro adds a standalone function to obtain an enum variant by its discriminant. The macro adds
+/// `from_repr(discriminant: usize) -> Option<YourEnum>` as a standalone function on the enum. For
+/// variants with additional data, the returned variant will use the `Default` trait to fill the
+/// data. The discriminant follows the same rules as `rustc`. The first discriminant is zero and each
+/// successive variant has a discriminant of one greater than the previous variant, expect where an
+/// explicit discriminant is specified. The type of the discriminant will match the `repr` type if
+/// it is specifed.
+///
+/// When the macro is applied using rustc >= 1.46 and when there is no additional data on any of
+/// the variants, the `from_repr` function is marked `const`. rustc >= 1.46 is required
+/// to allow `match` statements in `const fn`. The no additional data requirement is due to the
+/// inability to use `Default::default()` in a `const fn`.
+///
+/// You cannot derive `FromRepr` on any type with a lifetime bound (`<'a>`) because the function would surely
+/// create [unbounded lifetimes](https://doc.rust-lang.org/nightly/nomicon/unbounded-lifetimes.html).
+///
+/// ```
+///
+/// use strum_macros::FromRepr;
+///
+/// #[derive(FromRepr, Debug, PartialEq)]
+/// enum Color {
+///     Red,
+///     Green { range: usize },
+///     Blue(usize),
+///     Yellow,
+/// }
+///
+/// assert_eq!(Some(Color::Red), Color::from_repr(0));
+/// assert_eq!(Some(Color::Green {range: 0}), Color::from_repr(1));
+/// assert_eq!(Some(Color::Blue(0)), Color::from_repr(2));
+/// assert_eq!(Some(Color::Yellow), Color::from_repr(3));
+/// assert_eq!(None, Color::from_repr(4));
+///
+/// // Custom discriminant tests
+/// #[derive(FromRepr, Debug, PartialEq)]
+/// #[repr(u8)]
+/// enum Vehicle {
+///     Car = 1,
+///     Truck = 3,
+/// }
+///
+/// assert_eq!(None, Vehicle::from_repr(0));
+/// ```
+///
+/// On versions of rust >= 1.46, the `from_repr` function is marked `const`.
+///
+/// ```rust
+/// use strum_macros::FromRepr;
+///
+/// #[derive(FromRepr, Debug, PartialEq)]
+/// #[repr(u8)]
+/// enum Number {
+///     One = 1,
+///     Three = 3,
+/// }
+///
+/// # #[rustversion::since(1.46)]
+/// const fn number_from_repr(d: u8) -> Option<Number> {
+///     Number::from_repr(d)
+/// }
+///
+/// # #[rustversion::before(1.46)]
+/// # fn number_from_repr(d: u8) -> Option<Number> {
+/// #     Number::from_repr(d)
+/// # }
+/// assert_eq!(None, number_from_repr(0));
+/// assert_eq!(Some(Number::One), number_from_repr(1));
+/// assert_eq!(None, number_from_repr(2));
+/// assert_eq!(Some(Number::Three), number_from_repr(3));
+/// assert_eq!(None, number_from_repr(4));
+/// ```
+
+#[proc_macro_derive(FromRepr, attributes(strum))]
+pub fn from_repr(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let ast = syn::parse_macro_input!(input as DeriveInput);
+
+    let toks =
+        macros::from_repr::from_repr_inner(&ast).unwrap_or_else(|err| err.to_compile_error());
     debug_print_generated(&ast, &toks);
     toks.into()
 }

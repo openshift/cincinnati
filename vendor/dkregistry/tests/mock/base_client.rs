@@ -17,7 +17,7 @@ fn test_base_no_insecure() {
         .with_header(API_VERSION_K, API_VERSION_V)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(false)
@@ -45,7 +45,7 @@ fn test_base_useragent() {
         .with_header(API_VERSION_K, API_VERSION_V)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -73,7 +73,7 @@ fn test_base_custom_useragent() {
         .with_header(API_VERSION_K, API_VERSION_V)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)

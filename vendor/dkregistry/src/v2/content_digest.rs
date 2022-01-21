@@ -58,7 +58,7 @@ impl ContentDigest {
         if self != &layer_digest {
             return Err(ContentDigestError::Verify {
                 expected: self.clone(),
-                got: layer_digest.clone(),
+                got: layer_digest,
             });
         }
 

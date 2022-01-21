@@ -2,13 +2,15 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Data, DeriveInput, Ident};
 
-use crate::helpers::{non_enum_error, HasStrumVariantProperties};
+use crate::helpers::{non_enum_error, HasStrumVariantProperties, HasTypeProperties};
 
 pub fn enum_iter_inner(ast: &DeriveInput) -> syn::Result<TokenStream> {
     let name = &ast.ident;
     let gen = &ast.generics;
     let (impl_generics, ty_generics, where_clause) = gen.split_for_impl();
     let vis = &ast.vis;
+    let type_properties = ast.get_type_properties()?;
+    let strum_module_path = type_properties.crate_module_path();
 
     if gen.lifetimes().count() > 0 {
         return Err(syn::Error::new(
@@ -80,7 +82,7 @@ pub fn enum_iter_inner(ast: &DeriveInput) -> syn::Result<TokenStream> {
             }
         }
 
-        impl #impl_generics ::strum::IntoEnumIterator for #name #ty_generics #where_clause {
+        impl #impl_generics #strum_module_path::IntoEnumIterator for #name #ty_generics #where_clause {
             type Iterator = #iter_name #ty_generics;
             fn iter() -> #iter_name #ty_generics {
                 #iter_name {
@@ -94,7 +96,7 @@ pub fn enum_iter_inner(ast: &DeriveInput) -> syn::Result<TokenStream> {
         impl #impl_generics Iterator for #iter_name #ty_generics #where_clause {
             type Item = #name #ty_generics;
 
-            fn next(&mut self) -> Option<Self::Item> {
+            fn next(&mut self) -> Option<<Self as Iterator>::Item> {
                 self.nth(0)
             }
 
@@ -103,7 +105,7 @@ pub fn enum_iter_inner(ast: &DeriveInput) -> syn::Result<TokenStream> {
                 (t, Some(t))
             }
 
-            fn nth(&mut self, n: usize) -> Option<Self::Item> {
+            fn nth(&mut self, n: usize) -> Option<<Self as Iterator>::Item> {
                 let idx = self.idx + n + 1;
                 if idx + self.back_idx > #variant_count {
                     // We went past the end of the iterator. Freeze idx at #variant_count
@@ -125,7 +127,7 @@ pub fn enum_iter_inner(ast: &DeriveInput) -> syn::Result<TokenStream> {
         }
 
         impl #impl_generics DoubleEndedIterator for #iter_name #ty_generics #where_clause {
-            fn next_back(&mut self) -> Option<Self::Item> {
+            fn next_back(&mut self) -> Option<<Self as Iterator>::Item> {
                 let back_idx = self.back_idx + 1;
 
                 if self.idx + back_idx > #variant_count {

@@ -35,7 +35,7 @@ impl Client {
 
                 link = match last {
                     None => break,
-                    Some(ref s) if s == "" => None,
+                    Some(ref s) if s.is_empty() => None,
                     s => s,
                 };
             }
@@ -110,14 +110,14 @@ fn parse_link(hdr: Option<&header::HeaderValue>) -> Option<String> {
     let uri = sval.trim_end_matches(">; rel=\"next\"");
     let query: Vec<&str> = uri.splitn(2, "next_page=").collect();
     let params = match query.get(1) {
-        Some(v) if *v != "" => v,
+        Some(v) if !v.is_empty() => v,
         _ => return None,
     };
 
     // Last item in current page (pagination parameter).
     let last: Vec<&str> = params.splitn(2, '&').collect();
     match last.get(0).cloned() {
-        Some(v) if v != "" => Some(v.to_string()),
+        Some(v) if !v.is_empty() => Some(v.to_string()),
         _ => None,
     }
 }

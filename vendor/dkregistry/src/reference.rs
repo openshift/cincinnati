@@ -29,7 +29,6 @@
 // The `docker://` schema is not officially documented, but has a reference implementation:
 // https://github.com/docker/distribution/blob/v2.6.1/reference/reference.go
 
-use regex;
 use std::collections::VecDeque;
 use std::str::FromStr;
 use std::{fmt, str};
@@ -58,7 +57,7 @@ pub enum VersionParseError {
 impl str::FromStr for Version {
     type Err = VersionParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let v = match s.chars().nth(0) {
+        let v = match s.chars().next() {
             Some(':') => Version::Tag(s.trim_start_matches(':').to_string()),
             Some('@') => {
                 let r: Vec<&str> = s.trim_start_matches('@').splitn(2, ':').collect();
@@ -103,7 +102,6 @@ impl fmt::Display for Version {
 /// A registry image reference.
 #[derive(Clone, Debug, Default)]
 pub struct Reference {
-    has_schema: bool,
     raw_input: String,
     registry: String,
     repository: String,
@@ -115,7 +113,6 @@ impl Reference {
         let reg = registry.unwrap_or_else(|| DEFAULT_REGISTRY.to_string());
         let ver = version.unwrap_or_else(|| Version::Tag(DEFAULT_TAG.to_string()));
         Self {
-            has_schema: false,
             raw_input: "".into(),
             registry: reg,
             repository,
@@ -235,14 +232,14 @@ fn parse_url(input: &str) -> Result<Reference, ReferenceParseError> {
 
     // Handle images in default library namespace, that is:
     // `ubuntu` -> `library/ubuntu`
-    if components.is_empty() && &registry == DEFAULT_REGISTRY {
+    if components.is_empty() && registry == DEFAULT_REGISTRY {
         components.push_back("library".to_string());
     }
     components.push_back(image_name);
 
     // Check if all path components conform to the regex at
     // https://docs.docker.com/registry/spec/api/#overview.
-    const REGEX: &'static str = "^[a-z0-9]+(?:[._-][a-z0-9]+)*$";
+    const REGEX: &str = "^[a-z0-9]+(?:[._-][a-z0-9]+)*$";
     let path_re = regex::Regex::new(REGEX).expect("hardcoded regex is invalid");
     components.iter().try_for_each(|component| {
         if !path_re.is_match(component) {
@@ -265,7 +262,6 @@ fn parse_url(input: &str) -> Result<Reference, ReferenceParseError> {
     }
 
     Ok(Reference {
-        has_schema,
         raw_input: input.to_string(),
         registry,
         repository,

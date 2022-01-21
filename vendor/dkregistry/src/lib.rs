@@ -46,10 +46,9 @@ pub mod reference;
 pub mod render;
 pub mod v2;
 
-use errors::{Result, Error};
+use errors::{Error, Result};
 use std::collections::HashMap;
 use std::io::Read;
-
 
 /// Default User-Agent client identity.
 pub static USER_AGENT: &str = "camallo-dkregistry/0.0";

@@ -33,7 +33,7 @@ fn test_gcrio_base() {
         None => return,
     };
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(false)
@@ -50,7 +50,7 @@ fn test_gcrio_base() {
 
 #[test]
 fn test_gcrio_insecure() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(true)
@@ -67,7 +67,7 @@ fn test_gcrio_insecure() {
 
 #[test]
 fn test_gcrio_get_tags() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(false)
@@ -86,7 +86,7 @@ fn test_gcrio_get_tags() {
 
 #[test]
 fn test_gcrio_has_manifest() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(false)
@@ -111,7 +111,7 @@ fn test_gcrio_has_manifest() {
 
 #[test]
 fn test_gcrio_get_manifest() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(false)

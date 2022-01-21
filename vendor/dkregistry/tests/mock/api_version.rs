@@ -16,7 +16,7 @@ fn test_version_check_status_ok() {
         .with_header(API_VERSION_K, API_VERSION_V)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -43,7 +43,7 @@ fn test_version_check_status_unauth() {
         .with_header(API_VERSION_K, API_VERSION_V)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -68,7 +68,7 @@ fn test_version_check_status_notfound() {
         .with_header(API_VERSION_K, API_VERSION_V)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -93,7 +93,7 @@ fn test_version_check_status_forbidden() {
         .with_header(API_VERSION_K, API_VERSION_V)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -115,7 +115,7 @@ fn test_version_check_noheader() {
     let addr = mockito::server_address().to_string();
     let _m = mock("GET", "/v2/").with_status(403).create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -140,7 +140,7 @@ fn test_version_check_trailing_slash() {
         .with_header(API_VERSION_K, API_VERSION_V)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
