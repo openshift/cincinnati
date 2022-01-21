@@ -1,26 +1,19 @@
 //! Media-types for API objects.
 
-use crate::errors::{Result};
-use mime;
+use crate::errors::Result;
 use strum::EnumProperty;
 
 // For schema1 types, see https://docs.docker.com/registry/spec/manifest-v2-1/
 // For schema2 types, see https://docs.docker.com/registry/spec/manifest-v2-2/
 
-#[derive(EnumProperty, EnumString, ToString, Debug, Hash, PartialEq)]
+#[derive(EnumProperty, EnumString, Display, Debug, Hash, PartialEq, Clone)]
 pub enum MediaTypes {
     /// Manifest, version 2 schema 1.
     #[strum(serialize = "application/vnd.docker.distribution.manifest.v1+json")]
     #[strum(props(Sub = "vnd.docker.distribution.manifest.v1+json"))]
     ManifestV2S1,
     /// Signed manifest, version 2 schema 1.
-    #[strum(
-        serialize = "application/vnd.docker.distribution.manifest.v1+prettyjws",
-        to_string = "application/vnd.docker.distribution.manifest.v1+prettyjws",
-
-        // TODO(steveeJ) find a generic way to handle this form
-        serialize = "application/vnd.docker.distribution.manifest.v1+prettyjws; charset=utf-8",
-    )]
+    #[strum(serialize = "application/vnd.docker.distribution.manifest.v1+prettyjws")]
     #[strum(props(Sub = "vnd.docker.distribution.manifest.v1+prettyjws"))]
     ManifestV2S1Signed,
     /// Manifest, version 2 schema 2.
@@ -62,16 +55,16 @@ impl MediaTypes {
                     }
                     ("vnd.docker.image.rootfs.diff.tar.gzip", _) => Ok(MediaTypes::ImageLayerTgz),
                     ("vnd.docker.container.image.v1", "json") => Ok(MediaTypes::ContainerConfigV1),
-                    _ => return Err(crate::Error::UnknownMimeType(mtype.clone())),
+                    _ => Err(crate::Error::UnknownMimeType(mtype.clone())),
                 }
             }
-            _ => return Err(crate::Error::UnknownMimeType(mtype.clone())),
+            _ => Err(crate::Error::UnknownMimeType(mtype.clone())),
         }
     }
     pub fn to_mime(&self) -> mime::Mime {
         match self {
             &MediaTypes::ApplicationJson => Ok(mime::APPLICATION_JSON),
-            ref m => {
+            m => {
                 if let Some(s) = m.get_str("Sub") {
                     ("application/".to_string() + s).parse()
                 } else {

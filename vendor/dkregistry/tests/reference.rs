@@ -10,7 +10,7 @@ fn valid_references() {
         input: &'a str,
         expected_repo: &'a str,
         expected_registry: &'a str,
-    };
+    }
 
     impl<'a> Default for Tcase<'a> {
         fn default() -> Tcase<'a> {

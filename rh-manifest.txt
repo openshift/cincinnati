@@ -95,7 +95,7 @@ difference 2.0.0 https://crates.io/api/v1/crates/difference/2.0.0/download
 digest 0.9.0 https://crates.io/api/v1/crates/digest/0.9.0/download
 dirs 1.0.5 https://crates.io/api/v1/crates/dirs/1.0.5/download
 discard 1.0.4 https://crates.io/api/v1/crates/discard/1.0.4/download
-dkregistry 0.5.1-alpha.0 git+https://github.com/camallo/dkregistry-rs.git?rev=854d0da53bef5dd85b5e901123e85d43af97c74e#854d0da53bef5dd85b5e901123e85d43af97c74e
+dkregistry 0.5.1-alpha.0 git+https://github.com/camallo/dkregistry-rs.git?rev=0b1dbf63b2b74919d210819a490c18de3bd4e947#0b1dbf63b2b74919d210819a490c18de3bd4e947
 dtoa 0.4.8 https://crates.io/api/v1/crates/dtoa/0.4.8/download
 ed25519 1.1.1 https://crates.io/api/v1/crates/ed25519/1.1.1/download
 ed25519-dalek 1.0.1 https://crates.io/api/v1/crates/ed25519-dalek/1.0.1/download
@@ -244,6 +244,7 @@ rsa 0.3.0 https://crates.io/api/v1/crates/rsa/0.3.0/download
 rust-argon2 0.8.3 https://crates.io/api/v1/crates/rust-argon2/0.8.3/download
 rustc-demangle 0.1.19 https://crates.io/api/v1/crates/rustc-demangle/0.1.19/download
 rustc_version 0.2.3 https://crates.io/api/v1/crates/rustc_version/0.2.3/download
+rustversion 1.0.6 https://crates.io/api/v1/crates/rustversion/1.0.6/download
 ryu 1.0.5 https://crates.io/api/v1/crates/ryu/1.0.5/download
 safemem 0.3.3 https://crates.io/api/v1/crates/safemem/0.3.3/download
 same-file 1.0.6 https://crates.io/api/v1/crates/same-file/1.0.6/download
@@ -283,10 +284,10 @@ strsim 0.8.0 https://crates.io/api/v1/crates/strsim/0.8.0/download
 strsim 0.9.3 https://crates.io/api/v1/crates/strsim/0.9.3/download
 structopt 0.3.23 https://crates.io/api/v1/crates/structopt/0.3.23/download
 structopt-derive 0.4.16 https://crates.io/api/v1/crates/structopt-derive/0.4.16/download
-strum 0.20.0 https://crates.io/api/v1/crates/strum/0.20.0/download
 strum 0.21.0 https://crates.io/api/v1/crates/strum/0.21.0/download
-strum_macros 0.20.1 https://crates.io/api/v1/crates/strum_macros/0.20.1/download
+strum 0.23.0 https://crates.io/api/v1/crates/strum/0.23.0/download
 strum_macros 0.21.1 https://crates.io/api/v1/crates/strum_macros/0.21.1/download
+strum_macros 0.23.1 https://crates.io/api/v1/crates/strum_macros/0.23.1/download
 subtle 2.4.0 https://crates.io/api/v1/crates/subtle/2.4.0/download
 syn 1.0.73 https://crates.io/api/v1/crates/syn/1.0.73/download
 synstructure 0.12.4 https://crates.io/api/v1/crates/synstructure/0.12.4/download

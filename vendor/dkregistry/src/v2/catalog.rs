@@ -23,7 +23,7 @@ impl v2::Client {
             };
             let ep = format!("{}/v2/_catalog{}", self.base_url.clone(), suffix);
 
-            reqwest::Url::parse(&ep).map_err(|err| crate::Error::from(err))
+            reqwest::Url::parse(&ep).map_err(crate::Error::from)
         };
 
         try_stream! {
@@ -43,9 +43,7 @@ async fn fetch_catalog(req: RequestBuilder) -> Result<Catalog> {
     let status = r.status();
     trace!("Got status: {:?}", status);
     match status {
-        StatusCode::OK => r
-            .json::<Catalog>()
-            .await.map_err(Into::into),
+        StatusCode::OK => r.json::<Catalog>().await.map_err(Into::into),
         _ => Err(crate::Error::UnexpectedHttpStatus(status)),
     }
 }

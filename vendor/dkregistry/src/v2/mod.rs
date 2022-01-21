@@ -28,6 +28,7 @@
 //! ```
 
 use crate::errors::*;
+use crate::mediatypes::MediaTypes;
 use futures::prelude::*;
 use reqwest::{Method, StatusCode, Url};
 
@@ -54,10 +55,10 @@ pub use self::content_digest::ContentDigestError;
 pub struct Client {
     base_url: String,
     credentials: Option<(String, String)>,
-    index: String,
     user_agent: Option<String>,
     auth: Option<auth::Auth>,
     client: reqwest::Client,
+    accepted_types: Vec<(MediaTypes, Option<f64>)>,
 }
 
 impl Client {

@@ -1,4 +1,4 @@
-use crate::v2::*;
+use crate::{mediatypes::MediaTypes, v2::*};
 
 /// Configuration for a `Client`.
 #[derive(Debug)]
@@ -9,6 +9,7 @@ pub struct Config {
     username: Option<String>,
     password: Option<String>,
     accept_invalid_certs: bool,
+    accepted_types: Option<Vec<(MediaTypes, Option<f64>)>>,
 }
 
 impl Config {
@@ -18,6 +19,7 @@ impl Config {
             index: "registry-1.docker.io".into(),
             insecure_registry: false,
             accept_invalid_certs: false,
+            accepted_types: None,
             user_agent: Some(crate::USER_AGENT.to_owned()),
             username: None,
             password: None,
@@ -39,6 +41,15 @@ impl Config {
     /// Set whether or not to accept invalid certificates.
     pub fn accept_invalid_certs(mut self, accept_invalid_certs: bool) -> Self {
         self.accept_invalid_certs = accept_invalid_certs;
+        self
+    }
+
+    /// Set custom Accept headers
+    pub fn accepted_types(
+        mut self,
+        accepted_types: Option<Vec<(MediaTypes, Option<f64>)>>,
+    ) -> Self {
+        self.accepted_types = accepted_types;
         self
     }
 
@@ -93,13 +104,33 @@ impl Config {
             .danger_accept_invalid_certs(self.accept_invalid_certs)
             .build()?;
 
+        let accepted_types = match self.accepted_types {
+            Some(a) => a,
+            None => match self.index == "gcr.io" || self.index.ends_with(".gcr.io") {
+                false => vec![
+                    // accept header types and their q value, as documented in
+                    // https://tools.ietf.org/html/rfc7231#section-5.3.2
+                    (MediaTypes::ManifestV2S2, Some(0.5)),
+                    (MediaTypes::ManifestV2S1Signed, Some(0.4)),
+                    // TODO(steveeJ): uncomment this when all the Manifest methods work for it
+                    // mediatypes::MediaTypes::ManifestList,
+                ],
+                // GCR incorrectly parses `q` parameters, so we use special Accept for it.
+                // Bug: https://issuetracker.google.com/issues/159827510.
+                // TODO: when bug is fixed, this workaround should be removed.
+                true => vec![
+                    (MediaTypes::ManifestV2S2, None),
+                    (MediaTypes::ManifestV2S1Signed, None),
+                ],
+            },
+        };
         let c = Client {
             base_url: base,
             credentials: creds,
-            index: self.index,
             user_agent: self.user_agent,
             auth: None,
-            client: client,
+            client,
+            accepted_types,
         };
         Ok(c)
     }

@@ -17,7 +17,7 @@ fn get_env() -> Option<(String, String)> {
 fn common_init(
     login_scope: Option<&str>,
 ) -> Option<(tokio::runtime::Runtime, dkregistry::v2::Client)> {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
 
     let (user, password, login_scope) = if let Some(login_scope) = login_scope {
         match get_env() {
@@ -61,7 +61,7 @@ fn test_quayio_base() {
         None => return,
     };
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(false)
@@ -79,7 +79,7 @@ fn test_quayio_base() {
 #[test]
 #[ignore]
 fn test_quayio_insecure() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(true)
@@ -98,7 +98,7 @@ fn test_quayio_insecure() {
 #[test]
 fn test_quayio_auth_login() {
     let login_scope = "";
-    let (mut runtime, dclient) = common_init(Some(&login_scope)).unwrap();
+    let (runtime, dclient) = common_init(Some(&login_scope)).unwrap();
 
     let futlogin = dclient.is_auth();
     let res = runtime.block_on(futlogin).unwrap();
@@ -107,7 +107,7 @@ fn test_quayio_auth_login() {
 
 #[test]
 fn test_quayio_get_tags_simple() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(false)
@@ -129,7 +129,7 @@ fn test_quayio_get_tags_simple() {
 
 #[test]
 fn test_quayio_get_tags_limit() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(false)
@@ -151,7 +151,7 @@ fn test_quayio_get_tags_limit() {
 
 #[test]
 fn test_quayio_get_tags_pagination() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(false)
@@ -176,7 +176,7 @@ fn test_quayio_get_tags_pagination() {
 fn test_quayio_auth_tags() {
     let image = "steveej/cincinnati-test";
     let login_scope = format!("repository:{}:pull", image);
-    let (mut runtime, dclient) = common_init(Some(&login_scope)).unwrap();
+    let (runtime, dclient) = common_init(Some(&login_scope)).unwrap();
 
     let tags = runtime
         .block_on(dclient.get_tags(image, None).collect::<Vec<_>>())
@@ -190,7 +190,7 @@ fn test_quayio_auth_tags() {
 
 #[test]
 fn test_quayio_has_manifest() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(false)
@@ -213,7 +213,7 @@ fn test_quayio_auth_manifest() {
     let image = "steveej/cincinnati-test";
     let reference = "0.0.1";
     let login_scope = format!("repository:{}:pull", image);
-    let (mut runtime, dclient) = common_init(Some(&login_scope)).unwrap();
+    let (runtime, dclient) = common_init(Some(&login_scope)).unwrap();
 
     let fut_has_manifest = dclient.has_manifest(image, reference, None);
 
@@ -223,7 +223,7 @@ fn test_quayio_auth_manifest() {
 
 #[test]
 fn test_quayio_has_no_manifest() {
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(REGISTRY)
         .insecure_registry(false)
@@ -247,7 +247,7 @@ fn test_quayio_auth_manifestref_missing() {
     let tag = "no-such-tag";
 
     let login_scope = format!("repository:{}:pull", image);
-    let (mut runtime, dclient) = common_init(Some(&login_scope)).unwrap();
+    let (runtime, dclient) = common_init(Some(&login_scope)).unwrap();
     let fut_actual = async { dclient.get_manifestref(image, tag).await };
     let actual = runtime.block_on(fut_actual);
     assert!(actual.is_err());
@@ -262,7 +262,7 @@ fn test_quayio_auth_manifestref() {
         String::from("sha256:cc1f79c6a6fc92982a10ced91bddeefb8fbd037a01ae106a64d0a7e79d0e4813");
 
     let login_scope = format!("repository:{}:pull", image);
-    let (mut runtime, dclient) = common_init(Some(&login_scope)).unwrap();
+    let (runtime, dclient) = common_init(Some(&login_scope)).unwrap();
     let fut_actual = async { dclient.get_manifestref(image, tag).await.unwrap() };
     let actual = runtime.block_on(fut_actual).unwrap();
     assert_eq!(actual, expected);
@@ -277,7 +277,7 @@ fn test_quayio_auth_layer_blob() {
     let layer0_len: usize = 198;
 
     let login_scope = format!("repository:{}:pull", image);
-    let (mut runtime, dclient) = common_init(Some(&login_scope)).unwrap();
+    let (runtime, dclient) = common_init(Some(&login_scope)).unwrap();
 
     let fut_layer0_blob = async {
         let digest = dclient

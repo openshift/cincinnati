@@ -18,7 +18,7 @@ fn test_catalog_simple() {
         .with_body(repos)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)
@@ -59,7 +59,7 @@ fn test_catalog_paginate() {
         .with_body(repos_p2)
         .create();
 
-    let mut runtime = Runtime::new().unwrap();
+    let runtime = Runtime::new().unwrap();
     let dclient = dkregistry::v2::Client::configure()
         .registry(&addr)
         .insecure_registry(true)

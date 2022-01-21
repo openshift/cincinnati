@@ -5,14 +5,13 @@
 
 use libflate::gzip;
 use std::{fs, path};
-use tar;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RenderError {
     #[error("wrong target path {}: must be absolute path to existing directory", _0.display())]
     WrongTargetPath(path::PathBuf),
     #[error("io error")]
-    Io(#[from] std::io::Error)
+    Io(#[from] std::io::Error),
 }
 
 /// Unpack an ordered list of layers to a target directory.

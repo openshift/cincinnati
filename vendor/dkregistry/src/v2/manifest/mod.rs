@@ -1,7 +1,6 @@
 use crate::errors::{Error, Result};
 use crate::mediatypes;
 use crate::v2::*;
-use mime;
 use reqwest::{self, header, StatusCode, Url};
 use std::iter::FromIterator;
 use std::str::FromStr;
@@ -34,7 +33,7 @@ impl Client {
     ) -> Result<(Manifest, Option<String>)> {
         let url = self.build_url(name, reference)?;
 
-        let accept_headers = build_accept_headers(&self.index);
+        let accept_headers = build_accept_headers(&self.accepted_types);
 
         let client_spare0 = self.clone();
 
@@ -101,14 +100,14 @@ impl Client {
             name,
             reference
         );
-        reqwest::Url::parse(&ep).map_err(|e| Error::from(e))
+        reqwest::Url::parse(&ep).map_err(Error::from)
     }
 
     /// Fetch content digest for a particular tag.
     pub async fn get_manifestref(&self, name: &str, reference: &str) -> Result<Option<String>> {
         let url = self.build_url(name, reference)?;
 
-        let accept_headers = build_accept_headers(&self.index);
+        let accept_headers = build_accept_headers(&self.accepted_types);
 
         let res = self
             .build_reqwest(Method::HEAD, url)
@@ -151,7 +150,7 @@ impl Client {
                 let m = mediatypes::MediaTypes::ManifestV2S2.to_mime();
                 vec![m]
             }
-            Some(ref v) => to_mimes(v),
+            Some(v) => to_mimes(v),
         };
 
         let mut accept_headers = header::HeaderMap::with_capacity(accept_types.len());
@@ -184,7 +183,7 @@ impl Client {
             | StatusCode::FOUND
             | StatusCode::OK => {
                 let media_type =
-                    evaluate_media_type(r.headers().get(header::CONTENT_TYPE), &r.url())?;
+                    evaluate_media_type(r.headers().get(header::CONTENT_TYPE), r.url())?;
                 trace!("Manifest media-type: {:?}", media_type);
                 Ok(Some(media_type))
             }
@@ -250,31 +249,16 @@ fn evaluate_media_type(
     }
 }
 
-fn build_accept_headers(registry: &str) -> header::HeaderMap {
-    // GCR incorrectly parses `q` parameters, so we use special Accept for it.
-    // Bug: https://issuetracker.google.com/issues/159827510.
-    // TODO: when bug is fixed, this workaround should be removed.
-    let no_q = registry == "gcr.io" || registry.ends_with(".gcr.io");
-
-    let accepted_types = vec![
-        // accept header types and their q value, as documented in
-        // https://tools.ietf.org/html/rfc7231#section-5.3.2
-        (mediatypes::MediaTypes::ManifestV2S2, 0.5),
-        (mediatypes::MediaTypes::ManifestV2S1Signed, 0.4),
-        // TODO(steveeJ): uncomment this when all the Manifest methods work for it
-        // mediatypes::MediaTypes::ManifestList,
-    ];
-
+fn build_accept_headers(accepted_types: &[(MediaTypes, Option<f64>)]) -> header::HeaderMap {
     let accepted_types_string = accepted_types
-        .into_iter()
+        .iter()
         .map(|(ty, q)| {
             format!(
                 "{}{}",
-                ty.to_string(),
-                if no_q {
-                    String::default()
-                } else {
-                    format!("; q={}", q)
+                ty,
+                match q {
+                    None => String::default(),
+                    Some(v) => format!("; q={}", v),
                 }
             )
         })
@@ -348,5 +332,51 @@ impl Manifest {
             // Manifest::ML(_) => TODO(steveeJ),
             _ => Err(ManifestError::ArchitectureNotSupported(format!("{:?}", self)).into()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_case::test_case;
+
+    use crate::v2::Client;
+
+    #[test_case("not-gcr.io" => "application/vnd.docker.distribution.manifest.v2+json; q=0.5,application/vnd.docker.distribution.manifest.v1+prettyjws; q=0.4"; "Not gcr registry")]
+    #[test_case("gcr.io" => "application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.v1+prettyjws"; "gcr.io")]
+    #[test_case("foobar.gcr.io" => "application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.v1+prettyjws"; "Custom gcr.io registry")]
+    fn gcr_io_accept_headers(registry: &str) -> String {
+        let client_builder = Client::configure().registry(&registry);
+        let client = client_builder.build().unwrap();
+        let header_map = build_accept_headers(&client.accepted_types);
+        header_map
+            .get(header::ACCEPT)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string()
+    }
+    #[test_case(None => "application/vnd.docker.distribution.manifest.v2+json; q=0.5,application/vnd.docker.distribution.manifest.v1+prettyjws; q=0.4"; "Default settings")]
+    #[test_case(Some(vec![
+        (MediaTypes::ManifestV2S2, Some(0.5)),
+        (MediaTypes::ManifestV2S1Signed, Some(0.2)),
+    ]) => "application/vnd.docker.distribution.manifest.v2+json; q=0.5,application/vnd.docker.distribution.manifest.v1+prettyjws; q=0.2"; "Custom accept types with weight")]
+    #[test_case(Some(vec![
+        (MediaTypes::ManifestV2S2, None),
+    ]) => "application/vnd.docker.distribution.manifest.v2+json"; "Custom accept types, no weight")]
+    fn custom_accept_headers(accept_headers: Option<Vec<(MediaTypes, Option<f64>)>>) -> String {
+        let registry = "https://example.com";
+
+        let client_builder = Client::configure()
+            .registry(&registry)
+            .accepted_types(accept_headers);
+        let client = client_builder.build().unwrap();
+        let header_map = build_accept_headers(&client.accepted_types);
+        header_map
+            .get(header::ACCEPT)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string()
     }
 }
