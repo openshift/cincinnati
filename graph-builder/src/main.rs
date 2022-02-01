@@ -28,6 +28,7 @@ use parking_lot::RwLock;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::thread;
+use std::time::Duration;
 
 #[actix_web::main]
 async fn main() -> Result<(), Error> {
@@ -127,7 +128,7 @@ async fn main() -> Result<(), Error> {
                     .route(actix_web::web::get().to(graph::index)),
             )
     })
-    .keep_alive(10)
+    .keep_alive(Duration::new(10, 0))
     .bind(service_addr)?
     .run();
 
