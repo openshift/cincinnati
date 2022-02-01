@@ -7,7 +7,7 @@ use std::collections::HashSet;
 /// Template for policy-engine OpenAPIv3 document.
 const SPEC: &str = include_str!("openapiv3.json");
 
-pub(crate) fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
+pub(crate) async fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
     let path_prefix = &app_data.path_prefix;
 
     let mut spec_object: OpenAPI =
@@ -15,7 +15,7 @@ pub(crate) fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
             Ok(o) => o,
             Err(e) => {
                 error!("{}", e);
-                return actix_web::error::ErrorInternalServerError(e).into();
+                return HttpResponse::InternalServerError().body(e.to_string());
             }
         };
 
@@ -34,7 +34,7 @@ pub(crate) fn index(app_data: actix_web::web::Data<AppState>) -> HttpResponse {
         .map(HttpResponse::from)
         .unwrap_or_else(|e| {
             error!("{:?}", e);
-            actix_web::error::ErrorInternalServerError(e).into()
+            HttpResponse::InternalServerError().body(e.to_string())
         })
 }
 
