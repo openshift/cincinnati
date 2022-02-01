@@ -38,6 +38,7 @@ use opentelemetry::{
 };
 use prometheus::{labels, opts, Counter, Registry};
 use std::collections::HashSet;
+use std::time::Duration;
 
 #[allow(dead_code)]
 /// Build info
@@ -128,7 +129,7 @@ async fn main() -> Result<(), Error> {
             )
             .default_service(actix_web::web::route().to(default_response))
     })
-    .keep_alive(10)
+    .keep_alive(Duration::new(10, 0))
     .bind((settings.address, settings.port))?
     .run();
 
