@@ -54,7 +54,7 @@ test-case = "1.2.2"
 prettydiff = "0.6"
 
 [build-dependencies]
-protoc-rust = "2.26"
+protoc-rust = "2.27"
 
 [features]
 codegen-protoc = []
