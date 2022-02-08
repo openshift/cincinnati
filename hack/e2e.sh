@@ -77,10 +77,15 @@ export E2E_TESTDATA_DIR
 read -r E2E_METADATA_REVISION <"${E2E_TESTDATA_DIR}"/metadata_revision
 export E2E_METADATA_REVISION
 
+export GRAPH_SOURCE="${GRAPHDATA_IMAGE:-registry.ci.openshift.org/cincinnati-ci-public/cincinnati-graph-data:${E2E_METADATA_REVISION}}"
+
+echo "GRAPHDATA_IMAGE=${GRAPH_SOURCE}"
+
 # Render the template and apply subscription/operand
 oc process -f dist/openshift/cincinnati-e2e.yaml \
   -p IMAGE="${IMAGE}" \
   -p IMAGE_TAG="${IMAGE_TAG}" \
+  -p GRAPHDATA_IMAGE="${GRAPH_SOURCE}" \
   -p REPLICAS=2 \
   > /tmp/manifests.yaml
 backoff oc apply -f /tmp/manifests.yaml
