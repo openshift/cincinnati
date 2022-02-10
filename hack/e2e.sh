@@ -77,7 +77,7 @@ export E2E_TESTDATA_DIR
 read -r E2E_METADATA_REVISION <"${E2E_TESTDATA_DIR}"/metadata_revision
 export E2E_METADATA_REVISION
 
-export GRAPH_SOURCE="${GRAPHDATA_IMAGE:-registry.ci.openshift.org/cincinnati-ci-public/cincinnati-graph-data:${E2E_METADATA_REVISION}}"
+export GRAPH_SOURCE="${GRAPHDATA_IMAGE:-quay.io/openshift-ota/cincinnati-graph-data:${E2E_METADATA_REVISION}}"
 
 echo "GRAPHDATA_IMAGE=${GRAPH_SOURCE}"
 
