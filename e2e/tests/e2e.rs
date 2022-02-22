@@ -12,13 +12,15 @@ lazy_static::lazy_static! {
     static ref ORIGIN_HEADER_VALUE: HeaderValue = HeaderValue::from_str("example.com").unwrap();
 }
 
-#[test_case("stable-4.2", "amd64", "application/json")]
-#[test_case("stable-4.2", "amd64", "*/*")]
-#[test_case("stable-4.2", "s390x", "application/json")]
-#[test_case("stable-4.2", "s390x", "application/*")]
-#[test_case("stable-4.3", "amd64", "application/json")]
-#[test_case("stable-4.3", "amd64", "application/vnd.redhat.cincinnati.v1+json")]
-#[test_case("stable-4.3", "s390x", "application/json")]
+#[test_case("stable-4.7", "amd64", "application/json")]
+#[test_case("stable-4.7", "amd64", "*/*")]
+#[test_case("stable-4.7", "s390x", "application/json")]
+#[test_case("stable-4.7", "s390x", "application/*")]
+#[test_case("stable-4.8", "amd64", "application/json")]
+#[test_case("stable-4.8", "s390x", "application/vnd.redhat.cincinnati.v1+json")]
+#[test_case("stable-4.9", "amd64", "application/json")]
+#[test_case("stable-4.9", "amd64", "application/vnd.redhat.cincinnati.v1+json")]
+#[test_case("stable-4.9", "s390x", "application/json")]
 fn e2e_channel_success(channel: &'static str, arch: &'static str, header: &'static str) {
     let version = "v1";
     let testdata_path = format!(
@@ -58,7 +60,7 @@ fn e2e_channel_success(channel: &'static str, arch: &'static str, header: &'stat
     }
 }
 
-#[test_case("stable-4.3", "amd64", "application/vnd.redhat.cincinnati.v1+json")]
+#[test_case("stable-4.9", "amd64", "application/vnd.redhat.cincinnati.v1+json")]
 fn e2e_cors_headers(channel: &'static str, arch: &'static str, header: &'static str) {
     let runtime = commons::testing::init_runtime().unwrap();
     let res = run_graph_query(channel, arch, header, &runtime);

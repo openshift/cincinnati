@@ -1,0 +1,7967 @@
+{
+  "version": 1,
+  "nodes": [
+    {
+      "version": "4.7.31",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:ffe9342d60e71449dde930e0c731a06028658d2013ba228a42140d8663c49fab",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:ffe9342d60e71449dde930e0c731a06028658d2013ba228a42140d8663c49fab",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3510",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8"
+      }
+    },
+    {
+      "version": "4.6.19",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:af04b7bd6599842e0ccdac5f1bf108ca2914bcc9c0ab5ba30d3563c329989b32",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:0634",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:af04b7bd6599842e0ccdac5f1bf108ca2914bcc9c0ab5ba30d3563c329989b32",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.6.39",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:4b29fcd3e6d7fa5628e8ef7af170f6d37d18878d88571f9f3f712e8bb46ac057",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:2684",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:4b29fcd3e6d7fa5628e8ef7af170f6d37d18878d88571f9f3f712e8bb46ac057",
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8"
+      }
+    },
+    {
+      "version": "4.7.34",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:75c6d74a171e6c8475ea3a3c9e8576e7e6a52b4c39cc52a9160587b35f41c7b4",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:75c6d74a171e6c8475ea3a3c9e8576e7e6a52b4c39cc52a9160587b35f41c7b4",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,eus-4.8,fast-4.8,stable-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3824",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.7.40",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:97a59139774590455be5139a7696c489f06ef4aee9447f0f411eec7bc462c0b1",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:97a59139774590455be5139a7696c489f06ef4aee9447f0f411eec7bc462c0b1",
+        "url": "https://access.redhat.com/errata/RHBA-2021:5088",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,eus-4.8,fast-4.8,stable-4.8",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.6.36",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:af362b088b181a1167e2a75eb713fa71db3453f50582e148b324f17d96c7b528",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:af362b088b181a1167e2a75eb713fa71db3453f50582e148b324f17d96c7b528",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4.5.41",
+        "url": "https://access.redhat.com/errata/RHBA-2021:2498",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8"
+      }
+    },
+    {
+      "version": "4.6.34",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:3d9594bbc89080124fb30f2053b44dad7bfba2bd6c69b6d440fe135fa50c60cb",
+      "metadata": {
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:2267",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:3d9594bbc89080124fb30f2053b44dad7bfba2bd6c69b6d440fe135fa50c60cb",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8"
+      }
+    },
+    {
+      "version": "4.6.51",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:1ae65c892cdc04aeed02d6ef7483c967ee02eda6c52047dff2e7b9f31289b761",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:4800",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:1ae65c892cdc04aeed02d6ef7483c967ee02eda6c52047dff2e7b9f31289b761",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.6.13",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:3f195baabfd6490da256eec37c1dc3b3a5fad8370015828b3e0c12a2f20e2551",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:0171",
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:3f195baabfd6490da256eec37c1dc3b3a5fad8370015828b3e0c12a2f20e2551"
+      }
+    },
+    {
+      "version": "4.7.32",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:5b2bcee4dd9ef82768d56abc3b71ef23538ece63e923ab66fc48cfbc04fdb918",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:5b2bcee4dd9ef82768d56abc3b71ef23538ece63e923ab66fc48cfbc04fdb918",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3636",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.6.22",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:c8bb67393a317c1a2edd782b6c0b8502f80480a39c82d139f09034bb8663735c",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:0825",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:c8bb67393a317c1a2edd782b6c0b8502f80480a39c82d139f09034bb8663735c",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.7.3",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:1275ec59cc465729c9a18facaa471e013a4ad86a1bec5236b4169191922f7b5c",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:1275ec59cc465729c9a18facaa471e013a4ad86a1bec5236b4169191922f7b5c",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:0821",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*"
+      }
+    },
+    {
+      "version": "4.7.12",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:5f4aa1beddcf61182b715bc6301bf39ca1d967225b1052e3e41e02464bd9989b",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:5f4aa1beddcf61182b715bc6301bf39ca1d967225b1052e3e41e02464bd9989b",
+        "url": "https://access.redhat.com/errata/RHSA-2021:1561"
+      }
+    },
+    {
+      "version": "4.7.6",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:1cd01b7a64cd837cc5c2a4ef5d887b89ed2573c8956433b0b112720b75d1667b",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:1075",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:1cd01b7a64cd837cc5c2a4ef5d887b89ed2573c8956433b0b112720b75d1667b"
+      }
+    },
+    {
+      "version": "4.7.13",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:4cf44e68413acad063203e1ee8982fd01d8b9c1f8643a5b31cd7ff341b3199cd",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:2121",
+        "description": "",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:4cf44e68413acad063203e1ee8982fd01d8b9c1f8643a5b31cd7ff341b3199cd",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8"
+      }
+    },
+    {
+      "version": "4.6.15",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:4f113aa813f96701ea62474bcaa5545451a9cbfbdf3437fa9c24f8a8ac288010",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:0235",
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:4f113aa813f96701ea62474bcaa5545451a9cbfbdf3437fa9c24f8a8ac288010"
+      }
+    },
+    {
+      "version": "4.6.44",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:3489c1ce850e4c7a0bfc9121f3abd62fcfeef389491340103515bf52e0174a96",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:3489c1ce850e4c7a0bfc9121f3abd62fcfeef389491340103515bf52e0174a96",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3395"
+      }
+    },
+    {
+      "version": "4.6.16",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:2335685cda334ecf9e12c056b148c483fb81412fbfc96c885dc669d775e1f1ee",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:2335685cda334ecf9e12c056b148c483fb81412fbfc96c885dc669d775e1f1ee",
+        "url": "https://access.redhat.com/errata/RHBA-2021:0308",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8"
+      }
+    },
+    {
+      "version": "4.6.3",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:701559d0c12105bb50ea3fcd35b10af480cde25070d5dd6ad2aaf67f822de289",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:701559d0c12105bb50ea3fcd35b10af480cde25070d5dd6ad2aaf67f822de289",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.5\\..*",
+        "url": "https://access.redhat.com/errata/RHBA-2020:4339"
+      }
+    },
+    {
+      "version": "4.6.1",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:d14e2a166a2889633850f4bb472e6803c6408622316ffe63d21a68f068eb4bc9",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2020:4196",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:d14e2a166a2889633850f4bb472e6803c6408622316ffe63d21a68f068eb4bc9",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.5\\..*"
+      }
+    },
+    {
+      "version": "4.6.21",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:d62eaf00e7abcd825012e5432b53001ed59b981e6e9f46da078dd524ef3c82a8",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:d62eaf00e7abcd825012e5432b53001ed59b981e6e9f46da078dd524ef3c82a8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:0753",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.7.18",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:e284790f4bede2fa8e563b648185f3ae89da4104aada62ad14946cb9a3f8221e",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:e284790f4bede2fa8e563b648185f3ae89da4104aada62ad14946cb9a3f8221e",
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:2502"
+      }
+    },
+    {
+      "version": "4.7.2",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:e32040d23234e21f1b4ecc500533934996708c91587497a17ded2b89b36f72b4",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:e32040d23234e21f1b4ecc500533934996708c91587497a17ded2b89b36f72b4",
+        "url": "https://access.redhat.com/errata/RHBA-2021:0749",
+        "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*"
+      }
+    },
+    {
+      "version": "4.6.48",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:9f80fd95e7058275622c400de1530ae4c9bfa86bd2c0d600bfff6651ffc46771",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3829",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:9f80fd95e7058275622c400de1530ae4c9bfa86bd2c0d600bfff6651ffc46771"
+      }
+    },
+    {
+      "version": "4.6.27",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:6aeff3985c889de3805d4a3bac64ecd64345de62125bdb54b0de1ba71f9b6802",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:1427",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:6aeff3985c889de3805d4a3bac64ecd64345de62125bdb54b0de1ba71f9b6802"
+      }
+    },
+    {
+      "version": "4.6.12",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:9e78700d5b1b8618d67d39f12a2c163f08e537eb4cea89cd28d1aa3f4ea356bb",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:9e78700d5b1b8618d67d39f12a2c163f08e537eb4cea89cd28d1aa3f4ea356bb",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHSA-2021:0037",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8"
+      }
+    },
+    {
+      "version": "4.7.16",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:fd8ecf0af2682a5698fd8dea2b7c41c8615d35eb03d7da64b903a5d93eaa9161",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHSA-2021:2286",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "description": "",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:fd8ecf0af2682a5698fd8dea2b7c41c8615d35eb03d7da64b903a5d93eaa9161"
+      }
+    },
+    {
+      "version": "4.6.38",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:e77fe5981cd1d6486aa033d587ba99dc18443b8bb65268890542c9ac138c2dbe",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:2641",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:e77fe5981cd1d6486aa033d587ba99dc18443b8bb65268890542c9ac138c2dbe",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.7.19",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:c04d43604e396f595bc872254bbd0e3b7467d317178be4a1eabba9c26865ea7a",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:2554",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:c04d43604e396f595bc872254bbd0e3b7467d317178be4a1eabba9c26865ea7a",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.6.47",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:f90355236bdf28bdf1574fc86ebad2ef428e4ecb3c2fc440a9948b58fdd6f26b",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:f90355236bdf28bdf1574fc86ebad2ef428e4ecb3c2fc440a9948b58fdd6f26b",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3737",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.7.21",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:077cd6d28d5e1c8b331adc02902bceb41b6e2fcf2a835bca8da41f743f2e8c9b",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:2762",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:077cd6d28d5e1c8b331adc02902bceb41b6e2fcf2a835bca8da41f743f2e8c9b",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.7.30",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:99e21ceae6aa32678e8b25f22cdc3f1d3c191a7b722ff1dc3cd525bf51e699c6",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:99e21ceae6aa32678e8b25f22cdc3f1d3c191a7b722ff1dc3cd525bf51e699c6",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3422",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8"
+      }
+    },
+    {
+      "version": "4.6.28",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:51eb1cbe349e1daab7e22a74dfade6c78b4844b86fdb636fae42ffdf17b95c07",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:1487",
+        "description": "",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:51eb1cbe349e1daab7e22a74dfade6c78b4844b86fdb636fae42ffdf17b95c07"
+      }
+    },
+    {
+      "version": "4.7.37",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:211834cf55c5a70bc650a07facf47f8bcbf57505f17f7ce8a098348e0ff27d11",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:211834cf55c5a70bc650a07facf47f8bcbf57505f17f7ce8a098348e0ff27d11",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,eus-4.8,fast-4.8,stable-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:4572"
+      }
+    },
+    {
+      "version": "4.6.31",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:42632e8d46f3989db4b67e3e3e43e059620f687469936cbf5ed5370354b55cb3",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:42632e8d46f3989db4b67e3e3e43e059620f687469936cbf5ed5370354b55cb3",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:2100"
+      }
+    },
+    {
+      "version": "4.7.4",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:90be6b7e97d8da9fbb2afc7fe6d7dd4da6265fb847ec440e46bda1a25c224b0c",
+      "metadata": {
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:90be6b7e97d8da9fbb2afc7fe6d7dd4da6265fb847ec440e46bda1a25c224b0c",
+        "url": "https://access.redhat.com/errata/RHSA-2021:0957",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.6.29",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:a436a1fbdb0166381aba880d1b3631274e7c22c36ab8facd62ec4f6cec87f167",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:1521",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:a436a1fbdb0166381aba880d1b3631274e7c22c36ab8facd62ec4f6cec87f167",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.6.6",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:53971fb75a604ab7396575f9abd7e805dc14b7033a9bed98d3d5d15256898f80",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:53971fb75a604ab7396575f9abd7e805dc14b7033a9bed98d3d5d15256898f80"
+      }
+    },
+    {
+      "version": "4.7.23",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:5e633adb1d47cd2c0a000caa02d937074cab4e3b601b99d71368604c3109c632",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHSA-2021:2977",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:5e633adb1d47cd2c0a000caa02d937074cab4e3b601b99d71368604c3109c632",
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8"
+      }
+    },
+    {
+      "version": "4.7.22",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:551d2c79e0bfdb7dac8ca3900ba9ac6fc325b8189f3a4bcfd6422dccc51a39dc",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:551d2c79e0bfdb7dac8ca3900ba9ac6fc325b8189f3a4bcfd6422dccc51a39dc",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:2903"
+      }
+    },
+    {
+      "version": "4.6.17",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:28fdb1b6bc9348525ff52ab5879c285dbb95e7cb41c4e8506daa7d868045aa9d",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "url": "https://access.redhat.com/errata/RHSA-2021:0424",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:28fdb1b6bc9348525ff52ab5879c285dbb95e7cb41c4e8506daa7d868045aa9d"
+      }
+    },
+    {
+      "version": "4.7.24",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:cf407e67c387ea697f110d9ca5ac6882bf085a1d3b5d095bc6aad4f70c0e7243",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*",
+        "description": "",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:cf407e67c387ea697f110d9ca5ac6882bf085a1d3b5d095bc6aad4f70c0e7243",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3032"
+      }
+    },
+    {
+      "version": "4.7.38",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:79b485cbdbb11bd8d8af800a6974ef0b7202ea47070855f0abee84256206e240",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,eus-4.8,fast-4.8,stable-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:4802",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:79b485cbdbb11bd8d8af800a6974ef0b7202ea47070855f0abee84256206e240",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.7.39",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:c7c9317c12c85f765196033aab52c6723a6230a18d002b31c3dbf671efe49bde",
+      "metadata": {
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:4885",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,eus-4.8,fast-4.8,stable-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:c7c9317c12c85f765196033aab52c6723a6230a18d002b31c3dbf671efe49bde"
+      }
+    },
+    {
+      "version": "4.6.52",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:c8cc8fe80b5c3f3b03bbc934a14c4ccf2df51e988748869567d84b52ce14029c",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:c8cc8fe80b5c3f3b03bbc934a14c4ccf2df51e988748869567d84b52ce14029c",
+        "url": "https://access.redhat.com/errata/RHBA-2021:5010",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.7.5",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:3fc802aafb72402768bbf1b19ce7c6de95256e5cc50799390e63f40d96cec3cd",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:3fc802aafb72402768bbf1b19ce7c6de95256e5cc50799390e63f40d96cec3cd",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "url": "https://access.redhat.com/errata/RHSA-2021:1005",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*"
+      }
+    },
+    {
+      "version": "4.7.7",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:4a1aa09138ec75a0b9d37671b2e2a7041c91f2aacf9a7e3723efbd24d71b19b6",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:1149",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:4a1aa09138ec75a0b9d37671b2e2a7041c91f2aacf9a7e3723efbd24d71b19b6",
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*"
+      }
+    },
+    {
+      "version": "4.6.4",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:c9dd17e39acdcd5c55201a20280c423f91226bbc0eafcf7c2776d5a85dbe1e1f",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:c9dd17e39acdcd5c55201a20280c423f91226bbc0eafcf7c2776d5a85dbe1e1f",
+        "url": "https://access.redhat.com/errata/RHBA-2020:4987",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.5\\..*",
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8"
+      }
+    },
+    {
+      "version": "4.6.46",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:99b32c4454ed5a9989cd6f64bb95252c063476c8db6076c17d476be8c84601d6",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:99b32c4454ed5a9989cd6f64bb95252c063476c8db6076c17d476be8c84601d6",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3643",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.6.23",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:f591caf4f740446e8bd70847ceaafa465243c6527086f5f94c80738cee2e8989",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:f591caf4f740446e8bd70847ceaafa465243c6527086f5f94c80738cee2e8989",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:0952",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8"
+      }
+    },
+    {
+      "version": "4.6.35",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:4158a17c2464a4dc1cb3f0361612f02c43ab4a38543c080fcaf367d491c4de22",
+      "metadata": {
+        "io.openshift.upgrades.graph.previous.remove_regex": "4.5.41",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:4158a17c2464a4dc1cb3f0361612f02c43ab4a38543c080fcaf367d491c4de22",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:2410"
+      }
+    },
+    {
+      "version": "4.6.26",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:afeaf47fa0affd1dac83583e5cf57ae9824791e1bf23686733c6d5bbeb9ccc25",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:afeaf47fa0affd1dac83583e5cf57ae9824791e1bf23686733c6d5bbeb9ccc25",
+        "url": "https://access.redhat.com/errata/RHBA-2021:1232"
+      }
+    },
+    {
+      "version": "4.7.33",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:f21459e95d3e1f50e75b325dd73f622f091d00dc538337917960ffc796f2a2a6",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3686",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:f21459e95d3e1f50e75b325dd73f622f091d00dc538337917960ffc796f2a2a6"
+      }
+    },
+    {
+      "version": "4.6.18",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:191fff2ccf3f71a0fea8956a9d149a4679b48d9776be51f33691a5581ec0383b",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:191fff2ccf3f71a0fea8956a9d149a4679b48d9776be51f33691a5581ec0383b",
+        "url": "https://access.redhat.com/errata/RHBA-2021:0510",
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8"
+      }
+    },
+    {
+      "version": "4.7.9",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:5a5433a5f82a10c78783d7aed7d556d26602295ee8e9dcfaba97ebc1ab0bc2ac",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:1365",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:5a5433a5f82a10c78783d7aed7d556d26602295ee8e9dcfaba97ebc1ab0bc2ac",
+        "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*"
+      }
+    },
+    {
+      "version": "4.6.8",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:d04521dc0000f7eb07aba141589e54dc0f0dae32059055fe0a3f74b437c086b5",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHSA-2020:5259",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:d04521dc0000f7eb07aba141589e54dc0f0dae32059055fe0a3f74b437c086b5",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.7.29",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:19794cea3ec0e319223b38926e9a5356f0daa1594238ea620d83f6689777b11f",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHSA-2021:3303",
+        "description": "",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:19794cea3ec0e319223b38926e9a5356f0daa1594238ea620d83f6689777b11f",
+        "io.openshift.upgrades.graph.previous.remove_regex": "^(4[.]6[.].*|4[.]7[.][0-9]|4[.]7[.]1[0123456789]|4[.]7[.]2[0123])[+].*$",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8"
+      }
+    },
+    {
+      "version": "4.6.30",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:875779e511fa23d0bf0fe74cc4d350d29089e82621d62c60c40d8ddbfc374d88",
+      "metadata": {
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:1565",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:875779e511fa23d0bf0fe74cc4d350d29089e82621d62c60c40d8ddbfc374d88",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*"
+      }
+    },
+    {
+      "version": "4.6.54",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:dc9370770006692c967f59a5c414457c1864ba47ec4a5412fb385fc40a921435",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:dc9370770006692c967f59a5c414457c1864ba47ec4a5412fb385fc40a921435",
+        "url": "https://access.redhat.com/errata/RHBA-2022:0180"
+      }
+    },
+    {
+      "version": "4.6.25",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:27bd878e25381a01107ec4182cb70159fcfde06bec74ea606ebd0e3b897cf420",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:27bd878e25381a01107ec4182cb70159fcfde06bec74ea606ebd0e3b897cf420",
+        "url": "https://access.redhat.com/errata/RHBA-2021:1153",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8"
+      }
+    },
+    {
+      "version": "4.6.40",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:ce1ddd0ef91c1e79ba2a3ab44fa4bcac03d5cdbc1f6a979bdccb6f5cdc27a49f",
+      "metadata": {
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:2767",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:ce1ddd0ef91c1e79ba2a3ab44fa4bcac03d5cdbc1f6a979bdccb6f5cdc27a49f",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8"
+      }
+    },
+    {
+      "version": "4.6.45",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:2d29055c95b0751a79f4bb3f70381d2729813977d948dfb9d2795f025093b5df",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3517",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:2d29055c95b0751a79f4bb3f70381d2729813977d948dfb9d2795f025093b5df"
+      }
+    },
+    {
+      "version": "4.7.0",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:a68ca03d87496ddfea0ac26b82af77231583a58a7836b95de85efe5e390ad45d",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHSA-2020:5633",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:a68ca03d87496ddfea0ac26b82af77231583a58a7836b95de85efe5e390ad45d",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.7.41",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:b42b3254096ecfcbd76c0d58f1d6a8a0b45db541bd4c71e18974b3d587b4241f",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2022:0117",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:b42b3254096ecfcbd76c0d58f1d6a8a0b45db541bd4c71e18974b3d587b4241f",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,eus-4.8,fast-4.8,stable-4.8"
+      }
+    },
+    {
+      "version": "4.7.11",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:3755ab525f572d5ff24dfdbed56ddc6d7b5cacbcdd26960991e5764e181bceba",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHSA-2021:1550",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:3755ab525f572d5ff24dfdbed56ddc6d7b5cacbcdd26960991e5764e181bceba",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.6.49",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:7490b92413a583fc68236eab9300c131dbc62c68285bff3d772bb5e467bbeaf1",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:4009",
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:7490b92413a583fc68236eab9300c131dbc62c68285bff3d772bb5e467bbeaf1"
+      }
+    },
+    {
+      "version": "4.6.43",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:43c08f259d4e36b12f51a68e0898796e6db13049cfd828b9d9ef36db2f78ef28",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3197",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:43c08f259d4e36b12f51a68e0898796e6db13049cfd828b9d9ef36db2f78ef28",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*"
+      }
+    },
+    {
+      "version": "4.6.9",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:3d77e9b0fd14a5c4d50995bbb17494a02f27a69f2ffa9771b29d112fe084699f",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:3d77e9b0fd14a5c4d50995bbb17494a02f27a69f2ffa9771b29d112fe084699f",
+        "url": "https://access.redhat.com/errata/RHBA-2020:5614",
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*"
+      }
+    },
+    {
+      "version": "4.7.36",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:66c3ff041e36e1e98e6b99acc8e8239c6567911fedaa00a3cbff35de6351d4d3",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:3931",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:66c3ff041e36e1e98e6b99acc8e8239c6567911fedaa00a3cbff35de6351d4d3",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,eus-4.8,fast-4.8,stable-4.8",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.6.41",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:ca745155bc96009e03f22a8557eb85fc92e8b90e6f5e40f0cffb1ce1d3cd730f",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHBA-2021:2886",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:ca745155bc96009e03f22a8557eb85fc92e8b90e6f5e40f0cffb1ce1d3cd730f",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.6.20",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:d6477b7ff61bfe948cf0806611437ebbca07e8466ae89053ae9bca39b1cccd99",
+      "metadata": {
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:0674",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:d6477b7ff61bfe948cf0806611437ebbca07e8466ae89053ae9bca39b1cccd99",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8"
+      }
+    },
+    {
+      "version": "4.6.53",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:cb8470a138f2b3e77c434de8d5ad05514028b30c6580a34e95b50ad9f820125b",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:cb8470a138f2b3e77c434de8d5ad05514028b30c6580a34e95b50ad9f820125b",
+        "url": "https://access.redhat.com/errata/RHBA-2022:0025"
+      }
+    },
+    {
+      "version": "4.7.8",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:857c2b62a3029511626c2c52264fc2f087319a65089300e59338062e3a237421",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:857c2b62a3029511626c2c52264fc2f087319a65089300e59338062e3a237421",
+        "url": "https://access.redhat.com/errata/RHSA-2021:1225",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*",
+        "description": ""
+      }
+    },
+    {
+      "version": "4.7.28",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:30c2011f6d84b16960b981a07558f96a55e59a281449d25c5ccc778aaeb2f970",
+      "metadata": {
+        "url": "https://access.redhat.com/errata/RHSA-2021:3262",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:30c2011f6d84b16960b981a07558f96a55e59a281449d25c5ccc778aaeb2f970",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "description": "",
+        "io.openshift.upgrades.graph.previous.remove_regex": "^(4[.]6[.].*|4[.]7[.][0-9]|4[.]7[.]1[0-9]|4[.]7[.]2[0123])[+].*$"
+      }
+    },
+    {
+      "version": "4.6.32",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:db909f7382102ddc4ea995dd9a965633d109d57767b20816d1b3a43e6536a862",
+      "metadata": {
+        "description": "",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:db909f7382102ddc4ea995dd9a965633d109d57767b20816d1b3a43e6536a862",
+        "url": "https://access.redhat.com/errata/RHBA-2021:2157"
+      }
+    },
+    {
+      "version": "4.6.42",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:b6064855fbfe13da8c5f4738d713662a7e7e183b7192bd45fb7313913bcb354f",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.6,eus-4.6,fast-4.6,stable-4.6,candidate-4.7,fast-4.7,stable-4.7,eus-4.8",
+        "description": "",
+        "url": "https://access.redhat.com/errata/RHBA-2021:3008",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:b6064855fbfe13da8c5f4738d713662a7e7e183b7192bd45fb7313913bcb354f"
+      }
+    },
+    {
+      "version": "4.7.1",
+      "payload": "quay.io/openshift-release-dev/ocp-release@sha256:25909322759eecb2227fa46c2c0c8f61df547e607e27de34d0e1ce293e53ef0d",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
+        "url": "https://access.redhat.com/errata/RHBA-2021:0678",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*",
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:25909322759eecb2227fa46c2c0c8f61df547e607e27de34d0e1ce293e53ef0d",
+        "description": ""
+      }
+    }
+  ],
+  "edges": [
+    [
+      36,
+      63
+    ],
+    [
+      13,
+      26
+    ],
+    [
+      54,
+      30
+    ],
+    [
+      46,
+      26
+    ],
+    [
+      36,
+      14
+    ],
+    [
+      32,
+      44
+    ],
+    [
+      70,
+      58
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      15,
+      29
+    ],
+    [
+      8,
+      1
+    ],
+    [
+      72,
+      26
+    ],
+    [
+      38,
+      52
+    ],
+    [
+      54,
+      26
+    ],
+    [
+      60,
+      58
+    ],
+    [
+      26,
+      30
+    ],
+    [
+      6,
+      21
+    ],
+    [
+      59,
+      74
+    ],
+    [
+      62,
+      31
+    ],
+    [
+      66,
+      4
+    ],
+    [
+      60,
+      30
+    ],
+    [
+      69,
+      4
+    ],
+    [
+      45,
+      4
+    ],
+    [
+      40,
+      20
+    ],
+    [
+      53,
+      44
+    ],
+    [
+      20,
+      32
+    ],
+    [
+      13,
+      30
+    ],
+    [
+      75,
+      31
+    ],
+    [
+      51,
+      33
+    ],
+    [
+      8,
+      2
+    ],
+    [
+      51,
+      38
+    ],
+    [
+      21,
+      52
+    ],
+    [
+      5,
+      3
+    ],
+    [
+      18,
+      16
+    ],
+    [
+      61,
+      33
+    ],
+    [
+      46,
+      64
+    ],
+    [
+      26,
+      63
+    ],
+    [
+      68,
+      4
+    ],
+    [
+      48,
+      63
+    ],
+    [
+      50,
+      71
+    ],
+    [
+      59,
+      52
+    ],
+    [
+      36,
+      31
+    ],
+    [
+      48,
+      58
+    ],
+    [
+      47,
+      61
+    ],
+    [
+      34,
+      69
+    ],
+    [
+      34,
+      39
+    ],
+    [
+      49,
+      24
+    ],
+    [
+      74,
+      29
+    ],
+    [
+      73,
+      3
+    ],
+    [
+      30,
+      9
+    ],
+    [
+      31,
+      0
+    ],
+    [
+      24,
+      33
+    ],
+    [
+      52,
+      63
+    ],
+    [
+      49,
+      7
+    ],
+    [
+      37,
+      61
+    ],
+    [
+      74,
+      4
+    ],
+    [
+      22,
+      52
+    ],
+    [
+      20,
+      24
+    ],
+    [
+      17,
+      24
+    ],
+    [
+      30,
+      4
+    ],
+    [
+      24,
+      75
+    ],
+    [
+      37,
+      65
+    ],
+    [
+      68,
+      63
+    ],
+    [
+      1,
+      29
+    ],
+    [
+      8,
+      65
+    ],
+    [
+      27,
+      2
+    ],
+    [
+      21,
+      3
+    ],
+    [
+      2,
+      65
+    ],
+    [
+      8,
+      51
+    ],
+    [
+      35,
+      12
+    ],
+    [
+      68,
+      33
+    ],
+    [
+      25,
+      60
+    ],
+    [
+      20,
+      2
+    ],
+    [
+      16,
+      61
+    ],
+    [
+      32,
+      30
+    ],
+    [
+      16,
+      29
+    ],
+    [
+      75,
+      3
+    ],
+    [
+      27,
+      43
+    ],
+    [
+      59,
+      69
+    ],
+    [
+      47,
+      74
+    ],
+    [
+      32,
+      63
+    ],
+    [
+      3,
+      63
+    ],
+    [
+      32,
+      16
+    ],
+    [
+      34,
+      31
+    ],
+    [
+      28,
+      33
+    ],
+    [
+      17,
+      59
+    ],
+    [
+      75,
+      63
+    ],
+    [
+      57,
+      50
+    ],
+    [
+      76,
+      68
+    ],
+    [
+      51,
+      58
+    ],
+    [
+      15,
+      50
+    ],
+    [
+      34,
+      61
+    ],
+    [
+      47,
+      44
+    ],
+    [
+      56,
+      33
+    ],
+    [
+      32,
+      33
+    ],
+    [
+      51,
+      12
+    ],
+    [
+      25,
+      16
+    ],
+    [
+      5,
+      48
+    ],
+    [
+      47,
+      16
+    ],
+    [
+      32,
+      38
+    ],
+    [
+      19,
+      32
+    ],
+    [
+      69,
+      48
+    ],
+    [
+      18,
+      44
+    ],
+    [
+      47,
+      32
+    ],
+    [
+      56,
+      31
+    ],
+    [
+      34,
+      50
+    ],
+    [
+      38,
+      63
+    ],
+    [
+      50,
+      69
+    ],
+    [
+      60,
+      43
+    ],
+    [
+      50,
+      21
+    ],
+    [
+      67,
+      25
+    ],
+    [
+      69,
+      39
+    ],
+    [
+      25,
+      40
+    ],
+    [
+      38,
+      43
+    ],
+    [
+      16,
+      3
+    ],
+    [
+      49,
+      16
+    ],
+    [
+      19,
+      29
+    ],
+    [
+      27,
+      48
+    ],
+    [
+      30,
+      43
+    ],
+    [
+      36,
+      33
+    ],
+    [
+      61,
+      0
+    ],
+    [
+      74,
+      39
+    ],
+    [
+      6,
+      33
+    ],
+    [
+      50,
+      33
+    ],
+    [
+      25,
+      8
+    ],
+    [
+      14,
+      63
+    ],
+    [
+      5,
+      33
+    ],
+    [
+      53,
+      51
+    ],
+    [
+      70,
+      23
+    ],
+    [
+      6,
+      39
+    ],
+    [
+      69,
+      33
+    ],
+    [
+      19,
+      59
+    ],
+    [
+      75,
+      33
+    ],
+    [
+      15,
+      44
+    ],
+    [
+      66,
+      33
+    ],
+    [
+      18,
+      8
+    ],
+    [
+      64,
+      3
+    ],
+    [
+      16,
+      33
+    ],
+    [
+      40,
+      60
+    ],
+    [
+      13,
+      52
+    ],
+    [
+      47,
+      8
+    ],
+    [
+      32,
+      34
+    ],
+    [
+      20,
+      23
+    ],
+    [
+      2,
+      75
+    ],
+    [
+      10,
+      23
+    ],
+    [
+      49,
+      23
+    ],
+    [
+      60,
+      63
+    ],
+    [
+      23,
+      58
+    ],
+    [
+      36,
+      21
+    ],
+    [
+      37,
+      8
+    ],
+    [
+      35,
+      4
+    ],
+    [
+      59,
+      23
+    ],
+    [
+      75,
+      48
+    ],
+    [
+      51,
+      23
+    ],
+    [
+      6,
+      16
+    ],
+    [
+      45,
+      38
+    ],
+    [
+      62,
+      11
+    ],
+    [
+      17,
+      58
+    ],
+    [
+      25,
+      59
+    ],
+    [
+      62,
+      39
+    ],
+    [
+      8,
+      74
+    ],
+    [
+      51,
+      65
+    ],
+    [
+      13,
+      4
+    ],
+    [
+      16,
+      63
+    ],
+    [
+      0,
+      63
+    ],
+    [
+      66,
+      23
+    ],
+    [
+      76,
+      42
+    ],
+    [
+      34,
+      38
+    ],
+    [
+      55,
+      8
+    ],
+    [
+      19,
+      6
+    ],
+    [
+      54,
+      3
+    ],
+    [
+      11,
+      72
+    ],
+    [
+      22,
+      39
+    ],
+    [
+      9,
+      3
+    ],
+    [
+      36,
+      68
+    ],
+    [
+      1,
+      20
+    ],
+    [
+      11,
+      3
+    ],
+    [
+      27,
+      30
+    ],
+    [
+      62,
+      72
+    ],
+    [
+      49,
+      58
+    ],
+    [
+      25,
+      53
+    ],
+    [
+      51,
+      26
+    ],
+    [
+      70,
+      27
+    ],
+    [
+      36,
+      61
+    ],
+    [
+      55,
+      1
+    ],
+    [
+      62,
+      43
+    ],
+    [
+      17,
+      29
+    ],
+    [
+      45,
+      28
+    ],
+    [
+      53,
+      24
+    ],
+    [
+      72,
+      9
+    ],
+    [
+      32,
+      21
+    ],
+    [
+      50,
+      58
+    ],
+    [
+      5,
+      2
+    ],
+    [
+      17,
+      34
+    ],
+    [
+      30,
+      39
+    ],
+    [
+      37,
+      69
+    ],
+    [
+      6,
+      50
+    ],
+    [
+      2,
+      16
+    ],
+    [
+      55,
+      32
+    ],
+    [
+      74,
+      2
+    ],
+    [
+      37,
+      16
+    ],
+    [
+      14,
+      9
+    ],
+    [
+      57,
+      68
+    ],
+    [
+      24,
+      6
+    ],
+    [
+      5,
+      23
+    ],
+    [
+      17,
+      74
+    ],
+    [
+      50,
+      43
+    ],
+    [
+      24,
+      31
+    ],
+    [
+      60,
+      75
+    ],
+    [
+      0,
+      68
+    ],
+    [
+      24,
+      60
+    ],
+    [
+      55,
+      40
+    ],
+    [
+      59,
+      58
+    ],
+    [
+      5,
+      58
+    ],
+    [
+      13,
+      54
+    ],
+    [
+      6,
+      71
+    ],
+    [
+      27,
+      58
+    ],
+    [
+      72,
+      30
+    ],
+    [
+      74,
+      31
+    ],
+    [
+      19,
+      24
+    ],
+    [
+      55,
+      61
+    ],
+    [
+      48,
+      65
+    ],
+    [
+      25,
+      1
+    ],
+    [
+      45,
+      31
+    ],
+    [
+      46,
+      42
+    ],
+    [
+      66,
+      61
+    ],
+    [
+      17,
+      2
+    ],
+    [
+      51,
+      39
+    ],
+    [
+      36,
+      58
+    ],
+    [
+      57,
+      52
+    ],
+    [
+      59,
+      44
+    ],
+    [
+      22,
+      26
+    ],
+    [
+      57,
+      0
+    ],
+    [
+      74,
+      50
+    ],
+    [
+      53,
+      32
+    ],
+    [
+      74,
+      48
+    ],
+    [
+      8,
+      59
+    ],
+    [
+      60,
+      0
+    ],
+    [
+      39,
+      52
+    ],
+    [
+      41,
+      56
+    ],
+    [
+      22,
+      33
+    ],
+    [
+      70,
+      74
+    ],
+    [
+      54,
+      33
+    ],
+    [
+      30,
+      31
+    ],
+    [
+      5,
+      21
+    ],
+    [
+      47,
+      6
+    ],
+    [
+      14,
+      43
+    ],
+    [
+      27,
+      16
+    ],
+    [
+      51,
+      34
+    ],
+    [
+      67,
+      34
+    ],
+    [
+      26,
+      52
+    ],
+    [
+      45,
+      68
+    ],
+    [
+      5,
+      31
+    ],
+    [
+      19,
+      74
+    ],
+    [
+      51,
+      61
+    ],
+    [
+      5,
+      0
+    ],
+    [
+      38,
+      33
+    ],
+    [
+      53,
+      2
+    ],
+    [
+      27,
+      3
+    ],
+    [
+      67,
+      8
+    ],
+    [
+      45,
+      3
+    ],
+    [
+      74,
+      61
+    ],
+    [
+      56,
+      63
+    ],
+    [
+      60,
+      52
+    ],
+    [
+      66,
+      65
+    ],
+    [
+      12,
+      38
+    ],
+    [
+      36,
+      48
+    ],
+    [
+      6,
+      2
+    ],
+    [
+      27,
+      33
+    ],
+    [
+      10,
+      2
+    ],
+    [
+      40,
+      1
+    ],
+    [
+      57,
+      21
+    ],
+    [
+      50,
+      9
+    ],
+    [
+      59,
+      21
+    ],
+    [
+      41,
+      4
+    ],
+    [
+      36,
+      64
+    ],
+    [
+      10,
+      51
+    ],
+    [
+      32,
+      42
+    ],
+    [
+      34,
+      42
+    ],
+    [
+      50,
+      42
+    ],
+    [
+      41,
+      52
+    ],
+    [
+      51,
+      4
+    ],
+    [
+      55,
+      34
+    ],
+    [
+      5,
+      71
+    ],
+    [
+      1,
+      48
+    ],
+    [
+      27,
+      71
+    ],
+    [
+      2,
+      71
+    ],
+    [
+      10,
+      74
+    ],
+    [
+      40,
+      51
+    ],
+    [
+      70,
+      24
+    ],
+    [
+      25,
+      50
+    ],
+    [
+      67,
+      32
+    ],
+    [
+      5,
+      52
+    ],
+    [
+      59,
+      34
+    ],
+    [
+      8,
+      61
+    ],
+    [
+      74,
+      75
+    ],
+    [
+      27,
+      68
+    ],
+    [
+      47,
+      71
+    ],
+    [
+      60,
+      71
+    ],
+    [
+      69,
+      71
+    ],
+    [
+      75,
+      71
+    ],
+    [
+      66,
+      71
+    ],
+    [
+      16,
+      71
+    ],
+    [
+      61,
+      71
+    ],
+    [
+      48,
+      71
+    ],
+    [
+      29,
+      71
+    ],
+    [
+      23,
+      71
+    ],
+    [
+      65,
+      71
+    ],
+    [
+      59,
+      32
+    ],
+    [
+      76,
+      54
+    ],
+    [
+      7,
+      71
+    ],
+    [
+      44,
+      71
+    ],
+    [
+      37,
+      71
+    ],
+    [
+      32,
+      43
+    ],
+    [
+      66,
+      48
+    ],
+    [
+      8,
+      70
+    ],
+    [
+      55,
+      71
+    ],
+    [
+      67,
+      71
+    ],
+    [
+      19,
+      60
+    ],
+    [
+      15,
+      58
+    ],
+    [
+      29,
+      33
+    ],
+    [
+      71,
+      58
+    ],
+    [
+      70,
+      20
+    ],
+    [
+      51,
+      6
+    ],
+    [
+      54,
+      9
+    ],
+    [
+      74,
+      23
+    ],
+    [
+      57,
+      4
+    ],
+    [
+      36,
+      60
+    ],
+    [
+      56,
+      4
+    ],
+    [
+      59,
+      42
+    ],
+    [
+      36,
+      42
+    ],
+    [
+      74,
+      42
+    ],
+    [
+      5,
+      42
+    ],
+    [
+      5,
+      4
+    ],
+    [
+      1,
+      16
+    ],
+    [
+      22,
+      63
+    ],
+    [
+      60,
+      31
+    ],
+    [
+      36,
+      29
+    ],
+    [
+      72,
+      63
+    ],
+    [
+      22,
+      54
+    ],
+    [
+      19,
+      71
+    ],
+    [
+      51,
+      30
+    ],
+    [
+      25,
+      71
+    ],
+    [
+      8,
+      71
+    ],
+    [
+      15,
+      71
+    ],
+    [
+      15,
+      70
+    ],
+    [
+      18,
+      29
+    ],
+    [
+      23,
+      65
+    ],
+    [
+      17,
+      71
+    ],
+    [
+      25,
+      5
+    ],
+    [
+      2,
+      33
+    ],
+    [
+      22,
+      28
+    ],
+    [
+      46,
+      52
+    ],
+    [
+      76,
+      39
+    ],
+    [
+      23,
+      3
+    ],
+    [
+      61,
+      65
+    ],
+    [
+      40,
+      71
+    ],
+    [
+      1,
+      6
+    ],
+    [
+      26,
+      68
+    ],
+    [
+      69,
+      31
+    ],
+    [
+      17,
+      32
+    ],
+    [
+      47,
+      65
+    ],
+    [
+      34,
+      48
+    ],
+    [
+      31,
+      68
+    ],
+    [
+      24,
+      52
+    ],
+    [
+      76,
+      3
+    ],
+    [
+      67,
+      16
+    ],
+    [
+      24,
+      0
+    ],
+    [
+      53,
+      71
+    ],
+    [
+      1,
+      71
+    ],
+    [
+      22,
+      72
+    ],
+    [
+      74,
+      0
+    ],
+    [
+      62,
+      63
+    ],
+    [
+      14,
+      33
+    ],
+    [
+      28,
+      3
+    ],
+    [
+      57,
+      69
+    ],
+    [
+      32,
+      52
+    ],
+    [
+      57,
+      63
+    ],
+    [
+      35,
+      31
+    ],
+    [
+      76,
+      30
+    ],
+    [
+      10,
+      48
+    ],
+    [
+      2,
+      42
+    ],
+    [
+      46,
+      63
+    ],
+    [
+      42,
+      63
+    ],
+    [
+      53,
+      61
+    ],
+    [
+      46,
+      30
+    ],
+    [
+      24,
+      65
+    ],
+    [
+      35,
+      0
+    ],
+    [
+      40,
+      69
+    ],
+    [
+      25,
+      69
+    ],
+    [
+      23,
+      68
+    ],
+    [
+      70,
+      71
+    ],
+    [
+      66,
+      31
+    ],
+    [
+      57,
+      3
+    ],
+    [
+      18,
+      65
+    ],
+    [
+      66,
+      0
+    ],
+    [
+      67,
+      50
+    ],
+    [
+      57,
+      2
+    ],
+    [
+      31,
+      63
+    ],
+    [
+      60,
+      33
+    ],
+    [
+      32,
+      65
+    ],
+    [
+      62,
+      0
+    ],
+    [
+      16,
+      0
+    ],
+    [
+      1,
+      70
+    ],
+    [
+      59,
+      0
+    ],
+    [
+      59,
+      61
+    ],
+    [
+      13,
+      63
+    ],
+    [
+      50,
+      60
+    ],
+    [
+      24,
+      61
+    ],
+    [
+      20,
+      71
+    ],
+    [
+      10,
+      71
+    ],
+    [
+      49,
+      71
+    ],
+    [
+      40,
+      74
+    ],
+    [
+      59,
+      71
+    ],
+    [
+      51,
+      71
+    ],
+    [
+      24,
+      71
+    ],
+    [
+      32,
+      71
+    ],
+    [
+      36,
+      71
+    ],
+    [
+      18,
+      71
+    ],
+    [
+      57,
+      71
+    ],
+    [
+      34,
+      71
+    ],
+    [
+      74,
+      71
+    ],
+    [
+      48,
+      44
+    ],
+    [
+      20,
+      16
+    ],
+    [
+      73,
+      9
+    ],
+    [
+      61,
+      68
+    ],
+    [
+      1,
+      32
+    ],
+    [
+      22,
+      31
+    ],
+    [
+      49,
+      51
+    ],
+    [
+      44,
+      4
+    ],
+    [
+      47,
+      48
+    ],
+    [
+      15,
+      53
+    ],
+    [
+      21,
+      0
+    ],
+    [
+      55,
+      25
+    ],
+    [
+      51,
+      68
+    ],
+    [
+      47,
+      50
+    ],
+    [
+      28,
+      0
+    ],
+    [
+      52,
+      3
+    ],
+    [
+      29,
+      68
+    ],
+    [
+      35,
+      64
+    ],
+    [
+      6,
+      38
+    ],
+    [
+      51,
+      63
+    ],
+    [
+      59,
+      63
+    ],
+    [
+      26,
+      39
+    ],
+    [
+      37,
+      48
+    ],
+    [
+      47,
+      20
+    ],
+    [
+      20,
+      5
+    ],
+    [
+      0,
+      33
+    ],
+    [
+      11,
+      31
+    ],
+    [
+      16,
+      68
+    ],
+    [
+      16,
+      7
+    ],
+    [
+      31,
+      3
+    ],
+    [
+      35,
+      38
+    ],
+    [
+      25,
+      74
+    ],
+    [
+      59,
+      26
+    ],
+    [
+      15,
+      34
+    ],
+    [
+      67,
+      29
+    ],
+    [
+      59,
+      24
+    ],
+    [
+      11,
+      30
+    ],
+    [
+      54,
+      28
+    ],
+    [
+      64,
+      38
+    ],
+    [
+      76,
+      38
+    ],
+    [
+      13,
+      28
+    ],
+    [
+      30,
+      33
+    ],
+    [
+      48,
+      3
+    ],
+    [
+      59,
+      29
+    ],
+    [
+      10,
+      6
+    ],
+    [
+      8,
+      32
+    ],
+    [
+      39,
+      0
+    ],
+    [
+      19,
+      69
+    ],
+    [
+      44,
+      58
+    ],
+    [
+      53,
+      69
+    ],
+    [
+      57,
+      43
+    ],
+    [
+      9,
+      33
+    ],
+    [
+      11,
+      46
+    ],
+    [
+      37,
+      50
+    ],
+    [
+      76,
+      0
+    ],
+    [
+      67,
+      2
+    ],
+    [
+      29,
+      63
+    ],
+    [
+      8,
+      50
+    ],
+    [
+      9,
+      52
+    ],
+    [
+      28,
+      43
+    ],
+    [
+      66,
+      68
+    ],
+    [
+      35,
+      26
+    ],
+    [
+      25,
+      23
+    ],
+    [
+      8,
+      20
+    ],
+    [
+      14,
+      38
+    ],
+    [
+      32,
+      26
+    ],
+    [
+      13,
+      33
+    ],
+    [
+      70,
+      16
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      57,
+      39
+    ],
+    [
+      69,
+      3
+    ],
+    [
+      51,
+      42
+    ],
+    [
+      62,
+      52
+    ],
+    [
+      12,
+      39
+    ],
+    [
+      8,
+      69
+    ],
+    [
+      15,
+      69
+    ],
+    [
+      17,
+      69
+    ],
+    [
+      60,
+      42
+    ],
+    [
+      75,
+      42
+    ],
+    [
+      16,
+      42
+    ],
+    [
+      1,
+      69
+    ],
+    [
+      19,
+      15
+    ],
+    [
+      74,
+      16
+    ],
+    [
+      47,
+      51
+    ],
+    [
+      28,
+      31
+    ],
+    [
+      50,
+      44
+    ],
+    [
+      33,
+      63
+    ],
+    [
+      13,
+      64
+    ],
+    [
+      18,
+      61
+    ],
+    [
+      48,
+      29
+    ],
+    [
+      15,
+      5
+    ],
+    [
+      65,
+      44
+    ],
+    [
+      48,
+      42
+    ],
+    [
+      26,
+      31
+    ],
+    [
+      18,
+      50
+    ],
+    [
+      31,
+      4
+    ],
+    [
+      50,
+      38
+    ],
+    [
+      59,
+      12
+    ],
+    [
+      47,
+      69
+    ],
+    [
+      5,
+      29
+    ],
+    [
+      16,
+      52
+    ],
+    [
+      66,
+      52
+    ],
+    [
+      40,
+      24
+    ],
+    [
+      62,
+      68
+    ],
+    [
+      36,
+      23
+    ],
+    [
+      25,
+      6
+    ],
+    [
+      45,
+      12
+    ],
+    [
+      52,
+      4
+    ],
+    [
+      64,
+      68
+    ],
+    [
+      17,
+      53
+    ],
+    [
+      37,
+      34
+    ],
+    [
+      8,
+      36
+    ],
+    [
+      73,
+      63
+    ],
+    [
+      11,
+      33
+    ],
+    [
+      59,
+      2
+    ],
+    [
+      57,
+      5
+    ],
+    [
+      39,
+      38
+    ],
+    [
+      30,
+      38
+    ],
+    [
+      34,
+      30
+    ],
+    [
+      50,
+      29
+    ],
+    [
+      36,
+      34
+    ],
+    [
+      47,
+      60
+    ],
+    [
+      74,
+      6
+    ],
+    [
+      5,
+      61
+    ],
+    [
+      21,
+      39
+    ],
+    [
+      24,
+      16
+    ],
+    [
+      15,
+      65
+    ],
+    [
+      57,
+      58
+    ],
+    [
+      1,
+      5
+    ],
+    [
+      50,
+      31
+    ],
+    [
+      69,
+      63
+    ],
+    [
+      8,
+      58
+    ],
+    [
+      32,
+      60
+    ],
+    [
+      55,
+      44
+    ],
+    [
+      2,
+      48
+    ],
+    [
+      19,
+      61
+    ],
+    [
+      35,
+      21
+    ],
+    [
+      67,
+      40
+    ],
+    [
+      34,
+      29
+    ],
+    [
+      25,
+      65
+    ],
+    [
+      64,
+      39
+    ],
+    [
+      24,
+      12
+    ],
+    [
+      70,
+      60
+    ],
+    [
+      60,
+      29
+    ],
+    [
+      51,
+      60
+    ],
+    [
+      8,
+      29
+    ],
+    [
+      55,
+      29
+    ],
+    [
+      19,
+      2
+    ],
+    [
+      6,
+      52
+    ],
+    [
+      34,
+      43
+    ],
+    [
+      10,
+      61
+    ],
+    [
+      35,
+      33
+    ],
+    [
+      24,
+      34
+    ],
+    [
+      51,
+      43
+    ],
+    [
+      46,
+      3
+    ],
+    [
+      35,
+      3
+    ],
+    [
+      19,
+      8
+    ],
+    [
+      50,
+      0
+    ],
+    [
+      59,
+      5
+    ],
+    [
+      51,
+      5
+    ],
+    [
+      24,
+      5
+    ],
+    [
+      32,
+      5
+    ],
+    [
+      40,
+      53
+    ],
+    [
+      36,
+      5
+    ],
+    [
+      15,
+      36
+    ],
+    [
+      18,
+      5
+    ],
+    [
+      32,
+      29
+    ],
+    [
+      60,
+      23
+    ],
+    [
+      72,
+      64
+    ],
+    [
+      51,
+      74
+    ],
+    [
+      64,
+      42
+    ],
+    [
+      21,
+      42
+    ],
+    [
+      1,
+      50
+    ],
+    [
+      52,
+      42
+    ],
+    [
+      72,
+      42
+    ],
+    [
+      11,
+      54
+    ],
+    [
+      12,
+      63
+    ],
+    [
+      47,
+      23
+    ],
+    [
+      2,
+      68
+    ],
+    [
+      64,
+      0
+    ],
+    [
+      34,
+      5
+    ],
+    [
+      17,
+      36
+    ],
+    [
+      74,
+      5
+    ],
+    [
+      24,
+      14
+    ],
+    [
+      29,
+      52
+    ],
+    [
+      16,
+      48
+    ],
+    [
+      6,
+      5
+    ],
+    [
+      37,
+      15
+    ],
+    [
+      34,
+      65
+    ],
+    [
+      50,
+      5
+    ],
+    [
+      47,
+      5
+    ],
+    [
+      69,
+      68
+    ],
+    [
+      37,
+      5
+    ],
+    [
+      2,
+      52
+    ],
+    [
+      25,
+      61
+    ],
+    [
+      40,
+      61
+    ],
+    [
+      55,
+      5
+    ],
+    [
+      67,
+      5
+    ],
+    [
+      22,
+      38
+    ],
+    [
+      37,
+      59
+    ],
+    [
+      69,
+      65
+    ],
+    [
+      57,
+      30
+    ],
+    [
+      40,
+      75
+    ],
+    [
+      24,
+      4
+    ],
+    [
+      15,
+      24
+    ],
+    [
+      36,
+      26
+    ],
+    [
+      61,
+      43
+    ],
+    [
+      18,
+      25
+    ],
+    [
+      22,
+      0
+    ],
+    [
+      40,
+      36
+    ],
+    [
+      18,
+      1
+    ],
+    [
+      1,
+      74
+    ],
+    [
+      14,
+      0
+    ],
+    [
+      11,
+      68
+    ],
+    [
+      24,
+      29
+    ],
+    [
+      19,
+      25
+    ],
+    [
+      72,
+      0
+    ],
+    [
+      19,
+      20
+    ],
+    [
+      40,
+      32
+    ],
+    [
+      53,
+      23
+    ],
+    [
+      30,
+      52
+    ],
+    [
+      57,
+      29
+    ],
+    [
+      56,
+      52
+    ],
+    [
+      62,
+      38
+    ],
+    [
+      25,
+      70
+    ],
+    [
+      15,
+      23
+    ],
+    [
+      57,
+      31
+    ],
+    [
+      37,
+      20
+    ],
+    [
+      36,
+      50
+    ],
+    [
+      37,
+      29
+    ],
+    [
+      20,
+      34
+    ],
+    [
+      75,
+      0
+    ],
+    [
+      51,
+      2
+    ],
+    [
+      57,
+      6
+    ],
+    [
+      20,
+      29
+    ],
+    [
+      50,
+      30
+    ],
+    [
+      51,
+      69
+    ],
+    [
+      15,
+      7
+    ],
+    [
+      26,
+      28
+    ],
+    [
+      36,
+      43
+    ],
+    [
+      29,
+      3
+    ],
+    [
+      53,
+      58
+    ],
+    [
+      24,
+      50
+    ],
+    [
+      20,
+      51
+    ],
+    [
+      37,
+      44
+    ],
+    [
+      51,
+      16
+    ],
+    [
+      25,
+      32
+    ],
+    [
+      56,
+      9
+    ],
+    [
+      34,
+      63
+    ],
+    [
+      2,
+      29
+    ],
+    [
+      6,
+      31
+    ],
+    [
+      29,
+      42
+    ],
+    [
+      5,
+      38
+    ],
+    [
+      73,
+      0
+    ],
+    [
+      37,
+      58
+    ],
+    [
+      45,
+      13
+    ],
+    [
+      27,
+      75
+    ],
+    [
+      66,
+      7
+    ],
+    [
+      26,
+      0
+    ],
+    [
+      32,
+      23
+    ],
+    [
+      70,
+      69
+    ],
+    [
+      25,
+      75
+    ],
+    [
+      75,
+      16
+    ],
+    [
+      56,
+      68
+    ],
+    [
+      74,
+      43
+    ],
+    [
+      6,
+      4
+    ],
+    [
+      26,
+      42
+    ],
+    [
+      59,
+      33
+    ],
+    [
+      33,
+      43
+    ],
+    [
+      18,
+      24
+    ],
+    [
+      27,
+      38
+    ],
+    [
+      36,
+      74
+    ],
+    [
+      67,
+      74
+    ],
+    [
+      55,
+      6
+    ],
+    [
+      43,
+      63
+    ],
+    [
+      55,
+      15
+    ],
+    [
+      20,
+      59
+    ],
+    [
+      17,
+      60
+    ],
+    [
+      67,
+      48
+    ],
+    [
+      16,
+      23
+    ],
+    [
+      5,
+      60
+    ],
+    [
+      46,
+      0
+    ],
+    [
+      10,
+      50
+    ],
+    [
+      25,
+      29
+    ],
+    [
+      6,
+      69
+    ],
+    [
+      23,
+      42
+    ],
+    [
+      55,
+      23
+    ],
+    [
+      70,
+      34
+    ],
+    [
+      62,
+      13
+    ],
+    [
+      76,
+      13
+    ],
+    [
+      22,
+      13
+    ],
+    [
+      50,
+      23
+    ],
+    [
+      11,
+      13
+    ],
+    [
+      35,
+      13
+    ],
+    [
+      18,
+      74
+    ],
+    [
+      50,
+      48
+    ],
+    [
+      34,
+      75
+    ],
+    [
+      42,
+      4
+    ],
+    [
+      15,
+      40
+    ],
+    [
+      49,
+      69
+    ],
+    [
+      51,
+      21
+    ],
+    [
+      49,
+      50
+    ],
+    [
+      47,
+      58
+    ],
+    [
+      70,
+      50
+    ],
+    [
+      17,
+      51
+    ],
+    [
+      12,
+      42
+    ],
+    [
+      28,
+      42
+    ],
+    [
+      73,
+      42
+    ],
+    [
+      3,
+      42
+    ],
+    [
+      54,
+      42
+    ],
+    [
+      76,
+      31
+    ],
+    [
+      51,
+      0
+    ],
+    [
+      11,
+      38
+    ],
+    [
+      24,
+      2
+    ],
+    [
+      57,
+      33
+    ],
+    [
+      17,
+      7
+    ],
+    [
+      59,
+      64
+    ],
+    [
+      53,
+      36
+    ],
+    [
+      25,
+      58
+    ],
+    [
+      12,
+      33
+    ],
+    [
+      27,
+      60
+    ],
+    [
+      36,
+      12
+    ],
+    [
+      60,
+      68
+    ],
+    [
+      67,
+      15
+    ],
+    [
+      2,
+      63
+    ],
+    [
+      10,
+      75
+    ],
+    [
+      40,
+      70
+    ],
+    [
+      6,
+      43
+    ],
+    [
+      13,
+      42
+    ],
+    [
+      36,
+      38
+    ],
+    [
+      62,
+      21
+    ],
+    [
+      47,
+      1
+    ],
+    [
+      75,
+      61
+    ],
+    [
+      55,
+      70
+    ],
+    [
+      53,
+      70
+    ],
+    [
+      76,
+      26
+    ],
+    [
+      24,
+      30
+    ],
+    [
+      69,
+      0
+    ],
+    [
+      36,
+      30
+    ],
+    [
+      34,
+      23
+    ],
+    [
+      25,
+      20
+    ],
+    [
+      54,
+      63
+    ],
+    [
+      1,
+      61
+    ],
+    [
+      24,
+      44
+    ],
+    [
+      30,
+      68
+    ],
+    [
+      15,
+      51
+    ],
+    [
+      64,
+      12
+    ],
+    [
+      24,
+      69
+    ],
+    [
+      67,
+      51
+    ],
+    [
+      73,
+      33
+    ],
+    [
+      18,
+      53
+    ],
+    [
+      25,
+      15
+    ],
+    [
+      1,
+      36
+    ],
+    [
+      8,
+      15
+    ],
+    [
+      49,
+      61
+    ],
+    [
+      6,
+      26
+    ],
+    [
+      18,
+      15
+    ],
+    [
+      47,
+      15
+    ],
+    [
+      28,
+      39
+    ],
+    [
+      11,
+      14
+    ],
+    [
+      46,
+      14
+    ],
+    [
+      51,
+      24
+    ],
+    [
+      57,
+      26
+    ],
+    [
+      34,
+      33
+    ],
+    [
+      0,
+      42
+    ],
+    [
+      23,
+      33
+    ],
+    [
+      10,
+      29
+    ],
+    [
+      76,
+      43
+    ],
+    [
+      37,
+      40
+    ],
+    [
+      40,
+      7
+    ],
+    [
+      59,
+      7
+    ],
+    [
+      34,
+      7
+    ],
+    [
+      2,
+      7
+    ],
+    [
+      19,
+      65
+    ],
+    [
+      61,
+      7
+    ],
+    [
+      24,
+      43
+    ],
+    [
+      36,
+      9
+    ],
+    [
+      67,
+      69
+    ],
+    [
+      61,
+      9
+    ],
+    [
+      60,
+      3
+    ],
+    [
+      34,
+      74
+    ],
+    [
+      37,
+      51
+    ],
+    [
+      53,
+      60
+    ],
+    [
+      13,
+      31
+    ],
+    [
+      57,
+      48
+    ],
+    [
+      55,
+      51
+    ],
+    [
+      56,
+      0
+    ],
+    [
+      27,
+      44
+    ],
+    [
+      11,
+      12
+    ],
+    [
+      67,
+      75
+    ],
+    [
+      18,
+      51
+    ],
+    [
+      57,
+      65
+    ],
+    [
+      54,
+      12
+    ],
+    [
+      19,
+      17
+    ],
+    [
+      25,
+      17
+    ],
+    [
+      8,
+      17
+    ],
+    [
+      15,
+      17
+    ],
+    [
+      18,
+      17
+    ],
+    [
+      47,
+      17
+    ],
+    [
+      45,
+      21
+    ],
+    [
+      37,
+      17
+    ],
+    [
+      2,
+      39
+    ],
+    [
+      24,
+      39
+    ],
+    [
+      67,
+      53
+    ],
+    [
+      2,
+      69
+    ],
+    [
+      55,
+      17
+    ],
+    [
+      67,
+      17
+    ],
+    [
+      49,
+      32
+    ],
+    [
+      8,
+      34
+    ],
+    [
+      50,
+      52
+    ],
+    [
+      47,
+      53
+    ],
+    [
+      49,
+      34
+    ],
+    [
+      19,
+      40
+    ],
+    [
+      6,
+      0
+    ],
+    [
+      1,
+      75
+    ],
+    [
+      59,
+      65
+    ],
+    [
+      51,
+      48
+    ],
+    [
+      60,
+      38
+    ],
+    [
+      53,
+      5
+    ],
+    [
+      70,
+      36
+    ],
+    [
+      15,
+      32
+    ],
+    [
+      35,
+      68
+    ],
+    [
+      21,
+      43
+    ],
+    [
+      21,
+      38
+    ],
+    [
+      47,
+      29
+    ],
+    [
+      10,
+      59
+    ],
+    [
+      59,
+      16
+    ],
+    [
+      61,
+      23
+    ],
+    [
+      22,
+      46
+    ],
+    [
+      38,
+      4
+    ],
+    [
+      26,
+      43
+    ],
+    [
+      59,
+      30
+    ],
+    [
+      55,
+      65
+    ],
+    [
+      74,
+      26
+    ],
+    [
+      12,
+      68
+    ],
+    [
+      17,
+      50
+    ],
+    [
+      14,
+      42
+    ],
+    [
+      22,
+      42
+    ],
+    [
+      56,
+      42
+    ],
+    [
+      32,
+      14
+    ],
+    [
+      26,
+      4
+    ],
+    [
+      16,
+      43
+    ],
+    [
+      15,
+      16
+    ],
+    [
+      29,
+      43
+    ],
+    [
+      69,
+      23
+    ],
+    [
+      6,
+      48
+    ],
+    [
+      70,
+      59
+    ],
+    [
+      53,
+      75
+    ],
+    [
+      25,
+      51
+    ],
+    [
+      65,
+      42
+    ],
+    [
+      26,
+      9
+    ],
+    [
+      53,
+      1
+    ],
+    [
+      34,
+      0
+    ],
+    [
+      18,
+      23
+    ],
+    [
+      51,
+      64
+    ],
+    [
+      4,
+      63
+    ],
+    [
+      51,
+      31
+    ],
+    [
+      28,
+      63
+    ],
+    [
+      34,
+      6
+    ],
+    [
+      32,
+      61
+    ],
+    [
+      65,
+      4
+    ],
+    [
+      74,
+      65
+    ],
+    [
+      39,
+      43
+    ],
+    [
+      69,
+      61
+    ],
+    [
+      8,
+      23
+    ],
+    [
+      8,
+      16
+    ],
+    [
+      12,
+      52
+    ],
+    [
+      65,
+      43
+    ],
+    [
+      19,
+      1
+    ],
+    [
+      40,
+      23
+    ],
+    [
+      15,
+      61
+    ],
+    [
+      19,
+      7
+    ],
+    [
+      53,
+      7
+    ],
+    [
+      51,
+      7
+    ],
+    [
+      74,
+      7
+    ],
+    [
+      47,
+      7
+    ],
+    [
+      55,
+      36
+    ],
+    [
+      11,
+      39
+    ],
+    [
+      48,
+      7
+    ],
+    [
+      55,
+      7
+    ],
+    [
+      57,
+      9
+    ],
+    [
+      27,
+      9
+    ],
+    [
+      62,
+      9
+    ],
+    [
+      1,
+      24
+    ],
+    [
+      13,
+      12
+    ],
+    [
+      22,
+      14
+    ],
+    [
+      45,
+      14
+    ],
+    [
+      54,
+      14
+    ],
+    [
+      74,
+      63
+    ],
+    [
+      70,
+      44
+    ],
+    [
+      66,
+      16
+    ],
+    [
+      20,
+      6
+    ],
+    [
+      76,
+      21
+    ],
+    [
+      13,
+      21
+    ],
+    [
+      24,
+      64
+    ],
+    [
+      64,
+      21
+    ],
+    [
+      74,
+      38
+    ],
+    [
+      12,
+      21
+    ],
+    [
+      14,
+      21
+    ],
+    [
+      30,
+      3
+    ],
+    [
+      40,
+      5
+    ],
+    [
+      26,
+      21
+    ],
+    [
+      6,
+      63
+    ],
+    [
+      22,
+      21
+    ],
+    [
+      11,
+      21
+    ],
+    [
+      73,
+      68
+    ],
+    [
+      35,
+      14
+    ],
+    [
+      72,
+      14
+    ],
+    [
+      37,
+      75
+    ],
+    [
+      65,
+      58
+    ],
+    [
+      5,
+      9
+    ],
+    [
+      12,
+      31
+    ],
+    [
+      65,
+      33
+    ],
+    [
+      5,
+      69
+    ],
+    [
+      39,
+      63
+    ],
+    [
+      74,
+      33
+    ],
+    [
+      1,
+      7
+    ],
+    [
+      24,
+      7
+    ],
+    [
+      24,
+      26
+    ],
+    [
+      34,
+      14
+    ],
+    [
+      67,
+      36
+    ],
+    [
+      46,
+      21
+    ],
+    [
+      72,
+      21
+    ],
+    [
+      32,
+      39
+    ],
+    [
+      29,
+      7
+    ],
+    [
+      67,
+      7
+    ],
+    [
+      34,
+      9
+    ],
+    [
+      2,
+      9
+    ],
+    [
+      76,
+      9
+    ],
+    [
+      59,
+      38
+    ],
+    [
+      2,
+      31
+    ],
+    [
+      73,
+      43
+    ],
+    [
+      54,
+      21
+    ],
+    [
+      6,
+      29
+    ],
+    [
+      21,
+      63
+    ],
+    [
+      36,
+      52
+    ],
+    [
+      20,
+      75
+    ],
+    [
+      46,
+      4
+    ],
+    [
+      49,
+      29
+    ],
+    [
+      0,
+      52
+    ],
+    [
+      76,
+      72
+    ],
+    [
+      28,
+      52
+    ],
+    [
+      75,
+      29
+    ],
+    [
+      11,
+      4
+    ],
+    [
+      53,
+      20
+    ],
+    [
+      50,
+      16
+    ],
+    [
+      55,
+      58
+    ],
+    [
+      47,
+      70
+    ],
+    [
+      72,
+      38
+    ],
+    [
+      37,
+      60
+    ],
+    [
+      10,
+      24
+    ],
+    [
+      57,
+      74
+    ],
+    [
+      12,
+      26
+    ],
+    [
+      69,
+      75
+    ],
+    [
+      64,
+      4
+    ],
+    [
+      41,
+      0
+    ],
+    [
+      53,
+      29
+    ],
+    [
+      50,
+      68
+    ],
+    [
+      45,
+      0
+    ],
+    [
+      35,
+      63
+    ],
+    [
+      40,
+      2
+    ],
+    [
+      72,
+      4
+    ],
+    [
+      59,
+      60
+    ],
+    [
+      48,
+      33
+    ],
+    [
+      19,
+      5
+    ],
+    [
+      10,
+      34
+    ],
+    [
+      17,
+      16
+    ],
+    [
+      14,
+      31
+    ],
+    [
+      20,
+      48
+    ],
+    [
+      27,
+      61
+    ],
+    [
+      17,
+      40
+    ],
+    [
+      5,
+      44
+    ],
+    [
+      2,
+      58
+    ],
+    [
+      18,
+      40
+    ],
+    [
+      25,
+      48
+    ],
+    [
+      66,
+      9
+    ],
+    [
+      57,
+      61
+    ],
+    [
+      34,
+      21
+    ],
+    [
+      67,
+      70
+    ],
+    [
+      59,
+      50
+    ],
+    [
+      32,
+      58
+    ],
+    [
+      67,
+      59
+    ],
+    [
+      62,
+      4
+    ],
+    [
+      34,
+      16
+    ],
+    [
+      19,
+      58
+    ],
+    [
+      49,
+      75
+    ],
+    [
+      37,
+      55
+    ],
+    [
+      59,
+      3
+    ],
+    [
+      20,
+      36
+    ],
+    [
+      5,
+      68
+    ],
+    [
+      37,
+      24
+    ],
+    [
+      24,
+      9
+    ],
+    [
+      55,
+      24
+    ],
+    [
+      67,
+      24
+    ],
+    [
+      64,
+      14
+    ],
+    [
+      18,
+      20
+    ],
+    [
+      54,
+      39
+    ],
+    [
+      19,
+      44
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      2,
+      38
+    ],
+    [
+      32,
+      69
+    ],
+    [
+      14,
+      68
+    ],
+    [
+      27,
+      23
+    ],
+    [
+      18,
+      7
+    ],
+    [
+      46,
+      38
+    ],
+    [
+      19,
+      51
+    ],
+    [
+      76,
+      4
+    ],
+    [
+      15,
+      1
+    ],
+    [
+      20,
+      61
+    ],
+    [
+      13,
+      0
+    ],
+    [
+      55,
+      69
+    ],
+    [
+      10,
+      36
+    ],
+    [
+      14,
+      30
+    ],
+    [
+      69,
+      58
+    ],
+    [
+      2,
+      60
+    ],
+    [
+      45,
+      64
+    ],
+    [
+      5,
+      63
+    ],
+    [
+      17,
+      75
+    ],
+    [
+      8,
+      75
+    ],
+    [
+      49,
+      74
+    ],
+    [
+      72,
+      33
+    ],
+    [
+      41,
+      42
+    ],
+    [
+      3,
+      68
+    ],
+    [
+      9,
+      42
+    ],
+    [
+      17,
+      44
+    ],
+    [
+      53,
+      34
+    ],
+    [
+      32,
+      0
+    ],
+    [
+      33,
+      4
+    ],
+    [
+      54,
+      4
+    ],
+    [
+      27,
+      7
+    ],
+    [
+      53,
+      27
+    ],
+    [
+      53,
+      48
+    ],
+    [
+      73,
+      56
+    ],
+    [
+      57,
+      14
+    ],
+    [
+      67,
+      44
+    ],
+    [
+      8,
+      40
+    ],
+    [
+      47,
+      59
+    ],
+    [
+      18,
+      32
+    ],
+    [
+      31,
+      42
+    ],
+    [
+      44,
+      63
+    ],
+    [
+      28,
+      38
+    ],
+    [
+      75,
+      58
+    ],
+    [
+      2,
+      43
+    ],
+    [
+      60,
+      48
+    ],
+    [
+      49,
+      6
+    ],
+    [
+      61,
+      52
+    ],
+    [
+      51,
+      44
+    ],
+    [
+      62,
+      33
+    ],
+    [
+      51,
+      52
+    ],
+    [
+      47,
+      25
+    ],
+    [
+      25,
+      7
+    ],
+    [
+      1,
+      34
+    ],
+    [
+      32,
+      7
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      60,
+      7
+    ],
+    [
+      40,
+      34
+    ],
+    [
+      1,
+      60
+    ],
+    [
+      45,
+      72
+    ],
+    [
+      23,
+      7
+    ],
+    [
+      66,
+      44
+    ],
+    [
+      74,
+      9
+    ],
+    [
+      60,
+      9
+    ],
+    [
+      16,
+      31
+    ],
+    [
+      35,
+      28
+    ],
+    [
+      51,
+      75
+    ],
+    [
+      21,
+      9
+    ],
+    [
+      28,
+      9
+    ],
+    [
+      70,
+      7
+    ],
+    [
+      50,
+      7
+    ],
+    [
+      69,
+      7
+    ],
+    [
+      73,
+      31
+    ],
+    [
+      38,
+      0
+    ],
+    [
+      65,
+      7
+    ],
+    [
+      27,
+      65
+    ],
+    [
+      59,
+      9
+    ],
+    [
+      57,
+      7
+    ],
+    [
+      69,
+      9
+    ],
+    [
+      64,
+      9
+    ],
+    [
+      25,
+      2
+    ],
+    [
+      67,
+      60
+    ],
+    [
+      11,
+      52
+    ],
+    [
+      16,
+      65
+    ],
+    [
+      50,
+      2
+    ],
+    [
+      64,
+      52
+    ],
+    [
+      62,
+      54
+    ],
+    [
+      21,
+      33
+    ],
+    [
+      11,
+      64
+    ],
+    [
+      55,
+      53
+    ],
+    [
+      28,
+      4
+    ],
+    [
+      40,
+      59
+    ],
+    [
+      13,
+      72
+    ],
+    [
+      64,
+      43
+    ],
+    [
+      50,
+      65
+    ],
+    [
+      12,
+      30
+    ],
+    [
+      32,
+      2
+    ],
+    [
+      32,
+      74
+    ],
+    [
+      45,
+      46
+    ],
+    [
+      53,
+      50
+    ],
+    [
+      15,
+      60
+    ],
+    [
+      67,
+      58
+    ],
+    [
+      49,
+      65
+    ],
+    [
+      69,
+      44
+    ],
+    [
+      2,
+      30
+    ],
+    [
+      70,
+      2
+    ],
+    [
+      32,
+      31
+    ],
+    [
+      32,
+      3
+    ],
+    [
+      36,
+      39
+    ],
+    [
+      40,
+      50
+    ],
+    [
+      46,
+      54
+    ],
+    [
+      5,
+      43
+    ],
+    [
+      22,
+      3
+    ],
+    [
+      41,
+      63
+    ],
+    [
+      17,
+      20
+    ],
+    [
+      27,
+      4
+    ],
+    [
+      59,
+      39
+    ],
+    [
+      17,
+      23
+    ],
+    [
+      60,
+      65
+    ],
+    [
+      2,
+      23
+    ],
+    [
+      8,
+      44
+    ],
+    [
+      35,
+      30
+    ],
+    [
+      14,
+      39
+    ],
+    [
+      46,
+      33
+    ],
+    [
+      37,
+      1
+    ],
+    [
+      40,
+      65
+    ],
+    [
+      25,
+      27
+    ],
+    [
+      8,
+      27
+    ],
+    [
+      37,
+      53
+    ],
+    [
+      15,
+      27
+    ],
+    [
+      49,
+      36
+    ],
+    [
+      17,
+      27
+    ],
+    [
+      40,
+      27
+    ],
+    [
+      55,
+      60
+    ],
+    [
+      5,
+      65
+    ],
+    [
+      32,
+      6
+    ],
+    [
+      73,
+      52
+    ],
+    [
+      22,
+      43
+    ],
+    [
+      41,
+      68
+    ],
+    [
+      34,
+      2
+    ],
+    [
+      53,
+      59
+    ],
+    [
+      5,
+      75
+    ],
+    [
+      37,
+      23
+    ],
+    [
+      64,
+      31
+    ],
+    [
+      17,
+      5
+    ],
+    [
+      69,
+      43
+    ],
+    [
+      36,
+      3
+    ],
+    [
+      9,
+      68
+    ],
+    [
+      27,
+      29
+    ],
+    [
+      67,
+      23
+    ],
+    [
+      71,
+      63
+    ],
+    [
+      46,
+      39
+    ],
+    [
+      24,
+      23
+    ],
+    [
+      34,
+      3
+    ],
+    [
+      39,
+      9
+    ],
+    [
+      11,
+      0
+    ],
+    [
+      6,
+      23
+    ],
+    [
+      36,
+      2
+    ],
+    [
+      66,
+      3
+    ],
+    [
+      50,
+      39
+    ],
+    [
+      13,
+      46
+    ],
+    [
+      51,
+      50
+    ],
+    [
+      19,
+      36
+    ],
+    [
+      36,
+      4
+    ],
+    [
+      36,
+      6
+    ],
+    [
+      37,
+      2
+    ],
+    [
+      41,
+      33
+    ],
+    [
+      74,
+      30
+    ],
+    [
+      18,
+      58
+    ],
+    [
+      8,
+      6
+    ],
+    [
+      72,
+      54
+    ],
+    [
+      20,
+      27
+    ],
+    [
+      55,
+      20
+    ],
+    [
+      55,
+      74
+    ],
+    [
+      50,
+      4
+    ],
+    [
+      37,
+      6
+    ],
+    [
+      26,
+      3
+    ],
+    [
+      61,
+      44
+    ],
+    [
+      55,
+      75
+    ],
+    [
+      72,
+      3
+    ],
+    [
+      57,
+      38
+    ],
+    [
+      8,
+      60
+    ],
+    [
+      62,
+      30
+    ],
+    [
+      21,
+      4
+    ],
+    [
+      29,
+      4
+    ],
+    [
+      27,
+      0
+    ],
+    [
+      45,
+      52
+    ],
+    [
+      18,
+      69
+    ],
+    [
+      66,
+      58
+    ],
+    [
+      1,
+      27
+    ],
+    [
+      21,
+      30
+    ],
+    [
+      1,
+      44
+    ],
+    [
+      68,
+      42
+    ],
+    [
+      13,
+      68
+    ],
+    [
+      60,
+      4
+    ],
+    [
+      11,
+      28
+    ],
+    [
+      48,
+      68
+    ],
+    [
+      37,
+      25
+    ],
+    [
+      47,
+      75
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      61,
+      3
+    ],
+    [
+      16,
+      58
+    ],
+    [
+      24,
+      3
+    ],
+    [
+      29,
+      65
+    ],
+    [
+      38,
+      9
+    ],
+    [
+      19,
+      75
+    ],
+    [
+      69,
+      16
+    ],
+    [
+      6,
+      65
+    ],
+    [
+      3,
+      33
+    ],
+    [
+      23,
+      44
+    ],
+    [
+      67,
+      61
+    ],
+    [
+      25,
+      36
+    ],
+    [
+      62,
+      64
+    ],
+    [
+      6,
+      68
+    ],
+    [
+      37,
+      7
+    ],
+    [
+      8,
+      53
+    ],
+    [
+      52,
+      68
+    ],
+    [
+      10,
+      5
+    ],
+    [
+      59,
+      51
+    ],
+    [
+      70,
+      29
+    ],
+    [
+      18,
+      75
+    ],
+    [
+      74,
+      68
+    ],
+    [
+      34,
+      4
+    ],
+    [
+      9,
+      43
+    ],
+    [
+      45,
+      39
+    ],
+    [
+      57,
+      12
+    ],
+    [
+      19,
+      18
+    ],
+    [
+      59,
+      31
+    ],
+    [
+      10,
+      32
+    ],
+    [
+      70,
+      75
+    ],
+    [
+      12,
+      43
+    ],
+    [
+      56,
+      43
+    ],
+    [
+      52,
+      43
+    ],
+    [
+      57,
+      60
+    ],
+    [
+      74,
+      3
+    ],
+    [
+      28,
+      30
+    ],
+    [
+      59,
+      27
+    ],
+    [
+      40,
+      16
+    ],
+    [
+      62,
+      28
+    ],
+    [
+      18,
+      34
+    ],
+    [
+      59,
+      43
+    ],
+    [
+      35,
+      39
+    ],
+    [
+      29,
+      44
+    ],
+    [
+      59,
+      14
+    ],
+    [
+      8,
+      24
+    ],
+    [
+      8,
+      5
+    ],
+    [
+      51,
+      3
+    ],
+    [
+      11,
+      43
+    ],
+    [
+      19,
+      70
+    ],
+    [
+      54,
+      64
+    ],
+    [
+      46,
+      12
+    ],
+    [
+      1,
+      58
+    ],
+    [
+      7,
+      58
+    ],
+    [
+      55,
+      16
+    ],
+    [
+      20,
+      74
+    ],
+    [
+      41,
+      9
+    ],
+    [
+      47,
+      2
+    ],
+    [
+      37,
+      32
+    ],
+    [
+      41,
+      3
+    ],
+    [
+      36,
+      69
+    ],
+    [
+      67,
+      65
+    ],
+    [
+      61,
+      29
+    ],
+    [
+      24,
+      74
+    ],
+    [
+      27,
+      52
+    ],
+    [
+      70,
+      5
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      10,
+      27
+    ],
+    [
+      49,
+      27
+    ],
+    [
+      60,
+      16
+    ],
+    [
+      61,
+      63
+    ],
+    [
+      11,
+      26
+    ],
+    [
+      22,
+      30
+    ],
+    [
+      60,
+      69
+    ],
+    [
+      51,
+      27
+    ],
+    [
+      24,
+      27
+    ],
+    [
+      32,
+      27
+    ],
+    [
+      36,
+      27
+    ],
+    [
+      18,
+      27
+    ],
+    [
+      57,
+      27
+    ],
+    [
+      34,
+      27
+    ],
+    [
+      74,
+      27
+    ],
+    [
+      20,
+      50
+    ],
+    [
+      70,
+      6
+    ],
+    [
+      53,
+      74
+    ],
+    [
+      39,
+      68
+    ],
+    [
+      49,
+      48
+    ],
+    [
+      30,
+      0
+    ],
+    [
+      59,
+      68
+    ],
+    [
+      76,
+      14
+    ],
+    [
+      69,
+      38
+    ],
+    [
+      15,
+      2
+    ],
+    [
+      61,
+      4
+    ],
+    [
+      65,
+      63
+    ],
+    [
+      40,
+      58
+    ],
+    [
+      19,
+      16
+    ],
+    [
+      34,
+      60
+    ],
+    [
+      62,
+      14
+    ],
+    [
+      13,
+      14
+    ],
+    [
+      6,
+      27
+    ],
+    [
+      25,
+      44
+    ],
+    [
+      50,
+      27
+    ],
+    [
+      26,
+      33
+    ],
+    [
+      19,
+      55
+    ],
+    [
+      5,
+      27
+    ],
+    [
+      20,
+      69
+    ],
+    [
+      74,
+      58
+    ],
+    [
+      47,
+      27
+    ],
+    [
+      12,
+      3
+    ],
+    [
+      76,
+      22
+    ],
+    [
+      51,
+      32
+    ],
+    [
+      42,
+      43
+    ],
+    [
+      37,
+      27
+    ],
+    [
+      9,
+      63
+    ],
+    [
+      55,
+      27
+    ],
+    [
+      67,
+      27
+    ],
+    [
+      26,
+      38
+    ],
+    [
+      59,
+      28
+    ],
+    [
+      51,
+      28
+    ],
+    [
+      50,
+      63
+    ],
+    [
+      40,
+      48
+    ],
+    [
+      24,
+      28
+    ],
+    [
+      32,
+      28
+    ],
+    [
+      36,
+      28
+    ],
+    [
+      57,
+      28
+    ],
+    [
+      27,
+      39
+    ],
+    [
+      34,
+      28
+    ],
+    [
+      74,
+      28
+    ],
+    [
+      45,
+      33
+    ],
+    [
+      32,
+      48
+    ],
+    [
+      6,
+      28
+    ],
+    [
+      35,
+      46
+    ],
+    [
+      30,
+      63
+    ],
+    [
+      30,
+      42
+    ],
+    [
+      11,
+      42
+    ],
+    [
+      33,
+      42
+    ],
+    [
+      31,
+      33
+    ],
+    [
+      50,
+      28
+    ],
+    [
+      5,
+      28
+    ],
+    [
+      23,
+      43
+    ],
+    [
+      10,
+      69
+    ],
+    [
+      20,
+      58
+    ],
+    [
+      7,
+      44
+    ],
+    [
+      24,
+      21
+    ],
+    [
+      6,
+      44
+    ],
+    [
+      18,
+      2
+    ],
+    [
+      76,
+      28
+    ],
+    [
+      39,
+      4
+    ],
+    [
+      64,
+      28
+    ],
+    [
+      12,
+      28
+    ],
+    [
+      14,
+      28
+    ],
+    [
+      39,
+      3
+    ],
+    [
+      76,
+      63
+    ],
+    [
+      10,
+      58
+    ],
+    [
+      62,
+      3
+    ],
+    [
+      10,
+      16
+    ],
+    [
+      43,
+      4
+    ],
+    [
+      49,
+      5
+    ],
+    [
+      59,
+      6
+    ],
+    [
+      54,
+      31
+    ],
+    [
+      18,
+      60
+    ],
+    [
+      51,
+      14
+    ],
+    [
+      60,
+      39
+    ],
+    [
+      6,
+      60
+    ],
+    [
+      22,
+      4
+    ],
+    [
+      75,
+      44
+    ],
+    [
+      75,
+      4
+    ],
+    [
+      72,
+      39
+    ],
+    [
+      14,
+      26
+    ],
+    [
+      22,
+      11
+    ],
+    [
+      3,
+      43
+    ],
+    [
+      46,
+      28
+    ],
+    [
+      7,
+      63
+    ],
+    [
+      57,
+      44
+    ],
+    [
+      19,
+      53
+    ],
+    [
+      25,
+      24
+    ],
+    [
+      59,
+      4
+    ],
+    [
+      69,
+      52
+    ],
+    [
+      49,
+      59
+    ],
+    [
+      31,
+      52
+    ],
+    [
+      57,
+      16
+    ],
+    [
+      17,
+      70
+    ],
+    [
+      62,
+      22
+    ],
+    [
+      39,
+      33
+    ],
+    [
+      35,
+      52
+    ],
+    [
+      20,
+      44
+    ],
+    [
+      62,
+      76
+    ],
+    [
+      76,
+      64
+    ],
+    [
+      38,
+      3
+    ],
+    [
+      2,
+      44
+    ],
+    [
+      48,
+      43
+    ],
+    [
+      66,
+      29
+    ],
+    [
+      14,
+      52
+    ],
+    [
+      45,
+      63
+    ],
+    [
+      36,
+      16
+    ],
+    [
+      15,
+      75
+    ],
+    [
+      2,
+      61
+    ],
+    [
+      19,
+      27
+    ],
+    [
+      59,
+      75
+    ],
+    [
+      18,
+      55
+    ],
+    [
+      41,
+      43
+    ],
+    [
+      7,
+      4
+    ],
+    [
+      52,
+      33
+    ],
+    [
+      36,
+      0
+    ],
+    [
+      11,
+      9
+    ],
+    [
+      60,
+      44
+    ],
+    [
+      46,
+      68
+    ],
+    [
+      34,
+      26
+    ],
+    [
+      32,
+      75
+    ],
+    [
+      32,
+      68
+    ],
+    [
+      72,
+      31
+    ],
+    [
+      6,
+      58
+    ],
+    [
+      59,
+      48
+    ],
+    [
+      13,
+      38
+    ],
+    [
+      18,
+      47
+    ],
+    [
+      64,
+      26
+    ],
+    [
+      49,
+      60
+    ],
+    [
+      25,
+      34
+    ],
+    [
+      39,
+      31
+    ],
+    [
+      21,
+      68
+    ],
+    [
+      24,
+      38
+    ],
+    [
+      21,
+      28
+    ],
+    [
+      23,
+      63
+    ],
+    [
+      74,
+      21
+    ],
+    [
+      1,
+      59
+    ],
+    [
+      62,
+      42
+    ],
+    [
+      45,
+      30
+    ],
+    [
+      18,
+      48
+    ],
+    [
+      7,
+      43
+    ],
+    [
+      50,
+      75
+    ],
+    [
+      15,
+      59
+    ],
+    [
+      76,
+      12
+    ],
+    [
+      67,
+      1
+    ],
+    [
+      9,
+      4
+    ],
+    [
+      75,
+      43
+    ],
+    [
+      72,
+      52
+    ],
+    [
+      32,
+      4
+    ],
+    [
+      56,
+      3
+    ],
+    [
+      13,
+      3
+    ],
+    [
+      17,
+      65
+    ],
+    [
+      59,
+      36
+    ],
+    [
+      53,
+      16
+    ],
+    [
+      51,
+      36
+    ],
+    [
+      31,
+      9
+    ],
+    [
+      24,
+      36
+    ],
+    [
+      47,
+      55
+    ],
+    [
+      32,
+      36
+    ],
+    [
+      18,
+      36
+    ],
+    [
+      47,
+      36
+    ],
+    [
+      47,
+      24
+    ],
+    [
+      37,
+      36
+    ],
+    [
+      19,
+      23
+    ],
+    [
+      27,
+      31
+    ],
+    [
+      8,
+      7
+    ],
+    [
+      20,
+      7
+    ],
+    [
+      36,
+      7
+    ],
+    [
+      5,
+      7
+    ],
+    [
+      75,
+      7
+    ],
+    [
+      74,
+      44
+    ],
+    [
+      51,
+      9
+    ],
+    [
+      6,
+      9
+    ],
+    [
+      75,
+      9
+    ],
+    [
+      12,
+      9
+    ],
+    [
+      74,
+      52
+    ],
+    [
+      22,
+      12
+    ],
+    [
+      76,
+      46
+    ],
+    [
+      6,
+      61
+    ],
+    [
+      24,
+      48
+    ],
+    [
+      14,
+      4
+    ],
+    [
+      38,
+      31
+    ],
+    [
+      16,
+      9
+    ],
+    [
+      64,
+      33
+    ],
+    [
+      48,
+      23
+    ],
+    [
+      38,
+      42
+    ],
+    [
+      62,
+      12
+    ],
+    [
+      6,
+      75
+    ],
+    [
+      69,
+      29
+    ],
+    [
+      53,
+      6
+    ],
+    [
+      54,
+      0
+    ],
+    [
+      31,
+      43
+    ],
+    [
+      0,
+      43
+    ],
+    [
+      60,
+      61
+    ],
+    [
+      68,
+      43
+    ],
+    [
+      57,
+      34
+    ],
+    [
+      61,
+      48
+    ],
+    [
+      64,
+      63
+    ],
+    [
+      74,
+      60
+    ],
+    [
+      46,
+      31
+    ],
+    [
+      74,
+      69
+    ],
+    [
+      32,
+      64
+    ],
+    [
+      48,
+      52
+    ],
+    [
+      10,
+      7
+    ],
+    [
+      51,
+      29
+    ],
+    [
+      34,
+      52
+    ],
+    [
+      46,
+      72
+    ],
+    [
+      36,
+      44
+    ],
+    [
+      39,
+      42
+    ],
+    [
+      35,
+      42
+    ],
+    [
+      32,
+      12
+    ],
+    [
+      70,
+      48
+    ],
+    [
+      70,
+      32
+    ],
+    [
+      18,
+      6
+    ],
+    [
+      70,
+      51
+    ],
+    [
+      18,
+      59
+    ],
+    [
+      12,
+      4
+    ],
+    [
+      45,
+      54
+    ],
+    [
+      20,
+      60
+    ],
+    [
+      15,
+      20
+    ],
+    [
+      6,
+      30
+    ],
+    [
+      72,
+      68
+    ],
+    [
+      24,
+      32
+    ],
+    [
+      17,
+      6
+    ],
+    [
+      16,
+      44
+    ],
+    [
+      62,
+      46
+    ],
+    [
+      49,
+      44
+    ],
+    [
+      27,
+      63
+    ],
+    [
+      16,
+      4
+    ],
+    [
+      55,
+      2
+    ],
+    [
+      40,
+      6
+    ],
+    [
+      35,
+      72
+    ],
+    [
+      54,
+      68
+    ],
+    [
+      67,
+      20
+    ],
+    [
+      54,
+      38
+    ],
+    [
+      76,
+      52
+    ],
+    [
+      12,
+      14
+    ],
+    [
+      73,
+      4
+    ],
+    [
+      37,
+      74
+    ],
+    [
+      41,
+      73
+    ],
+    [
+      36,
+      65
+    ],
+    [
+      14,
+      3
+    ],
+    [
+      24,
+      63
+    ],
+    [
+      23,
+      4
+    ],
+    [
+      29,
+      23
+    ],
+    [
+      19,
+      47
+    ],
+    [
+      49,
+      2
+    ],
+    [
+      57,
+      23
+    ],
+    [
+      75,
+      23
+    ],
+    [
+      28,
+      68
+    ],
+    [
+      34,
+      58
+    ],
+    [
+      50,
+      61
+    ],
+    [
+      22,
+      9
+    ],
+    [
+      57,
+      75
+    ],
+    [
+      15,
+      74
+    ],
+    [
+      35,
+      43
+    ],
+    [
+      76,
+      33
+    ],
+    [
+      45,
+      43
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      0,
+      4
+    ],
+    [
+      0,
+      9
+    ],
+    [
+      35,
+      9
+    ],
+    [
+      24,
+      42
+    ],
+    [
+      57,
+      42
+    ],
+    [
+      6,
+      42
+    ],
+    [
+      27,
+      42
+    ],
+    [
+      13,
+      43
+    ],
+    [
+      46,
+      43
+    ],
+    [
+      72,
+      43
+    ],
+    [
+      54,
+      43
+    ],
+    [
+      45,
+      9
+    ],
+    [
+      48,
+      4
+    ],
+    [
+      76,
+      11
+    ],
+    [
+      75,
+      65
+    ],
+    [
+      53,
+      65
+    ],
+    [
+      55,
+      50
+    ],
+    [
+      75,
+      52
+    ],
+    [
+      1,
+      65
+    ],
+    [
+      45,
+      26
+    ],
+    [
+      22,
+      68
+    ],
+    [
+      70,
+      65
+    ],
+    [
+      17,
+      1
+    ],
+    [
+      20,
+      65
+    ],
+    [
+      13,
+      9
+    ],
+    [
+      69,
+      42
+    ],
+    [
+      66,
+      42
+    ],
+    [
+      61,
+      42
+    ],
+    [
+      21,
+      31
+    ],
+    [
+      10,
+      60
+    ],
+    [
+      55,
+      59
+    ],
+    [
+      37,
+      70
+    ],
+    [
+      46,
+      9
+    ],
+    [
+      6,
+      3
+    ],
+    [
+      19,
+      34
+    ],
+    [
+      70,
+      61
+    ],
+    [
+      66,
+      63
+    ],
+    [
+      34,
+      68
+    ],
+    [
+      24,
+      58
+    ],
+    [
+      41,
+      31
+    ],
+    [
+      1,
+      23
+    ],
+    [
+      12,
+      0
+    ],
+    [
+      5,
+      16
+    ],
+    [
+      11,
+      63
+    ],
+    [
+      29,
+      58
+    ],
+    [
+      55,
+      48
+    ],
+    [
+      47,
+      34
+    ],
+    [
+      8,
+      48
+    ],
+    [
+      66,
+      43
+    ],
+    [
+      5,
+      30
+    ],
+    [
+      19,
+      48
+    ],
+    [
+      17,
+      61
+    ],
+    [
+      64,
+      30
+    ],
+    [
+      50,
+      3
+    ],
+    [
+      54,
+      52
+    ],
+    [
+      10,
+      65
+    ],
+    [
+      67,
+      6
+    ],
+    [
+      24,
+      68
+    ],
+    [
+      35,
+      54
+    ],
+    [
+      15,
+      48
+    ],
+    [
+      62,
+      26
+    ],
+    [
+      5,
+      39
+    ],
+    [
+      32,
+      9
+    ],
+    [
+      72,
+      28
+    ],
+    [
+      40,
+      44
+    ],
+    [
+      61,
+      58
+    ],
+    [
+      15,
+      6
+    ],
+    [
+      27,
+      69
+    ],
+    [
+      22,
+      64
+    ],
+    [
+      19,
+      50
+    ],
+    [
+      45,
+      42
+    ],
+    [
+      36,
+      75
+    ],
+    [
+      13,
+      39
+    ],
+    [
+      38,
+      68
+    ],
+    [
+      10,
+      44
+    ],
+    [
+      17,
+      48
+    ],
+    [
+      32,
+      50
+    ],
+    [
+      1,
+      51
+    ],
+    [
+      72,
+      12
+    ],
+    [
+      47,
+      40
+    ],
+    [
+      40,
+      29
+    ],
+    [
+      34,
+      44
+    ],
+    [
+      75,
+      68
+    ],
+    [
+      18,
+      70
+    ]
+  ],
+  "conditionalEdges": [
+    {
+      "edges": [
+        {
+          "from": "4.7.2",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.40",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.6",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.13",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.19",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.33",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.36",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.8",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.6",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.11",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.18",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.4",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.22",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.32",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.0",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.21",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.34",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.37",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.2",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.2",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.7.30",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.31",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.28",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.3",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.7.9",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.16",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.23",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.4",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.21",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.29",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.33",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.8",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.38",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.11",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.3",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.9",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.7",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.24",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.1",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.34",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.37",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.3",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.12",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.5",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.29",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.32",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.1",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.7.38",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.23",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.0",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.5",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.31",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.22",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.39",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.39",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.28",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.16",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.13",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.30",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.1",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.12",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.24",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.0",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.7.7",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.19",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.7.36",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.7.18",
+          "to": "4.7.41"
+        }
+      ],
+      "risks": [
+        {
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=1942207#c3",
+          "name": "VSphereNodeNameChanges",
+          "message": "vSphere clusters leveraging the vSphere cloud provider may lose node names which can have serious impacts on the stability of the control plane and workloads.",
+          "matchingRules": [
+            {
+              "type": "PromQL",
+              "promql": {
+                "promql": "cluster_infrastructure_provider{type=~\"VSphere|None\"}\nor\n0 * cluster_infrastructure_provider\n"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "edges": [
+        {
+          "from": "4.6.26",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.35",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.28",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.26",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.44",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.27",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.51",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.40",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.25",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.22",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.6.46",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.48",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.48",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.42",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.38",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.49",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.17",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.6.43",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.20",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.6.44",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.39",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.15",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.6.25",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.45",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.34",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.51",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.38",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.18",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.6.52",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.47",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.28",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.34",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.31",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.42",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.30",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.21",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.6.39",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.29",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.16",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.6.41",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.52",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.32",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.46",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.30",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.35",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.27",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.32",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.40",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.43",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.23",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.6.49",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.36",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.53",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.31",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.19",
+          "to": "4.7.4"
+        },
+        {
+          "from": "4.6.47",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.41",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.36",
+          "to": "4.7.40"
+        },
+        {
+          "from": "4.6.29",
+          "to": "4.7.41"
+        },
+        {
+          "from": "4.6.45",
+          "to": "4.7.40"
+        }
+      ],
+      "risks": [
+        {
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=1941840#c33",
+          "name": "AuthOAuthProxyLeakedConnections",
+          "message": "On clusters with a Proxy configured, the authentication operator may keep many oauth-server connections open, resulting in high memory consumption by the authentication operator and router pods.",
+          "matchingRules": [
+            {
+              "type": "PromQL",
+              "promql": {
+                "promql": "max(cluster_proxy_enabled{type=~\"https?\"})"
+              }
+            }
+          ]
+        },
+        {
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=1942207#c3",
+          "name": "VSphereNodeNameChanges",
+          "message": "vSphere clusters leveraging the vSphere cloud provider may lose node names which can have serious impacts on the stability of the control plane and workloads.",
+          "matchingRules": [
+            {
+              "type": "PromQL",
+              "promql": {
+                "promql": "cluster_infrastructure_provider{type=~\"VSphere|None\"}\nor\n0 * cluster_infrastructure_provider\n"
+              }
+            }
+          ]
+        },
+        {
+          "url": "https://access.redhat.com/solutions/5896081",
+          "name": "VSphereHW14CrossNodeNetworkingError",
+          "message": "Clusters on vSphere Virtual Hardware Version 14 and later may experience cross-node networking issues.",
+          "matchingRules": [
+            {
+              "type": "PromQL",
+              "promql": {
+                "promql": "cluster_infrastructure_provider{type=~\"VSphere|None\"}\nor\n0 * cluster_infrastructure_provider\n"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
