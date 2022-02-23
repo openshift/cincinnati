@@ -38,15 +38,21 @@ fn get_query_result_string(query: &'static str) -> VectorResult {
         _ => panic!("expected vector"),
     };
     assert_ne!(vector_data.len(), 0, "the vector contains 0 elements");
-    return vector_data.get(0).unwrap().clone();
+    return vector_data.last().unwrap().clone();
 }
 
-// No scrape errors
-#[test_case("cincinnati_gb_graph_upstream_errors_total" => is less_than(1))]
-// No upstream errors
-#[test_case("cincinnati_pe_http_upstream_errors_total" => is less_than(1))]
-// At least one scrape has been performed
-#[test_case("cincinnati_gb_graph_upstream_scrapes_total" => is greater_than_or_equal_to(1))]
+#[test_case("sum(kube_pod_container_status_restarts_total{container=~'(graph-builder|policy-engine)'}) or vector(0)" => "0"; "No GB/PE restarts")]
+#[test_case("sum(kube_pod_container_status_last_terminated_reason{container=~'(graph-builder|policy-engine)', reason='Completed'}) or vector(0)" => "0"; "Crashes due to liveness checks")]
+#[test_case("sum(kube_pod_container_status_last_terminated_reason{container=~'(graph-builder|policy-engine)', reason='OOMKilled'})  or vector(0)" => "0"; "Crashes due to OOM killer")]
+#[test_case("sum(kube_pod_container_status_last_terminated_reason{container=~'(graph-builder|policy-engine)', reason='Error'}) or vector(0)" => "0"; "Crashes due to process exit code")]
+#[test_case("sum(cincinnati_gb_graph_upstream_errors_total) or vector(0)" => "0"; "No scrape errors")]
+#[test_case("sum(cincinnati_pe_http_upstream_errors_total) or vector(0)" => "0"; "No upstream errors")]
+fn check_slo_exact(query: &'static str) -> String {
+    get_query_result_string(query).sample().to_string()
+}
+
+#[test_case("sum_over_time(cincinnati_gb_graph_upstream_scrapes_total[1h])" => is greater_than_or_equal_to(1); "At least one scrape has been performed")]
+#[test_case("sum(cincinnati_pe_graph_response_errors_total{code!~'4.+'}) or vector(0)" => is less_than(1); "Only HTTP 4xx errors returned")]
 fn check_slo_numeric(query: &'static str) -> i32 {
     get_query_result_string(query)
         .sample()
@@ -55,11 +61,12 @@ fn check_slo_numeric(query: &'static str) -> i32 {
         .unwrap()
 }
 
-// Minimal serve duration is less than 1s
+// 90% of requests are served in less than 0.5 seconds
 #[test_case(
-    "histogram_quantile(0.90, sum(cincinnati_pe_graph_serve_duration_seconds_bucket) by (le))"
-     => is less_than(0.5)
+    "max_over_time(histogram_quantile(0.90, sum(cincinnati_pe_graph_serve_duration_seconds_bucket) by (le))[1h:1m])"
+     => is less_than(0.5); "90% of requests are served in 0.5 sec"
 )]
+#[test_case("min_over_time(sum(rate(cincinnati_pe_graph_incoming_requests_total[1m]))[1h:10m]) > 20" => is greater_than(100.0); "OSUS can handle at least 100rps")]
 fn check_slo_float(query: &'static str) -> f32 {
     get_query_result_string(query)
         .sample()
@@ -69,9 +76,9 @@ fn check_slo_float(query: &'static str) -> f32 {
 }
 
 // Graph builder reports valid git commit
-#[test_case("cincinnati_gb_build_info", "git_commit" => is not(eq("unknown")))]
+#[test_case("cincinnati_gb_build_info", "git_commit" => is not(eq("unknown")); "graph-builder returns build information")]
 // Policy engine reports valid git commit
-#[test_case("cincinnati_pe_build_info", "git_commit" => is not(eq("unknown")))]
+#[test_case("cincinnati_pe_build_info", "git_commit" => is not(eq("unknown")); "policy-engine returns build information")]
 fn check_slo_parameter(query: &'static str, parameter: &'static str) -> String {
     let result = get_query_result_string(query);
     let metric: &Map<String, Value> = match result.metric() {
