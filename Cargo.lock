@@ -638,9 +638,9 @@ dependencies = [
 
 [[package]]
 name = "cached"
-version = "0.31.0"
+version = "0.32.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c1f4c9703975381eac2ac9a2a846844968389e8d2173c088bdc7901088af70c"
+checksum = "a8c2f17f7be6adf37bd51e543537b0a9e51d865e94c11a421a5a3c8aafac41af"
 dependencies = [
  "async-mutex",
  "async-rwlock",
@@ -654,9 +654,9 @@ dependencies = [
 
 [[package]]
 name = "cached_proc_macro"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "528d0f15a4a808c6867cffcd965f6307f44a29d6369a3e9f6c6a2e5a615f1bf3"
+checksum = "dc8de7b947777686ee8f3c11f4c3e58c296d6bc598d9b2286a80a9404a538ff8"
 dependencies = [
  "cached_proc_macro_types",
  "darling 0.13.1",
