@@ -10,6 +10,22 @@
 #   * CINCINNATI_IMAGE (optional) - image with graph-builder and policy-engine
 #   * env var IMAGE_FORMAT (e.g `registry.ci.openshift.org/ci-op-ish8m5dt/stable:${component}`)
 
+# ARGUMENTS
+#    -ri --run-ignored    Run the ignored tests only for cincinnati e2e
+
+# parse the input arguments
+run_ignored=""
+while [[ $# -gt 0 ]]
+do
+  key="$1"
+  case $key in
+      -ri|--run-ignored)
+      run_ignored="--ignored"
+      shift
+      ;;
+  esac
+done
+
 # Use CI image format by default unless CINCINNATI_IMAGE is set
 if [[ ! -z "${CINCINNATI_IMAGE}" ]]; then
   IMAGE=$(echo "${CINCINNATI_IMAGE}" | cut -d ':' -f1)
@@ -135,7 +151,7 @@ done
 export RUST_BACKTRACE="1"
 
 # Run e2e tests
-/usr/bin/cincinnati-e2e-test
+/usr/bin/cincinnati-e2e-test $run_ignored
 
 # Ensure prometheus_query tests are executed
 /usr/bin/cincinnati-prometheus_query-test

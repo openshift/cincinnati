@@ -73,6 +73,30 @@ fn e2e_cors_headers(channel: &'static str, arch: &'static str, header: &'static 
     );
 }
 
+// #ignore attribute as we dont need these tests working on cincinnati repo by default,
+// its already being tested when we check for correctness of the graph output in `e2e_channel_success`
+// this test is mainly for `cincinnati-graph-data` to check if the graph output is valid.
+/// test the graph response for a correctly formatted graph
+#[ignore]
+#[test_case("stable-4.4", "amd64", "application/json")]
+#[test_case("stable-4.5", "amd64", "*/*")]
+#[test_case("stable-4.6", "s390x", "application/json")]
+#[test_case("stable-4.7", "s390x", "application/*")]
+#[test_case("stable-4.8", "amd64", "application/json")]
+#[test_case("stable-4.9", "s390x", "application/vnd.redhat.cincinnati.v1+json")]
+fn e2e_graph_format(channel: &'static str, arch: &'static str, header: &'static str) {
+    let runtime = commons::testing::init_runtime().unwrap();
+
+    let res = run_graph_query(channel, arch, header, &runtime);
+
+    assert!(res.status().is_success(), "{}", res.status());
+    let text = runtime.block_on(res.text()).unwrap();
+    let _actual: cincinnati::plugins::internal::versioned_graph::VersionedGraph =
+        serde_json::from_str(&text)
+            .context(format!("Failed to parse '{}' as json", text))
+            .unwrap();
+}
+
 /// runs the graph query and returns the response
 fn run_graph_query(
     channel: &'static str,
