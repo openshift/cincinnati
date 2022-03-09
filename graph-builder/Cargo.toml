@@ -19,7 +19,7 @@ lazy_static = "^1.2.0"
 log = "^0.4.3"
 prometheus = "0.13"
 quay = { path = "../quay" }
-regex = "^1.5.4"
+regex = "^1.5.5"
 reqwest = "^0.11"
 semver = { version = "^0.11", features = [ "serde" ] }
 serde = "^1.0.136"
