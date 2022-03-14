@@ -57,8 +57,13 @@ function backoff() {
     return $failed
 }
 
-# Use defined PULL_SECRET or fall back to CI location
-PULL_SECRET=${PULL_SECRET:-/var/run/secrets/ci.openshift.io/cluster-profile/pull-secret}
+# Use defined PULL_SECRET or fall back to in-cluster pull secret
+if test -z "${PULL_SECRET}"
+then
+  PULL_SECRET=/tmp/pull_secret
+  oc -n openshift-config get --template='{{index .data ".dockerconfigjson" | base64decode}}' secret pull-secret > "${PULL_SECRET}"
+  echo "using in-cluster pull-secret"
+fi
 
 set -euo pipefail
 set -x
