@@ -34,6 +34,25 @@ _coverage:
 
 coverage: test _coverage
 
+dashboards:
+    #!/usr/bin/env bash
+    for file in dist/grafana/*.json; do
+    cat <<EOF > dist/grafana/dashboards/$(basename $file .json).configmap.yaml
+    #This file is auto-generated from dist/grafana. Make changes there and run "just dashboards" to generate the file
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: $(basename $file .json)
+      labels:
+        grafana_dashboard: "true"
+      annotations:
+        grafana-folder: /grafana-dashboard-definitions/Cincinnati
+    data:
+      cincinnati.json: |-
+    $(sed 's/^/    /' $file)
+    EOF
+    done
+
 test-pwd +args="":
 	#!/usr/bin/env bash
 	set -e
