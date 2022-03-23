@@ -16,7 +16,7 @@ flate2 = "^1.0.22"
 futures = "0.3"
 itertools = "^0.10"
 lazy_static = "^1.2.0"
-log = "^0.4.3"
+log = "^0.4.16"
 prometheus = "0.13"
 quay = { path = "../quay" }
 regex = "^1.5.5"
