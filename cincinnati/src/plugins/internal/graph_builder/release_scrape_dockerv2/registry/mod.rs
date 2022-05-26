@@ -458,7 +458,14 @@ async fn get_manifest_and_ref(
     trace!("[{}] Processing {}", &tag, &repo);
     let (manifest, manifestref) = registry_client
         .get_manifest_and_ref(&repo, &tag)
-        .map_err(|e| format_err!("{}", e))
+        .map_err(|e| {
+            format_err!(
+                "fetching manifest and manifestref for {}:{}: {}",
+                &repo,
+                &tag,
+                e
+            )
+        })
         .await?;
 
     let manifestref =
@@ -483,7 +490,14 @@ async fn find_first_release_metadata(
 
         let blob = registry_client
             .get_blob(&repo, &layer_digest)
-            .map_err(|e| format_err!("{}", e))
+            .map_err(|e| {
+                format_err!(
+                    "fetching blob for repo {} with layer_digest {}: {}",
+                    &repo,
+                    &layer_digest,
+                    e
+                )
+            })
             .await?;
 
         let metadata_filename = "release-manifests/release-metadata";
