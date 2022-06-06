@@ -269,7 +269,15 @@ impl Graph {
     pub fn find_by_version_vec(&self, version: &str) -> Vec<(ReleaseId, String)> {
         self.dag
             .node_references()
-            .filter(|nr| nr.weight().version().to_string().contains(version))
+            .filter(|nr| {
+                let v: &str = &nr.weight().version().to_string();
+                if v == version {
+                    true
+                } else {
+                    let version_unsuffixed: Vec<&str> = v.split("+").collect();
+                    version_unsuffixed[0] == version //ignore the architecture(eg +amd64) attached to version
+                }
+            })
             .map(|nr| (ReleaseId(nr.id()), nr.weight().version().to_string()))
             .collect()
     }
