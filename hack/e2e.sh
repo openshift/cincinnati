@@ -139,7 +139,8 @@ PROM_ROUTE=$(oc -n openshift-monitoring get route thanos-querier -o jsonpath="{.
 export PROM_ENDPOINT="https://${PROM_ROUTE}"
 echo "Using Prometheus endpoint ${PROM_ENDPOINT}"
 
-oc version --client
+oc -n openshift-monitoring get serviceaccount prometheus-k8s
+oc -n openshift-monitoring get serviceaccount prometheus-k8s -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}'
 
 PROM_TOKEN_NAME=$(oc -n openshift-monitoring get serviceaccount prometheus-k8s \
     -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep prometheus-k8s-token)
