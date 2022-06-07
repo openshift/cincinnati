@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "pretty_assertions"
-version = "1.2.0"
+version = "1.2.1"
 authors = ["Colin Kiegel <kiegel@gmx.de>", "Florent Fayolle <florent.fayolle69@gmail.com>", "Tom Milligan <code@tommilligan.net>"]
 description = "Overwrite `assert_eq!` and `assert_ne!` with drop-in replacements, adding colorful diffs."
 documentation = "https://docs.rs/pretty_assertions"

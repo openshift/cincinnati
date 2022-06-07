@@ -1,3 +1,10 @@
+#![allow(
+    clippy::no_effect_underscore_binding,
+    clippy::too_many_lines,
+    clippy::used_underscore_binding
+)]
+
+#[rustfmt::skip]
 mod gen;
 
 use proc_macro2::{Ident, Literal, TokenStream};
