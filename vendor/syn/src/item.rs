@@ -985,7 +985,6 @@ pub mod parsing {
     use proc_macro2::{Delimiter, Group, Punct, Spacing, TokenTree};
     use std::iter::{self, FromIterator};
 
-    crate::custom_keyword!(existential);
     crate::custom_keyword!(macro_rules);
 
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
@@ -1123,8 +1122,6 @@ pub mod parsing {
                 input.parse().map(Item::Mod)
             } else if lookahead.peek(Token![type]) {
                 parse_item_type(begin, input)
-            } else if lookahead.peek(existential) {
-                input.call(item_existential).map(Item::Verbatim)
             } else if lookahead.peek(Token![struct]) {
                 input.parse().map(Item::Struct)
             } else if lookahead.peek(Token![enum]) {
@@ -1180,14 +1177,25 @@ pub mod parsing {
         semi_token: Token![;],
     }
 
-    impl Parse for FlexibleItemType {
-        fn parse(input: ParseStream) -> Result<Self> {
+    enum WhereClauseLocation {
+        // type Ty<T> where T: 'static = T;
+        BeforeEq,
+        // type Ty<T> = T where T: 'static;
+        #[allow(dead_code)]
+        AfterEq,
+        // TODO: goes away once the migration period on rust-lang/rust#89122 is over
+        Both,
+    }
+
+    impl FlexibleItemType {
+        fn parse(input: ParseStream, where_clause_location: WhereClauseLocation) -> Result<Self> {
             let vis: Visibility = input.parse()?;
             let defaultness: Option<Token![default]> = input.parse()?;
             let type_token: Token![type] = input.parse()?;
             let ident: Ident = input.parse()?;
             let mut generics: Generics = input.parse()?;
             let colon_token: Option<Token![:]> = input.parse()?;
+
             let mut bounds = Punctuated::new();
             if colon_token.is_some() {
                 loop {
@@ -1201,12 +1209,29 @@ pub mod parsing {
                     bounds.push_punct(input.parse::<Token![+]>()?);
                 }
             }
-            generics.where_clause = input.parse()?;
+
+            match where_clause_location {
+                WhereClauseLocation::BeforeEq | WhereClauseLocation::Both => {
+                    generics.where_clause = input.parse()?;
+                }
+                _ => {}
+            }
+
             let ty = if let Some(eq_token) = input.parse()? {
                 Some((eq_token, input.parse::<Type>()?))
             } else {
                 None
             };
+
+            match where_clause_location {
+                WhereClauseLocation::AfterEq | WhereClauseLocation::Both
+                    if generics.where_clause.is_none() =>
+                {
+                    generics.where_clause = input.parse()?;
+                }
+                _ => {}
+            }
+
             let semi_token: Token![;] = input.parse()?;
 
             Ok(FlexibleItemType {
@@ -1808,7 +1833,7 @@ pub mod parsing {
                 #[cfg(not(test))]
                 _ => unreachable!(),
             };
-            attrs.extend(item_attrs.drain(..));
+            attrs.append(item_attrs);
             *item_attrs = attrs;
 
             Ok(item)
@@ -1871,7 +1896,7 @@ pub mod parsing {
             bounds: _,
             ty,
             semi_token,
-        } = input.parse()?;
+        } = FlexibleItemType::parse(input, WhereClauseLocation::BeforeEq)?;
 
         if defaultness.is_some()
             || generics.lt_token.is_some()
@@ -1940,7 +1965,7 @@ pub mod parsing {
             bounds: _,
             ty,
             semi_token,
-        } = input.parse()?;
+        } = FlexibleItemType::parse(input, WhereClauseLocation::BeforeEq)?;
 
         if defaultness.is_some() || colon_token.is_some() || ty.is_none() {
             Ok(Item::Verbatim(verbatim::between(begin, input)))
@@ -1959,63 +1984,15 @@ pub mod parsing {
         }
     }
 
-    #[cfg(not(feature = "printing"))]
-    fn item_existential(input: ParseStream) -> Result<TokenStream> {
-        Err(input.error("existential type is not supported"))
-    }
-
-    #[cfg(feature = "printing")]
-    fn item_existential(input: ParseStream) -> Result<TokenStream> {
-        use crate::attr::FilterAttrs;
-        use quote::{ToTokens, TokenStreamExt};
-
-        let attrs = input.call(Attribute::parse_outer)?;
-        let vis: Visibility = input.parse()?;
-        let existential_token: existential = input.parse()?;
-        let type_token: Token![type] = input.parse()?;
-        let ident: Ident = input.parse()?;
-
-        let mut generics: Generics = input.parse()?;
-        generics.where_clause = input.parse()?;
-
-        let colon_token: Token![:] = input.parse()?;
-
-        let mut bounds = Punctuated::new();
-        while !input.peek(Token![;]) {
-            if !bounds.is_empty() {
-                bounds.push_punct(input.parse::<Token![+]>()?);
-            }
-            bounds.push_value(input.parse::<TypeParamBound>()?);
-        }
-
-        let semi_token: Token![;] = input.parse()?;
-
-        let mut tokens = TokenStream::new();
-        tokens.append_all(attrs.outer());
-        vis.to_tokens(&mut tokens);
-        existential_token.to_tokens(&mut tokens);
-        type_token.to_tokens(&mut tokens);
-        ident.to_tokens(&mut tokens);
-        generics.to_tokens(&mut tokens);
-        generics.where_clause.to_tokens(&mut tokens);
-        if !bounds.is_empty() {
-            colon_token.to_tokens(&mut tokens);
-            bounds.to_tokens(&mut tokens);
-        }
-        semi_token.to_tokens(&mut tokens);
-        Ok(tokens)
-    }
-
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for ItemStruct {
         fn parse(input: ParseStream) -> Result<Self> {
-            let mut attrs = input.call(Attribute::parse_outer)?;
+            let attrs = input.call(Attribute::parse_outer)?;
             let vis = input.parse::<Visibility>()?;
             let struct_token = input.parse::<Token![struct]>()?;
             let ident = input.parse::<Ident>()?;
             let generics = input.parse::<Generics>()?;
-            let (where_clause, fields, semi_token) =
-                derive::parsing::data_struct(input, &mut attrs)?;
+            let (where_clause, fields, semi_token) = derive::parsing::data_struct(input)?;
             Ok(ItemStruct {
                 attrs,
                 vis,
@@ -2034,13 +2011,12 @@ pub mod parsing {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for ItemEnum {
         fn parse(input: ParseStream) -> Result<Self> {
-            let mut attrs = input.call(Attribute::parse_outer)?;
+            let attrs = input.call(Attribute::parse_outer)?;
             let vis = input.parse::<Visibility>()?;
             let enum_token = input.parse::<Token![enum]>()?;
             let ident = input.parse::<Ident>()?;
             let generics = input.parse::<Generics>()?;
-            let (where_clause, brace_token, variants) =
-                derive::parsing::data_enum(input, &mut attrs)?;
+            let (where_clause, brace_token, variants) = derive::parsing::data_enum(input)?;
             Ok(ItemEnum {
                 attrs,
                 vis,
@@ -2059,12 +2035,12 @@ pub mod parsing {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for ItemUnion {
         fn parse(input: ParseStream) -> Result<Self> {
-            let mut attrs = input.call(Attribute::parse_outer)?;
+            let attrs = input.call(Attribute::parse_outer)?;
             let vis = input.parse::<Visibility>()?;
             let union_token = input.parse::<Token![union]>()?;
             let ident = input.parse::<Ident>()?;
             let generics = input.parse::<Generics>()?;
-            let (where_clause, fields) = derive::parsing::data_union(input, &mut attrs)?;
+            let (where_clause, fields) = derive::parsing::data_union(input)?;
             Ok(ItemUnion {
                 attrs,
                 vis,
@@ -2293,7 +2269,7 @@ pub mod parsing {
                 #[cfg(not(test))]
                 _ => unreachable!(),
             };
-            attrs.extend(item_attrs.drain(..));
+            attrs.append(item_attrs);
             *item_attrs = attrs;
             Ok(item)
         }
@@ -2378,7 +2354,6 @@ pub mod parsing {
                 }
             }
 
-            generics.where_clause = input.parse()?;
             let default = if input.peek(Token![=]) {
                 let eq_token: Token![=] = input.parse()?;
                 let default: Type = input.parse()?;
@@ -2386,6 +2361,8 @@ pub mod parsing {
             } else {
                 None
             };
+
+            generics.where_clause = input.parse()?;
             let semi_token: Token![;] = input.parse()?;
 
             Ok(TraitItemType {
@@ -2412,7 +2389,7 @@ pub mod parsing {
             bounds,
             ty,
             semi_token,
-        } = input.parse()?;
+        } = FlexibleItemType::parse(input, WhereClauseLocation::Both)?;
 
         if defaultness.is_some() || vis.is_some() {
             Ok(TraitItem::Verbatim(verbatim::between(begin, input)))
@@ -2505,7 +2482,7 @@ pub mod parsing {
             while let Type::Group(ty) = first_ty_ref {
                 first_ty_ref = &ty.elem;
             }
-            if let Type::Path(_) = first_ty_ref {
+            if let Type::Path(TypePath { qself: None, .. }) = first_ty_ref {
                 while let Type::Group(ty) = first_ty {
                     first_ty = *ty.elem;
                 }
@@ -2609,8 +2586,6 @@ pub mod parsing {
                 }
             } else if lookahead.peek(Token![type]) {
                 parse_impl_item_type(begin, input)
-            } else if vis.is_inherited() && defaultness.is_none() && lookahead.peek(existential) {
-                input.call(item_existential).map(ImplItem::Verbatim)
             } else if vis.is_inherited()
                 && defaultness.is_none()
                 && (lookahead.peek(Ident)
@@ -2637,7 +2612,7 @@ pub mod parsing {
                     #[cfg(not(test))]
                     _ => unreachable!(),
                 };
-                attrs.extend(item_attrs.drain(..));
+                attrs.append(item_attrs);
                 *item_attrs = attrs;
             }
 
@@ -2687,7 +2662,7 @@ pub mod parsing {
                 punct.set_span(semi.span);
                 let tokens = TokenStream::from_iter(vec![TokenTree::Punct(punct)]);
                 Block {
-                    brace_token: Brace::default(),
+                    brace_token: Brace { span: semi.span },
                     stmts: vec![Stmt::Item(Item::Verbatim(tokens))],
                 }
             } else {
@@ -2713,20 +2688,26 @@ pub mod parsing {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for ImplItemType {
         fn parse(input: ParseStream) -> Result<Self> {
+            let attrs = input.call(Attribute::parse_outer)?;
+            let vis: Visibility = input.parse()?;
+            let defaultness: Option<Token![default]> = input.parse()?;
+            let type_token: Token![type] = input.parse()?;
+            let ident: Ident = input.parse()?;
+            let mut generics: Generics = input.parse()?;
+            let eq_token: Token![=] = input.parse()?;
+            let ty: Type = input.parse()?;
+            generics.where_clause = input.parse()?;
+            let semi_token: Token![;] = input.parse()?;
             Ok(ImplItemType {
-                attrs: input.call(Attribute::parse_outer)?,
-                vis: input.parse()?,
-                defaultness: input.parse()?,
-                type_token: input.parse()?,
-                ident: input.parse()?,
-                generics: {
-                    let mut generics: Generics = input.parse()?;
-                    generics.where_clause = input.parse()?;
-                    generics
-                },
-                eq_token: input.parse()?,
-                ty: input.parse()?,
-                semi_token: input.parse()?,
+                attrs,
+                vis,
+                defaultness,
+                type_token,
+                ident,
+                generics,
+                eq_token,
+                ty,
+                semi_token,
             })
         }
     }
@@ -2742,7 +2723,7 @@ pub mod parsing {
             bounds: _,
             ty,
             semi_token,
-        } = input.parse()?;
+        } = FlexibleItemType::parse(input, WhereClauseLocation::Both)?;
 
         if colon_token.is_some() || ty.is_none() {
             Ok(ImplItem::Verbatim(verbatim::between(begin, input)))
@@ -3158,11 +3139,11 @@ mod printing {
                 TokensOrDefault(&self.colon_token).to_tokens(tokens);
                 self.bounds.to_tokens(tokens);
             }
-            self.generics.where_clause.to_tokens(tokens);
             if let Some((eq_token, default)) = &self.default {
                 eq_token.to_tokens(tokens);
                 default.to_tokens(tokens);
             }
+            self.generics.where_clause.to_tokens(tokens);
             self.semi_token.to_tokens(tokens);
         }
     }
@@ -3223,9 +3204,9 @@ mod printing {
             self.type_token.to_tokens(tokens);
             self.ident.to_tokens(tokens);
             self.generics.to_tokens(tokens);
-            self.generics.where_clause.to_tokens(tokens);
             self.eq_token.to_tokens(tokens);
             self.ty.to_tokens(tokens);
+            self.generics.where_clause.to_tokens(tokens);
             self.semi_token.to_tokens(tokens);
         }
     }

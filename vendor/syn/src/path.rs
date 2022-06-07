@@ -231,7 +231,38 @@ pub mod parsing {
             }
 
             if input.peek(Ident) && input.peek2(Token![=]) {
-                return Ok(GenericArgument::Binding(input.parse()?));
+                let ident: Ident = input.parse()?;
+                let eq_token: Token![=] = input.parse()?;
+
+                let ty = if input.peek(Lit) {
+                    let begin = input.fork();
+                    input.parse::<Lit>()?;
+                    Type::Verbatim(verbatim::between(begin, input))
+                } else if input.peek(token::Brace) {
+                    let begin = input.fork();
+
+                    #[cfg(feature = "full")]
+                    {
+                        input.parse::<ExprBlock>()?;
+                    }
+
+                    #[cfg(not(feature = "full"))]
+                    {
+                        let content;
+                        braced!(content in input);
+                        content.parse::<Expr>()?;
+                    }
+
+                    Type::Verbatim(verbatim::between(begin, input))
+                } else {
+                    input.parse()?
+                };
+
+                return Ok(GenericArgument::Binding(Binding {
+                    ident,
+                    eq_token,
+                    ty,
+                }));
             }
 
             #[cfg(feature = "full")]
@@ -589,7 +620,7 @@ pub mod parsing {
             path: &mut Self,
             expr_style: bool,
         ) -> Result<()> {
-            while input.peek(Token![::]) {
+            while input.peek(Token![::]) && !input.peek3(token::Paren) {
                 let punct: Token![::] = input.parse()?;
                 path.segments.push_punct(punct);
                 let value = PathSegment::parse_helper(input, expr_style)?;
