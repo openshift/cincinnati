@@ -139,10 +139,9 @@ PROM_ROUTE=$(oc -n openshift-monitoring get route thanos-querier -o jsonpath="{.
 export PROM_ENDPOINT="https://${PROM_ROUTE}"
 echo "Using Prometheus endpoint ${PROM_ENDPOINT}"
 
-export PROM_TOKEN=$(oc -n openshift-monitoring get secret \
-  $(oc -n openshift-monitoring get serviceaccount prometheus-k8s \
-    -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep prometheus-k8s-token) \
-  -o go-template='{{.data.token | base64decode}}')
+PROM_TOKEN_NAME=$(oc -n openshift-monitoring get serviceaccount prometheus-k8s \
+    -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep prometheus-k8s-token)
+export PROM_TOKEN=$(oc -n openshift-monitoring get secret "${PROM_TOKEN_NAME}"  -o go-template='{{.data.token | base64decode}}')
 
 DELAY=30
 for i in $(seq 1 10); do
