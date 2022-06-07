@@ -40,6 +40,7 @@ JQ_SCRIPT='
           $reordered_nodes_by_version[.to]]
       ] | sort
     ),
+    conditionalEdges: .conditionalEdges,
   }
 '
 
