@@ -153,7 +153,11 @@ impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
             self.settings.fetch_concurrency,
         )
         .await
-        .context("failed to fetch all release metadata")?;
+        .context(format!(
+            "failed to fetch all release metadata from {}/{}",
+            &self.registry.host_port_string(),
+            &self.settings.repository
+        ))?;
 
         if releases.is_empty() {
             warn!(
