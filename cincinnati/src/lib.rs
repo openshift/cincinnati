@@ -87,6 +87,20 @@ impl Release {
             _ => bail!("could not get manifest reference"),
         }
     }
+
+    /// return the arch identifier set in metadata or returns `none`
+    pub fn metadata_arch_id(&mut self) -> String {
+        let metadata_arch_key = "release.openshift.io/architecture";
+        let no_arch = String::from("none");
+        let arch = self
+            .get_metadata_mut()
+            .map(|metadata| metadata.get(metadata_arch_key))
+            .unwrap_or(None);
+        match arch {
+            Some(arch) => arch.to_string(),
+            _ => no_arch,
+        }
+    }
 }
 
 /// Type to represent a Release with all its information.
@@ -207,7 +221,7 @@ impl Graph {
         R: Into<Release>,
     {
         let missing_manifest_ref = String::from("none");
-        let release = release.into();
+        let mut release = release.into();
         match self.find_by_version(release.version()) {
             Some(id) => {
                 let node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
@@ -216,12 +230,18 @@ impl Graph {
                     if release.manifestref().unwrap_or(&missing_manifest_ref)
                         != node.manifestref().unwrap_or(&missing_manifest_ref)
                     {
-                        bail!(
-                            "mismatched manifest ref for concrete release {}: {}, {}",
-                            release.version(),
-                            release.manifestref().unwrap_or(&missing_manifest_ref),
-                            node.manifestref().unwrap_or(&missing_manifest_ref)
-                        )
+                        let release_arch = release.metadata_arch_id();
+                        if release_arch == node.metadata_arch_id() {
+                            bail!(
+                                "mismatched manifest ref for concrete release {}: {}, {}",
+                                release.version(),
+                                release.manifestref().unwrap_or(&missing_manifest_ref),
+                                node.manifestref().unwrap_or(&missing_manifest_ref)
+                            )
+                        }
+                        if release_arch == "multi" {
+                            return Ok(id);
+                        }
                     }
                 }
                 *node = release;
