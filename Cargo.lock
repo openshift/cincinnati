@@ -1188,21 +1188,23 @@ dependencies = [
 [[package]]
 name = "dkregistry"
 version = "0.5.1-alpha.0"
-source = "git+https://github.com/camallo/dkregistry-rs.git?rev=0b1dbf63b2b74919d210819a490c18de3bd4e947#0b1dbf63b2b74919d210819a490c18de3bd4e947"
+source = "git+https://github.com/camallo/dkregistry-rs.git?rev=37acecb4b8139dd1b1cc83795442f94f90e1ffc5#37acecb4b8139dd1b1cc83795442f94f90e1ffc5"
 dependencies = [
  "async-stream",
  "base64 0.13.0",
+ "bytes",
  "futures",
  "http",
  "libflate",
  "log",
  "mime",
+ "pin-project",
  "regex",
  "reqwest",
  "serde",
  "serde_ignored",
  "serde_json",
- "sha2",
+ "sha2 0.10.1",
  "strum 0.23.0",
  "strum_macros 0.23.1",
  "tar",
@@ -1254,7 +1256,7 @@ dependencies = [
  "ed25519",
  "rand 0.7.3",
  "serde",
- "sha2",
+ "sha2 0.9.5",
  "zeroize",
 ]
 
@@ -2427,7 +2429,7 @@ dependencies = [
  "ripemd160",
  "rsa",
  "sha-1 0.9.6",
- "sha2",
+ "sha2 0.9.5",
  "sha3",
  "signature",
  "smallvec",
@@ -2902,7 +2904,7 @@ dependencies = [
  "num-traits",
  "pem",
  "rand 0.7.3",
- "sha2",
+ "sha2 0.9.5",
  "simple_asn1",
  "subtle",
  "thiserror",
@@ -3120,6 +3122,17 @@ dependencies = [
  "cpufeatures 0.1.4",
  "digest 0.9.0",
  "opaque-debug",
+]
+
+[[package]]
+name = "sha2"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99c3bd8169c58782adad9290a9af5939994036b76187f7b4f0e6de91dbbfc0ec"
+dependencies = [
+ "cfg-if 1.0.0",
+ "cpufeatures 0.2.1",
+ "digest 0.10.1",
 ]
 
 [[package]]
