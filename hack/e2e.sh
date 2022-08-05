@@ -139,12 +139,27 @@ PROM_ROUTE=$(oc -n openshift-monitoring get route thanos-querier -o jsonpath="{.
 export PROM_ENDPOINT="https://${PROM_ROUTE}"
 echo "Using Prometheus endpoint ${PROM_ENDPOINT}"
 
-export PROM_TOKEN=$(oc -n openshift-monitoring get secret \
-  $(oc -n openshift-monitoring get serviceaccount prometheus-k8s \
-    -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep prometheus-k8s-token) \
-  -o go-template='{{.data.token | base64decode}}')
+
+# create a prometheus secret based token manually. this is required for clusters >= OCP 4.11
+oc apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-robot-secret
+  namespace: openshift-monitoring
+  annotations:
+    kubernetes.io/service-account.name: prometheus-k8s
+type: kubernetes.io/service-account-token
+EOF
 
 DELAY=30
+for i in $(seq 1 10); do
+  # extract the prometheus token
+  export PROM_TOKEN=$(oc extract secret/prometheus-robot-secret --to=- --keys=token -n openshift-monitoring) || continue
+  grep "waiting for prometheus token" <<< "${PROM_TOKEN}" || continue && break
+  sleep ${DELAY}
+done
+
 for i in $(seq 1 10); do
   PROM_OUTPUT=$(curl -kLs -H "Authorization: Bearer ${PROM_TOKEN}" "${PROM_ENDPOINT}/api/v1/query?query=cincinnati_gb_build_info") || continue
   grep "metric" <<< "${PROM_OUTPUT}" || continue && break
