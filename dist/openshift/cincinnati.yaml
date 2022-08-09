@@ -233,7 +233,7 @@ objects:
     metadata:
       name: cincinnati-configs
       annotations:
-        qontract.recycle: true
+        qontract.recycle: "true"
     data:
       gb.toml: |
         verbosity = "${GB_LOG_VERBOSITY}"
