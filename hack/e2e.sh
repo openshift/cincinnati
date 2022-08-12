@@ -104,6 +104,7 @@ echo "GRAPHDATA_IMAGE=${GRAPH_SOURCE}"
 
 # Render the template and apply subscription/operand
 oc process -f dist/openshift/cincinnati-e2e.yaml \
+  -p NAMESPACE="openshift-update-service" \
   -p IMAGE="${IMAGE}" \
   -p IMAGE_TAG="${IMAGE_TAG}" \
   -p GRAPHDATA_IMAGE="${GRAPH_SOURCE}" \

@@ -10,7 +10,9 @@ objects:
       name: openshift-update-service
       annotations:
         olm.providedAPIs: ''
-    spec: {}
+    spec:
+      targetNamespaces:
+        - "${NAMESPACE}"
   - apiVersion: operators.coreos.com/v1alpha1
     kind: Subscription
     metadata:
@@ -36,6 +38,8 @@ objects:
       releases: quay.io/openshift-release-dev/ocp-release
       replicas: ${{REPLICAS}}
 parameters:
+  - name: NAMESPACE
+    value: "openshift-update-service"
   - name: IMAGE
     value: "quay.io/app-sre/cincinnati"
     displayName: cincinnati image
