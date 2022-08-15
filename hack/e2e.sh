@@ -127,7 +127,7 @@ backoff oc -n openshift-update-service wait --for=condition=Ready pod -l app=e2e
 }
 
 # Expose services
-PE_URL=$(oc get route e2e-policy-engine-route -o jsonpath='{.spec.host}')
+PE_URL=$(oc get route e2e-route -o jsonpath='{.spec.host}')
 export GRAPH_URL="https://${PE_URL}/api/upgrades_info/graph"
 
 # Wait for route to become available
