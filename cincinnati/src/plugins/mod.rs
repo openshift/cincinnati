@@ -493,7 +493,7 @@ mod tests {
 
     #[test]
     fn convert_roundtrip_internalio_externalio() {
-        let graph = generate_graph(false);
+        let graph = generate_graph(false, false);
         let input_internal = InternalIO {
             graph,
             parameters: [("hello".to_string(), "plugin".to_string())]
@@ -568,7 +568,7 @@ mod tests {
         }
 
         let initial_internalio = InternalIO {
-            graph: generate_graph(false),
+            graph: generate_graph(false, false),
             parameters: [("hello".to_string(), "plugin".to_string())]
                 .iter()
                 .cloned()
@@ -576,7 +576,7 @@ mod tests {
         };
 
         let expected_internalio = InternalIO {
-            graph: generate_graph(false),
+            graph: generate_graph(false, false),
             parameters: [
                 ("hello".to_string(), "plugin".to_string()),
                 ("COUNTER".to_string(), "1".to_string()),
@@ -613,7 +613,7 @@ mod tests {
         }
 
         let initial_internalio = InternalIO {
-            graph: generate_graph(false),
+            graph: generate_graph(false, false),
             parameters: [("hello".to_string(), "plugin".to_string())]
                 .iter()
                 .cloned()
@@ -624,7 +624,7 @@ mod tests {
 
         for i in 0..runs {
             let expected_internalio = InternalIO {
-                graph: generate_graph(false),
+                graph: generate_graph(false, false),
                 parameters: [
                     ("hello".to_string(), "plugin".to_string()),
                     ("COUNTER".to_string(), format!("{}", i + 1)),
