@@ -102,9 +102,11 @@ export GRAPH_SOURCE="${GRAPHDATA_IMAGE:-quay.io/openshift-ota/cincinnati-graph-d
 
 echo "GRAPHDATA_IMAGE=${GRAPH_SOURCE}"
 
+NAMESPACE="openshift-update-service"
+
 # Render the template and apply subscription/operand
 oc process -f dist/openshift/cincinnati-e2e.yaml \
-  -p NAMESPACE="openshift-update-service" \
+  -p NAMESPACE="${NAMESPACE}" \
   -p IMAGE="${IMAGE}" \
   -p IMAGE_TAG="${IMAGE_TAG}" \
   -p GRAPHDATA_IMAGE="${GRAPH_SOURCE}" \
@@ -127,8 +129,8 @@ backoff oc -n openshift-update-service wait --for=condition=Ready pod -l app=e2e
 }
 
 # Expose services
-PE_URL=$(oc get route e2e-policy-engine-route -o jsonpath='{.spec.host}')
-export GRAPH_URL="https://${PE_URL}/api/upgrades_info/graph"
+PE_URL=$(oc -n "${NAMESPACE}" get -o jsonpath='{.status.policyEngineURI}' updateservice "e2e")
+export GRAPH_URL="${PE_URL}/api/upgrades_info/graph"
 
 # Wait for route to become available
 backoff test "$(curl -ks -o /dev/null -w "%{http_code}" --header 'Accept:application/json' "${GRAPH_URL}?channel=a")" = "200"
