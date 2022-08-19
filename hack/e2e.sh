@@ -102,8 +102,11 @@ export GRAPH_SOURCE="${GRAPHDATA_IMAGE:-quay.io/openshift-ota/cincinnati-graph-d
 
 echo "GRAPHDATA_IMAGE=${GRAPH_SOURCE}"
 
+NAMESPACE="openshift-update-service"
+
 # Render the template and apply subscription/operand
 oc process -f dist/openshift/cincinnati-e2e.yaml \
+  -p NAMESPACE="${NAMESPACE}" \
   -p IMAGE="${IMAGE}" \
   -p IMAGE_TAG="${IMAGE_TAG}" \
   -p GRAPHDATA_IMAGE="${GRAPH_SOURCE}" \
@@ -126,8 +129,13 @@ backoff oc -n openshift-update-service wait --for=condition=Ready pod -l app=e2e
 }
 
 # Expose services
-PE_URL=$(oc get route e2e-policy-engine-route -o jsonpath='{.spec.host}')
-export GRAPH_URL="https://${PE_URL}/api/upgrades_info/graph"
+while sleep 1;
+do
+  PE_URL=$(oc -n "${NAMESPACE}" get -o jsonpath='{.status.policyEngineURI}' updateservice "e2e");
+  SCHEME="${PE_URL%%:*}";
+  if test "${SCHEME}" = http -o "${SCHEME}" = https; then break; fi;
+done
+export GRAPH_URL="${PE_URL}/api/upgrades_info/graph"
 
 # Wait for route to become available
 backoff test "$(curl -ks -o /dev/null -w "%{http_code}" --header 'Accept:application/json' "${GRAPH_URL}?channel=a")" = "200"
@@ -139,12 +147,27 @@ PROM_ROUTE=$(oc -n openshift-monitoring get route thanos-querier -o jsonpath="{.
 export PROM_ENDPOINT="https://${PROM_ROUTE}"
 echo "Using Prometheus endpoint ${PROM_ENDPOINT}"
 
-export PROM_TOKEN=$(oc -n openshift-monitoring get secret \
-  $(oc -n openshift-monitoring get serviceaccount prometheus-k8s \
-    -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep prometheus-k8s-token) \
-  -o go-template='{{.data.token | base64decode}}')
+
+# create a prometheus secret based token manually. this is required for clusters >= OCP 4.11
+oc apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-robot-secret
+  namespace: openshift-monitoring
+  annotations:
+    kubernetes.io/service-account.name: prometheus-k8s
+type: kubernetes.io/service-account-token
+EOF
 
 DELAY=30
+for i in $(seq 1 10); do
+  # extract the prometheus token
+  export PROM_TOKEN=$(oc extract secret/prometheus-robot-secret --to=- --keys=token -n openshift-monitoring) || continue
+  grep "waiting for prometheus token" <<< "${PROM_TOKEN}" || continue && break
+  sleep ${DELAY}
+done
+
 for i in $(seq 1 10); do
   PROM_OUTPUT=$(curl -kLs -H "Authorization: Bearer ${PROM_TOKEN}" "${PROM_ENDPOINT}/api/v1/query?query=cincinnati_gb_build_info") || continue
   grep "metric" <<< "${PROM_OUTPUT}" || continue && break
