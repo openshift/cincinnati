@@ -24,8 +24,8 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 20953,
-  "iteration": 1661960688643,
+  "id": 146,
+  "iteration": 1661975946554,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -1590,7 +1590,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "pMQ_mGf7z"
+        "uid": "gH4yqWBnz"
       },
       "fieldConfig": {
         "defaults": {
@@ -1669,7 +1669,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "pMQ_mGf7z"
+            "uid": "gH4yqWBnz"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -1913,7 +1913,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "C98liGfnk"
+        "uid": "qq7sqWfnz"
       },
       "fill": 10,
       "fillGradient": 0,
@@ -1954,7 +1954,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "C98liGfnk"
+            "uid": "qq7sqWfnz"
           },
           "expr": "sum(irate(container_network_receive_packets_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
           "format": "time_series",
@@ -2004,7 +2004,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "C98liGfnk"
+        "uid": "qq7sqWfnz"
       },
       "fill": 10,
       "fillGradient": 0,
@@ -2045,7 +2045,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "C98liGfnk"
+            "uid": "qq7sqWfnz"
           },
           "expr": "sum(irate(container_network_receive_packets_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
           "format": "time_series",
@@ -2119,7 +2119,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "C98liGfnk"
+        "uid": "qq7sqWfnz"
       },
       "fill": 10,
       "fillGradient": 0,
@@ -2160,12 +2160,14 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "C98liGfnk"
+            "uid": "qq7sqWfnz"
           },
+          "editorMode": "code",
           "exemplar": true,
           "expr": "sum(irate(container_network_receive_packets_dropped_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "{{pod}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -2207,7 +2209,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "C98liGfnk"
+        "uid": "qq7sqWfnz"
       },
       "fill": 10,
       "fillGradient": 0,
@@ -2248,7 +2250,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "C98liGfnk"
+            "uid": "qq7sqWfnz"
           },
           "expr": "sum(irate(container_network_transmit_packets_dropped_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
           "format": "time_series",
