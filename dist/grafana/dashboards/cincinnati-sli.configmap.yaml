@@ -14,7 +14,10 @@ data:
         "list": [
           {
             "builtIn": 1,
-            "datasource": "-- Grafana --",
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
             "enable": true,
             "hide": true,
             "iconColor": "rgba(0, 211, 255, 1)",
@@ -31,18 +34,17 @@ data:
       },
       "editable": true,
       "fiscalYearStartMonth": 0,
-      "gnetId": null,
       "graphTooltip": 0,
-      "iteration": 1647548089423,
+      "id": 20953,
+      "iteration": 1661960688643,
       "links": [],
       "liveNow": false,
       "panels": [
         {
           "collapsed": false,
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {},
-            "overrides": []
+          "datasource": {
+            "type": "prometheus",
+            "uid": "iLX_mMBnk"
           },
           "gridPos": {
             "h": 1,
@@ -52,7 +54,15 @@ data:
           },
           "id": 12,
           "panels": [],
-          "repeat": null,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "iLX_mMBnk"
+              },
+              "refId": "A"
+            }
+          ],
           "title": "CPU Usage",
           "type": "row"
         },
@@ -61,7 +71,9 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": {
+            "uid": "$datasource"
+          },
           "fieldConfig": {
             "defaults": {
               "links": []
@@ -95,7 +107,7 @@ data:
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "8.2.7",
+          "pluginVersion": "9.0.3",
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
@@ -105,19 +117,19 @@ data:
           "steppedLine": false,
           "targets": [
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}",
-              "legendLink": null,
               "refId": "A",
               "step": 10
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "CPU Usage",
           "tooltip": {
             "shared": false,
@@ -126,9 +138,7 @@ data:
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
@@ -136,33 +146,26 @@ data:
             {
               "$$hashKey": "object:3074",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
               "min": 0,
               "show": true
             },
             {
               "$$hashKey": "object:3075",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
           "collapsed": false,
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {},
-            "overrides": []
+          "datasource": {
+            "type": "prometheus",
+            "uid": "iLX_mMBnk"
           },
           "gridPos": {
             "h": 1,
@@ -172,7 +175,15 @@ data:
           },
           "id": 13,
           "panels": [],
-          "repeat": null,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "iLX_mMBnk"
+              },
+              "refId": "A"
+            }
+          ],
           "title": "CPU Quota",
           "type": "row"
         },
@@ -182,7 +193,9 @@ data:
           "columns": [],
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": {
+            "uid": "$datasource"
+          },
           "fill": 1,
           "fontSize": "100%",
           "gridPos": {
@@ -205,7 +218,6 @@ data:
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null as zero",
-          "pageSize": null,
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -230,7 +242,6 @@ data:
             {
               "alias": "CPU Usage",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -245,7 +256,6 @@ data:
             {
               "alias": "CPU Requests",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -260,7 +270,6 @@ data:
             {
               "alias": "CPU Requests %",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -275,7 +284,6 @@ data:
             {
               "alias": "CPU Limits",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -290,7 +298,6 @@ data:
             {
               "alias": "CPU Limits %",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -305,7 +312,6 @@ data:
             {
               "alias": "Pod",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -320,7 +326,6 @@ data:
             {
               "alias": "",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -332,6 +337,9 @@ data:
           ],
           "targets": [
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -341,6 +349,9 @@ data:
               "step": 10
             },
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(kube_pod_container_resource_requests_cpu_cores{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -350,6 +361,9 @@ data:
               "step": 10
             },
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod) / sum(kube_pod_container_resource_requests_cpu_cores{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -359,6 +373,9 @@ data:
               "step": 10
             },
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(kube_pod_container_resource_limits_cpu_cores{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -368,6 +385,9 @@ data:
               "step": 10
             },
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod) / sum(kube_pod_container_resource_limits_cpu_cores{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -378,8 +398,6 @@ data:
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "CPU Quota",
           "tooltip": {
             "shared": false,
@@ -389,37 +407,29 @@ data:
           "transform": "table",
           "type": "table-old",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
               "min": 0,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ]
         },
         {
           "collapsed": false,
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {},
-            "overrides": []
+          "datasource": {
+            "type": "prometheus",
+            "uid": "iLX_mMBnk"
           },
           "gridPos": {
             "h": 1,
@@ -429,7 +439,15 @@ data:
           },
           "id": 14,
           "panels": [],
-          "repeat": null,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "iLX_mMBnk"
+              },
+              "refId": "A"
+            }
+          ],
           "title": "Memory Usage",
           "type": "row"
         },
@@ -438,7 +456,9 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": {
+            "uid": "$datasource"
+          },
           "fieldConfig": {
             "defaults": {
               "links": []
@@ -472,7 +492,7 @@ data:
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "8.2.7",
+          "pluginVersion": "9.0.3",
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
@@ -482,19 +502,19 @@ data:
           "steppedLine": false,
           "targets": [
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(container_memory_working_set_bytes{cluster=\"$cluster\", namespace=\"$namespace\", container!=\"\"}) by (pod)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}",
-              "legendLink": null,
               "refId": "A",
               "step": 10
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Memory Usage (w/o cache)",
           "tooltip": {
             "shared": false,
@@ -503,41 +523,32 @@ data:
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "bytes",
-              "label": null,
               "logBase": 1,
-              "max": null,
               "min": 0,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
           "collapsed": false,
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {},
-            "overrides": []
+          "datasource": {
+            "type": "prometheus",
+            "uid": "iLX_mMBnk"
           },
           "gridPos": {
             "h": 1,
@@ -547,7 +558,15 @@ data:
           },
           "id": 15,
           "panels": [],
-          "repeat": null,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "iLX_mMBnk"
+              },
+              "refId": "A"
+            }
+          ],
           "title": "Memory Quota",
           "type": "row"
         },
@@ -557,7 +576,9 @@ data:
           "columns": [],
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": {
+            "uid": "$datasource"
+          },
           "fill": 1,
           "fontSize": "100%",
           "gridPos": {
@@ -580,7 +601,6 @@ data:
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null as zero",
-          "pageSize": null,
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -605,7 +625,6 @@ data:
             {
               "alias": "Memory Usage",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -620,7 +639,6 @@ data:
             {
               "alias": "Memory Requests",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -635,7 +653,6 @@ data:
             {
               "alias": "Memory Requests %",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -650,7 +667,6 @@ data:
             {
               "alias": "Memory Limits",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -665,7 +681,6 @@ data:
             {
               "alias": "Memory Limits %",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -680,7 +695,6 @@ data:
             {
               "alias": "Memory Usage (RSS)",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -695,7 +709,6 @@ data:
             {
               "alias": "Memory Usage (Cache)",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -710,7 +723,6 @@ data:
             {
               "alias": "Memory Usage (Swap)",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -725,7 +737,6 @@ data:
             {
               "alias": "Pod",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -740,7 +751,6 @@ data:
             {
               "alias": "",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -752,6 +762,9 @@ data:
           ],
           "targets": [
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(container_memory_working_set_bytes{cluster=\"$cluster\", namespace=\"$namespace\",container!=\"\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -761,6 +774,9 @@ data:
               "step": 10
             },
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(kube_pod_container_resource_requests_memory_bytes{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -770,6 +786,9 @@ data:
               "step": 10
             },
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(container_memory_working_set_bytes{cluster=\"$cluster\", namespace=\"$namespace\",container!=\"\"}) by (pod) / sum(kube_pod_container_resource_requests_memory_bytes{namespace=\"$namespace\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -779,6 +798,9 @@ data:
               "step": 10
             },
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(kube_pod_container_resource_limits_memory_bytes{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -788,6 +810,9 @@ data:
               "step": 10
             },
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(container_memory_working_set_bytes{cluster=\"$cluster\", namespace=\"$namespace\",container!=\"\"}) by (pod) / sum(kube_pod_container_resource_limits_memory_bytes{namespace=\"$namespace\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -797,6 +822,9 @@ data:
               "step": 10
             },
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(container_memory_rss{cluster=\"$cluster\", namespace=\"$namespace\",container!=\"\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -806,6 +834,9 @@ data:
               "step": 10
             },
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(container_memory_cache{cluster=\"$cluster\", namespace=\"$namespace\",container!=\"\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -815,6 +846,9 @@ data:
               "step": 10
             },
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(container_memory_swap{cluster=\"$cluster\", namespace=\"$namespace\",container!=\"\"}) by (pod)",
               "format": "table",
               "instant": true,
@@ -825,8 +859,6 @@ data:
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Memory Quota",
           "tooltip": {
             "shared": false,
@@ -836,37 +868,29 @@ data:
           "transform": "table",
           "type": "table-old",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
               "min": 0,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ]
         },
         {
           "collapsed": false,
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {},
-            "overrides": []
+          "datasource": {
+            "type": "prometheus",
+            "uid": "iLX_mMBnk"
           },
           "gridPos": {
             "h": 1,
@@ -876,7 +900,15 @@ data:
           },
           "id": 16,
           "panels": [],
-          "repeat": null,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "iLX_mMBnk"
+              },
+              "refId": "A"
+            }
+          ],
           "title": "Network",
           "type": "row"
         },
@@ -886,7 +918,10 @@ data:
           "columns": [],
           "dashLength": 10,
           "dashes": false,
-          "datasource": "$datasource",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$datasource"
+          },
           "fill": 1,
           "fontSize": "100%",
           "gridPos": {
@@ -909,7 +944,6 @@ data:
           "linewidth": 1,
           "links": [],
           "nullPointMode": "null as zero",
-          "pageSize": null,
           "percentage": false,
           "pointradius": 5,
           "points": false,
@@ -934,7 +968,6 @@ data:
             {
               "alias": "Current Receive Bandwidth",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -949,7 +982,6 @@ data:
             {
               "alias": "Current Transmit Bandwidth",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -964,7 +996,6 @@ data:
             {
               "alias": "Rate of Received Packets",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -979,7 +1010,6 @@ data:
             {
               "alias": "Rate of Transmitted Packets",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -994,7 +1024,6 @@ data:
             {
               "alias": "Rate of Received Packets Dropped",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -1009,7 +1038,6 @@ data:
             {
               "alias": "Rate of Transmitted Packets Dropped",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -1024,7 +1052,6 @@ data:
             {
               "alias": "Pod",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -1039,7 +1066,6 @@ data:
             {
               "alias": "",
               "align": "auto",
-              "colorMode": null,
               "colors": [],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
@@ -1051,8 +1077,12 @@ data:
           ],
           "targets": [
             {
-              "expr": "sum(irate(container_network_receive_bytes_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "sum(irate(container_network_receive_bytes_total{namespace=~\"$namespace\"}[$interval])) by (pod)",
               "format": "table",
+              "hide": false,
               "instant": true,
               "intervalFactor": 2,
               "legendFormat": "",
@@ -1060,8 +1090,12 @@ data:
               "step": 10
             },
             {
-              "expr": "sum(irate(container_network_transmit_bytes_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "sum(irate(container_network_transmit_bytes_total{namespace=~\"$namespace\"}[$interval])) by (pod)",
               "format": "table",
+              "hide": false,
               "instant": true,
               "intervalFactor": 2,
               "legendFormat": "",
@@ -1069,8 +1103,12 @@ data:
               "step": 10
             },
             {
-              "expr": "sum(irate(container_network_receive_packets_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "sum(irate(container_network_receive_packets_total{ namespace=~\"$namespace\"}[$interval])) by (pod)",
               "format": "table",
+              "hide": false,
               "instant": true,
               "intervalFactor": 2,
               "legendFormat": "",
@@ -1078,7 +1116,10 @@ data:
               "step": 10
             },
             {
-              "expr": "sum(irate(container_network_transmit_packets_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "sum(irate(container_network_transmit_packets_total{namespace=~\"$namespace\"}[$interval])) by (pod)",
               "format": "table",
               "instant": true,
               "intervalFactor": 2,
@@ -1087,8 +1128,12 @@ data:
               "step": 10
             },
             {
-              "expr": "sum(irate(container_network_receive_packets_dropped_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "sum(irate(container_network_receive_packets_dropped_total{namespace=~\"$namespace\"}[$interval])) by (pod)",
               "format": "table",
+              "hide": false,
               "instant": true,
               "intervalFactor": 2,
               "legendFormat": "",
@@ -1096,7 +1141,10 @@ data:
               "step": 10
             },
             {
-              "expr": "sum(irate(container_network_transmit_packets_dropped_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "sum(irate(container_network_transmit_packets_dropped_total{namespace=~\"$namespace\"}[$interval])) by (pod)",
               "format": "table",
               "instant": true,
               "intervalFactor": 2,
@@ -1106,8 +1154,6 @@ data:
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Current Network Usage",
           "tooltip": {
             "shared": false,
@@ -1117,37 +1163,29 @@ data:
           "transform": "table",
           "type": "table-old",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
               "min": 0,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ]
         },
         {
           "collapsed": false,
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {},
-            "overrides": []
+          "datasource": {
+            "type": "prometheus",
+            "uid": "iLX_mMBnk"
           },
           "gridPos": {
             "h": 1,
@@ -1157,11 +1195,23 @@ data:
           },
           "id": 17,
           "panels": [],
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "iLX_mMBnk"
+              },
+              "refId": "A"
+            }
+          ],
           "title": "Performance",
           "type": "row"
         },
         {
-          "datasource": "${datasource}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1221,20 +1271,31 @@ data:
           "id": 26,
           "options": {
             "legend": {
-              "calcs": [],
-              "displayMode": "list",
+              "calcs": [
+                "lastNotNull",
+                "mean",
+                "min",
+                "max"
+              ],
+              "displayMode": "table",
               "placement": "bottom"
             },
             "tooltip": {
-              "mode": "single"
+              "mode": "single",
+              "sort": "none"
             }
           },
           "targets": [
             {
+              "datasource": {
+                "uid": "${datasource}"
+              },
+              "editorMode": "code",
               "exemplar": true,
               "expr": "component:latency:p90_rate5m{job=\"cincinnati-policy-engine\",service=\"cincinnati\",component=\"cincinnati-policy-engine\"}",
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "{{component}}",
+              "range": true,
               "refId": "A"
             }
           ],
@@ -1242,7 +1303,115 @@ data:
           "type": "timeseries"
         },
         {
-          "datasource": "${datasource}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 49
+          },
+          "id": 38,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "mean",
+                "min",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "sortBy": "Last *",
+              "sortDesc": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(cincinnati_pe_graph_incoming_requests_total[5m])) by (pod)",
+              "legendFormat": "{{pod}}",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(cincinnati_pe_graph_incoming_requests_total[5m]))",
+              "hide": false,
+              "legendFormat": "Total",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "Graph Incoming Requests",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1298,25 +1467,36 @@ data:
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 49
+            "y": 59
           },
           "id": 28,
           "options": {
             "legend": {
-              "calcs": [],
-              "displayMode": "list",
+              "calcs": [
+                "lastNotNull",
+                "mean",
+                "min",
+                "max"
+              ],
+              "displayMode": "table",
               "placement": "bottom"
             },
             "tooltip": {
-              "mode": "single"
+              "mode": "single",
+              "sort": "none"
             }
           },
           "targets": [
             {
+              "datasource": {
+                "uid": "${datasource}"
+              },
+              "editorMode": "code",
               "exemplar": true,
               "expr": "sum(status_class:http_requests_total:rate5m{route=\"cincinnati-route-prod\", service=\"cincinnati\", component=\"cincinnati-policy-engine\"})",
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "Responses Completed ",
+              "range": true,
               "refId": "A"
             }
           ],
@@ -1324,7 +1504,10 @@ data:
           "type": "timeseries"
         },
         {
-          "datasource": "${datasource}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1379,25 +1562,36 @@ data:
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 56
+            "y": 66
           },
           "id": 32,
           "options": {
             "legend": {
-              "calcs": [],
-              "displayMode": "list",
+              "calcs": [
+                "lastNotNull",
+                "mean",
+                "min",
+                "max"
+              ],
+              "displayMode": "table",
               "placement": "bottom"
             },
             "tooltip": {
-              "mode": "single"
+              "mode": "single",
+              "sort": "none"
             }
           },
           "targets": [
             {
+              "datasource": {
+                "uid": "${datasource}"
+              },
+              "editorMode": "code",
               "exemplar": true,
               "expr": "sum by (status_class) (status_class:http_requests_total:rate5m{route=\"cincinnati-route-prod\", service=\"cincinnati\", component=\"cincinnati-policy-engine\"}) > 0",
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "{{label_name}}",
+              "range": true,
               "refId": "A"
             }
           ],
@@ -1405,7 +1599,10 @@ data:
           "type": "timeseries"
         },
         {
-          "datasource": "app-sre-prod-04-prometheus",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pMQ_mGf7z"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1460,25 +1657,37 @@ data:
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 64
+            "y": 74
           },
           "id": 30,
           "options": {
             "legend": {
-              "calcs": [],
-              "displayMode": "list",
+              "calcs": [
+                "lastNotNull",
+                "mean",
+                "min",
+                "max"
+              ],
+              "displayMode": "table",
               "placement": "bottom"
             },
             "tooltip": {
-              "mode": "single"
+              "mode": "single",
+              "sort": "none"
             }
           },
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "pMQ_mGf7z"
+              },
+              "editorMode": "code",
               "exemplar": true,
               "expr": "sum by (pod) (envoy_cluster_upstream_rq_pending_active{envoy_cluster_name=\"upgrades_info\"})",
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "{{pod}}",
+              "range": true,
               "refId": "A"
             }
           ],
@@ -1487,224 +1696,243 @@ data:
         },
         {
           "collapsed": false,
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {},
-            "overrides": []
+          "datasource": {
+            "type": "prometheus",
+            "uid": "iLX_mMBnk"
           },
           "gridPos": {
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 72
+            "y": 82
           },
           "id": 19,
           "panels": [],
-          "repeat": null,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "iLX_mMBnk"
+              },
+              "refId": "A"
+            }
+          ],
           "title": "Network",
           "type": "row"
         },
         {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$datasource",
-          "fill": 10,
-          "fillGradient": 0,
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 100,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineStyle": {
+                  "fill": "solid"
+                },
+                "lineWidth": 0,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "Bps"
+            },
+            "overrides": []
+          },
           "gridPos": {
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 73
+            "y": 83
           },
-          "hiddenSeries": false,
           "id": 6,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 0,
           "links": [],
-          "nullPointMode": "null as zero",
           "options": {
-            "alertThreshold": true
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "mean",
+                "min",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
           },
-          "percentage": false,
-          "pluginVersion": "8.2.7",
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
+          "pluginVersion": "9.0.3",
           "targets": [
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(irate(container_network_receive_bytes_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}",
-              "legendLink": null,
               "refId": "A",
               "step": 10
             }
           ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
           "title": "Receive Bandwidth",
-          "tooltip": {
-            "shared": false,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "$$hashKey": "object:3123",
-              "format": "Bps",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": 0,
-              "show": true
-            },
-            {
-              "$$hashKey": "object:3124",
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
+          "type": "timeseries"
         },
         {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$datasource",
-          "fill": 10,
-          "fillGradient": 0,
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 100,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 0,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "Bps"
+            },
+            "overrides": []
+          },
           "gridPos": {
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 80
+            "y": 90
           },
-          "hiddenSeries": false,
           "id": 7,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 0,
           "links": [],
-          "nullPointMode": "null as zero",
           "options": {
-            "alertThreshold": true
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "mean",
+                "min",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
           },
-          "percentage": false,
-          "pluginVersion": "8.2.7",
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
+          "pluginVersion": "9.0.3",
           "targets": [
             {
+              "datasource": {
+                "uid": "$datasource"
+              },
               "expr": "sum(irate(container_network_transmit_bytes_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}",
-              "legendLink": null,
               "refId": "A",
               "step": 10
             }
           ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
           "title": "Transmit Bandwidth",
-          "tooltip": {
-            "shared": false,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "Bps",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": 0,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
+          "type": "timeseries"
         },
         {
           "aliasColors": {},
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "appsrep06ue2-cluster-prometheus",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "C98liGfnk"
+          },
           "fill": 10,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 87
+            "y": 97
           },
           "hiddenSeries": false,
           "id": 8,
@@ -1725,7 +1953,7 @@ data:
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "8.2.7",
+          "pluginVersion": "9.0.3",
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
@@ -1735,19 +1963,20 @@ data:
           "steppedLine": false,
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "C98liGfnk"
+              },
               "expr": "sum(irate(container_network_receive_packets_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}",
-              "legendLink": null,
               "refId": "A",
               "step": 10
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Rate of Received Packets",
           "tooltip": {
             "shared": false,
@@ -1756,9 +1985,7 @@ data:
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
@@ -1766,25 +1993,19 @@ data:
             {
               "$$hashKey": "object:3172",
               "format": "Bps",
-              "label": null,
               "logBase": 1,
-              "max": null,
               "min": 0,
               "show": true
             },
             {
               "$$hashKey": "object:3173",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -1792,14 +2013,17 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "appsrep06ue2-cluster-prometheus",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "C98liGfnk"
+          },
           "fill": 10,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 94
+            "y": 104
           },
           "hiddenSeries": false,
           "id": 9,
@@ -1820,7 +2044,7 @@ data:
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "8.2.7",
+          "pluginVersion": "9.0.3",
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
@@ -1830,19 +2054,20 @@ data:
           "steppedLine": false,
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "C98liGfnk"
+              },
               "expr": "sum(irate(container_network_receive_packets_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}",
-              "legendLink": null,
               "refId": "A",
               "step": 10
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Rate of Transmitted Packets",
           "tooltip": {
             "shared": false,
@@ -1851,51 +2076,50 @@ data:
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "Bps",
-              "label": null,
               "logBase": 1,
-              "max": null,
               "min": 0,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
           "collapsed": false,
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {},
-            "overrides": []
+          "datasource": {
+            "type": "prometheus",
+            "uid": "iLX_mMBnk"
           },
           "gridPos": {
             "h": 1,
             "w": 24,
             "x": 0,
-            "y": 101
+            "y": 111
           },
           "id": 21,
           "panels": [],
-          "repeat": null,
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "iLX_mMBnk"
+              },
+              "refId": "A"
+            }
+          ],
           "title": "Network",
           "type": "row"
         },
@@ -1904,14 +2128,17 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "appsrep06ue2-cluster-prometheus",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "C98liGfnk"
+          },
           "fill": 10,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 102
+            "y": 112
           },
           "hiddenSeries": false,
           "id": 10,
@@ -1932,7 +2159,7 @@ data:
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "8.2.7",
+          "pluginVersion": "9.0.3",
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
@@ -1942,6 +2169,10 @@ data:
           "steppedLine": false,
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "C98liGfnk"
+              },
               "exemplar": true,
               "expr": "sum(irate(container_network_receive_packets_dropped_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
               "interval": "",
@@ -1950,9 +2181,7 @@ data:
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Rate of Received Packets Dropped",
           "tooltip": {
             "shared": false,
@@ -1961,33 +2190,25 @@ data:
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "Bps",
-              "label": null,
               "logBase": 1,
-              "max": null,
               "min": 0,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -1995,14 +2216,17 @@ data:
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "appsrep06ue2-cluster-prometheus",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "C98liGfnk"
+          },
           "fill": 10,
           "fillGradient": 0,
           "gridPos": {
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 109
+            "y": 119
           },
           "hiddenSeries": false,
           "id": 11,
@@ -2023,7 +2247,7 @@ data:
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "8.2.7",
+          "pluginVersion": "9.0.3",
           "pointradius": 5,
           "points": false,
           "renderer": "flot",
@@ -2033,19 +2257,20 @@ data:
           "steppedLine": false,
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "C98liGfnk"
+              },
               "expr": "sum(irate(container_network_transmit_packets_dropped_total{cluster=\"$cluster\", namespace=~\"$namespace\"}[$interval])) by (pod)",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}",
-              "legendLink": null,
               "refId": "A",
               "step": 10
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Rate of Transmitted Packets Dropped",
           "tooltip": {
             "shared": false,
@@ -2054,38 +2279,227 @@ data:
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "Bps",
-              "label": null,
               "logBase": 1,
-              "max": null,
               "min": 0,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 126
+          },
+          "id": 36,
+          "panels": [],
+          "title": "Health",
+          "type": "row"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 127
+          },
+          "id": 34,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "mean",
+                "min",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "editorMode": "code",
+              "expr": "(time()-cincinnati_gb_graph_last_successful_refresh_timestamp{job=\"cincinnati-graph-builder\",namespace=\"$namespace\"}) < time()",
+              "legendFormat": "{{pod}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Graph Staleness",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 137
+          },
+          "id": 40,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "min",
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(kube_pod_container_status_restarts_total{namespace=\"$namespace\",container=~\"cincinnati-graph-builder|cincinnati-policy-engine\"}[10m])) by (pod)",
+              "legendFormat": "{{pod}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Container Restarts",
+          "type": "timeseries"
         }
       ],
-      "refresh": "10s",
-      "schemaVersion": 32,
+      "refresh": "5s",
+      "schemaVersion": 36,
       "style": "dark",
       "tags": [
         "kubernetes-mixin"
@@ -2098,11 +2512,8 @@ data:
               "text": "appsrep06ue2-prometheus",
               "value": "appsrep06ue2-prometheus"
             },
-            "description": null,
-            "error": null,
             "hide": 0,
             "includeAll": false,
-            "label": null,
             "multi": false,
             "name": "datasource",
             "options": [],
@@ -2113,17 +2524,17 @@ data:
             "type": "datasource"
           },
           {
-            "allValue": null,
             "current": {
               "isNone": true,
               "selected": false,
               "text": "None",
               "value": ""
             },
-            "datasource": "$datasource",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "$datasource"
+            },
             "definition": "",
-            "description": null,
-            "error": null,
             "hide": 2,
             "includeAll": false,
             "label": "cluster",
@@ -2144,16 +2555,16 @@ data:
             "useTags": false
           },
           {
-            "allValue": null,
             "current": {
               "selected": false,
               "text": "cincinnati-production",
               "value": "cincinnati-production"
             },
-            "datasource": "$datasource",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "$datasource"
+            },
             "definition": "",
-            "description": null,
-            "error": null,
             "hide": 0,
             "includeAll": false,
             "label": "namespace",
@@ -2174,7 +2585,6 @@ data:
             "useTags": false
           },
           {
-            "allValue": null,
             "auto": false,
             "auto_count": 30,
             "auto_min": "10s",
@@ -2184,11 +2594,8 @@ data:
               "value": "4h"
             },
             "datasource": "prometheus",
-            "description": null,
-            "error": null,
             "hide": 2,
             "includeAll": false,
-            "label": null,
             "multi": false,
             "name": "interval",
             "options": [
@@ -2211,7 +2618,7 @@ data:
         ]
       },
       "time": {
-        "from": "now-1h",
+        "from": "now-7d",
         "to": "now"
       },
       "timepicker": {
@@ -2242,5 +2649,6 @@ data:
       "timezone": "utc",
       "title": "Cincinnati Service Level Indicators (SLIs)",
       "uid": "cincinnati",
-      "version": 1
+      "version": 1,
+      "weekStart": ""
     }
