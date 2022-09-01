@@ -126,6 +126,10 @@ async fn main() -> Result<(), Error> {
                 actix_web::web::resource(&format!("{}/openapi", app_prefix))
                     .route(actix_web::web::get().to(openapi::index)),
             )
+            .service(
+                actix_web::web::resource(&format!("{}/v1/openapi", app_prefix))
+                    .route(actix_web::web::get().to(openapi::index)),
+            )
             .default_service(actix_web::web::route().to(default_response))
     })
     .backlog(settings.backlog)
