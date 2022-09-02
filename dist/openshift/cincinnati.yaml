@@ -201,13 +201,13 @@ objects:
           targetPort: ${{PE_STATUS_PORT}}
       selector:
         deploymentconfig: cincinnati
-  - apiVersion: policy/v1beta1
+  - apiVersion: policy/v1
     kind: PodDisruptionBudget
     metadata:
       name: cincinnati-pdb
       namespace: cincinnati
     spec:
-      minAvailable: 1
+      minAvailable: ${{PDB_MIN}}
       selector:
         matchLabels:
           app: cincinnati
@@ -366,4 +366,6 @@ parameters:
   - name: ENVIRONMENT_SECRETS
     value: '{ "CINCINNATI_GITHUB_SCRAPER_OAUTH_TOKEN_PATH": "/etc/secrets/github_token.key" }'
   - name: REPLICAS
+    value: "1"
+  - name: PDB_MIN
     value: "1"
