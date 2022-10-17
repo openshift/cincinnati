@@ -2499,6 +2499,7 @@ dependencies = [
  "mockito",
  "openapiv3",
  "opentelemetry",
+ "parking_lot 0.12.0",
  "prometheus",
  "semver 0.11.0",
  "serde",

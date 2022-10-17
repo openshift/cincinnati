@@ -22,13 +22,14 @@ extern crate custom_debug_derive;
 mod config;
 mod graph;
 mod openapi;
+mod status;
 
 use actix_cors::Cors;
 use actix_service::Service;
 use actix_web::http::StatusCode;
-use actix_web::{middleware, App, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{http, middleware, App, HttpRequest, HttpResponse, HttpServer};
 use cincinnati::plugins::BoxedPlugin;
-use commons::metrics::{self, RegistryWrapper};
+use commons::metrics::{self, HasRegistry};
 use commons::prelude_errors::*;
 use commons::tracing::{get_tracer, init_tracer, set_span_tags};
 use futures::future;
@@ -36,8 +37,12 @@ use opentelemetry::{
     trace::{mark_span_as_active, FutureExt, Tracer},
     Context as ot_context,
 };
+use parking_lot::RwLock;
 use prometheus::{labels, opts, Counter, Registry};
 use std::collections::HashSet;
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 #[allow(dead_code)]
 /// Build info
@@ -72,15 +77,46 @@ async fn main() -> Result<(), Error> {
     let registry: &'static Registry = Box::leak(Box::new(metrics::new_registry(Some(
         METRICS_PREFIX.to_string(),
     ))?));
-    graph::register_metrics(registry)?;
     registry.register(Box::new(BUILD_INFO.clone()))?;
+
+    // Main service.
+    let plugins = settings.validate_and_build_plugins(Some(registry))?;
+
+    // Shared state.
+    let state = {
+        let mandatory_params = settings.mandatory_client_parameters.clone();
+        let path_prefix = settings.path_prefix.clone();
+        let plugins = Box::leak(Box::new(plugins));
+        let live = Arc::new(RwLock::new(false));
+        let ready = Arc::new(RwLock::new(false));
+
+        AppState::new(
+            mandatory_params,
+            path_prefix,
+            plugins,
+            live,
+            ready,
+            registry,
+        )
+    };
+
+    graph::register_metrics(state.registry())?;
+    let metric_state = state.clone();
     let metrics_server = HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
-            .app_data(actix_web::web::Data::new(RegistryWrapper(registry)))
+            .app_data(actix_web::web::Data::new(metric_state.clone()))
             .service(
                 actix_web::web::resource("/metrics")
-                    .route(actix_web::web::get().to(metrics::serve::<RegistryWrapper>)),
+                    .route(actix_web::web::get().to(metrics::serve::<AppState>)),
+            )
+            .service(
+                actix_web::web::resource("/livez")
+                    .route(actix_web::web::get().to(status::serve_liveness)),
+            )
+            .service(
+                actix_web::web::resource("/readyz")
+                    .route(actix_web::web::get().to(status::serve_readiness)),
             )
     })
     .bind((settings.status_address, settings.status_port))?
@@ -88,17 +124,9 @@ async fn main() -> Result<(), Error> {
 
     // Enable tracing
     init_tracer("policy-engine", settings.tracing_endpoint.clone())?;
-
-    // Main service.
-    let plugins = settings.validate_and_build_plugins(Some(registry))?;
-    let state = AppState {
-        mandatory_params: settings.mandatory_client_parameters.clone(),
-        path_prefix: settings.path_prefix.clone(),
-        plugins: Box::leak(Box::new(plugins)),
-    };
-
+    let main_state = state.clone();
     let main_server = HttpServer::new(move || {
-        let app_prefix = state.path_prefix.clone();
+        let app_prefix = main_state.path_prefix.clone();
         App::new()
             .wrap_fn(|req, srv| {
                 let mut span = get_tracer().start("request");
@@ -112,7 +140,7 @@ async fn main() -> Result<(), Error> {
                     .allow_any_origin()
                     .allowed_methods(vec!["HEAD", "GET"]),
             )
-            .app_data(actix_web::web::Data::<AppState>::new(state.clone()))
+            .app_data(actix_web::web::Data::<AppState>::new(main_state.clone()))
             .service(
                 // keeping this for backward compatibility
                 actix_web::web::resource(&format!("{}/v1/graph", app_prefix))
@@ -140,8 +168,39 @@ async fn main() -> Result<(), Error> {
     .bind((settings.address, settings.port))?
     .run();
 
-    BUILD_INFO.inc();
+    // metrics endpoints has started running
+    *state.live.write() = true;
 
+    let http_req = actix_web::test::TestRequest::get()
+        .uri(&format!(
+            "{}?channel=stable-4.10",
+            "http://ready.probe/graph"
+        ))
+        .insert_header((
+            http::header::ACCEPT,
+            http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
+        ))
+        .to_http_request();
+
+    debug!("waiting for the application to be ready");
+
+    // wait for the application to be initialized and the cache refreshed.
+    while *state.ready.read() == false {
+        thread::sleep(Duration::new(10, 0));
+        let resp = graph::index(
+            http_req.clone(),
+            actix_web::web::Data::<AppState>::new(state.clone()),
+        )
+        .await;
+        let status =
+            resp.unwrap_or_else(|err| HttpResponse::InternalServerError().body(err.to_string()));
+        if status.status().is_success() {
+            debug!("application is ready");
+            *state.ready.write() = true;
+        }
+    }
+
+    BUILD_INFO.inc();
     future::try_join(metrics_server, main_server).await?;
     Ok(())
 }
@@ -160,21 +219,51 @@ async fn default_response(req: HttpRequest) -> HttpResponse {
 
 /// Shared application configuration (cloned per-thread).
 #[derive(Clone, Debug)]
-struct AppState {
+pub struct AppState {
     /// Query parameters that must be present in all client requests.
-    pub mandatory_params: HashSet<String>,
+    mandatory_params: HashSet<String>,
     /// Upstream cincinnati service.
-    pub path_prefix: String,
+    path_prefix: String,
     /// Policy plugins.
-    pub plugins: &'static [BoxedPlugin],
+    plugins: &'static [BoxedPlugin],
+    live: Arc<RwLock<bool>>,
+    ready: Arc<RwLock<bool>>,
+    registry: &'static Registry,
 }
 
-impl Default for AppState {
-    fn default() -> Self {
-        Self {
-            plugins: Box::leak(Box::new([])),
-            mandatory_params: HashSet::new(),
-            path_prefix: String::new(),
+impl AppState {
+    /// Creates a new State with the given arguments
+    pub fn new(
+        mandatory_params: HashSet<String>,
+        path_prefix: String,
+        plugins: &'static [BoxedPlugin],
+        live: Arc<RwLock<bool>>,
+        ready: Arc<RwLock<bool>>,
+        registry: &'static Registry,
+    ) -> AppState {
+        AppState {
+            mandatory_params,
+            path_prefix,
+            plugins,
+            live,
+            ready,
+            registry,
         }
+    }
+
+    /// Returns the boolean inside self.live
+    pub fn is_live(&self) -> bool {
+        *self.live.read()
+    }
+
+    /// Returns the boolean inside self.ready
+    pub fn is_ready(&self) -> bool {
+        *self.ready.read()
+    }
+}
+
+impl HasRegistry for AppState {
+    fn registry(&self) -> &'static Registry {
+        self.registry
     }
 }
