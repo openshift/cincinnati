@@ -144,8 +144,16 @@ objects:
                 - name: status-pe
                   containerPort: ${{PE_STATUS_PORT}}
               livenessProbe:
-                tcpSocket:
-                  port: ${{PE_PORT}}
+                httpGet:
+                  path: /livez
+                  port: ${{GB_STATUS_PORT}}
+                initialDelaySeconds: 60
+                periodSeconds: 30
+                timeoutSeconds: 3
+              readinessProbe:
+                httpGet:
+                  path: /readyz
+                  port: ${{GB_STATUS_PORT}}
                 initialDelaySeconds: 60
                 periodSeconds: 30
                 timeoutSeconds: 3
