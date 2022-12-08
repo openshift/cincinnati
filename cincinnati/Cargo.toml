@@ -48,7 +48,7 @@ cached = "^0.32.1"
 [dev-dependencies]
 mockito = "^0.31.0"
 serde_json = "1.0.79"
-memchr = "^2.4"
+memchr = "^2.5"
 pretty_assertions = "1.2.1"
 test-case = "1.2.3"
 prettydiff = "0.6"

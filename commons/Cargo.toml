@@ -26,5 +26,5 @@ actix-service = "^2.0.2"
 hamcrest2 = "0.3.0"
 
 [dev-dependencies]
-memchr = "^2.4"
+memchr = "^2.5"
 mockito = "^0.31.0"
