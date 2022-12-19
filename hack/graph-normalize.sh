@@ -41,6 +41,7 @@ JQ_SCRIPT='
       ] | sort
     ),
     conditionalEdges: .conditionalEdges,
+    version: .version,
   }
 '
 
