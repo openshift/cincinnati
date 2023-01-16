@@ -17,7 +17,7 @@ pub mod testing;
 pub mod tracing;
 
 mod errors;
-pub use errors::{register_metrics, Fallible, GraphError, MISSING_APPSTATE_PANIC_MSG};
+pub use errors::{register_metrics, Error, Fallible, GraphError, MISSING_APPSTATE_PANIC_MSG};
 
 /// Commonly used imports for error handling.
 pub mod prelude_errors {
@@ -25,9 +25,18 @@ pub mod prelude_errors {
 }
 
 use actix_web::http::header::{HeaderMap, HeaderValue, ACCEPT};
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fs::File;
+use std::path::Path;
 use url::form_urlencoded;
+
+/// Defines the key for placing the data directory path in the IO parameters
+pub static GRAPH_DATA_DIR_PARAM_KEY: &str = "io.openshift.upgrades.secondary_metadata.directory";
+/// Defines the key for placing the graph_data tar path in the IO parameters
+pub static SECONDARY_METADATA_PARAM_KEY: &str = "io.openshift.upgrades.secondary_metadata.tar";
 
 lazy_static! {
     /// list of cincinnati versions
@@ -160,6 +169,19 @@ pub fn validate_content_type(
     } else {
         Err(GraphError::InvalidContentType)
     }
+}
+
+/// creates the tar file in the output directory from data_path
+pub async fn create_tar(output_path: Box<Path>, data_path: Box<Path>) -> Result<(), Error> {
+    let tar_gz = File::create(output_path)?;
+    let enc = GzEncoder::new(tar_gz, Compression::default());
+    let mut tar = tar::Builder::new(enc);
+    tar.append_dir_all(".", data_path)?;
+    let tar_status = tar.finish();
+    if tar_status.is_err() {
+        return Err(prelude_errors::format_err!("{:?}", tar_status.unwrap_err()));
+    }
+    Ok(())
 }
 
 #[cfg(test)]

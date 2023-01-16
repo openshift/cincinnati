@@ -6,6 +6,7 @@ use crate as cincinnati;
 use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
 
+use commons::{GRAPH_DATA_DIR_PARAM_KEY, SECONDARY_METADATA_PARAM_KEY};
 use tokio::sync::Mutex as FuturesMutex;
 
 pub static DEFAULT_OUTPUT_WHITELIST: &[&str] = &[
@@ -14,9 +15,6 @@ pub static DEFAULT_OUTPUT_WHITELIST: &[&str] = &[
     "blocked-edges/.+\\.ya+ml",
     "raw/metadata.json",
 ];
-
-// Defines the key for placing the data directory path in the IO parameters
-pub static GRAPH_DATA_DIR_PARAM_KEY: &str = "io.openshift.upgrades.secondary_metadata.directory";
 
 lazy_static::lazy_static! {
     pub static ref DEFAULT_REFERENCE_BRANCH: Option<String> = Some(String::from("master"));
@@ -333,7 +331,7 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
     }
 
     /// Extract a given blob to the output directory, adhering to the output allowlist, and finally update the completed commit state.
-    async fn extract(&self, commit: github_v3::Commit, bytes: Box<[u8]>) -> Fallible<()> {
+    async fn extract(&self, commit: github_v3::Commit, bytes: Box<[u8]>) -> Fallible<PathBuf> {
         // Use a tempdir as intermediary extraction target, and later rename to the destination
         let tmpdir = tempfile::tempdir_in(&self.settings.output_directory)?;
 
@@ -431,8 +429,8 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
             // Set commit_completed to the one we've extracted.
             state_guard.commit_completed = Some(commit);
         }
-
-        Ok(())
+        let data_dir_path = self.data_dir.path().to_path_buf();
+        Ok(data_dir_path)
     }
 }
 
@@ -467,9 +465,29 @@ impl InternalPlugin for GithubOpenshiftSecondaryMetadataScraperPlugin {
                 .download_wanted()
                 .await
                 .context("Downloading tarball")?;
-            self.extract(commit, blob)
+            let graph_data_dir = self
+                .extract(commit, blob)
                 .await
                 .context("Extracting tarball")?;
+
+            let graph_data_tar_path = self.settings.output_directory.join("graph-data.tar.gz");
+
+            commons::create_tar(
+                graph_data_tar_path.clone().into_boxed_path(),
+                graph_data_dir.into_boxed_path(),
+            )
+            .await
+            .context("creating graph-data tar")?;
+
+            io.parameters.insert(
+                SECONDARY_METADATA_PARAM_KEY.to_string(),
+                graph_data_tar_path
+                    .to_str()
+                    .ok_or_else(|| {
+                        format_err!("secondary_metadata path cannot be converted to str")
+                    })?
+                    .to_string(),
+            );
         };
 
         Ok(io)

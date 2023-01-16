@@ -62,7 +62,7 @@ async fn main() -> Result<(), Error> {
         let json_graph = Arc::new(RwLock::new(String::new()));
         let live = Arc::new(RwLock::new(false));
         let ready = Arc::new(RwLock::new(false));
-
+        let secondary_metadata = Arc::new(RwLock::new(String::new()));
         graph::State::new(
             json_graph,
             settings.mandatory_client_parameters.clone(),
@@ -70,6 +70,7 @@ async fn main() -> Result<(), Error> {
             ready,
             Box::leak(Box::new(plugins)),
             Box::leak(Box::new(registry)),
+            secondary_metadata,
         )
     };
 
