@@ -50,6 +50,14 @@ pub struct ServiceOptions {
     #[structopt(name = "service_port", long = "service.port", alias = "port")]
     pub port: Option<u16>,
 
+    /// Port to which the server will bind
+    #[structopt(
+        name = "service_public_port",
+        long = "service.public_port",
+        alias = "public_port"
+    )]
+    pub public_port: Option<u16>,
+
     /// Namespace prefix for all service endpoints (e.g. '/<prefix>/graph')
     #[structopt(long = "service.path_prefix", parse(from_str = parse_path_prefix))]
     #[serde(default = "Option::default", deserialize_with = "de_path_prefix")]
@@ -101,6 +109,7 @@ impl MergeOptions<Option<ServiceOptions>> for AppSettings {
             assign_if_some!(self.scrape_timeout_secs, service.scrape_timeout_secs);
             assign_if_some!(self.address, service.address);
             assign_if_some!(self.port, service.port);
+            assign_if_some!(self.public_port, service.public_port);
             assign_if_some!(self.path_prefix, service.path_prefix);
             assign_if_some!(self.tracing_endpoint, service.tracing_endpoint);
             if let Some(params) = service.mandatory_client_parameters {

@@ -54,8 +54,10 @@ async fn main() -> Result<(), Error> {
     )?;
 
     let service_addr = (settings.address, settings.port);
+    let public_addr = (settings.address, settings.public_port);
     let status_addr = (settings.status_address, settings.status_port);
     let app_prefix = settings.path_prefix.clone();
+    let public_app_prefix = app_prefix.clone();
 
     // Shared state.
     let state = {
@@ -106,7 +108,7 @@ async fn main() -> Result<(), Error> {
     .run();
 
     // Main service.
-    let main_state = state;
+    let main_state = state.clone();
     let main_server = HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
@@ -133,7 +135,30 @@ async fn main() -> Result<(), Error> {
     .bind(service_addr)?
     .run();
 
-    future::try_join(metrics_server, main_server).await?;
+    // Public service.
+    let public_state = state;
+    let public_server = HttpServer::new(move || {
+        App::new()
+            .wrap(middleware::Compress::default())
+            .wrap_fn(|req, srv| {
+                let parent_context = get_context(&req);
+                let mut span = get_tracer().start_with_context("request", parent_context);
+                set_span_tags(req.path(), req.headers(), &mut span);
+                let _active_span = mark_span_as_active(span);
+                let cx = ot_context::current();
+                srv.call(req).with_context(cx)
+            })
+            .app_data(actix_web::web::Data::new(public_state.clone()))
+            .service(
+                actix_web::web::resource(&format!("{}/graph-data", public_app_prefix.clone()))
+                    .route(actix_web::web::get().to(graph::graph_data)),
+            )
+    })
+    .keep_alive(Duration::new(10, 0))
+    .bind(public_addr)?
+    .run();
+
+    future::try_join3(metrics_server, main_server, public_server).await?;
 
     Ok(())
 }

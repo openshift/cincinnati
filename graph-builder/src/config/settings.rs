@@ -42,6 +42,10 @@ pub struct AppSettings {
     #[default(8080)]
     pub port: u16,
 
+    /// Public port for graph-builder
+    #[default(8090)]
+    pub public_port: u16,
+
     // TODO(lucab): split this in (TLS, hostname+port).
     /// Target host for the registry scraper.
     #[default(cincinnati::plugins::internal::release_scrape_dockerv2::DEFAULT_SCRAPE_REGISTRY.to_string())]
