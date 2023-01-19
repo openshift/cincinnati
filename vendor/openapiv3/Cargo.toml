@@ -12,13 +12,18 @@
 [package]
 edition = "2018"
 name = "openapiv3"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["Glade Miller <glademiller@gmail.com>"]
 description = "This crate provides data structures that represent the OpenAPI v3.0.x specification easily deserializable with serde."
 homepage = "https://github.com/glademiller/openapiv3"
-keywords = ["openapi", "v3"]
+readme = "README.md"
+keywords = [
+    "openapi",
+    "v3",
+]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/glademiller/openapiv3"
+
 [dependencies.indexmap]
 version = "1.0"
 features = ["serde-1"]
@@ -29,6 +34,7 @@ features = ["derive"]
 
 [dependencies.serde_json]
 version = "1.0"
+
 [dev-dependencies.newline-converter]
 version = "0.2.0"
 

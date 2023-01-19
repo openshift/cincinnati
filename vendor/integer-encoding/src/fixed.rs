@@ -1,4 +1,4 @@
-use std::mem::transmute;
+use std::mem::{size_of, transmute};
 
 /// `FixedInt` provides encoding/decoding to and from fixed int representations.
 ///
@@ -8,7 +8,7 @@ pub trait FixedInt: Sized + Copy {
     /// Returns how many bytes are required to represent the given type.
     fn required_space() -> usize;
     /// Encode a value into the given slice. `dst` must be exactly `REQUIRED_SPACE` bytes.
-    fn encode_fixed(self, src: &mut [u8]);
+    fn encode_fixed(self, dst: &mut [u8]);
     /// Decode a value from the given slice. `src` must be exactly `REQUIRED_SPACE` bytes.
     fn decode_fixed(src: &[u8]) -> Self;
     /// Perform a transmute, i.e. return a "view" into the integer's memory, which is faster than
@@ -30,9 +30,9 @@ pub trait FixedInt: Sized + Copy {
 }
 
 macro_rules! impl_fixedint {
-    ($t:ty, $sz:expr) => {
+    ($t:ty) => {
         impl FixedInt for $t {
-            const REQUIRED_SPACE: usize = $sz;
+            const REQUIRED_SPACE: usize = size_of::<Self>();
 
             fn required_space() -> usize {
                 Self::REQUIRED_SPACE
@@ -49,22 +49,51 @@ macro_rules! impl_fixedint {
 
             fn encode_fixed(self, dst: &mut [u8]) {
                 assert_eq!(dst.len(), Self::REQUIRED_SPACE);
-                let encoded = unsafe { &*(&self as *const $t as *const [u8; $sz]) };
+
+                #[allow(unused_mut)]
+                let mut encoded =
+                    unsafe { &*(&self as *const $t as *const [u8; Self::REQUIRED_SPACE]) };
+
+                #[cfg(target_endian = "big")]
+                if Self::REQUIRED_SPACE > 1 {
+                    let mut encoded_rev = [0 as u8; Self::REQUIRED_SPACE];
+                    encoded_rev.copy_from_slice(encoded);
+                    encoded_rev.reverse();
+                    dst.clone_from_slice(&encoded_rev);
+                    return;
+                }
+
                 dst.clone_from_slice(encoded);
             }
+
+            #[cfg(target_endian = "little")]
             fn decode_fixed(src: &[u8]) -> $t {
-                assert_eq!(src.len(), Self::REQUIRED_SPACE);
-                return unsafe { *(src.as_ptr() as *const $t) };
+                unsafe { (src.as_ptr() as *const $t).read_unaligned() }
+            }
+
+            #[cfg(target_endian = "big")]
+            fn decode_fixed(src: &[u8]) -> $t {
+                match Self::REQUIRED_SPACE {
+                    1 => unsafe { (src.as_ptr() as *const $t).read_unaligned() },
+                    _ => {
+                        let mut src_fin = [0 as u8; Self::REQUIRED_SPACE];
+                        src_fin.copy_from_slice(src);
+                        src_fin.reverse();
+                        unsafe { (src_fin.as_ptr() as *const $t).read_unaligned() }
+                    }
+                }
             }
         }
     };
 }
 
-impl_fixedint!(usize, 8);
-impl_fixedint!(u64, 8);
-impl_fixedint!(u32, 4);
-impl_fixedint!(u16, 2);
-impl_fixedint!(isize, 8);
-impl_fixedint!(i64, 8);
-impl_fixedint!(i32, 4);
-impl_fixedint!(i16, 2);
+impl_fixedint!(usize);
+impl_fixedint!(u64);
+impl_fixedint!(u32);
+impl_fixedint!(u16);
+impl_fixedint!(u8);
+impl_fixedint!(isize);
+impl_fixedint!(i64);
+impl_fixedint!(i32);
+impl_fixedint!(i16);
+impl_fixedint!(i8);

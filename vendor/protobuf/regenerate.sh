@@ -16,9 +16,9 @@ case "$protoc_ver" in
 esac
 
 cargo build --manifest-path=../protobuf-codegen/Cargo.toml
-cargo build --manifest-path=../protoc-bin-vendored/Cargo.toml --bin protoc-bin-which
+cargo build --manifest-path=../protoc-bin/Cargo.toml --bin protoc-bin-which
 
-PROTOC=$(cargo run --manifest-path=../protoc-bin-vendored/Cargo.toml --bin protoc-bin-which)
+PROTOC=$(cargo run --manifest-path=../protoc-bin/Cargo.toml --bin protoc-bin-which)
 
 where_am_i=$(
     cd ..
@@ -42,9 +42,8 @@ esac
     --rust_out tmp-generated \
     --rust_opt 'serde_derive=true inside_protobuf=true' \
     -I../proto \
-    -I../protoc-bin-vendored/include \
-    ../protoc-bin-vendored/include/google/protobuf/*.proto \
-    ../protoc-bin-vendored/include/google/protobuf/compiler/* \
+    ../proto/google/protobuf/*.proto \
+    ../proto/google/protobuf/compiler/*.proto \
     ../proto/rustproto.proto
 
 mv tmp-generated/descriptor.rs tmp-generated/plugin.rs tmp-generated/rustproto.rs src/

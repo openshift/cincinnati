@@ -4,13 +4,11 @@
 //!
 //! This module only supports **Linux** platform.
 
-use std::sync::Mutex;
-
 use lazy_static::lazy_static;
 
-use crate::counter::Counter;
+use crate::counter::IntCounter;
 use crate::desc::Desc;
-use crate::gauge::Gauge;
+use crate::gauge::IntGauge;
 use crate::metrics::{Collector, Opts};
 use crate::proto;
 
@@ -27,13 +25,13 @@ const METRICS_NUMBER: usize = 7;
 pub struct ProcessCollector {
     pid: pid_t,
     descs: Vec<Desc>,
-    cpu_total: Mutex<Counter>,
-    open_fds: Gauge,
-    max_fds: Gauge,
-    vsize: Gauge,
-    rss: Gauge,
-    start_time: Gauge,
-    threads: Gauge,
+    cpu_total: IntCounter,
+    open_fds: IntGauge,
+    max_fds: IntGauge,
+    vsize: IntGauge,
+    rss: IntGauge,
+    start_time: IntGauge,
+    threads: IntGauge,
 }
 
 impl ProcessCollector {
@@ -42,7 +40,7 @@ impl ProcessCollector {
         let namespace = namespace.into();
         let mut descs = Vec::new();
 
-        let cpu_total = Counter::with_opts(
+        let cpu_total = IntCounter::with_opts(
             Opts::new(
                 "process_cpu_seconds_total",
                 "Total user and system CPU time spent in \
@@ -53,14 +51,14 @@ impl ProcessCollector {
         .unwrap();
         descs.extend(cpu_total.desc().into_iter().cloned());
 
-        let open_fds = Gauge::with_opts(
+        let open_fds = IntGauge::with_opts(
             Opts::new("process_open_fds", "Number of open file descriptors.")
                 .namespace(namespace.clone()),
         )
         .unwrap();
         descs.extend(open_fds.desc().into_iter().cloned());
 
-        let max_fds = Gauge::with_opts(
+        let max_fds = IntGauge::with_opts(
             Opts::new(
                 "process_max_fds",
                 "Maximum number of open file descriptors.",
@@ -70,7 +68,7 @@ impl ProcessCollector {
         .unwrap();
         descs.extend(max_fds.desc().into_iter().cloned());
 
-        let vsize = Gauge::with_opts(
+        let vsize = IntGauge::with_opts(
             Opts::new(
                 "process_virtual_memory_bytes",
                 "Virtual memory size in bytes.",
@@ -80,7 +78,7 @@ impl ProcessCollector {
         .unwrap();
         descs.extend(vsize.desc().into_iter().cloned());
 
-        let rss = Gauge::with_opts(
+        let rss = IntGauge::with_opts(
             Opts::new(
                 "process_resident_memory_bytes",
                 "Resident memory size in bytes.",
@@ -90,7 +88,7 @@ impl ProcessCollector {
         .unwrap();
         descs.extend(rss.desc().into_iter().cloned());
 
-        let start_time = Gauge::with_opts(
+        let start_time = IntGauge::with_opts(
             Opts::new(
                 "process_start_time_seconds",
                 "Start time of the process since unix epoch \
@@ -99,11 +97,17 @@ impl ProcessCollector {
             .namespace(namespace.clone()),
         )
         .unwrap();
+        // proc_start_time init once because it is immutable
+        if let Ok(boot_time) = procfs::boot_time_secs() {
+            if let Ok(stat) = procfs::process::Process::myself().and_then(|p| p.stat()) {
+                start_time.set(stat.starttime as i64 / *CLK_TCK + boot_time as i64);
+            }
+        }
         descs.extend(start_time.desc().into_iter().cloned());
 
-        let threads = Gauge::with_opts(
+        let threads = IntGauge::with_opts(
             Opts::new("process_threads", "Number of OS threads in the process.")
-                .namespace(namespace.clone()),
+                .namespace(namespace),
         )
         .unwrap();
         descs.extend(threads.desc().into_iter().cloned());
@@ -111,7 +115,7 @@ impl ProcessCollector {
         ProcessCollector {
             pid,
             descs,
-            cpu_total: Mutex::new(cpu_total),
+            cpu_total,
             open_fds,
             max_fds,
             vsize,
@@ -144,43 +148,38 @@ impl Collector for ProcessCollector {
 
         // file descriptors
         if let Ok(fd_count) = p.fd_count() {
-            self.open_fds.set(fd_count as f64);
+            self.open_fds.set(fd_count as i64);
         }
         if let Ok(limits) = p.limits() {
             if let procfs::process::LimitValue::Value(max) = limits.max_open_files.soft_limit {
-                self.max_fds.set(max as f64)
+                self.max_fds.set(max as i64)
             }
         }
 
-        // memory
-        self.vsize.set(p.stat.vsize as f64);
-        self.rss.set(p.stat.rss as f64 * *PAGESIZE);
+        let mut cpu_total_mfs = None;
+        if let Ok(stat) = p.stat() {
+            // memory
+            self.vsize.set(stat.vsize as i64);
+            self.rss.set((stat.rss as i64) * *PAGESIZE);
 
-        // proc_start_time
-        if let Some(boot_time) = *BOOT_TIME {
-            self.start_time
-                .set(p.stat.starttime as f64 / *CLK_TCK + boot_time);
+            // cpu
+            let total = (stat.utime + stat.stime) / *CLK_TCK as u64;
+            let past = self.cpu_total.get();
+            // If two threads are collecting metrics at the same time,
+            // the cpu_total counter may have already been updated,
+            // and the subtraction may underflow.
+            self.cpu_total.inc_by(total.saturating_sub(past));
+            cpu_total_mfs = Some(self.cpu_total.collect());
+
+            // threads
+            self.threads.set(stat.num_threads);
         }
-
-        // cpu
-        let cpu_total_mfs = {
-            let cpu_total = self.cpu_total.lock().unwrap();
-            let total = (p.stat.utime + p.stat.stime) as f64 / *CLK_TCK;
-            let past = cpu_total.get();
-            let delta = total - past;
-            if delta > 0.0 {
-                cpu_total.inc_by(delta);
-            }
-
-            cpu_total.collect()
-        };
-
-        // threads
-        self.threads.set(p.stat.num_threads as f64);
 
         // collect MetricFamilys.
         let mut mfs = Vec::with_capacity(METRICS_NUMBER);
-        mfs.extend(cpu_total_mfs);
+        if let Some(cpu) = cpu_total_mfs {
+            mfs.extend(cpu);
+        }
         mfs.extend(self.open_fds.collect());
         mfs.extend(self.max_fds.collect());
         mfs.extend(self.vsize.collect());
@@ -193,22 +192,18 @@ impl Collector for ProcessCollector {
 
 lazy_static! {
     // getconf CLK_TCK
-    static ref CLK_TCK: f64 = {
+    static ref CLK_TCK: i64 = {
         unsafe {
-            libc::sysconf(libc::_SC_CLK_TCK) as f64
-        }
+            libc::sysconf(libc::_SC_CLK_TCK)
+        }.into()
     };
 
     // getconf PAGESIZE
-    static ref PAGESIZE: f64 = {
+    static ref PAGESIZE: i64 = {
         unsafe {
-            libc::sysconf(libc::_SC_PAGESIZE) as f64
-        }
+            libc::sysconf(libc::_SC_PAGESIZE)
+        }.into()
     };
-}
-
-lazy_static! {
-    static ref BOOT_TIME: Option<f64> = procfs::boot_time_secs().ok().map(|i| i as f64);
 }
 
 #[cfg(test)]

@@ -6,53 +6,68 @@
 #[cfg(any(feature = "alloc", feature = "std", test))]
 use core::borrow::Borrow;
 use core::cmp::Ordering;
-use core::ops::{Add, Sub};
+use core::ops::{Add, AddAssign, Sub, SubAssign};
 use core::{fmt, hash};
-use oldtime::Duration as OldDuration;
+
+#[cfg(feature = "rkyv")]
+use rkyv::{Archive, Deserialize, Serialize};
 
 #[cfg(feature = "unstable-locales")]
-use format::Locale;
+use crate::format::Locale;
 #[cfg(any(feature = "alloc", feature = "std", test))]
-use format::{DelayedFormat, Item, StrftimeItems};
-use naive::{self, IsoWeek, NaiveDate, NaiveTime};
-use offset::{TimeZone, Utc};
-use DateTime;
-use {Datelike, Weekday};
+use crate::format::{DelayedFormat, Item, StrftimeItems};
+use crate::naive::{IsoWeek, NaiveDate, NaiveTime};
+use crate::offset::{TimeZone, Utc};
+use crate::oldtime::Duration as OldDuration;
+use crate::DateTime;
+use crate::{Datelike, Weekday};
 
 /// ISO 8601 calendar date with time zone.
 ///
-/// This type should be considered ambiguous at best,
-/// due to the inherent lack of precision required for the time zone resolution.
-/// For serialization and deserialization uses, it is best to use `NaiveDate` instead.
+/// You almost certainly want to be using a [`NaiveDate`] instead of this type.
+///
+/// This type primarily exists to aid in the construction of DateTimes that
+/// have a timezone by way of the [`TimeZone`] datelike constructors (e.g.
+/// [`TimeZone::ymd`]).
+///
+/// This type should be considered ambiguous at best, due to the inherent lack
+/// of precision required for the time zone resolution.
+///
 /// There are some guarantees on the usage of `Date<Tz>`:
 ///
-/// - If properly constructed via `TimeZone::ymd` and others without an error,
+/// - If properly constructed via [`TimeZone::ymd`] and others without an error,
 ///   the corresponding local date should exist for at least a moment.
 ///   (It may still have a gap from the offset changes.)
 ///
-/// - The `TimeZone` is free to assign *any* `Offset` to the local date,
-///   as long as that offset did occur in given day.
+/// - The `TimeZone` is free to assign *any* [`Offset`](crate::offset::Offset) to the
+///   local date, as long as that offset did occur in given day.
+///
 ///   For example, if `2015-03-08T01:59-08:00` is followed by `2015-03-08T03:00-07:00`,
 ///   it may produce either `2015-03-08-08:00` or `2015-03-08-07:00`
 ///   but *not* `2015-03-08+00:00` and others.
 ///
-/// - Once constructed as a full `DateTime`,
-///   `DateTime::date` and other associated methods should return those for the original `Date`.
-///   For example, if `dt = tz.ymd(y,m,d).hms(h,n,s)` were valid, `dt.date() == tz.ymd(y,m,d)`.
+/// - Once constructed as a full `DateTime`, [`DateTime::date`] and other associated
+///   methods should return those for the original `Date`. For example, if `dt =
+///   tz.ymd(y,m,d).hms(h,n,s)` were valid, `dt.date() == tz.ymd(y,m,d)`.
 ///
 /// - The date is timezone-agnostic up to one day (i.e. practically always),
 ///   so the local date and UTC date should be equal for most cases
 ///   even though the raw calculation between `NaiveDate` and `Duration` may not.
 #[derive(Clone)]
+#[cfg_attr(feature = "rkyv", derive(Archive, Deserialize, Serialize))]
 pub struct Date<Tz: TimeZone> {
     date: NaiveDate,
     offset: Tz::Offset,
 }
 
 /// The minimum possible `Date`.
-pub const MIN_DATE: Date<Utc> = Date { date: naive::MIN_DATE, offset: Utc };
+#[allow(deprecated)]
+#[deprecated(since = "0.4.20", note = "Use Date::MIN_UTC instead")]
+pub const MIN_DATE: Date<Utc> = Date::<Utc>::MIN_UTC;
 /// The maximum possible `Date`.
-pub const MAX_DATE: Date<Utc> = Date { date: naive::MAX_DATE, offset: Utc };
+#[allow(deprecated)]
+#[deprecated(since = "0.4.20", note = "Use Date::MAX_UTC instead")]
+pub const MAX_DATE: Date<Utc> = Date::<Utc>::MAX_UTC;
 
 impl<Tz: TimeZone> Date<Tz> {
     /// Makes a new `Date` with given *UTC* date and offset.
@@ -61,7 +76,7 @@ impl<Tz: TimeZone> Date<Tz> {
     // note: this constructor is purposely not named to `new` to discourage the direct usage.
     #[inline]
     pub fn from_utc(date: NaiveDate, offset: Tz::Offset) -> Date<Tz> {
-        Date { date: date, offset: offset }
+        Date { date, offset }
     }
 
     /// Makes a new `DateTime` from the current date and given `NaiveTime`.
@@ -227,7 +242,7 @@ impl<Tz: TimeZone> Date<Tz> {
     #[inline]
     pub fn checked_add_signed(self, rhs: OldDuration) -> Option<Date<Tz>> {
         let date = try_opt!(self.date.checked_add_signed(rhs));
-        Some(Date { date: date, offset: self.offset })
+        Some(Date { date, offset: self.offset })
     }
 
     /// Subtracts given `Duration` from the current date.
@@ -236,7 +251,7 @@ impl<Tz: TimeZone> Date<Tz> {
     #[inline]
     pub fn checked_sub_signed(self, rhs: OldDuration) -> Option<Date<Tz>> {
         let date = try_opt!(self.date.checked_sub_signed(rhs));
-        Some(Date { date: date, offset: self.offset })
+        Some(Date { date, offset: self.offset })
     }
 
     /// Subtracts another `Date` from the current date.
@@ -264,6 +279,24 @@ impl<Tz: TimeZone> Date<Tz> {
     pub fn naive_local(&self) -> NaiveDate {
         self.date
     }
+
+    /// Returns the number of whole years from the given `base` until `self`.
+    pub fn years_since(&self, base: Self) -> Option<u32> {
+        let mut years = self.year() - base.year();
+        if (self.month(), self.day()) < (base.month(), base.day()) {
+            years -= 1;
+        }
+
+        match years >= 0 {
+            true => Some(years as u32),
+            false => None,
+        }
+    }
+
+    /// The minimum possible `Date`.
+    pub const MIN_UTC: Date<Utc> = Date { date: NaiveDate::MIN, offset: Utc };
+    /// The maximum possible `Date`.
+    pub const MAX_UTC: Date<Utc> = Date { date: NaiveDate::MAX, offset: Utc };
 }
 
 /// Maps the local date to other date with given conversion function.
@@ -290,8 +323,17 @@ where
     }
 
     /// Formats the date with the specified format string.
-    /// See the [`format::strftime` module](./format/strftime/index.html)
+    /// See the [`crate::format::strftime`] module
     /// on the supported escape sequences.
+    ///
+    /// # Example
+    /// ```rust
+    /// use chrono::prelude::*;
+    ///
+    /// let date_time: Date<Utc> = Utc.ymd(2017, 04, 02);
+    /// let formatted = format!("{}", date_time.format("%d/%m/%Y"));
+    /// assert_eq!(formatted, "02/04/2017");
+    /// ```
     #[cfg(any(feature = "alloc", feature = "std", test))]
     #[inline]
     pub fn format<'a>(&self, fmt: &'a str) -> DelayedFormat<StrftimeItems<'a>> {
@@ -320,7 +362,7 @@ where
     }
 
     /// Formats the date with the specified format string and locale.
-    /// See the [`format::strftime` module](./format/strftime/index.html)
+    /// See the [`::format::strftime`] module
     /// on the supported escape sequences.
     #[cfg(feature = "unstable-locales")]
     #[inline]
@@ -446,12 +488,26 @@ impl<Tz: TimeZone> Add<OldDuration> for Date<Tz> {
     }
 }
 
+impl<Tz: TimeZone> AddAssign<OldDuration> for Date<Tz> {
+    #[inline]
+    fn add_assign(&mut self, rhs: OldDuration) {
+        self.date = self.date.checked_add_signed(rhs).expect("`Date + Duration` overflowed");
+    }
+}
+
 impl<Tz: TimeZone> Sub<OldDuration> for Date<Tz> {
     type Output = Date<Tz>;
 
     #[inline]
     fn sub(self, rhs: OldDuration) -> Date<Tz> {
         self.checked_sub_signed(rhs).expect("`Date - Duration` overflowed")
+    }
+}
+
+impl<Tz: TimeZone> SubAssign<OldDuration> for Date<Tz> {
+    #[inline]
+    fn sub_assign(&mut self, rhs: OldDuration) {
+        self.date = self.date.checked_sub_signed(rhs).expect("`Date - Duration` overflowed");
     }
 }
 
@@ -476,5 +532,102 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}{}", self.naive_local(), self.offset)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Date;
+
+    use crate::oldtime::Duration;
+    use crate::{FixedOffset, NaiveDate, Utc};
+
+    #[cfg(feature = "clock")]
+    use crate::offset::{Local, TimeZone};
+
+    #[test]
+    #[cfg(feature = "clock")]
+    fn test_years_elapsed() {
+        const WEEKS_PER_YEAR: f32 = 52.1775;
+
+        // This is always at least one year because 1 year = 52.1775 weeks.
+        let one_year_ago = Utc::today() - Duration::weeks((WEEKS_PER_YEAR * 1.5).ceil() as i64);
+        // A bit more than 2 years.
+        let two_year_ago = Utc::today() - Duration::weeks((WEEKS_PER_YEAR * 2.5).ceil() as i64);
+
+        assert_eq!(Utc::today().years_since(one_year_ago), Some(1));
+        assert_eq!(Utc::today().years_since(two_year_ago), Some(2));
+
+        // If the given DateTime is later than now, the function will always return 0.
+        let future = Utc::today() + Duration::weeks(12);
+        assert_eq!(Utc::today().years_since(future), None);
+    }
+
+    #[test]
+    fn test_date_add_assign() {
+        let naivedate = NaiveDate::from_ymd(2000, 1, 1);
+        let date = Date::<Utc>::from_utc(naivedate, Utc);
+        let mut date_add = date;
+
+        date_add += Duration::days(5);
+        assert_eq!(date_add, date + Duration::days(5));
+
+        let timezone = FixedOffset::east(60 * 60);
+        let date = date.with_timezone(&timezone);
+        let date_add = date_add.with_timezone(&timezone);
+
+        assert_eq!(date_add, date + Duration::days(5));
+
+        let timezone = FixedOffset::west(2 * 60 * 60);
+        let date = date.with_timezone(&timezone);
+        let date_add = date_add.with_timezone(&timezone);
+
+        assert_eq!(date_add, date + Duration::days(5));
+    }
+
+    #[test]
+    #[cfg(feature = "clock")]
+    fn test_date_add_assign_local() {
+        let naivedate = NaiveDate::from_ymd(2000, 1, 1);
+
+        let date = Local.from_utc_date(&naivedate);
+        let mut date_add = date;
+
+        date_add += Duration::days(5);
+        assert_eq!(date_add, date + Duration::days(5));
+    }
+
+    #[test]
+    fn test_date_sub_assign() {
+        let naivedate = NaiveDate::from_ymd(2000, 1, 1);
+        let date = Date::<Utc>::from_utc(naivedate, Utc);
+        let mut date_sub = date;
+
+        date_sub -= Duration::days(5);
+        assert_eq!(date_sub, date - Duration::days(5));
+
+        let timezone = FixedOffset::east(60 * 60);
+        let date = date.with_timezone(&timezone);
+        let date_sub = date_sub.with_timezone(&timezone);
+
+        assert_eq!(date_sub, date - Duration::days(5));
+
+        let timezone = FixedOffset::west(2 * 60 * 60);
+        let date = date.with_timezone(&timezone);
+        let date_sub = date_sub.with_timezone(&timezone);
+
+        assert_eq!(date_sub, date - Duration::days(5));
+    }
+
+    #[test]
+    #[cfg(feature = "clock")]
+    fn test_date_sub_assign_local() {
+        let naivedate = NaiveDate::from_ymd(2000, 1, 1);
+
+        let date = Local.from_utc_date(&naivedate);
+        let mut date_sub = date;
+
+        date_sub -= Duration::days(5);
+        assert_eq!(date_sub, date - Duration::days(5));
     }
 }

@@ -56,7 +56,6 @@ pub enum Error {
     UnterminatedString(usize),
     NewlineInTableKey(usize),
     MultilineStringKey(usize),
-    EmptyTableKey(usize),
     Wanted {
         at: usize,
         expected: &'static str,
@@ -194,9 +193,6 @@ impl<'a> Tokenizer<'a> {
                 if multiline {
                     return Err(Error::MultilineStringKey(offset));
                 }
-                if val == "" {
-                    return Err(Error::EmptyTableKey(offset));
-                }
                 match src.find('\n') {
                     None => Ok((span, val)),
                     Some(i) => Err(Error::NewlineInTableKey(offset + i)),
@@ -282,7 +278,7 @@ impl<'a> Tokenizer<'a> {
 
     fn comment_token(&mut self, start: usize) -> Token<'a> {
         while let Some((_, ch)) = self.chars.clone().next() {
-            if ch != '\t' && (ch < '\u{20}' || ch > '\u{10ffff}') {
+            if ch != '\t' && !('\u{20}'..='\u{10ffff}').contains(&ch) {
                 break;
             }
             self.one();
@@ -290,6 +286,7 @@ impl<'a> Tokenizer<'a> {
         Comment(&self.input[start..self.current()])
     }
 
+    #[allow(clippy::type_complexity)]
     fn read_string(
         &mut self,
         delim: char,
@@ -368,7 +365,7 @@ impl<'a> Tokenizer<'a> {
 
     fn literal_string(&mut self, start: usize) -> Result<Token<'a>, Error> {
         self.read_string('\'', start, &mut |_me, val, _multi, i, ch| {
-            if ch == '\u{09}' || ('\u{20}' <= ch && ch <= '\u{10ffff}' && ch != '\u{7f}') {
+            if ch == '\u{09}' || (('\u{20}'..='\u{10ffff}').contains(&ch) && ch != '\u{7f}') {
                 val.push(ch);
                 Ok(())
             } else {
@@ -423,7 +420,7 @@ impl<'a> Tokenizer<'a> {
                 }
                 Ok(())
             }
-            ch if ch == '\u{09}' || ('\u{20}' <= ch && ch <= '\u{10ffff}' && ch != '\u{7f}') => {
+            ch if ch == '\u{09}' || (('\u{20}'..='\u{10ffff}').contains(&ch) && ch != '\u{7f}') => {
                 val.push(ch);
                 Ok(())
             }
@@ -435,7 +432,7 @@ impl<'a> Tokenizer<'a> {
         let mut buf = StdString::with_capacity(len);
         for _ in 0..len {
             match self.one() {
-                Some((_, ch)) if ch as u32 <= 0x7F && ch.is_digit(16) => buf.push(ch),
+                Some((_, ch)) if ch as u32 <= 0x7F && ch.is_ascii_hexdigit() => buf.push(ch),
                 Some((i, ch)) => return Err(Error::InvalidHexEscape(i, ch)),
                 None => return Err(Error::UnterminatedString(start)),
             }
@@ -510,6 +507,7 @@ impl MaybeString {
         }
     }
 
+    #[allow(clippy::wrong_self_convention)]
     fn to_owned(&mut self, input: &str) {
         match *self {
             MaybeString::NotEscaped(start) => {
@@ -528,9 +526,9 @@ impl MaybeString {
 }
 
 fn is_keylike(ch: char) -> bool {
-    ('A' <= ch && ch <= 'Z')
-        || ('a' <= ch && ch <= 'z')
-        || ('0' <= ch && ch <= '9')
+    ('A'..='Z').contains(&ch)
+        || ('a'..='z').contains(&ch)
+        || ('0'..='9').contains(&ch)
         || ch == '-'
         || ch == '_'
 }
@@ -584,7 +582,7 @@ mod tests {
                 Token::String {
                     src: input,
                     val: Cow::Borrowed(val),
-                    multiline: multiline,
+                    multiline,
                 }
             );
             assert!(t.next().unwrap().is_none());
@@ -610,7 +608,7 @@ mod tests {
                 Token::String {
                     src: input,
                     val: Cow::Borrowed(val),
-                    multiline: multiline,
+                    multiline,
                 }
             );
             assert!(t.next().unwrap().is_none());

@@ -498,6 +498,7 @@ impl Hash for Expr {
                 state.write_u8(39u8);
                 v0.hash(state);
             }
+            #[cfg(any(syn_no_non_exhaustive, not(feature = "full")))]
             _ => unreachable!(),
         }
     }
@@ -1112,6 +1113,7 @@ impl Hash for ForeignItem {
                 state.write_u8(4u8);
                 TokenStreamHelper(v0).hash(state);
             }
+            #[cfg(syn_no_non_exhaustive)]
             _ => unreachable!(),
         }
     }
@@ -1182,15 +1184,15 @@ impl Hash for GenericArgument {
                 state.write_u8(1u8);
                 v0.hash(state);
             }
-            GenericArgument::Binding(v0) => {
+            GenericArgument::Const(v0) => {
                 state.write_u8(2u8);
                 v0.hash(state);
             }
-            GenericArgument::Constraint(v0) => {
+            GenericArgument::Binding(v0) => {
                 state.write_u8(3u8);
                 v0.hash(state);
             }
-            GenericArgument::Const(v0) => {
+            GenericArgument::Constraint(v0) => {
                 state.write_u8(4u8);
                 v0.hash(state);
             }
@@ -1280,6 +1282,7 @@ impl Hash for ImplItem {
                 state.write_u8(4u8);
                 TokenStreamHelper(v0).hash(state);
             }
+            #[cfg(syn_no_non_exhaustive)]
             _ => unreachable!(),
         }
     }
@@ -1416,6 +1419,7 @@ impl Hash for Item {
                 state.write_u8(16u8);
                 TokenStreamHelper(v0).hash(state);
             }
+            #[cfg(syn_no_non_exhaustive)]
             _ => unreachable!(),
         }
     }
@@ -1920,6 +1924,7 @@ impl Hash for Pat {
                 state.write_u8(15u8);
                 v0.hash(state);
             }
+            #[cfg(syn_no_non_exhaustive)]
             _ => unreachable!(),
         }
     }
@@ -2339,6 +2344,7 @@ impl Hash for TraitItem {
                 state.write_u8(4u8);
                 TokenStreamHelper(v0).hash(state);
             }
+            #[cfg(syn_no_non_exhaustive)]
             _ => unreachable!(),
         }
     }
@@ -2464,6 +2470,7 @@ impl Hash for Type {
                 state.write_u8(14u8);
                 TokenStreamHelper(v0).hash(state);
             }
+            #[cfg(syn_no_non_exhaustive)]
             _ => unreachable!(),
         }
     }

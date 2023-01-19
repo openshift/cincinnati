@@ -26,8 +26,7 @@ maintained with the occasional fix for edge cases and depends on Tokio v0.2.
 ## FixedInt
 
 `FixedInt` casts integers to bytes by either copying the underlying memory or
-performing a transmutation. The encoded values use machine endianness
-(little-endian on x86).
+performing a transmutation. The encoded values use are little-endian.
 
 ## VarInt
 

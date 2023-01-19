@@ -13,12 +13,19 @@
 edition = "2018"
 rust-version = "1.38"
 name = "anyhow"
-version = "1.0.56"
+version = "1.0.63"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 description = "Flexible concrete Error type built on std::error::Error"
 documentation = "https://docs.rs/anyhow"
 readme = "README.md"
-categories = ["rust-patterns"]
+keywords = [
+    "error",
+    "error-handling",
+]
+categories = [
+    "rust-patterns",
+    "no-std",
+]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/anyhow"
 

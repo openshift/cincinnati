@@ -16,6 +16,9 @@ use core::{fmt, i64};
 #[cfg(any(feature = "std", test))]
 use std::error::Error;
 
+#[cfg(feature = "rkyv")]
+use rkyv::{Archive, Deserialize, Serialize};
+
 /// The number of nanoseconds in a microsecond.
 const NANOS_PER_MICRO: i32 = 1000;
 /// The number of nanoseconds in a millisecond.
@@ -45,21 +48,23 @@ macro_rules! try_opt {
 }
 
 /// ISO 8601 time duration with nanosecond precision.
+///
 /// This also allows for the negative duration; see individual methods for details.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[cfg_attr(feature = "rkyv", derive(Archive, Deserialize, Serialize))]
 pub struct Duration {
     secs: i64,
     nanos: i32, // Always 0 <= nanos < NANOS_PER_SEC
 }
 
 /// The minimum possible `Duration`: `i64::MIN` milliseconds.
-pub const MIN: Duration = Duration {
+pub(crate) const MIN: Duration = Duration {
     secs: i64::MIN / MILLIS_PER_SEC - 1,
     nanos: NANOS_PER_SEC + (i64::MIN % MILLIS_PER_SEC) as i32 * NANOS_PER_MILLI,
 };
 
 /// The maximum possible `Duration`: `i64::MAX` milliseconds.
-pub const MAX: Duration = Duration {
+pub(crate) const MAX: Duration = Duration {
     secs: i64::MAX / MILLIS_PER_SEC,
     nanos: (i64::MAX % MILLIS_PER_SEC) as i32 * NANOS_PER_MILLI,
 };
@@ -244,7 +249,11 @@ impl Duration {
     /// Returns the duration as an absolute (non-negative) value.
     #[inline]
     pub fn abs(&self) -> Duration {
-        Duration { secs: self.secs.abs(), nanos: self.nanos }
+        if self.secs < 0 && self.nanos != 0 {
+            Duration { secs: (self.secs + 1).abs(), nanos: NANOS_PER_SEC - self.nanos }
+        } else {
+            Duration { secs: self.secs.abs(), nanos: self.nanos }
+        }
     }
 
     /// The minimum possible `Duration`: `i64::MIN` milliseconds.
@@ -372,7 +381,24 @@ impl Div<i32> for Duration {
     }
 }
 
+#[cfg(any(feature = "std", test))]
+impl<'a> std::iter::Sum<&'a Duration> for Duration {
+    fn sum<I: Iterator<Item = &'a Duration>>(iter: I) -> Duration {
+        iter.fold(Duration::zero(), |acc, x| acc + *x)
+    }
+}
+
+#[cfg(any(feature = "std", test))]
+impl std::iter::Sum<Duration> for Duration {
+    fn sum<I: Iterator<Item = Duration>>(iter: I) -> Duration {
+        iter.fold(Duration::zero(), |acc, x| acc + x)
+    }
+}
+
 impl fmt::Display for Duration {
+    /// Format a duration using the [ISO 8601] format
+    ///
+    /// [ISO 8601]: https://en.wikipedia.org/wiki/ISO_8601#Durations
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // technically speaking, negative duration is not valid ISO 8601,
         // but we need to print it anyway.
@@ -589,6 +615,19 @@ mod tests {
     }
 
     #[test]
+    fn test_duration_abs() {
+        assert_eq!(Duration::milliseconds(1300).abs(), Duration::milliseconds(1300));
+        assert_eq!(Duration::milliseconds(1000).abs(), Duration::milliseconds(1000));
+        assert_eq!(Duration::milliseconds(300).abs(), Duration::milliseconds(300));
+        assert_eq!(Duration::milliseconds(0).abs(), Duration::milliseconds(0));
+        assert_eq!(Duration::milliseconds(-300).abs(), Duration::milliseconds(300));
+        assert_eq!(Duration::milliseconds(-700).abs(), Duration::milliseconds(700));
+        assert_eq!(Duration::milliseconds(-1000).abs(), Duration::milliseconds(1000));
+        assert_eq!(Duration::milliseconds(-1300).abs(), Duration::milliseconds(1300));
+        assert_eq!(Duration::milliseconds(-1700).abs(), Duration::milliseconds(1700));
+    }
+
+    #[test]
     fn test_duration_mul() {
         assert_eq!(Duration::zero() * i32::MAX, Duration::zero());
         assert_eq!(Duration::zero() * i32::MIN, Duration::zero());
@@ -624,6 +663,27 @@ mod tests {
         assert_eq!(Duration::seconds(-1) / -2, Duration::milliseconds(500));
         assert_eq!(Duration::seconds(-4) / 3, Duration::nanoseconds(-1_333_333_333));
         assert_eq!(Duration::seconds(-4) / -3, Duration::nanoseconds(1_333_333_333));
+    }
+
+    #[test]
+    fn test_duration_sum() {
+        let duration_list_1 = [Duration::zero(), Duration::seconds(1)];
+        let sum_1: Duration = duration_list_1.iter().sum();
+        assert_eq!(sum_1, Duration::seconds(1));
+
+        let duration_list_2 =
+            [Duration::zero(), Duration::seconds(1), Duration::seconds(6), Duration::seconds(10)];
+        let sum_2: Duration = duration_list_2.iter().sum();
+        assert_eq!(sum_2, Duration::seconds(17));
+
+        let duration_vec = vec![
+            Duration::zero(),
+            Duration::seconds(1),
+            Duration::seconds(6),
+            Duration::seconds(10),
+        ];
+        let sum_3: Duration = duration_vec.into_iter().sum();
+        assert_eq!(sum_3, Duration::seconds(17));
     }
 
     #[test]
