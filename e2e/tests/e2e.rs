@@ -21,6 +21,7 @@ lazy_static::lazy_static! {
 #[test_case("stable-4.9", "amd64", "application/json")]
 #[test_case("stable-4.9", "amd64", "application/vnd.redhat.cincinnati.v1+json")]
 #[test_case("stable-4.9", "s390x", "application/json")]
+#[test_case("candidate-4.12", "multi", "application/json")]
 fn e2e_channel_success(channel: &'static str, arch: &'static str, header: &'static str) {
     let version = "v1";
     let testdata_path = format!(
@@ -84,6 +85,7 @@ fn e2e_cors_headers(channel: &'static str, arch: &'static str, header: &'static 
 #[test_case("stable-4.7", "s390x", "application/*")]
 #[test_case("stable-4.8", "amd64", "application/json")]
 #[test_case("stable-4.9", "s390x", "application/vnd.redhat.cincinnati.v1+json")]
+#[test_case("candidate-4.12", "multi", "application/json")]
 fn e2e_graph_format(channel: &'static str, arch: &'static str, header: &'static str) {
     let runtime = commons::testing::init_runtime().unwrap();
 

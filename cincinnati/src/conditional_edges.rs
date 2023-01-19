@@ -34,20 +34,28 @@ pub struct ConditionalUpdateRisk {
 #[serde(default)]
 pub struct ClusterCondition {
     #[serde(rename = "type")]
-    condition_type: String,
-    promql: PromQLClusterCondition,
+    pub condition_type: String,
+    #[serde(skip_serializing_if = "PromQLClusterCondition::is_empty")]
+    pub promql: PromQLClusterCondition,
 }
 
 /// Contains the PromQL string
 #[derive(Debug, Serialize, Deserialize, SmartDefault, Clone, Eq, PartialEq, Hash)]
 #[serde(default)]
-struct PromQLClusterCondition {
-    promql: String,
+pub struct PromQLClusterCondition {
+    pub promql: String,
 }
 
 impl ConditionalEdge {
     /// gets the mutable vector of edges
     pub fn mut_edges(&mut self) -> &mut Vec<ConditionalUpdateEdge> {
         &mut self.edges
+    }
+}
+
+impl PromQLClusterCondition {
+    /// returns true if there is no PromQL condition to serialize.
+    pub fn is_empty(&self) -> bool {
+        self.promql.is_empty()
     }
 }

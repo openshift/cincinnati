@@ -8,30 +8,30 @@ build = "src/build.rs"
 [dependencies]
 actix = "0.13.0"
 actix-web = "^4.0.0-rc.3"
-chrono = "^0.4.7"
+chrono = "^0.4.20"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
 env_logger = "^0.9"
-flate2 = "^1.0.22"
+flate2 = "^1.0.25"
 futures = "0.3"
 itertools = "^0.10"
 lazy_static = "^1.2.0"
-log = "^0.4.3"
+log = "^0.4.17"
 prometheus = "0.13"
 quay = { path = "../quay" }
-regex = "^1.5.5"
+regex = "^1.7.1"
 reqwest = "^0.11"
 semver = { version = "^0.11", features = [ "serde" ] }
-serde = "^1.0.136"
+serde = "^1.0.152"
 serde_derive = "^1.0.70"
-serde_json = "^1.0.79"
+serde_json = "^1.0.91"
 smart-default = "^0.6"
 structopt = "^0.3"
 tar = "^0.4.38"
 tokio = { version = "1.16", features = [ "fs",  "rt-multi-thread" ] }
 tokio-stream = { version = "0.1", features = ["fs"] }
 toml = "^0.5"
-url = "^2.2"
+url = "^2.3"
 parking_lot = "^0.12"
 tempfile = "^3.3.0"
 async-trait = "^0.1"
@@ -43,7 +43,7 @@ actix-service = "2.0.2"
 built = { version = "^0.5.1", features = [ "git2" ]}
 
 [dev-dependencies]
-memchr = "^2.4"
+memchr = "^2.5"
 
 [features]
 test-net = []
