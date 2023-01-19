@@ -116,7 +116,7 @@ fn parse_link(hdr: Option<&header::HeaderValue>) -> Option<String> {
 
     // Last item in current page (pagination parameter).
     let last: Vec<&str> = params.splitn(2, '&').collect();
-    match last.get(0).cloned() {
+    match last.first().cloned() {
         Some(v) if !v.is_empty() => Some(v.to_string()),
         _ => None,
     }

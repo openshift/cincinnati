@@ -4,16 +4,16 @@
 //! A collection of parsed date and time items.
 //! They can be constructed incrementally while being checked for consistency.
 
+use num_integer::div_rem;
 use num_traits::ToPrimitive;
-use oldtime::Duration as OldDuration;
 
 use super::{ParseResult, IMPOSSIBLE, NOT_ENOUGH, OUT_OF_RANGE};
-use div::div_rem;
-use naive::{NaiveDate, NaiveDateTime, NaiveTime};
-use offset::{FixedOffset, LocalResult, Offset, TimeZone};
-use DateTime;
-use Weekday;
-use {Datelike, Timelike};
+use crate::naive::{NaiveDate, NaiveDateTime, NaiveTime};
+use crate::offset::{FixedOffset, LocalResult, Offset, TimeZone};
+use crate::oldtime::Duration as OldDuration;
+use crate::DateTime;
+use crate::Weekday;
+use crate::{Datelike, Timelike};
 
 /// Parsed parts of date and time. There are two classes of methods:
 ///
@@ -22,8 +22,7 @@ use {Datelike, Timelike};
 ///
 /// - `to_*` methods try to make a concrete date and time value out of set fields.
 ///   It fully checks any remaining out-of-range conditions and inconsistent/impossible fields.
-#[allow(missing_copy_implementations)]
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Default)]
 pub struct Parsed {
     /// Year.
     ///
@@ -123,34 +122,6 @@ fn set_if_consistent<T: PartialEq>(old: &mut Option<T>, new: T) -> ParseResult<(
     } else {
         *old = Some(new);
         Ok(())
-    }
-}
-
-impl Default for Parsed {
-    fn default() -> Parsed {
-        Parsed {
-            year: None,
-            year_div_100: None,
-            year_mod_100: None,
-            isoyear: None,
-            isoyear_div_100: None,
-            isoyear_mod_100: None,
-            month: None,
-            week_from_sun: None,
-            week_from_mon: None,
-            isoweek: None,
-            weekday: None,
-            ordinal: None,
-            day: None,
-            hour_div_12: None,
-            hour_mod_12: None,
-            minute: None,
-            second: None,
-            nanosecond: None,
-            timestamp: None,
-            offset: None,
-            _dummy: (),
-        }
     }
 }
 
@@ -333,7 +304,7 @@ impl Parsed {
                 // check if present quotient and/or modulo is consistent to the full year.
                 // since the presence of those fields means a positive full year,
                 // we should filter a negative full year first.
-                (Some(y), q, r @ Some(0...99)) | (Some(y), q, r @ None) => {
+                (Some(y), q, r @ Some(0..=99)) | (Some(y), q, r @ None) => {
                     if y < 0 {
                         return Err(OUT_OF_RANGE);
                     }
@@ -347,7 +318,7 @@ impl Parsed {
 
                 // the full year is missing but we have quotient and modulo.
                 // reconstruct the full year. make sure that the result is always positive.
-                (None, Some(q), Some(r @ 0...99)) => {
+                (None, Some(q), Some(r @ 0..=99)) => {
                     if q < 0 {
                         return Err(OUT_OF_RANGE);
                     }
@@ -357,7 +328,7 @@ impl Parsed {
 
                 // we only have modulo. try to interpret a modulo as a conventional two-digit year.
                 // note: we are affected by Rust issue #18060. avoid multiple range patterns.
-                (None, None, Some(r @ 0...99)) => Ok(Some(r + if r < 70 { 2000 } else { 1900 })),
+                (None, None, Some(r @ 0..=99)) => Ok(Some(r + if r < 70 { 2000 } else { 1900 })),
 
                 // otherwise it is an out-of-bound or insufficient condition.
                 (None, Some(_), None) => Err(NOT_ENOUGH),
@@ -528,32 +499,32 @@ impl Parsed {
     /// It is able to handle leap seconds when given second is 60.
     pub fn to_naive_time(&self) -> ParseResult<NaiveTime> {
         let hour_div_12 = match self.hour_div_12 {
-            Some(v @ 0...1) => v,
+            Some(v @ 0..=1) => v,
             Some(_) => return Err(OUT_OF_RANGE),
             None => return Err(NOT_ENOUGH),
         };
         let hour_mod_12 = match self.hour_mod_12 {
-            Some(v @ 0...11) => v,
+            Some(v @ 0..=11) => v,
             Some(_) => return Err(OUT_OF_RANGE),
             None => return Err(NOT_ENOUGH),
         };
         let hour = hour_div_12 * 12 + hour_mod_12;
 
         let minute = match self.minute {
-            Some(v @ 0...59) => v,
+            Some(v @ 0..=59) => v,
             Some(_) => return Err(OUT_OF_RANGE),
             None => return Err(NOT_ENOUGH),
         };
 
         // we allow omitting seconds or nanoseconds, but they should be in the range.
         let (second, mut nano) = match self.second.unwrap_or(0) {
-            v @ 0...59 => (v, 0),
+            v @ 0..=59 => (v, 0),
             60 => (59, 1_000_000_000),
             _ => return Err(OUT_OF_RANGE),
         };
         nano += match self.nanosecond {
-            Some(v @ 0...999_999_999) if self.second.is_some() => v,
-            Some(0...999_999_999) => return Err(NOT_ENOUGH), // second is missing
+            Some(v @ 0..=999_999_999) if self.second.is_some() => v,
+            Some(0..=999_999_999) => return Err(NOT_ENOUGH), // second is missing
             Some(_) => return Err(OUT_OF_RANGE),
             None => 0,
         };
@@ -655,6 +626,12 @@ impl Parsed {
         let offset = self.offset.ok_or(NOT_ENOUGH)?;
         let datetime = self.to_naive_datetime_with_offset(offset)?;
         let offset = FixedOffset::east_opt(offset).ok_or(OUT_OF_RANGE)?;
+
+        // this is used to prevent an overflow when calling FixedOffset::from_local_datetime
+        datetime
+            .checked_sub_signed(OldDuration::seconds(i64::from(offset.local_minus_utc())))
+            .ok_or(OUT_OF_RANGE)?;
+
         match offset.from_local_datetime(&datetime) {
             LocalResult::None => Err(IMPOSSIBLE),
             LocalResult::Single(t) => Ok(t),
@@ -721,10 +698,10 @@ impl Parsed {
 mod tests {
     use super::super::{IMPOSSIBLE, NOT_ENOUGH, OUT_OF_RANGE};
     use super::Parsed;
-    use naive::{NaiveDate, NaiveTime, MAX_DATE, MIN_DATE};
-    use offset::{FixedOffset, TimeZone, Utc};
-    use Datelike;
-    use Weekday::*;
+    use crate::naive::{NaiveDate, NaiveTime};
+    use crate::offset::{FixedOffset, TimeZone, Utc};
+    use crate::Datelike;
+    use crate::Weekday::*;
 
     #[test]
     fn test_parsed_set_fields() {
@@ -851,7 +828,7 @@ mod tests {
         assert_eq!(parse!(year_div_100: 19, year_mod_100: -1, month: 1, day: 1), Err(OUT_OF_RANGE));
         assert_eq!(parse!(year_div_100: 0, year_mod_100: 0, month: 1, day: 1), ymd(0, 1, 1));
         assert_eq!(parse!(year_div_100: -1, year_mod_100: 42, month: 1, day: 1), Err(OUT_OF_RANGE));
-        let max_year = MAX_DATE.year();
+        let max_year = NaiveDate::MAX.year();
         assert_eq!(
             parse!(year_div_100: max_year / 100,
                           year_mod_100: max_year % 100, month: 1, day: 1),
@@ -1104,14 +1081,14 @@ mod tests {
 
         // more timestamps
         let max_days_from_year_1970 =
-            MAX_DATE.signed_duration_since(NaiveDate::from_ymd(1970, 1, 1));
+            NaiveDate::MAX.signed_duration_since(NaiveDate::from_ymd(1970, 1, 1));
         let year_0_from_year_1970 =
             NaiveDate::from_ymd(0, 1, 1).signed_duration_since(NaiveDate::from_ymd(1970, 1, 1));
         let min_days_from_year_1970 =
-            MIN_DATE.signed_duration_since(NaiveDate::from_ymd(1970, 1, 1));
+            NaiveDate::MIN.signed_duration_since(NaiveDate::from_ymd(1970, 1, 1));
         assert_eq!(
             parse!(timestamp: min_days_from_year_1970.num_seconds()),
-            ymdhms(MIN_DATE.year(), 1, 1, 0, 0, 0)
+            ymdhms(NaiveDate::MIN.year(), 1, 1, 0, 0, 0)
         );
         assert_eq!(
             parse!(timestamp: year_0_from_year_1970.num_seconds()),
@@ -1119,7 +1096,7 @@ mod tests {
         );
         assert_eq!(
             parse!(timestamp: max_days_from_year_1970.num_seconds() + 86399),
-            ymdhms(MAX_DATE.year(), 12, 31, 23, 59, 59)
+            ymdhms(NaiveDate::MAX.year(), 12, 31, 23, 59, 59)
         );
 
         // leap seconds #1: partial fields

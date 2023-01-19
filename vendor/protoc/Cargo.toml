@@ -11,12 +11,13 @@
 
 [package]
 name = "protoc"
-version = "2.27.1"
+version = "2.28.0"
 authors = ["Stepan Koltsov <stepan.koltsov@gmail.com>"]
 description = """
 Protobuf protoc command as API
 """
 homepage = "https://github.com/stepancheg/rust-protobuf/tree/master/protoc/"
+readme = "README.md"
 license = "MIT"
 repository = "https://github.com/stepancheg/rust-protobuf/tree/master/protoc/"
 

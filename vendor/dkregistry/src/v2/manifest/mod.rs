@@ -155,7 +155,7 @@ impl Client {
 
         let mut accept_headers = header::HeaderMap::with_capacity(accept_types.len());
         for accept_type in accept_types {
-            let header_value = header::HeaderValue::from_str(&accept_type.to_string())
+            let header_value = header::HeaderValue::from_str(accept_type.as_ref())
                 .expect("mime type is always valid header value");
             accept_headers.insert(header::ACCEPT, header_value);
         }
@@ -295,8 +295,20 @@ pub enum ManifestError {
 
 impl Manifest {
     /// List digests of all layers referenced by this manifest, if available.
+    /// For ManifestList, returns the digests of all the manifest list images.
     ///
-    /// The returned layers list is ordered starting with the base image first.
+    /// As manifest list images only contain digests of the
+    /// images contained in the manifest, the `layers_digests`
+    /// function returns the digests of all the images
+    /// contained in the ManifestList instead of individual
+    /// layers of the manifests.
+    /// The layers of a specific image from manifest list can
+    /// be obtained using the digest of the image from the
+    /// manifest list and getting its manifest and manifestref
+    /// (get_manifest_and_ref()) and using this manifest of
+    /// the individual image to get the layers.
+    ///
+    /// The returned layers list for non ManifestList images is ordered starting with the base image first.
     pub fn layers_digests(&self, architecture: Option<&str>) -> Result<Vec<String>> {
         match (self, self.architectures(), architecture) {
             (Manifest::S1Signed(m), _, None) => Ok(m.get_layers()),
@@ -319,7 +331,7 @@ impl Manifest {
                 }
                 Ok(m.get_layers())
             }
-            // Manifest::ML(_) => TODO(steveeJ),
+            (Manifest::ML(m), _, _) => Ok(m.get_digests()),
             _ => Err(ManifestError::LayerDigestsUnsupported(format!("{:?}", self)).into()),
         }
     }
@@ -329,8 +341,7 @@ impl Manifest {
         match self {
             Manifest::S1Signed(m) => Ok([m.architecture.clone()].to_vec()),
             Manifest::S2(m) => Ok([m.architecture()].to_vec()),
-            // Manifest::ML(_) => TODO(steveeJ),
-            _ => Err(ManifestError::ArchitectureNotSupported(format!("{:?}", self)).into()),
+            Manifest::ML(m) => Ok(m.architectures()),
         }
     }
 }
@@ -342,9 +353,9 @@ mod tests {
 
     use crate::v2::Client;
 
-    #[test_case("not-gcr.io" => "application/vnd.docker.distribution.manifest.v2+json; q=0.5,application/vnd.docker.distribution.manifest.v1+prettyjws; q=0.4"; "Not gcr registry")]
-    #[test_case("gcr.io" => "application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.v1+prettyjws"; "gcr.io")]
-    #[test_case("foobar.gcr.io" => "application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.v1+prettyjws"; "Custom gcr.io registry")]
+    #[test_case("not-gcr.io" => "application/vnd.docker.distribution.manifest.v2+json; q=0.5,application/vnd.docker.distribution.manifest.v1+prettyjws; q=0.4,application/vnd.docker.distribution.manifest.list.v2+json; q=0.5"; "Not gcr registry")]
+    #[test_case("gcr.io" => "application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.v1+prettyjws,application/vnd.docker.distribution.manifest.list.v2+json"; "gcr.io")]
+    #[test_case("foobar.gcr.io" => "application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.v1+prettyjws,application/vnd.docker.distribution.manifest.list.v2+json"; "Custom gcr.io registry")]
     fn gcr_io_accept_headers(registry: &str) -> String {
         let client_builder = Client::configure().registry(&registry);
         let client = client_builder.build().unwrap();
@@ -356,14 +367,16 @@ mod tests {
             .unwrap()
             .to_string()
     }
-    #[test_case(None => "application/vnd.docker.distribution.manifest.v2+json; q=0.5,application/vnd.docker.distribution.manifest.v1+prettyjws; q=0.4"; "Default settings")]
+    #[test_case(None => "application/vnd.docker.distribution.manifest.v2+json; q=0.5,application/vnd.docker.distribution.manifest.v1+prettyjws; q=0.4,application/vnd.docker.distribution.manifest.list.v2+json; q=0.5"; "Default settings")]
     #[test_case(Some(vec![
         (MediaTypes::ManifestV2S2, Some(0.5)),
         (MediaTypes::ManifestV2S1Signed, Some(0.2)),
-    ]) => "application/vnd.docker.distribution.manifest.v2+json; q=0.5,application/vnd.docker.distribution.manifest.v1+prettyjws; q=0.2"; "Custom accept types with weight")]
+        (MediaTypes::ManifestList, Some(0.5)),
+    ]) => "application/vnd.docker.distribution.manifest.v2+json; q=0.5,application/vnd.docker.distribution.manifest.v1+prettyjws; q=0.2,application/vnd.docker.distribution.manifest.list.v2+json; q=0.5"; "Custom accept types with weight")]
     #[test_case(Some(vec![
         (MediaTypes::ManifestV2S2, None),
-    ]) => "application/vnd.docker.distribution.manifest.v2+json"; "Custom accept types, no weight")]
+        (MediaTypes::ManifestList, None),
+    ]) => "application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.list.v2+json"; "Custom accept types, no weight")]
     fn custom_accept_headers(accept_headers: Option<Vec<(MediaTypes, Option<f64>)>>) -> String {
         let registry = "https://example.com";
 

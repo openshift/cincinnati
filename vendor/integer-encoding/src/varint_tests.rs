@@ -200,4 +200,13 @@ mod tests {
         encoded.push(0x00);
         assert_eq!(i64::decode_var(&encoded[..]), None);
     }
+
+    #[test]
+    fn test_regression_22() {
+        let encoded: Vec<u8> = (0x112233 as u64).encode_var_vec();
+        assert_eq!(
+            encoded.as_slice().read_varint::<i8>().unwrap_err().kind(),
+            std::io::ErrorKind::InvalidData
+        );
+    }
 }

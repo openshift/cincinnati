@@ -15,15 +15,17 @@ compile_error! {
 // type. If the current toolchain is able to compile it, we go ahead and use
 // backtrace in anyhow.
 const PROBE: &str = r#"
-    #![feature(backtrace)]
-    #![allow(dead_code)]
+    #![feature(error_generic_member_access, provide_any)]
 
+    use std::any::Demand;
     use std::backtrace::{Backtrace, BacktraceStatus};
     use std::error::Error;
     use std::fmt::{self, Display};
 
     #[derive(Debug)]
-    struct E;
+    struct E {
+        backtrace: Backtrace,
+    }
 
     impl Display for E {
         fn fmt(&self, _formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -32,14 +34,20 @@ const PROBE: &str = r#"
     }
 
     impl Error for E {
-        fn backtrace(&self) -> Option<&Backtrace> {
-            let backtrace = Backtrace::capture();
-            match backtrace.status() {
-                BacktraceStatus::Captured | BacktraceStatus::Disabled | _ => {}
-            }
-            unimplemented!()
+        fn provide<'a>(&'a self, req: &mut Demand<'a>) {
+            req.provide_ref(&self.backtrace);
         }
     }
+
+    const _: fn() = || {
+        let backtrace: Backtrace = Backtrace::capture();
+        let status: BacktraceStatus = backtrace.status();
+        match status {
+            BacktraceStatus::Captured | BacktraceStatus::Disabled | _ => {}
+        }
+    };
+
+    const _: fn(&dyn Error) -> Option<&Backtrace> = |err| err.request_ref::<Backtrace>();
 "#;
 
 fn main() {
@@ -71,7 +79,7 @@ fn compile_probe() -> Option<ExitStatus> {
     fs::write(&probefile, PROBE).ok()?;
 
     // Make sure to pick up Cargo rustc configuration.
-    let mut cmd = if let Some(wrapper) = env::var_os("CARGO_RUSTC_WRAPPER") {
+    let mut cmd = if let Some(wrapper) = env::var_os("RUSTC_WRAPPER") {
         let mut cmd = Command::new(wrapper);
         // The wrapper's first argument is supposed to be the path to rustc.
         cmd.arg(rustc);
@@ -88,6 +96,10 @@ fn compile_probe() -> Option<ExitStatus> {
         .arg("--out-dir")
         .arg(out_dir)
         .arg(probefile);
+
+    if let Some(target) = env::var_os("TARGET") {
+        cmd.arg("--target").arg(target);
+    }
 
     // If Cargo wants to set RUSTFLAGS, use that.
     if let Ok(rustflags) = env::var("CARGO_ENCODED_RUSTFLAGS") {

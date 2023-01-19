@@ -14,7 +14,7 @@ use super::scan;
 use super::{Fixed, InternalFixed, InternalInternal, Item, Numeric, Pad, Parsed};
 use super::{ParseError, ParseErrorKind, ParseResult};
 use super::{BAD_FORMAT, INVALID, NOT_ENOUGH, OUT_OF_RANGE, TOO_LONG, TOO_SHORT};
-use {DateTime, FixedOffset, Weekday};
+use crate::{DateTime, FixedOffset, Weekday};
 
 fn set_weekday_with_num_days_from_sunday(p: &mut Parsed, v: i64) -> ParseResult<()> {
     p.set_weekday(match v {
@@ -53,7 +53,10 @@ fn parse_rfc2822<'a>(parsed: &mut Parsed, mut s: &'a str) -> ParseResult<(&'a st
 
     // an adapted RFC 2822 syntax from Section 3.3 and 4.3:
     //
-    // date-time   = [ day-of-week "," ] date 1*S time *S
+    // c-char      = <any char except '(', ')' and '\\'>
+    // c-escape    = "\" <any char>
+    // comment     = "(" *(comment / c-char / c-escape) ")" *S
+    // date-time   = [ day-of-week "," ] date 1*S time *S *comment
     // day-of-week = *S day-name *S
     // day-name    = "Mon" / "Tue" / "Wed" / "Thu" / "Fri" / "Sat" / "Sun"
     // date        = day month year
@@ -79,9 +82,10 @@ fn parse_rfc2822<'a>(parsed: &mut Parsed, mut s: &'a str) -> ParseResult<(&'a st
     //
     // - we do not recognize a folding white space (FWS) or comment (CFWS).
     //   for our purposes, instead, we accept any sequence of Unicode
-    //   white space characters (denoted here to `S`). any actual RFC 2822
-    //   parser is expected to parse FWS and/or CFWS themselves and replace
-    //   it with a single SP (`%x20`); this is legitimate.
+    //   white space characters (denoted here to `S`). For comments, we accept
+    //   any text within parentheses while respecting escaped parentheses.
+    //   Any actual RFC 2822 parser is expected to parse FWS and/or CFWS themselves
+    //   and replace it with a single SP (`%x20`); this is legitimate.
     //
     // - two-digit year < 50 should be interpreted by adding 2000.
     //   two-digit year >= 50 or three-digit year should be interpreted
@@ -117,10 +121,10 @@ fn parse_rfc2822<'a>(parsed: &mut Parsed, mut s: &'a str) -> ParseResult<(&'a st
     let mut year = try_consume!(scan::number(s, 2, usize::MAX));
     let yearlen = prevlen - s.len();
     match (yearlen, year) {
-        (2, 0...49) => {
+        (2, 0..=49) => {
             year += 2000;
         } //   47 -> 2047,   05 -> 2005
-        (2, 50...99) => {
+        (2, 50..=99) => {
             year += 1900;
         } //   79 -> 1979
         (3, _) => {
@@ -143,6 +147,11 @@ fn parse_rfc2822<'a>(parsed: &mut Parsed, mut s: &'a str) -> ParseResult<(&'a st
     if let Some(offset) = try_consume!(scan::timezone_offset_2822(s)) {
         // only set the offset when it is definitely known (i.e. not `-0000`)
         parsed.set_offset(i64::from(offset))?;
+    }
+
+    // optional comments
+    while let Ok((s_out, ())) = scan::comment_2822(s) {
+        s = s_out;
     }
 
     Ok((s, ()))
@@ -455,11 +464,22 @@ where
     }
 }
 
+/// Accepts a relaxed form of RFC3339.
+/// A space or a 'T' are acepted as the separator between the date and time
+/// parts. Additional spaces are allowed between each component.
+///
+/// All of these examples are equivalent:
+/// ```
+/// # use chrono::{DateTime, offset::FixedOffset};
+/// "2012-12-12T12:12:12Z".parse::<DateTime<FixedOffset>>();
+/// "2012-12-12 12:12:12Z".parse::<DateTime<FixedOffset>>();
+/// "2012-  12-12T12:  12:12Z".parse::<DateTime<FixedOffset>>();
+/// ```
 impl str::FromStr for DateTime<FixedOffset> {
     type Err = ParseError;
 
     fn from_str(s: &str) -> ParseResult<DateTime<FixedOffset>> {
-        const DATE_ITEMS: &'static [Item<'static>] = &[
+        const DATE_ITEMS: &[Item<'static>] = &[
             Item::Numeric(Numeric::Year, Pad::Zero),
             Item::Space(""),
             Item::Literal("-"),
@@ -468,7 +488,7 @@ impl str::FromStr for DateTime<FixedOffset> {
             Item::Literal("-"),
             Item::Numeric(Numeric::Day, Pad::Zero),
         ];
-        const TIME_ITEMS: &'static [Item<'static>] = &[
+        const TIME_ITEMS: &[Item<'static>] = &[
             Item::Numeric(Numeric::Hour, Pad::Zero),
             Item::Space(""),
             Item::Literal(":"),
@@ -488,11 +508,11 @@ impl str::FromStr for DateTime<FixedOffset> {
                 if remainder.starts_with('T') || remainder.starts_with(' ') {
                     parse(&mut parsed, &remainder[1..], TIME_ITEMS.iter())?;
                 } else {
-                    Err(INVALID)?;
+                    return Err(INVALID);
                 }
             }
-            Err((_s, e)) => Err(e)?,
-            Ok(_) => Err(NOT_ENOUGH)?,
+            Err((_s, e)) => return Err(e),
+            Ok(_) => return Err(NOT_ENOUGH),
         };
         parsed.to_datetime()
     }
@@ -557,7 +577,7 @@ fn test_parse() {
     check!(" \t987",      [num!(Year)]; year:  987);
     check!("5",           [num!(Year)]; year:    5);
     check!("5\0",         [num!(Year)]; TOO_LONG);
-    check!("\05",         [num!(Year)]; INVALID);
+    check!("\x005",       [num!(Year)]; INVALID);
     check!("",            [num!(Year)]; TOO_SHORT);
     check!("12345",       [num!(Year), lit!("5")]; year: 1234);
     check!("12345",       [nums!(Year), lit!("5")]; year: 1234);
@@ -798,14 +818,25 @@ fn test_parse() {
 fn test_rfc2822() {
     use super::NOT_ENOUGH;
     use super::*;
-    use offset::FixedOffset;
-    use DateTime;
+    use crate::offset::FixedOffset;
+    use crate::DateTime;
 
     // Test data - (input, Ok(expected result after parse and format) or Err(error code))
     let testdates = [
         ("Tue, 20 Jan 2015 17:35:20 -0800", Ok("Tue, 20 Jan 2015 17:35:20 -0800")), // normal case
         ("Fri,  2 Jan 2015 17:35:20 -0800", Ok("Fri, 02 Jan 2015 17:35:20 -0800")), // folding whitespace
         ("Fri, 02 Jan 2015 17:35:20 -0800", Ok("Fri, 02 Jan 2015 17:35:20 -0800")), // leading zero
+        ("Tue, 20 Jan 2015 17:35:20 -0800 (UTC)", Ok("Tue, 20 Jan 2015 17:35:20 -0800")), // trailing comment
+        (
+            r"Tue, 20 Jan 2015 17:35:20 -0800 ( (UTC ) (\( (a)\(( \t ) ) \\( \) ))",
+            Ok("Tue, 20 Jan 2015 17:35:20 -0800"),
+        ), // complex trailing comment
+        (r"Tue, 20 Jan 2015 17:35:20 -0800 (UTC\)", Err(TOO_LONG)), // incorrect comment, not enough closing parentheses
+        (
+            "Tue, 20 Jan 2015 17:35:20 -0800 (UTC)\t \r\n(Anothercomment)",
+            Ok("Tue, 20 Jan 2015 17:35:20 -0800"),
+        ), // multiple comments
+        ("Tue, 20 Jan 2015 17:35:20 -0800 (UTC) ", Err(TOO_LONG)), // trailing whitespace after comment
         ("20 Jan 2015 17:35:20 -0800", Ok("Tue, 20 Jan 2015 17:35:20 -0800")), // no day of week
         ("20 JAN 2015 17:35:20 -0800", Ok("Tue, 20 Jan 2015 17:35:20 -0800")), // upper case month
         ("Tue, 20 Jan 2015 17:35 -0800", Ok("Tue, 20 Jan 2015 17:35:00 -0800")), // no second
@@ -853,9 +884,9 @@ fn test_rfc2822() {
 #[cfg(test)]
 #[test]
 fn parse_rfc850() {
-    use {TimeZone, Utc};
+    use crate::{TimeZone, Utc};
 
-    static RFC850_FMT: &'static str = "%A, %d-%b-%y %T GMT";
+    static RFC850_FMT: &str = "%A, %d-%b-%y %T GMT";
 
     let dt_str = "Sunday, 06-Nov-94 08:49:37 GMT";
     let dt = Utc.ymd(1994, 11, 6).and_hms(8, 49, 37);
@@ -886,8 +917,8 @@ fn parse_rfc850() {
 #[test]
 fn test_rfc3339() {
     use super::*;
-    use offset::FixedOffset;
-    use DateTime;
+    use crate::offset::FixedOffset;
+    use crate::DateTime;
 
     // Test data - (input, Ok(expected result after parse and format) or Err(error code))
     let testdates = [

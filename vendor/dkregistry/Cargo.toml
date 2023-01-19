@@ -37,8 +37,10 @@ strum = "0.23"
 strum_macros = "0.23"
 tar = "0.4"
 tokio = "1.0"
-reqwest = { version = "0.11", default-features = false, features = ["json"] }
-sha2 = "^0.9.0"
+reqwest = { version = "0.11", default-features = false, features = ["json", "stream"] }
+sha2 = "^0.10.0"
+bytes = "1.1"
+pin-project = "1.0"
 async-stream = "0.3"
 thiserror = "1.0.19"
 url = "2.1.1"

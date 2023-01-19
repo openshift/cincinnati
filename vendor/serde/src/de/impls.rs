@@ -733,7 +733,7 @@ impl<'de> Deserialize<'de> for CString {
 macro_rules! forwarded_impl {
     (
         $(#[doc = $doc:tt])*
-        ( $($id: ident),* ), $ty: ty, $func: expr
+        ($($id:ident),*), $ty:ty, $func:expr
     ) => {
         $(#[doc = $doc])*
         impl<'de $(, $id : Deserialize<'de>,)*> Deserialize<'de> for $ty {
@@ -793,7 +793,6 @@ where
         T::deserialize(deserializer).map(Some)
     }
 
-    #[doc(hidden)]
     fn __private_visit_untagged_option<D>(self, deserializer: D) -> Result<Self::Value, ()>
     where
         D: Deserializer<'de>,
@@ -861,7 +860,7 @@ impl<'de, T: ?Sized> Deserialize<'de> for PhantomData<T> {
 #[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! seq_impl {
     (
-        $ty:ident < T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >,
+        $ty:ident <T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)*>,
         $access:ident,
         $clear:expr,
         $with_capacity:expr,
@@ -1354,7 +1353,7 @@ tuple_impls! {
 #[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! map_impl {
     (
-        $ty:ident < K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)* >,
+        $ty:ident <K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)*>,
         $access:ident,
         $with_capacity:expr
     ) => {
@@ -1441,15 +1440,15 @@ macro_rules! parse_ip_impl {
 #[cfg(feature = "std")]
 macro_rules! variant_identifier {
     (
-        $name_kind: ident ( $($variant: ident; $bytes: expr; $index: expr),* )
-        $expecting_message: expr,
-        $variants_name: ident
+        $name_kind:ident ($($variant:ident; $bytes:expr; $index:expr),*)
+        $expecting_message:expr,
+        $variants_name:ident
     ) => {
         enum $name_kind {
-            $( $variant ),*
+            $($variant),*
         }
 
-        static $variants_name: &'static [&'static str] = &[ $( stringify!($variant) ),*];
+        static $variants_name: &'static [&'static str] = &[$(stringify!($variant)),*];
 
         impl<'de> Deserialize<'de> for $name_kind {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -1516,12 +1515,12 @@ macro_rules! variant_identifier {
 #[cfg(feature = "std")]
 macro_rules! deserialize_enum {
     (
-        $name: ident $name_kind: ident ( $($variant: ident; $bytes: expr; $index: expr),* )
-        $expecting_message: expr,
-        $deserializer: expr
+        $name:ident $name_kind:ident ($($variant:ident; $bytes:expr; $index:expr),*)
+        $expecting_message:expr,
+        $deserializer:expr
     ) => {
-        variant_identifier!{
-            $name_kind ( $($variant; $bytes; $index),* )
+        variant_identifier! {
+            $name_kind ($($variant; $bytes; $index),*)
             $expecting_message,
             VARIANTS
         }
@@ -2012,7 +2011,7 @@ impl<'de> Deserialize<'de> for Duration {
                             b"nanos" => Ok(Field::Nanos),
                             _ => {
                                 let value = ::__private::from_utf8_lossy(value);
-                                Err(Error::unknown_field(&value, FIELDS))
+                                Err(Error::unknown_field(&*value, FIELDS))
                             }
                         }
                     }
@@ -2269,14 +2268,14 @@ where
     where
         D: Deserializer<'de>,
     {
-        let (start, end) = deserializer.deserialize_struct(
+        let (start, end) = try!(deserializer.deserialize_struct(
             "Range",
             range::FIELDS,
             range::RangeVisitor {
                 expecting: "struct Range",
                 phantom: PhantomData,
             },
-        )?;
+        ));
         Ok(start..end)
     }
 }
@@ -2290,14 +2289,14 @@ where
     where
         D: Deserializer<'de>,
     {
-        let (start, end) = deserializer.deserialize_struct(
+        let (start, end) = try!(deserializer.deserialize_struct(
             "RangeInclusive",
             range::FIELDS,
             range::RangeVisitor {
                 expecting: "struct RangeInclusive",
                 phantom: PhantomData,
             },
-        )?;
+        ));
         Ok(RangeInclusive::new(start, end))
     }
 }
@@ -2352,7 +2351,7 @@ mod range {
                         b"end" => Ok(Field::End),
                         _ => {
                             let value = ::__private::from_utf8_lossy(value);
-                            Err(Error::unknown_field(&value, FIELDS))
+                            Err(Error::unknown_field(&*value, FIELDS))
                         }
                     }
                 }
@@ -2663,8 +2662,9 @@ where
 
 #[cfg(all(feature = "std", not(no_std_atomic)))]
 macro_rules! atomic_impl {
-    ($($ty:ident)*) => {
+    ($($ty:ident $size:expr)*) => {
         $(
+            #[cfg(any(no_target_has_atomic, target_has_atomic = $size))]
             impl<'de> Deserialize<'de> for $ty {
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
@@ -2679,14 +2679,21 @@ macro_rules! atomic_impl {
 
 #[cfg(all(feature = "std", not(no_std_atomic)))]
 atomic_impl! {
-    AtomicBool
-    AtomicI8 AtomicI16 AtomicI32 AtomicIsize
-    AtomicU8 AtomicU16 AtomicU32 AtomicUsize
+    AtomicBool "8"
+    AtomicI8 "8"
+    AtomicI16 "16"
+    AtomicI32 "32"
+    AtomicIsize "ptr"
+    AtomicU8 "8"
+    AtomicU16 "16"
+    AtomicU32 "32"
+    AtomicUsize "ptr"
 }
 
 #[cfg(all(feature = "std", not(no_std_atomic64)))]
 atomic_impl! {
-    AtomicI64 AtomicU64
+    AtomicI64 "64"
+    AtomicU64 "64"
 }
 
 #[cfg(feature = "std")]

@@ -193,13 +193,12 @@ impl Map<String, Value> {
         }
     }
 
-    /// Moves all elements from other into Self, leaving other empty.
+    /// Moves all elements from other into self, leaving other empty.
     #[inline]
     pub fn append(&mut self, other: &mut Self) {
         #[cfg(feature = "preserve_order")]
-        for (k, v) in mem::replace(&mut other.map, MapImpl::default()) {
-            self.map.insert(k, v);
-        }
+        self.map
+            .extend(mem::replace(&mut other.map, MapImpl::default()));
         #[cfg(not(feature = "preserve_order"))]
         self.map.append(&mut other.map);
     }
@@ -304,6 +303,11 @@ impl Clone for Map<String, Value> {
             map: self.map.clone(),
         }
     }
+
+    #[inline]
+    fn clone_from(&mut self, source: &Self) {
+        self.map.clone_from(&source.map);
+    }
 }
 
 impl PartialEq for Map<String, Value> {
@@ -323,10 +327,10 @@ impl Eq for Map<String, Value> {}
 /// #
 /// # let val = &Value::String("".to_owned());
 /// # let _ =
-/// match *val {
-///     Value::String(ref s) => Some(s.as_str()),
-///     Value::Array(ref arr) => arr[0].as_str(),
-///     Value::Object(ref map) => map["type"].as_str(),
+/// match val {
+///     Value::String(s) => Some(s.as_str()),
+///     Value::Array(arr) => arr[0].as_str(),
+///     Value::Object(map) => map["type"].as_str(),
 ///     _ => None,
 /// }
 /// # ;
@@ -530,9 +534,9 @@ impl<'a> Entry<'a> {
     /// assert_eq!(map.entry("serde").key(), &"serde");
     /// ```
     pub fn key(&self) -> &String {
-        match *self {
-            Entry::Vacant(ref e) => e.key(),
-            Entry::Occupied(ref e) => e.key(),
+        match self {
+            Entry::Vacant(e) => e.key(),
+            Entry::Occupied(e) => e.key(),
         }
     }
 
