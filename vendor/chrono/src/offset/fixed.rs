@@ -5,13 +5,16 @@
 
 use core::fmt;
 use core::ops::{Add, Sub};
-use oldtime::Duration as OldDuration;
+
+use num_integer::div_mod_floor;
+#[cfg(feature = "rkyv")]
+use rkyv::{Archive, Deserialize, Serialize};
 
 use super::{LocalResult, Offset, TimeZone};
-use div::div_mod_floor;
-use naive::{NaiveDate, NaiveDateTime, NaiveTime};
-use DateTime;
-use Timelike;
+use crate::naive::{NaiveDate, NaiveDateTime, NaiveTime};
+use crate::oldtime::Duration as OldDuration;
+use crate::DateTime;
+use crate::Timelike;
 
 /// The time zone with fixed offset, from UTC-23:59:59 to UTC+23:59:59.
 ///
@@ -20,6 +23,7 @@ use Timelike;
 /// `DateTime<FixedOffset>` instances. See the [`east`](#method.east) and
 /// [`west`](#method.west) methods for examples.
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
+#[cfg_attr(feature = "rkyv", derive(Archive, Deserialize, Serialize))]
 pub struct FixedOffset {
     local_minus_utc: i32,
 }
@@ -32,13 +36,13 @@ impl FixedOffset {
     ///
     /// # Example
     ///
-    /// ~~~~
+    /// ```
     /// use chrono::{FixedOffset, TimeZone};
     /// let hour = 3600;
     /// let datetime = FixedOffset::east(5 * hour).ymd(2016, 11, 08)
     ///                                           .and_hms(0, 0, 0);
     /// assert_eq!(&datetime.to_rfc3339(), "2016-11-08T00:00:00+05:00")
-    /// ~~~~
+    /// ```
     pub fn east(secs: i32) -> FixedOffset {
         FixedOffset::east_opt(secs).expect("FixedOffset::east out of bounds")
     }
@@ -62,13 +66,13 @@ impl FixedOffset {
     ///
     /// # Example
     ///
-    /// ~~~~
+    /// ```
     /// use chrono::{FixedOffset, TimeZone};
     /// let hour = 3600;
     /// let datetime = FixedOffset::west(5 * hour).ymd(2016, 11, 08)
     ///                                           .and_hms(0, 0, 0);
     /// assert_eq!(&datetime.to_rfc3339(), "2016-11-08T00:00:00-05:00")
-    /// ~~~~
+    /// ```
     pub fn west(secs: i32) -> FixedOffset {
         FixedOffset::west_opt(secs).expect("FixedOffset::west out of bounds")
     }
@@ -218,7 +222,7 @@ impl<Tz: TimeZone> Sub<FixedOffset> for DateTime<Tz> {
 #[cfg(test)]
 mod tests {
     use super::FixedOffset;
-    use offset::TimeZone;
+    use crate::offset::TimeZone;
 
     #[test]
     fn test_date_extreme_offset() {

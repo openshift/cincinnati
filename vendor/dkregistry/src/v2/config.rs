@@ -112,8 +112,7 @@ impl Config {
                     // https://tools.ietf.org/html/rfc7231#section-5.3.2
                     (MediaTypes::ManifestV2S2, Some(0.5)),
                     (MediaTypes::ManifestV2S1Signed, Some(0.4)),
-                    // TODO(steveeJ): uncomment this when all the Manifest methods work for it
-                    // mediatypes::MediaTypes::ManifestList,
+                    (MediaTypes::ManifestList, Some(0.5)),
                 ],
                 // GCR incorrectly parses `q` parameters, so we use special Accept for it.
                 // Bug: https://issuetracker.google.com/issues/159827510.
@@ -121,6 +120,7 @@ impl Config {
                 true => vec![
                     (MediaTypes::ManifestV2S2, None),
                     (MediaTypes::ManifestV2S1Signed, None),
+                    (MediaTypes::ManifestList, None),
                 ],
             },
         };

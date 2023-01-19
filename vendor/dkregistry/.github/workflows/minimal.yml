@@ -13,7 +13,7 @@ jobs:
         rust:
           - stable
           - beta
-          - 1.46.0  # MSRV
+          - 1.58.0  # MSRV
         include:
           - rust: nightly
             experimental: true
@@ -41,7 +41,7 @@ jobs:
         rust:
           - stable
           - beta
-          - 1.46.0  # MSRV
+          - 1.58.0  # MSRV
         include:
           - rust: nightly
             experimental: true
@@ -75,7 +75,7 @@ jobs:
         rust:
           - stable
           - beta
-          - 1.46.0  # MSRV
+          - 1.58.0  # MSRV
         include:
           - rust: nightly
             experimental: true
@@ -91,10 +91,7 @@ jobs:
           override: true
 
       - name: Run cargo test (test-net-private)
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --features test-net,test-net-private
+        run: cargo test --features test-net,test-net-private
         env:
           DKREG_QUAY_USER: ${{ secrets.DKREG_QUAY_USER }}
           DKREG_QUAY_PASSWD: ${{ secrets.DKREG_QUAY_PASSWD }}
@@ -107,7 +104,7 @@ jobs:
         rust:
           - stable
           - beta
-          - 1.46.0  # MSRV
+          - 1.58.0  # MSRV
         include:
           - rust: nightly
             experimental: true

@@ -141,3 +141,27 @@ impl ManifestSchema2 {
         self.config_blob.architecture.to_owned()
     }
 }
+
+impl ManifestObj {
+    /// Get the architecture of the manifest object
+    pub fn architecture(&self) -> String {
+        self.platform.architecture.to_owned()
+    }
+
+    /// Returns the sha digest of the manifest object
+    pub fn digest(&self) -> String {
+        self.digest.to_owned()
+    }
+}
+
+impl ManifestList {
+    /// Get architecture of all the manifests
+    pub fn architectures(&self) -> Vec<String> {
+        self.manifests.iter().map(|mo| mo.architecture()).collect()
+    }
+
+    /// Get the digest for all the manifest images in the ManifestList
+    pub fn get_digests(&self) -> Vec<String> {
+        self.manifests.iter().map(|mo| mo.digest()).collect()
+    }
+}

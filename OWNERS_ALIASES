@@ -2,10 +2,9 @@
 
 aliases:
   cincinnati-approvers:
-    - lucab
     - wking
-    - vrutkovs
     - LalatenduMohanty
     - jottofar
     - PratikMahajan
+    - petr-muller
   cincinnati-reviewers:

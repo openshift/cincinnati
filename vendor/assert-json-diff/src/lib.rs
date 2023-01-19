@@ -151,7 +151,6 @@
     unused_qualifications,
     unknown_lints
 )]
-#![doc(html_root_url = "https://docs.rs/assert-json-diff/2.0.1")]
 
 use diff::diff;
 use serde::Serialize;
@@ -252,9 +251,7 @@ macro_rules! assert_json_eq {
 #[macro_export]
 macro_rules! assert_json_matches {
     ($lhs:expr, $rhs:expr, $config:expr $(,)?) => {{
-        let lhs = $lhs;
-        let rhs = $rhs;
-        if let Err(error) = $crate::assert_json_matches_no_panic(&lhs, &rhs, $config) {
+        if let Err(error) = $crate::assert_json_matches_no_panic(&$lhs, &$rhs, $config) {
             panic!("\n\n{}\n\n", error);
         }
     }};

@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 /// Most-significant byte, == 0x80
 pub const MSB: u8 = 0b1000_0000;
 /// All bits except for the most significant. Can be used as bitmask to drop the most-signficant
@@ -62,6 +64,16 @@ fn zigzag_encode(from: i64) -> u64 {
 #[inline]
 fn zigzag_decode(from: u64) -> i64 {
     ((from >> 1) ^ (-((from & 1) as i64)) as u64) as i64
+}
+
+pub(crate) trait VarIntMaxSize {
+    fn varint_max_size() -> usize;
+}
+
+impl<VI: VarInt> VarIntMaxSize for VI {
+    fn varint_max_size() -> usize {
+        (size_of::<VI>() * 8 + 7) / 7
+    }
 }
 
 macro_rules! impl_varint {

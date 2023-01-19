@@ -34,7 +34,8 @@ use std::string::String;
 use std::sync::Arc;
 use tar::Archive;
 
-use dkregistry::mediatypes::MediaTypes::{ManifestV2S1Signed, ManifestV2S2};
+use dkregistry::mediatypes::MediaTypes::{ManifestList, ManifestV2S1Signed, ManifestV2S2};
+use dkregistry::v2::Client;
 
 /// Module for the release cache
 pub mod cache {
@@ -215,6 +216,7 @@ pub async fn new_registry_client(
             .accepted_types(Some(vec![
                 (ManifestV2S2, None),
                 (ManifestV2S1Signed, Some(0.8)),
+                (ManifestList, Some(0.5)),
             ]));
         let scope = format!("repository:{}:pull", &repo);
 
@@ -242,6 +244,49 @@ pub async fn new_registry_client(
     };
 
     Ok(client)
+}
+
+// get the architecture, manifestref and layers_digest for images with tag/digest
+async fn get_manifest_layers(
+    tag: String,
+    repo: &str,
+    registry_client: &Client,
+) -> Result<(Option<String>, String, Vec<String>), Error> {
+    trace!("[{}] Fetching release", tag);
+    let (tag, manifest, manifestref) =
+        get_manifest_and_ref(tag, repo.to_owned(), &registry_client).await?;
+
+    // Try to read the architecture from the manifest
+    let arch = match manifest.architectures() {
+        Ok(archs) => {
+            if archs.len() == 1 {
+                archs.first().map(std::string::ToString::to_string)
+            } else {
+                Some(String::from("multi"))
+            }
+        }
+        Err(e) => {
+            error!(
+                "could not get architecture from manifest for tag {}: {}",
+                tag, e
+            );
+            None
+        }
+    };
+
+    let layers_digests = manifest
+        .layers_digests(arch.as_deref())
+        .map_err(|e| format_err!("{}", e))
+        .context(format!(
+            "[{}] could not get layers_digests from manifest",
+            tag
+        ))?
+        // Reverse the order to start with the top-most layer
+        .into_iter()
+        .rev()
+        .collect();
+
+    Ok((arch, manifestref, layers_digests))
 }
 
 /// Fetches a vector of all release metadata from the given repository, hosted on the given
@@ -274,43 +319,26 @@ pub async fn fetch_releases(
         let releases = releases.clone();
 
         async move {
-            trace!("[{}] Fetching release", tag);
-            let (tag, manifest, manifestref) =
-                get_manifest_and_ref(tag, repo.to_owned(), &registry_client).await?;
+            let (arch, manifestref, mut layers_digests) =
+                get_manifest_layers(tag.to_owned(), &repo, &registry_client).await?;
 
-            // Try to read the architecture from the manifest
-            let arch = match manifest.architectures() {
-                Ok(archs) => {
-                    // We don't support ManifestLists now, so we expect only 1
-                    // architecture for the given manifest
-                    ensure!(
-                        archs.len() == 1,
-                        "[{}] broke assumption of exactly one architecture per tag: {:?}",
-                        tag,
-                        archs
+            // if the image is multi arch, we will have to get one image from the manifest list and
+            // use its metadata, because manifest lists are just collections of manifests and don't
+            // have their own layers with metadata files.
+            if arch.as_ref().unwrap() == "multi" {
+                let digest = layers_digests
+                    .first()
+                    .map(std::string::ToString::to_string)
+                    .expect(
+                        format!("no images referenced in ManifestList ref:{}", manifestref)
+                            .as_str(),
                     );
-                    archs.first().map(std::string::ToString::to_string)
-                }
-                Err(e) => {
-                    error!(
-                        "could not get architecture from manifest for tag {}: {}",
-                        tag, e
-                    );
-                    None
-                }
-            };
-
-            let layers_digests = manifest
-                .layers_digests(arch.as_deref())
-                .map_err(|e| format_err!("{}", e))
-                .context(format!(
-                    "[{}] could not get layers_digests from manifest",
-                    tag
-                ))?
-                // Reverse the order to start with the top-most layer
-                .into_iter()
-                .rev()
-                .collect();
+                // TODO: destructured assignments are unstable in current rust, after updating rust
+                // change this to (_,_,layers_digests) and remove separate assignment from below.
+                let (_ml_arch, _ml_manifestref, ml_layers_digests) =
+                    get_manifest_layers(digest, &repo, &registry_client).await?;
+                layers_digests = ml_layers_digests;
+            }
 
             let release = match lookup_or_fetch(
                 layers_digests,

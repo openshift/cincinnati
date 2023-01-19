@@ -2,10 +2,10 @@ use std::io;
 use std::io::{Read, Result};
 
 use crate::fixed::FixedInt;
-use crate::varint::{VarInt, MSB};
+use crate::varint::{VarInt, VarIntMaxSize, MSB};
 
 #[cfg(feature = "tokio_async")]
-use tokio::io::{AsyncReadExt, AsyncRead};
+use tokio::io::{AsyncRead, AsyncReadExt};
 
 #[cfg(feature = "futures_async")]
 use futures_util::{io::AsyncRead, io::AsyncReadExt};
@@ -34,12 +34,19 @@ pub trait VarIntAsyncReader {
 #[derive(Default)]
 pub struct VarIntProcessor {
     buf: [u8; 10],
+    maxsize: usize,
     i: usize,
 }
 
 impl VarIntProcessor {
+    fn new<VI: VarIntMaxSize>() -> VarIntProcessor {
+        VarIntProcessor {
+            maxsize: VI::varint_max_size(),
+            ..VarIntProcessor::default()
+        }
+    }
     fn push(&mut self, b: u8) -> Result<()> {
-        if self.i >= 10 {
+        if self.i >= self.maxsize {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "Unterminated varint",
@@ -62,7 +69,7 @@ impl VarIntProcessor {
 impl<AR: AsyncRead + Unpin + Send> VarIntAsyncReader for AR {
     async fn read_varint_async<VI: VarInt>(&mut self) -> Result<VI> {
         let mut buf = [0 as u8; 1];
-        let mut p = VarIntProcessor::default();
+        let mut p = VarIntProcessor::new::<VI>();
 
         while !p.finished() {
             let read = self.read(&mut buf).await?;
@@ -86,7 +93,7 @@ impl<AR: AsyncRead + Unpin + Send> VarIntAsyncReader for AR {
 impl<R: Read> VarIntReader for R {
     fn read_varint<VI: VarInt>(&mut self) -> Result<VI> {
         let mut buf = [0 as u8; 1];
-        let mut p = VarIntProcessor::default();
+        let mut p = VarIntProcessor::new::<VI>();
 
         while !p.finished() {
             let read = self.read(&mut buf)?;

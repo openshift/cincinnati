@@ -11,12 +11,13 @@
 
 [package]
 name = "protoc-rust"
-version = "2.27.1"
+version = "2.28.0"
 authors = ["Stepan Koltsov <stepan.koltsov@gmail.com>"]
 description = """
 protoc --rust_out=... available as API. protoc needs to be in $PATH, protoc-gen-run does not.
 """
 homepage = "https://github.com/stepancheg/rust-protobuf/"
+readme = "README.md"
 license = "MIT"
 repository = "https://github.com/stepancheg/rust-protobuf/"
 
@@ -28,13 +29,13 @@ doctest = false
 bench = false
 
 [dependencies.protobuf]
-version = "=2.27.1"
+version = "=2.28.0"
 
 [dependencies.protobuf-codegen]
-version = "=2.27.1"
+version = "=2.28.0"
 
 [dependencies.protoc]
-version = "=2.27.1"
+version = "=2.28.0"
 
 [dependencies.tempfile]
 version = "3"

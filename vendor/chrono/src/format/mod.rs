@@ -12,10 +12,26 @@
 //! which are just an [`Iterator`](https://doc.rust-lang.org/std/iter/trait.Iterator.html) of
 //! the [`Item`](./enum.Item.html) type.
 //! They are generated from more readable **format strings**;
-//! currently Chrono supports [one built-in syntax closely resembling
-//! C's `strftime` format](./strftime/index.html).
+//! currently Chrono supports a built-in syntax closely resembling
+//! C's `strftime` format. The available options can be found [here](./strftime/index.html).
+//!
+//! # Example
+//! ```rust
+//! # use std::error::Error;
+//! use chrono::prelude::*;
+//!
+//! let date_time = Utc.ymd(2020, 11, 10).and_hms(0, 1, 32);
+//!
+//! let formatted = format!("{}", date_time.format("%Y-%m-%d %H:%M:%S"));
+//! assert_eq!(formatted, "2020-11-10 00:01:32");
+//!
+//! let parsed = Utc.datetime_from_str(&formatted, "%Y-%m-%d %H:%M:%S")?;
+//! assert_eq!(parsed, date_time);
+//! # Ok::<(), chrono::ParseError>(())
+//! ```
 
-#![allow(ellipsis_inclusive_range_patterns)]
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
@@ -29,22 +45,22 @@ use core::str::FromStr;
 use std::error::Error;
 
 #[cfg(any(feature = "alloc", feature = "std", test))]
-use naive::{NaiveDate, NaiveTime};
+use crate::naive::{NaiveDate, NaiveTime};
 #[cfg(any(feature = "alloc", feature = "std", test))]
-use offset::{FixedOffset, Offset};
+use crate::offset::{FixedOffset, Offset};
 #[cfg(any(feature = "alloc", feature = "std", test))]
-use {Datelike, Timelike};
-use {Month, ParseMonthError, ParseWeekdayError, Weekday};
+use crate::{Datelike, Timelike};
+use crate::{Month, ParseMonthError, ParseWeekdayError, Weekday};
 
 #[cfg(feature = "unstable-locales")]
 pub(crate) mod locales;
 
-pub use self::parse::parse;
-pub use self::parsed::Parsed;
-pub use self::strftime::StrftimeItems;
+pub use parse::parse;
+pub use parsed::Parsed;
 /// L10n locales.
 #[cfg(feature = "unstable-locales")]
 pub use pure_rust_locales::Locale;
+pub use strftime::StrftimeItems;
 
 #[cfg(not(feature = "unstable-locales"))]
 #[derive(Debug)]
@@ -320,9 +336,16 @@ macro_rules! internal_fix {
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub struct ParseError(ParseErrorKind);
 
+impl ParseError {
+    /// The category of parse error
+    pub fn kind(&self) -> ParseErrorKind {
+        self.0
+    }
+}
+
 /// The category of parse error
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
-enum ParseErrorKind {
+pub enum ParseErrorKind {
     /// Given field is out of permitted range.
     OutOfRange,
 
@@ -350,6 +373,10 @@ enum ParseErrorKind {
 
     /// There was an error on the formatting string, or there were non-supported formating items.
     BadFormat,
+
+    // TODO: Change this to `#[non_exhaustive]` (on the enum) when MSRV is increased
+    #[doc(hidden)]
+    __Nonexhaustive,
 }
 
 /// Same as `Result<T, ParseError>`.
@@ -365,6 +392,7 @@ impl fmt::Display for ParseError {
             ParseErrorKind::TooShort => write!(f, "premature end of input"),
             ParseErrorKind::TooLong => write!(f, "trailing input"),
             ParseErrorKind::BadFormat => write!(f, "bad or unsupported format string"),
+            _ => unreachable!(),
         }
     }
 }
@@ -448,7 +476,7 @@ fn format_inner<'a>(
     };
 
     use core::fmt::Write;
-    use div::{div_floor, mod_floor};
+    use num_integer::{div_floor, mod_floor};
 
     match *item {
         Item::Literal(s) | Item::Space(s) => result.push_str(s),
@@ -540,7 +568,7 @@ fn format_inner<'a>(
                         write!(result, "{}{:02}{:02}", sign, off / 3600, off / 60 % 60)
                     }
                 } else {
-                    result.push_str("Z");
+                    result.push('Z');
                     Ok(())
                 }
             }
@@ -565,7 +593,7 @@ fn format_inner<'a>(
                         Ok(())
                     }),
                     LowerAmPm => time.map(|t| {
-                        #[cfg_attr(feature = "cargo-clippy", allow(useless_asref))]
+                        #[cfg_attr(feature = "cargo-clippy", allow(clippy::useless_asref))]
                         {
                             result.push_str(if t.hour12().0 {
                                 am_pm_lowercase[1].as_ref()
@@ -726,6 +754,9 @@ pub struct DelayedFormat<I> {
     /// An iterator returning formatting items.
     items: I,
     /// Locale used for text.
+    // TODO: Only used with the locale feature. We should make this property
+    // only present when the feature is enabled.
+    #[cfg(feature = "unstable-locales")]
     locale: Option<Locale>,
 }
 
@@ -733,7 +764,14 @@ pub struct DelayedFormat<I> {
 impl<'a, I: Iterator<Item = B> + Clone, B: Borrow<Item<'a>>> DelayedFormat<I> {
     /// Makes a new `DelayedFormat` value out of local date and time.
     pub fn new(date: Option<NaiveDate>, time: Option<NaiveTime>, items: I) -> DelayedFormat<I> {
-        DelayedFormat { date: date, time: time, off: None, items: items, locale: None }
+        DelayedFormat {
+            date,
+            time,
+            off: None,
+            items,
+            #[cfg(feature = "unstable-locales")]
+            locale: None,
+        }
     }
 
     /// Makes a new `DelayedFormat` value out of local date and time and UTC offset.
@@ -748,10 +786,11 @@ impl<'a, I: Iterator<Item = B> + Clone, B: Borrow<Item<'a>>> DelayedFormat<I> {
     {
         let name_and_diff = (offset.to_string(), offset.fix());
         DelayedFormat {
-            date: date,
-            time: time,
+            date,
+            time,
             off: Some(name_and_diff),
-            items: items,
+            items,
+            #[cfg(feature = "unstable-locales")]
             locale: None,
         }
     }
@@ -764,7 +803,7 @@ impl<'a, I: Iterator<Item = B> + Clone, B: Borrow<Item<'a>>> DelayedFormat<I> {
         items: I,
         locale: Locale,
     ) -> DelayedFormat<I> {
-        DelayedFormat { date: date, time: time, off: None, items: items, locale: Some(locale) }
+        DelayedFormat { date, time, off: None, items, locale: Some(locale) }
     }
 
     /// Makes a new `DelayedFormat` value out of local date and time, UTC offset and locale.
@@ -780,13 +819,7 @@ impl<'a, I: Iterator<Item = B> + Clone, B: Borrow<Item<'a>>> DelayedFormat<I> {
         Off: Offset + fmt::Display,
     {
         let name_and_diff = (offset.to_string(), offset.fix());
-        DelayedFormat {
-            date: date,
-            time: time,
-            off: Some(name_and_diff),
-            items: items,
-            locale: Some(locale),
-        }
+        DelayedFormat { date, time, off: Some(name_and_diff), items, locale: Some(locale) }
     }
 }
 
@@ -817,26 +850,26 @@ impl<'a, I: Iterator<Item = B> + Clone, B: Borrow<Item<'a>>> fmt::Display for De
 ///
 /// # Example
 ///
-/// ~~~~
+/// ```
 /// use chrono::Weekday;
 ///
 /// assert_eq!("Sunday".parse::<Weekday>(), Ok(Weekday::Sun));
 /// assert!("any day".parse::<Weekday>().is_err());
-/// ~~~~
+/// ```
 ///
 /// The parsing is case-insensitive.
 ///
-/// ~~~~
+/// ```
 /// # use chrono::Weekday;
 /// assert_eq!("mON".parse::<Weekday>(), Ok(Weekday::Mon));
-/// ~~~~
+/// ```
 ///
 /// Only the shortest form (e.g. `sun`) and the longest form (e.g. `sunday`) is accepted.
 ///
-/// ~~~~
+/// ```
 /// # use chrono::Weekday;
 /// assert!("thurs".parse::<Weekday>().is_err());
-/// ~~~~
+/// ```
 impl FromStr for Weekday {
     type Err = ParseWeekdayError;
 
@@ -890,27 +923,27 @@ where
 ///
 /// # Example
 ///
-/// ~~~~
+/// ```
 /// use chrono::Month;
 ///
 /// assert_eq!("January".parse::<Month>(), Ok(Month::January));
 /// assert!("any day".parse::<Month>().is_err());
-/// ~~~~
+/// ```
 ///
 /// The parsing is case-insensitive.
 ///
-/// ~~~~
+/// ```
 /// # use chrono::Month;
 /// assert_eq!("fEbruARy".parse::<Month>(), Ok(Month::February));
-/// ~~~~
+/// ```
 ///
 /// Only the shortest form (e.g. `jan`) and the longest form (e.g. `january`) is accepted.
 ///
-/// ~~~~
+/// ```
 /// # use chrono::Month;
 /// assert!("septem".parse::<Month>().is_err());
 /// assert!("Augustin".parse::<Month>().is_err());
-/// ~~~~
+/// ```
 impl FromStr for Month {
     type Err = ParseMonthError;
 

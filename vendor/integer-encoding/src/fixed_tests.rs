@@ -21,6 +21,16 @@ mod tests {
         assert_eq!(result, vec![0, 1]);
     }
     #[test]
+    fn test_u8_enc() {
+        let result = (255 as u8).encode_fixed_vec();
+        assert_eq!(result, vec![255]);
+    }
+    #[test]
+    fn test_i8_enc() {
+        let result = (-1 as i8).encode_fixed_vec();
+        assert_eq!(result, vec![255]);
+    }
+    #[test]
     fn test_i16_enc() {
         let result = (-32768 as i16).encode_fixed_vec();
         assert_eq!(result, vec![0, 128]);
@@ -49,12 +59,14 @@ mod tests {
     }
     #[test]
     fn test_all_identity() {
-        let a: u16 = 17;
-        let b: u32 = 17;
-        let c: u64 = 17;
-        let d: i16 = -17;
-        let e: i32 = -17;
-        let f: i64 = -17;
+        let a: u8 = 17;
+        let b: u16 = 17;
+        let c: u32 = 17;
+        let d: u64 = 17;
+        let e: i8 = -17;
+        let f: i16 = -17;
+        let g: i32 = -17;
+        let h: i64 = -17;
 
         assert_eq!(a, FixedInt::decode_fixed_vec(&a.encode_fixed_vec()));
         assert_eq!(b, FixedInt::decode_fixed_vec(&b.encode_fixed_vec()));
@@ -62,6 +74,8 @@ mod tests {
         assert_eq!(d, FixedInt::decode_fixed_vec(&d.encode_fixed_vec()));
         assert_eq!(e, FixedInt::decode_fixed_vec(&e.encode_fixed_vec()));
         assert_eq!(f, FixedInt::decode_fixed_vec(&f.encode_fixed_vec()));
+        assert_eq!(g, FixedInt::decode_fixed_vec(&g.encode_fixed_vec()));
+        assert_eq!(h, FixedInt::decode_fixed_vec(&h.encode_fixed_vec()));
 
         assert_eq!(a, FixedInt::decode_fixed(&a.encode_fixed_light()));
         assert_eq!(b, FixedInt::decode_fixed(&b.encode_fixed_light()));
@@ -69,6 +83,8 @@ mod tests {
         assert_eq!(d, FixedInt::decode_fixed(&d.encode_fixed_light()));
         assert_eq!(e, FixedInt::decode_fixed(&e.encode_fixed_light()));
         assert_eq!(f, FixedInt::decode_fixed(&f.encode_fixed_light()));
+        assert_eq!(g, FixedInt::decode_fixed(&g.encode_fixed_light()));
+        assert_eq!(h, FixedInt::decode_fixed(&h.encode_fixed_light()));
     }
 
     #[test]
@@ -120,12 +136,16 @@ mod tests {
         let i3: u32 = 4200123456;
         let i4: i64 = i3 as i64 * 1000;
         let i5: i32 = -32456;
+        let i6: i8 = -128;
+        let i7: u8 = 255;
 
         buf.write_fixedint_async(i1).await.unwrap();
         buf.write_fixedint_async(i2).await.unwrap();
         buf.write_fixedint_async(i3).await.unwrap();
         buf.write_fixedint_async(i4).await.unwrap();
         buf.write_fixedint_async(i5).await.unwrap();
+        buf.write_fixedint_async(i6).await.unwrap();
+        buf.write_fixedint_async(i7).await.unwrap();
 
         let mut reader: &[u8] = buf.as_ref();
 
@@ -134,6 +154,8 @@ mod tests {
         assert_eq!(i3, reader.read_fixedint_async().await.unwrap());
         assert_eq!(i4, reader.read_fixedint_async().await.unwrap());
         assert_eq!(i5, reader.read_fixedint_async().await.unwrap());
+        assert_eq!(i6, reader.read_fixedint_async().await.unwrap());
+        assert_eq!(i7, reader.read_fixedint_async().await.unwrap());
         assert!(reader.read_fixedint_async::<u32>().await.is_err());
     }
 }

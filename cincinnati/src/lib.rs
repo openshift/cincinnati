@@ -87,6 +87,20 @@ impl Release {
             _ => bail!("could not get manifest reference"),
         }
     }
+
+    /// return the arch identifier set in metadata or returns `none`
+    pub fn metadata_arch_id(&mut self) -> String {
+        let metadata_arch_key = "release.openshift.io/architecture";
+        let no_arch = String::from("none");
+        let arch = self
+            .get_metadata_mut()
+            .map(|metadata| metadata.get(metadata_arch_key))
+            .unwrap_or(None);
+        match arch {
+            Some(arch) => arch.to_string(),
+            _ => no_arch,
+        }
+    }
 }
 
 /// Type to represent a Release with all its information.
@@ -207,7 +221,7 @@ impl Graph {
         R: Into<Release>,
     {
         let missing_manifest_ref = String::from("none");
-        let release = release.into();
+        let mut release = release.into();
         match self.find_by_version(release.version()) {
             Some(id) => {
                 let node = self.dag.node_weight_mut(id.0).expect(EXPECT_NODE_WEIGHT);
@@ -216,12 +230,18 @@ impl Graph {
                     if release.manifestref().unwrap_or(&missing_manifest_ref)
                         != node.manifestref().unwrap_or(&missing_manifest_ref)
                     {
-                        bail!(
-                            "mismatched manifest ref for concrete release {}: {}, {}",
-                            release.version(),
-                            release.manifestref().unwrap_or(&missing_manifest_ref),
-                            node.manifestref().unwrap_or(&missing_manifest_ref)
-                        )
+                        let release_arch = release.metadata_arch_id();
+                        if release_arch == node.metadata_arch_id() {
+                            bail!(
+                                "mismatched manifest ref for concrete release {}: {}, {}",
+                                release.version(),
+                                release.manifestref().unwrap_or(&missing_manifest_ref),
+                                node.manifestref().unwrap_or(&missing_manifest_ref)
+                            )
+                        }
+                        if release_arch == "multi" {
+                            return Ok(id);
+                        }
                     }
                 }
                 *node = release;
@@ -798,12 +818,49 @@ pub mod testing {
     use super::*;
     use crate::plugins::internal::versioned_graph::VersionedGraph;
 
-    pub fn generate_graph(include_conditional_edge: bool) -> Graph {
+    pub fn generate_graph(include_conditional_edge: bool, include_always_condition: bool) -> Graph {
         let mut graph = Graph::default();
 
+        if include_conditional_edge {
+            let mut ce = ConditionalEdge {
+                edge_regex: ConditionalUpdateEdge {
+                    from: "1[.]0[.].*".to_string(),
+                    to: "2.0.0".to_string(),
+                },
+                edges: vec![ConditionalUpdateEdge {
+                    from: "1.0.0".to_string(),
+                    to: "2.0.0".to_string(),
+                }],
+                risks: vec![ConditionalUpdateRisk {
+                    url: "https://bug.example.com/show_bug.cgi?id=example".to_string(),
+                    name: "BrokenUpdates".to_string(),
+                    message: "Updates are broken for this provider".to_string(),
+                    matching_rules: vec![ClusterCondition {
+                        condition_type: "PromQL".to_string(),
+                        promql: PromQLClusterCondition {
+                            promql: "cluster_infrastructure_provider{type=\"CloudProvider\"}"
+                                .to_string(),
+                        },
+                    }],
+                }],
+            };
+            if include_always_condition {
+                ce.risks = vec![ConditionalUpdateRisk {
+                    url: "https://bug.example.com/show_bug.cgi?id=example".to_string(),
+                    name: "AllBrokenUpdates".to_string(),
+                    message: "All Updates are broken".to_string(),
+                    matching_rules: vec![ClusterCondition {
+                        condition_type: "Always".to_string(),
+                        promql: Default::default(),
+                    }],
+                }]
+            }
+            graph.conditional_edges = Some(vec![ce]);
+        }
         if !include_conditional_edge {
             graph.conditional_edges = None;
         }
+
         let v1 = graph.dag.add_node(Release::Concrete(ConcreteRelease {
             version: String::from("1.0.0"),
             payload: String::from("image/1.0.0"),
@@ -1140,7 +1197,7 @@ mod tests {
 
     #[test]
     fn serialize_graph() {
-        let graph = generate_graph(false);
+        let graph = generate_graph(false, false);
         assert_eq!(
             serde_json::to_string(&graph).unwrap(),
             r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]]}"#
@@ -1149,10 +1206,19 @@ mod tests {
 
     #[test]
     fn serialize_graph_with_conditional_edges() {
-        let graph = generate_graph(true);
+        let graph = generate_graph(true, false);
         assert_eq!(
             serde_json::to_string(&graph).unwrap(),
-            r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]],"conditionalEdges":[]}"#
+            r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]],"conditionalEdges":[{"edges":[{"from":"1.0.0","to":"2.0.0"}],"risks":[{"url":"https://bug.example.com/show_bug.cgi?id=example","name":"BrokenUpdates","message":"Updates are broken for this provider","matchingRules":[{"type":"PromQL","promql":{"promql":"cluster_infrastructure_provider{type=\"CloudProvider\"}"}}]}]}]}"#
+        );
+    }
+
+    #[test]
+    fn serialize_graph_with_conditional_edges_always() {
+        let graph = generate_graph(true, true);
+        assert_eq!(
+            serde_json::to_string(&graph).unwrap(),
+            r#"{"nodes":[{"version":"1.0.0","payload":"image/1.0.0","metadata":{}},{"version":"2.0.0","payload":"image/2.0.0","metadata":{}},{"version":"3.0.0","payload":"image/3.0.0","metadata":{}}],"edges":[[0,1],[1,2],[0,2]],"conditionalEdges":[{"edges":[{"from":"1.0.0","to":"2.0.0"}],"risks":[{"url":"https://bug.example.com/show_bug.cgi?id=example","name":"AllBrokenUpdates","message":"All Updates are broken","matchingRules":[{"type":"Always"}]}]}]}"#
         );
     }
 
@@ -1206,7 +1272,7 @@ mod tests {
 
     #[test]
     fn test_graph_eq_true_for_equal_graphs() {
-        assert_eq!(generate_graph(false), generate_graph(false))
+        assert_eq!(generate_graph(false, false), generate_graph(false, false))
     }
 
     #[test]
@@ -1294,10 +1360,10 @@ mod tests {
 
     #[test]
     fn roundtrip_conversion_from_graph_via_plugin_interface() {
-        let graph_plugin_interface: plugins::interface::Graph = generate_graph(false).into();
+        let graph_plugin_interface: plugins::interface::Graph = generate_graph(false, false).into();
         let graph_native_converted: Graph = graph_plugin_interface.into();
 
-        assert_eq!(generate_graph(false), graph_native_converted);
+        assert_eq!(generate_graph(false, false), graph_native_converted);
     }
 
     fn get_test_metadata_fn_mut(key_prefix: &str, key_suffix: &str) -> TestMetadata {

@@ -247,6 +247,7 @@ pub type ParseStream<'a> = &'a ParseBuffer<'a>;
 /// - One of [the `syn::parse*` functions][syn-parse]; or
 /// - A method of the [`Parser`] trait.
 ///
+/// [`parse_macro_input!`]: crate::parse_macro_input!
 /// [syn-parse]: self#the-synparse-functions
 pub struct ParseBuffer<'a> {
     scope: Span,
@@ -1217,7 +1218,6 @@ where
         }
     }
 
-    #[doc(hidden)]
     #[cfg(any(feature = "full", feature = "derive"))]
     fn __parse_scoped(self, scope: Span, tokens: TokenStream) -> Result<Self::Output> {
         let buf = TokenBuffer::new2(tokens);
@@ -1233,7 +1233,6 @@ where
         }
     }
 
-    #[doc(hidden)]
     #[cfg(any(feature = "full", feature = "derive"))]
     fn __parse_stream(self, input: ParseStream) -> Result<Self::Output> {
         self(input)

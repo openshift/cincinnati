@@ -6,11 +6,15 @@ for Rust libraries in [RFC #1105](https://github.com/rust-lang/rfcs/blob/master/
 
 ## Unreleased
 
-None.
+- None.
 
 ### Breaking changes
 
 None.
+
+## 2.0.2 - 2022-06-29
+
+- Don't move the `Value`s being compared in `assert_json_matches`
 
 ## 2.0.1 - 2021-02-14
 

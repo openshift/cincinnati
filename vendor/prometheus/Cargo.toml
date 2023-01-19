@@ -12,15 +12,23 @@
 [package]
 edition = "2018"
 name = "prometheus"
-version = "0.13.0"
-authors = ["overvenus@gmail.com", "siddontang@gmail.com", "vistaswx@gmail.com"]
+version = "0.13.3"
+authors = [
+    "overvenus@gmail.com",
+    "siddontang@gmail.com",
+    "vistaswx@gmail.com",
+]
 description = "Prometheus instrumentation library for Rust applications."
 homepage = "https://github.com/tikv/rust-prometheus"
 documentation = "https://docs.rs/prometheus"
 readme = "README.md"
-keywords = ["prometheus", "metrics"]
+keywords = [
+    "prometheus",
+    "metrics",
+]
 license = "Apache-2.0"
 repository = "https://github.com/tikv/rust-prometheus"
+
 [package.metadata.docs.rs]
 features = ["nightly"]
 
@@ -47,6 +55,7 @@ harness = false
 [[bench]]
 name = "text_encoder"
 harness = false
+
 [dependencies.cfg-if]
 version = "^1.0"
 
@@ -64,7 +73,7 @@ optional = true
 version = "^2.3"
 
 [dependencies.parking_lot]
-version = "^0.11"
+version = "^0.12"
 
 [dependencies.protobuf]
 version = "^2.0"
@@ -77,19 +86,28 @@ optional = true
 
 [dependencies.thiserror]
 version = "^1.0"
+
 [dev-dependencies.criterion]
-version = "0.3"
+version = "0.4"
 
 [dev-dependencies.getopts]
 version = "^0.2"
 
 [dev-dependencies.hyper]
 version = "^0.14"
-features = ["server", "http1", "tcp"]
+features = [
+    "server",
+    "http1",
+    "tcp",
+]
 
 [dev-dependencies.tokio]
 version = "^1.0"
-features = ["macros", "rt-multi-thread"]
+features = [
+    "macros",
+    "rt-multi-thread",
+]
+
 [build-dependencies.protobuf-codegen-pure]
 version = "^2.0"
 optional = true
@@ -98,11 +116,20 @@ optional = true
 default = ["protobuf"]
 gen = ["protobuf-codegen-pure"]
 nightly = ["libc"]
-process = ["libc", "procfs"]
-push = ["reqwest", "libc", "protobuf"]
+process = [
+    "libc",
+    "procfs",
+]
+push = [
+    "reqwest",
+    "libc",
+    "protobuf",
+]
+
 [target."cfg(target_os = \"linux\")".dependencies.procfs]
-version = "^0.10"
+version = "^0.14"
 optional = true
 default-features = false
+
 [badges.travis-ci]
 repository = "pingcap/rust-prometheus"

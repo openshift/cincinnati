@@ -60,7 +60,7 @@ fn different_numeric_types_assume_float() {
     let actual = json!({ "a": { "b": true }, "c": [true, null, 1] });
     let expected = json!({ "a": { "b": true }, "c": [true, null, 1.0] });
     let config = Config::new(CompareMode::Inclusive).numeric_mode(NumericMode::AssumeFloat);
-    assert_json_matches!(&actual, &expected, config.clone());
+    assert_json_matches!(actual, expected, config.clone());
 
     assert_json_matches!(actual, expected, config.compare_mode(CompareMode::Strict))
 }
