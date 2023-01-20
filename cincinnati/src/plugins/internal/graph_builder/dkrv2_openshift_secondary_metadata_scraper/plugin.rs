@@ -1,6 +1,7 @@
 use crate as cincinnati;
 use crate::plugins::internal::dkrv2_openshift_secondary_metadata_scraper::gpg;
 use crate::plugins::internal::release_scrape_dockerv2::registry;
+use commons::{GRAPH_DATA_DIR_PARAM_KEY, SECONDARY_METADATA_PARAM_KEY};
 use reqwest::{Client, ClientBuilder};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -25,9 +26,6 @@ pub static DEFAULT_METADATA_IMAGE_TAG: &str = "latest";
 pub static DEFAULT_SIGNATURE_BASEURL: &str =
     "https://mirror.openshift.com/pub/openshift-v4/signatures/openshift/release/";
 pub static DEFAULT_SIGNATURE_FETCH_TIMEOUT_SECS: u64 = 30;
-
-// Defines the key for placing the data directory path in the IO parameters
-pub static GRAPH_DATA_DIR_PARAM_KEY: &str = "io.openshift.upgrades.secondary_metadata.directory";
 
 /// Plugin settings.
 #[derive(Debug, SmartDefault, Clone, Deserialize)]
@@ -276,7 +274,25 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         })
         .await?;
 
+        let graph_data_dir = data_dir.path().to_path_buf();
         self.update_cache_state(layers, data_dir).await;
+
+        let graph_data_tar_path = self.settings.output_directory.join("graph-data.tar.gz");
+
+        commons::create_tar(
+            graph_data_tar_path.clone().into_boxed_path(),
+            graph_data_dir.into_boxed_path(),
+        )
+        .await
+        .context("creating graph-data tar")?;
+
+        io.parameters.insert(
+            SECONDARY_METADATA_PARAM_KEY.to_string(),
+            graph_data_tar_path
+                .to_str()
+                .ok_or_else(|| format_err!("secondary_metadata path cannot be converted to str"))?
+                .to_string(),
+        );
 
         Ok(io)
     }

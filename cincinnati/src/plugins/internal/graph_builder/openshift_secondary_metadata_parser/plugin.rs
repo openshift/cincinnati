@@ -1,10 +1,10 @@
 use crate as cincinnati;
 
-use self::cincinnati::plugins::internal::graph_builder::github_openshift_secondary_metadata_scraper::plugin::GRAPH_DATA_DIR_PARAM_KEY;
 use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
 
 use crate::conditional_edges::{ConditionalEdge, ConditionalUpdateEdge, ConditionalUpdateRisk};
+use commons::GRAPH_DATA_DIR_PARAM_KEY;
 use std::collections::HashSet;
 use std::path::Path;
 

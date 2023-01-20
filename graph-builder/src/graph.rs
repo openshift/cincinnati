@@ -14,13 +14,14 @@
 
 use crate::built_info;
 use crate::config;
+use actix_files::NamedFile;
 use actix_web::http::header;
 use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::prelude::*;
 use cincinnati::CONTENT_TYPE;
 use commons::metrics::HasRegistry;
 use commons::tracing::get_tracer;
-use commons::{Fallible, GraphError};
+use commons::{Fallible, GraphError, SECONDARY_METADATA_PARAM_KEY};
 use lazy_static;
 use opentelemetry::trace::{mark_span_as_active, Tracer};
 pub use parking_lot::RwLock;
@@ -125,6 +126,22 @@ pub async fn index(
     Ok(resp)
 }
 
+/// Serve Cincinnati graph-data requests.
+pub async fn graph_data(
+    _req: HttpRequest,
+    app_data: actix_web::web::Data<State>,
+) -> Result<NamedFile, GraphError> {
+    let graph_data_path = app_data.secondary_metadata.read().clone();
+    let f = NamedFile::open(graph_data_path);
+    if f.is_err() {
+        return Err(GraphError::FileOpenError(format!(
+            "unable to open {}",
+            f.unwrap_err()
+        )));
+    }
+    Ok(f.unwrap())
+}
+
 #[derive(Clone)]
 pub struct State {
     json: Arc<RwLock<String>>,
@@ -134,6 +151,7 @@ pub struct State {
     ready: Arc<RwLock<bool>>,
     plugins: &'static [BoxedPlugin],
     registry: &'static prometheus::Registry,
+    secondary_metadata: Arc<RwLock<String>>,
 }
 
 impl State {
@@ -145,6 +163,7 @@ impl State {
         ready: Arc<RwLock<bool>>,
         plugins: &'static [BoxedPlugin],
         registry: &'static prometheus::Registry,
+        secondary_metadata: Arc<RwLock<String>>,
     ) -> State {
         State {
             json,
@@ -153,6 +172,7 @@ impl State {
             ready,
             plugins,
             registry,
+            secondary_metadata,
         }
     }
 
@@ -236,6 +256,18 @@ pub fn run(settings: &config::AppSettings, state: &State) -> ! {
                     continue;
                 }
             };
+
+            if internal_io
+                .parameters
+                .contains_key(SECONDARY_METADATA_PARAM_KEY)
+            {
+                let secondary_metadata = internal_io
+                    .parameters
+                    .get(SECONDARY_METADATA_PARAM_KEY)
+                    .unwrap();
+
+                *state.secondary_metadata.write() = secondary_metadata.to_string();
+            }
 
             *state.json.write() = json_graph;
             nodes_count = internal_io.graph.releases_count() as i64;
