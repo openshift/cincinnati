@@ -267,7 +267,7 @@ objects:
         pause_secs = ${GB_PAUSE_SECS}
         address = "${GB_ADDRESS}"
         port = ${GB_PORT}
-        public_port = "${GB_PUBLIC_PORT}"
+        public_port = ${GB_PUBLIC_PORT}
 
         [status]
         address = "${GB_STATUS_ADDRESS}"
