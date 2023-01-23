@@ -62,7 +62,7 @@ objects:
               ports:
                 - name: graph-builder
                   containerPort: ${{GB_PORT}}
-                - name: graph-builder-public
+                - name: gb-public
                   containerPort: ${{GB_PUBLIC_PORT}}
                 - name: status-gb
                   containerPort: ${{GB_STATUS_PORT}}
@@ -196,12 +196,12 @@ objects:
   - apiVersion: v1
     kind: Service
     metadata:
-      name: cincinnati-graph-builder-public
+      name: cincinnati-gb-public
       labels:
         app: cincinnati-graph-builder
     spec:
       ports:
-        - name: graph-builder-public
+        - name: gb-public
           protocol: TCP
           port: ${{GB_PUBLIC_PORT}}
           targetPort: ${{GB_PUBLIC_PORT}}
