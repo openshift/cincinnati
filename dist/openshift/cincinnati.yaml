@@ -243,7 +243,7 @@ objects:
       gb.rust_backtrace: "${RUST_BACKTRACE}"
       pe.address: "0.0.0.0"
       pe.status.address: "0.0.0.0"
-      pe.upstream: "http://localhost:8080/graph"
+      pe.upstream: "http://localhost:8080${GB_PATH_PREFIX}/graph"
       pe.log.verbosity: ${{PE_LOG_VERBOSITY}}
       pe.mandatory_client_parameters: "channel"
       pe.rust_backtrace: "${RUST_BACKTRACE}"
@@ -265,6 +265,7 @@ objects:
         [service]
         scrape_timeout_secs = ${GB_SCRAPE_TIMEOUT_SECS}
         pause_secs = ${GB_PAUSE_SECS}
+        path_prefix = "${GB_PATH_PREFIX}"
         address = "${GB_ADDRESS}"
         port = ${GB_PORT}
         public_port = ${GB_PUBLIC_PORT}
