@@ -10,8 +10,9 @@ use commons::{GRAPH_DATA_DIR_PARAM_KEY, SECONDARY_METADATA_PARAM_KEY};
 use tokio::sync::Mutex as FuturesMutex;
 
 pub static DEFAULT_OUTPUT_WHITELIST: &[&str] = &[
+    "LICENSE",
     "version",
-    "channels/.+\\.ya+ml",
+    "/channels/.+\\.ya+ml",
     "blocked-edges/.+\\.ya+ml",
     "raw/metadata.json",
 ];
