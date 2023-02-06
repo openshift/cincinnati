@@ -190,7 +190,7 @@ impl EdgeAddRemovePlugin {
                     });
 
                     for (from, from_version) in froms {
-                        info!(
+                        debug!(
                             "[{}]: removing previous {} by regex",
                             to_version, from_version
                         );
@@ -216,7 +216,7 @@ impl EdgeAddRemovePlugin {
                     for to_version in to_csv.split(',').map(str::trim) {
                         let to_version = try_annotate_semver_build(graph, to_version, &from)?;
                         if let Some(to) = graph.find_by_version(&to_version) {
-                            info!("[{}]: removing next {}", from_version, to_version);
+                            debug!("[{}]: removing next {}", from_version, to_version);
                             handle_remove_edge!(from, to)
                         } else {
                             warn!(
@@ -264,7 +264,7 @@ impl EdgeAddRemovePlugin {
                         try_annotate_semver_build(graph, from_version, &to)?;
 
                     if let Some(from) = graph.find_by_version(&from_version_annotated) {
-                        info!(
+                        debug!(
                             "[{}]: adding {} {}",
                             &to_version, "previous", &from_version_annotated
                         );
@@ -294,7 +294,7 @@ impl EdgeAddRemovePlugin {
                     let to_version_annotated = try_annotate_semver_build(graph, to_version, &from)?;
 
                     if let Some(to) = graph.find_by_version(&to_version_annotated) {
-                        info!(
+                        debug!(
                             "[{}]: adding {} {}",
                             &from_version, "next", &to_version_annotated
                         );

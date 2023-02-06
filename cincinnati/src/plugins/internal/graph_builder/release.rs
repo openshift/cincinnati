@@ -18,7 +18,7 @@ use self::cincinnati::MapImpl;
 
 use commons::prelude_errors::*;
 use itertools::Itertools;
-use log::{trace, warn};
+use log::{debug, trace, warn};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -104,7 +104,7 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, Error> 
                     let previous = match graph.find_by_version(&version.to_string()) {
                         Some(id) => id,
                         None => {
-                            warn!("Adding abstract release for {}", version.to_string());
+                            debug!("Adding abstract release for {}", version.to_string());
                             graph.add_release(cincinnati::Release::Abstract(
                                 cincinnati::AbstractRelease {
                                     version: version.to_string(),
@@ -134,7 +134,7 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, Error> 
                     let next = match graph.find_by_version(&version.to_string()) {
                         Some(id) => id,
                         None => {
-                            warn!("Adding abstract release for {}", version.to_string());
+                            debug!("Adding abstract release for {}", version.to_string());
                             graph.add_release(cincinnati::Release::Abstract(
                                 cincinnati::AbstractRelease {
                                     version: version.to_string(),
