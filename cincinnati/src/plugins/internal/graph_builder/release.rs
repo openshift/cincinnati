@@ -116,7 +116,7 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, Error> 
                     if let Err(e) = graph.add_edge(&previous, &current) {
                         if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeAlreadyExists>()
                         {
-                            warn!("{}", eae);
+                            debug!("{}", eae);
                         } else {
                             return Err(e);
                         }
@@ -146,7 +146,7 @@ pub fn create_graph(releases: Vec<Release>) -> Result<cincinnati::Graph, Error> 
                     if let Err(e) = graph.add_edge(&current, &next) {
                         if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeAlreadyExists>()
                         {
-                            warn!("{:?}", eae);
+                            debug!("{:?}", eae);
                         } else {
                             return Err(e);
                         }

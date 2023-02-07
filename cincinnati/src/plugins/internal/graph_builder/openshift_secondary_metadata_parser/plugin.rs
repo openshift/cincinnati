@@ -480,11 +480,11 @@ impl OpenshiftSecondaryMetadataParserPlugin {
                                         blocked_edge.from.to_string(),
                                     );
                                 }
-                                Err(e) => warn!("{}", e),
+                                Err(e) => debug!("{}", e),
                             };
                         }
                         None => {
-                            info!("Release with version {} not found in graph", to);
+                            debug!("Release with version {} not found in graph", to);
                         }
                     };
                 });
@@ -597,7 +597,7 @@ impl OpenshiftSecondaryMetadataParserPlugin {
                     )) {
                     Ok(metadata) => metadata,
                     Err(e) => {
-                        warn!("{}", e);
+                        debug!("{}", e);
                         continue;
                     }
                 };

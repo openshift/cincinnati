@@ -99,7 +99,7 @@ impl EdgeAddRemovePlugin {
             ($from:ident, $to:ident) => {
                 if let Err(e) = graph.remove_edge(&$from, &$to) {
                     if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeDoesntExist>() {
-                        warn!("{}", eae);
+                        debug!("{}", eae);
                         continue;
                     };
                     bail!(e)
@@ -240,7 +240,7 @@ impl EdgeAddRemovePlugin {
             ($direction:expr, $from:ident, $to:ident, $from_string:ident, $to_string:ident) => {
                 if let Err(e) = graph.add_edge(&$from, &$to) {
                     if let Some(eae) = e.downcast_ref::<cincinnati::errors::EdgeAlreadyExists>() {
-                        warn!("{}", eae);
+                        debug!("{}", eae);
                         continue;
                     };
                     bail!(e);
