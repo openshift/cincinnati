@@ -71,7 +71,7 @@ async fn main() -> Result<(), Error> {
         .filter(Some(module_path!()), settings.verbosity)
         .filter(Some("cincinnati"), settings.verbosity)
         .init();
-    debug!("application settings:\n{:#?}", &settings);
+    info!("application settings:\n{:#?}", &settings);
 
     // Metrics service.
     let registry: &'static Registry = Box::leak(Box::new(metrics::new_registry(Some(
@@ -182,7 +182,7 @@ async fn main() -> Result<(), Error> {
         ))
         .to_http_request();
 
-    debug!("waiting for the application to be ready");
+    info!("waiting for the application to be ready");
 
     // wait for the application to be initialized and the cache refreshed.
     while *state.ready.read() == false {
@@ -195,7 +195,7 @@ async fn main() -> Result<(), Error> {
         let status =
             resp.unwrap_or_else(|err| HttpResponse::InternalServerError().body(err.to_string()));
         if status.status().is_success() {
-            debug!("application is ready");
+            info!("application is ready");
             *state.ready.write() = true;
         }
     }
