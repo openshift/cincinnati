@@ -223,7 +223,7 @@ pub fn run(settings: &config::AppSettings, state: &State) -> ! {
             thread::sleep(settings.pause_secs);
         }
 
-        debug!("graph update triggered");
+        info!("graph update triggered");
         let scrape_timer = UPSTREAM_SCRAPES_DURATION.start_timer();
 
         let scrape = cincinnati::plugins::process_blocking(
@@ -287,6 +287,6 @@ pub fn run(settings: &config::AppSettings, state: &State) -> ! {
         GRAPH_LAST_SUCCESSFUL_REFRESH.set(chrono::Utc::now().timestamp() as i64);
 
         GRAPH_FINAL_RELEASES.set(nodes_count);
-        debug!("graph update completed, {} valid releases", nodes_count);
+        info!("graph update completed, {} valid releases", nodes_count);
     }
 }
