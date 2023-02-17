@@ -18,7 +18,7 @@ use self::cincinnati::MapImpl;
 
 use commons::prelude_errors::*;
 use itertools::Itertools;
-use log::{debug, trace, warn};
+use log::{debug, trace};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::fmt;

@@ -1,4 +1,5 @@
 use crate as cincinnati;
+use std::any::TypeId;
 
 use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
@@ -195,13 +196,18 @@ pub async fn deserialize_directory_files<T>(
     disallowed_errors: &HashSet<DeserializeDirectoryFilesErrorDiscriminants>,
 ) -> Fallible<Vec<T>>
 where
-    T: DeserializeOwned,
+    T: DeserializeOwned + 'static,
 {
     use futures::Stream;
     use std::sync::Arc;
     use std::sync::Mutex;
     use tokio_stream::wrappers::ReadDirStream;
     use tokio_stream::StreamExt;
+
+    let mut is_conditional_edge = false;
+    if TypeId::of::<T>() == TypeId::of::<graph_data_model::ConditionalEdgeYaml>() {
+        is_conditional_edge = true;
+    }
 
     // Even though we don't use concurrent threads, the usage of async forces us
     // to guarantee that the error container is thread-safe
@@ -281,8 +287,22 @@ where
             Ok(yaml) => match serde_yaml::from_slice(&yaml) {
                 Ok(value) => t_vec.push(value),
                 Err(e) => {
-                    warn!("Failed to deserialize file at {:?}: {}", &path, e);
-                    commit_error!(error, DeserializeDirectoryFilesError::Deserialize(path, e));
+                    let mut old_block: Option<graph_data_model::BlockedEdge> = None;
+                    if is_conditional_edge {
+                        // conditional-edge file threw error while parsing the file but matched
+                        // blocked-edge, so not committing error. It'll be considered as blocked-edge
+                        // till we're able to parse conditional-edge file without errors.
+                        // we'll throw an error if the file is not able to match blocked-edge
+                        // as well as conditional-edge
+                        old_block = match serde_yaml::from_slice(&yaml) {
+                            Ok(value) => value,
+                            Err(_e) => None,
+                        };
+                    }
+                    if old_block.is_none() {
+                        warn!("Failed to deserialize file at {:?}: {}", &path, e);
+                        commit_error!(error, DeserializeDirectoryFilesError::Deserialize(path, e));
+                    }
                 }
             },
             Err(e) => {
