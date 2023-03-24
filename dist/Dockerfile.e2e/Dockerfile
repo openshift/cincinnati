@@ -1,15 +1,15 @@
-FROM registry.centos.org/centos/centos:7 as rust_builder
+FROM quay.io/centos/centos:stream9 as rust_builder
 
 # base: EPEL repo for extra tools
-RUN yum -y install epel-release
+RUN dnf -y install epel-release
 
 # build: system utilities and libraries
-RUN yum update -y && \
-    yum -y groupinstall 'Development Tools' && \
-    yum -y install gcc openssl-devel protobuf-compiler jq skopeo buildah libgit2 && \
-    yum -y install yamllint && \
-    yum -y install cmake elfutils-libelf-devel libcurl-devel binutils-devel elfutils-devel && \
-    yum clean all
+RUN dnf update -y && \
+    dnf -y groupinstall 'Development Tools' && \
+    dnf -y install gcc openssl-devel jq skopeo buildah libgit2 && \
+    dnf -y install yamllint && \
+    dnf -y install cmake elfutils-libelf-devel libcurl-devel binutils-devel elfutils-devel && \
+    dnf clean all
 
 ENV HOME="/root"
 ENV PATH="${HOME}/.cargo/bin:${PATH}"
@@ -23,13 +23,15 @@ RUN \
   find $HOME/. -type d -exec chmod 777 {} \; && \
   find $HOME/. -type f -exec chmod ugo+rw {} \;
 
-
+WORKDIR /opt/app-root/src/
+COPY . .
+COPY .git .git
 RUN hack/build_e2e.sh
 
-FROM registry.ci.openshift.org/openshift/release:golang-1.13 AS golang_builder
+FROM registry.ci.openshift.org/openshift/release:golang-1.18 AS golang_builder
 RUN curl -L https://github.com/tsenart/vegeta/releases/download/v12.8.4/vegeta_12.8.4_linux_amd64.tar.gz| tar xvzf - -C /usr/local/bin/ vegeta
 
-FROM registry.centos.org/centos/centos:7
+FROM quay.io/centos/centos:stream9
 
 ENV HOME="/root"
 
