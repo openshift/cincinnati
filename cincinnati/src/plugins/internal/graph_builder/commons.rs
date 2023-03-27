@@ -4,7 +4,6 @@ pub mod tests {
 
     use crate as cincinnati;
 
-    use cincinnati::plugins::internal::graph_builder::release;
     use cincinnati::plugins::internal::graph_builder::release_scrape_dockerv2::registry;
 
     fn init_logger() {

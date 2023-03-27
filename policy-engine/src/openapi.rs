@@ -162,6 +162,7 @@ mod tests {
             mandatory_params: mandatory_params.clone(),
             path_prefix: path_prefix.clone(),
             plugins: Box::leak(Box::new([])),
+            ..Default::default()
         });
         let resource =
             actix_web::web::resource(service_uri).route(actix_web::web::get().to(super::index));
