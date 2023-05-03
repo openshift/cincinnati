@@ -1,14 +1,10 @@
-FROM registry.centos.org/centos/centos:7 as builder
+FROM registry.access.redhat.com/ubi8:latest as builder
 
-# base: EPEL repo for extra tools
-RUN yum -y install epel-release
 
 # build: system utilities and libraries
 RUN yum update -y && \
-    yum -y groupinstall 'Development Tools' && \
-    yum -y install gcc openssl-devel protobuf-compiler jq skopeo buildah libgit2 && \
-    yum -y install yamllint && \
-    yum -y install cmake elfutils-libelf-devel libcurl-devel binutils-devel elfutils-devel && \
+    yum -y install gcc openssl-devel && \
+    yum -y install cmake libcurl-devel && \
     yum clean all
 
 ENV HOME="/root"
@@ -34,12 +30,12 @@ RUN cargo build --release && \
     cp -rvf $HOME/target/release/graph-builder /opt/cincinnati/bin && \
     cp -rvf $HOME/target/release/policy-engine /opt/cincinnati/bin
 
-FROM registry.centos.org/centos/centos:7
+FROM registry.access.redhat.com/ubi8:latest
 
 ENV RUST_LOG=actix_web=error,dkregistry=error
 
 RUN yum update -y && \
-    yum install -y openssl libgit2 && \
+    yum install -y openssl && \
     yum clean all
 
 COPY --from=builder /opt/cincinnati/bin/* /usr/bin/
