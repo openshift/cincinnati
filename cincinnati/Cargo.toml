@@ -33,7 +33,7 @@ flate2 = "^1.0.25"
 tar = "^0.4.38"
 dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "abb58c140fba8bebae3d20ea4290c52147468e27" }
 itertools = "^0.10"
-serde_yaml = "^0.8.23"
+serde_yaml = "^0.8.26"
 prettydiff = { version = "0.6", optional = true }
 opentelemetry = "0.14.0"
 strum = "^0.24"
