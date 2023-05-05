@@ -211,8 +211,17 @@ mod tests {
         let registry: &'static Registry = Box::leak(Box::new(
             metrics::new_registry(Some(config::METRICS_PREFIX.to_string())).unwrap(),
         ));
+        let secondary_metadata = Arc::new(RwLock::new(String::new()));
 
-        State::new(json_graph, HashSet::new(), live, ready, plugins, registry)
+        State::new(
+            json_graph,
+            HashSet::new(),
+            live,
+            ready,
+            plugins,
+            registry,
+            secondary_metadata,
+        )
     }
 
     #[test]

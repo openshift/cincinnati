@@ -262,6 +262,22 @@ impl AppState {
     }
 }
 
+impl Default for AppState {
+    fn default() -> Self {
+        let registry: &'static Registry = Box::leak(Box::new(
+            metrics::new_registry(Some(METRICS_PREFIX.to_string())).unwrap(),
+        ));
+        AppState {
+            mandatory_params: Default::default(),
+            path_prefix: Default::default(),
+            plugins: Default::default(),
+            live: Default::default(),
+            ready: Default::default(),
+            registry,
+        }
+    }
+}
+
 impl HasRegistry for AppState {
     fn registry(&self) -> &'static Registry {
         self.registry
