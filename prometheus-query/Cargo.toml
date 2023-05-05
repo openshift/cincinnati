@@ -3,7 +3,7 @@ name = "prometheus-query"
 version = "0.0.0-dev"
 authors = ["Stefan Junker <mail@stefanjunker.de>"]
 publish = false
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 commons = { path = "../commons" }
