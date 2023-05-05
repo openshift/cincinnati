@@ -643,7 +643,7 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f346b6890a0dfa7266974910e7df2d5088120dd54721b9b0e5aae1ae5e05715"
 dependencies = [
- "cargo-lock",
+ "cargo-lock 7.1.0",
  "git2",
 ]
 
@@ -710,9 +710,21 @@ checksum = "3a4f925191b4367301851c6d99b09890311d74b0d43f274c0b34c86d308a3663"
 
 [[package]]
 name = "cargo-lock"
-version = "7.0.1"
+version = "7.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fb04b88bd5b2036e30704f95c6ee16f3b5ca3b4ca307da2889d9006648e5c88"
+checksum = "6c408da54db4c50d4693f7e649c299bc9de9c23ead86249e5368830bb32a734b"
+dependencies = [
+ "semver 1.0.3",
+ "serde",
+ "toml",
+ "url",
+]
+
+[[package]]
+name = "cargo-lock"
+version = "8.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "031718ddb8f78aa5def78a09e90defe30151d1f6c672f937af4dd916429ed996"
 dependencies = [
  "semver 1.0.3",
  "serde",
@@ -3039,7 +3051,7 @@ name = "rh-manifest-generator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cargo-lock",
+ "cargo-lock 8.0.3",
  "lazy_static",
  "reqwest",
  "serde",
