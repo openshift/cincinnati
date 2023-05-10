@@ -14,11 +14,11 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use tokio::sync::Mutex as FuturesMutex;
 
 pub static DEFAULT_OUTPUT_ALLOWLIST: &[&str] = &[
-    "LICENSE",
-    "/channels/.+\\.ya+ml",
-    "blocked-edges/.+\\.ya+ml",
-    "raw/metadata.json",
-    "version",
+    "/LICENSE$",
+    "/channels/.+\\.ya+ml$",
+    "/blocked-edges/.+\\.ya+ml$",
+    "/raw/metadata.json$",
+    "/version$",
 ];
 
 pub static DEFAULT_METADATA_IMAGE_REGISTRY: &str = "";
