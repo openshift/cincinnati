@@ -20,6 +20,9 @@ pub struct FileOptions {
 
     /// Status service options.
     pub status: Option<options::StatusOptions>,
+
+    /// Signatures service options
+    pub signatures: Option<options::SignaturesOptions>,
 }
 
 impl FileOptions {
@@ -52,6 +55,7 @@ impl MergeOptions<Option<FileOptions>> for AppSettings {
             assign_if_some!(self.verbosity, file.verbosity);
             self.try_merge(file.service)?;
             self.try_merge(file.status)?;
+            self.try_merge(file.signatures)?;
         }
         Ok(())
     }

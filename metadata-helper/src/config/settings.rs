@@ -7,7 +7,6 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::time::Duration;
 use structopt::StructOpt;
 
-
 /// Runtime application settings (validated config).
 #[derive(CustomDebug, SmartDefault)]
 pub struct AppSettings {
@@ -18,21 +17,21 @@ pub struct AppSettings {
     /// Listening address for the main service.
     #[default(IpAddr::V4(Ipv4Addr::LOCALHOST))]
     pub address: IpAddr,
-
     /// Listening port for the main service.
     #[default(9081)]
     pub port: u16,
+    /// Endpoints namespace for the main service.
+    pub path_prefix: String,
 
     /// Listening address for the status service.
     #[default(IpAddr::V4(Ipv4Addr::LOCALHOST))]
     pub status_address: IpAddr,
-
     /// Listening port for the status service.
     #[default(9091)]
     pub status_port: u16,
 
-    /// Endpoints namespace for the main service.
-    pub path_prefix: String,
+    /// directory to store signatures
+    pub signatures_dir: String,
 
     /// Jaeger host and port for tracing support
     pub tracing_endpoint: Option<String>,
@@ -86,5 +85,4 @@ impl AppSettings {
 
         Ok(self)
     }
-
 }

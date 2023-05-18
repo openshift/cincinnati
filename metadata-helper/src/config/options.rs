@@ -28,6 +28,23 @@ impl MergeOptions<Option<StatusOptions>> for AppSettings {
     }
 }
 
+// Options for Signatures Service
+#[derive(Debug, Deserialize, Serialize, StructOpt)]
+pub struct SignaturesOptions {
+    /// directory where the sigatures are stored
+    #[structopt(name = "signatures_dir", long = "signatures.dir")]
+    pub dir: Option<String>,
+}
+
+impl MergeOptions<Option<SignaturesOptions>> for AppSettings {
+    fn try_merge(&mut self, opts: Option<SignaturesOptions>) -> Fallible<()> {
+        if let Some(signatures) = opts {
+            assign_if_some!(self.signatures_dir, signatures.dir);
+        }
+        Ok(())
+    }
+}
+
 /// Options for the main Cincinnati service.
 #[derive(Debug, Deserialize, Serialize, StructOpt)]
 pub struct ServiceOptions {

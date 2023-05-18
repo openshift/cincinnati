@@ -81,6 +81,10 @@ pub enum GraphError {
     /// Failed to open a file
     #[error("failed to open file: {}", _0)]
     FileOpenError(String),
+
+    /// Resource does not exist
+    #[error("does not exist: {}", _0)]
+    DoesNotExist(String),
 }
 
 impl actix_web::error::ResponseError for GraphError {
@@ -124,6 +128,7 @@ impl GraphError {
             GraphError::InvalidParams(_) => http::StatusCode::BAD_REQUEST,
             GraphError::ArchVersionError(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
             GraphError::FileOpenError(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
+            GraphError::DoesNotExist(_) => http::StatusCode::NOT_FOUND,
         }
     }
 
@@ -140,6 +145,7 @@ impl GraphError {
             GraphError::InvalidParams(_) => "invalid_params",
             GraphError::ArchVersionError(_) => "arch_version_error",
             GraphError::FileOpenError(_) => "file_open_err",
+            GraphError::DoesNotExist(_) => "does_not_exist",
         };
         kind.to_string()
     }

@@ -29,9 +29,12 @@ use actix_service::Service;
 use actix_web::http::StatusCode;
 use actix_web::{http, middleware, App, HttpRequest, HttpResponse, HttpServer};
 use cincinnati::plugins::BoxedPlugin;
-use commons::metrics::{self, HasRegistry};
 use commons::prelude_errors::*;
 use commons::tracing::{get_tracer, init_tracer, set_span_tags};
+use commons::{
+    format_request,
+    metrics::{self, HasRegistry},
+};
 use futures::future;
 use opentelemetry::{
     trace::{mark_span_as_active, FutureExt, Tracer},
@@ -209,7 +212,7 @@ async fn main() -> Result<(), Error> {
 async fn default_response(req: HttpRequest) -> HttpResponse {
     error!(
         "Error serving request '{}' from '{}': Incorrect Endpoint",
-        graph::format_request(&req),
+        format_request(&req),
         req.peer_addr()
             .map(|addr| addr.to_string())
             .unwrap_or_else(|| "<not available>".into())

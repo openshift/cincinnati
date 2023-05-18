@@ -29,8 +29,8 @@ extern crate structopt;
 extern crate custom_debug_derive;
 
 mod config;
-mod status;
 mod signatures;
+mod status;
 
 use actix_cors::Cors;
 use actix_service::Service;
@@ -51,7 +51,6 @@ use std::sync::Arc;
 /// Common prefix for metadata-helper metrics.
 pub static METRICS_PREFIX: &str = "metadata-helper";
 
-
 #[allow(dead_code)]
 /// Build info
 mod built_info {
@@ -71,7 +70,6 @@ lazy_static! {
 
 #[actix_web::main]
 async fn main() -> Result<(), Error> {
-
     let settings = config::AppSettings::assemble()?;
     env_logger::Builder::from_default_env()
         .filter(Some(module_path!()), settings.verbosity)
@@ -85,20 +83,30 @@ async fn main() -> Result<(), Error> {
     ))?));
     registry.register(Box::new(BUILD_INFO.clone()))?;
 
+    let mut signatures_dir = settings.signatures_dir.clone();
+    if signatures_dir.is_empty() {
+        // create a temp data directory to store signatures.
+        // creating an empty temp dir instead of "" as we dont want to read
+        // system or other user files (for security purpose).
+        let temp_dir = tempfile::tempdir().expect("failed to create tempdir");
+        signatures_dir = temp_dir.as_ref().to_str().unwrap().to_string();
+        info!(
+            "signatures data directory not provided, using {}",
+            signatures_dir
+        );
+    }
+
     // Shared state.
     let state = {
         let path_prefix = settings.path_prefix.clone();
         let live = Arc::new(RwLock::new(false));
         let ready = Arc::new(RwLock::new(false));
+        let signatures_dir = signatures_dir;
 
-        AppState::new(
-            path_prefix,
-            live,
-            ready,
-            registry,
-        )
+        AppState::new(path_prefix, live, ready, registry, signatures_dir)
     };
 
+    signatures::register_metrics(state.registry())?;
     let metric_state = state.clone();
     let metrics_server = HttpServer::new(move || {
         App::new()
@@ -120,7 +128,6 @@ async fn main() -> Result<(), Error> {
     .bind((settings.status_address, settings.status_port))?
     .run();
 
-
     // Enable tracing
     init_tracer(METRICS_PREFIX, settings.tracing_endpoint.clone())?;
     let main_state = state.clone();
@@ -141,9 +148,12 @@ async fn main() -> Result<(), Error> {
             )
             .app_data(actix_web::web::Data::<AppState>::new(main_state.clone()))
             .service(
-                // keeping this for backward compatibility
-                actix_web::web::resource(&format!("{}/signatures", app_prefix))
-                    .route(actix_web::web::get().to(status::serve_readiness)),
+                actix_web::web::resource(&format!(
+                    "{}{}",
+                    &format!("{}/signatures", app_prefix),
+                    "/{ALGO}/{DIGEST}/{SIGNATURE}"
+                ))
+                .route(actix_web::web::get().to(signatures::index)),
             )
             .default_service(actix_web::web::route().to(default_response))
     })
@@ -164,18 +174,17 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-
 // log errors in case an incorrect endpoint is called
 async fn default_response(req: HttpRequest) -> HttpResponse {
     error!(
-        "Error serving request from '{}': Incorrect Endpoint",
+        "Error serving request from '{}': Incorrect Endpoint {}",
         req.peer_addr()
             .map(|addr| addr.to_string())
-            .unwrap_or_else(|| "<not available>".into())
+            .unwrap_or_else(|| "<not available>".into()),
+        req.path()
     );
     HttpResponse::new(StatusCode::NOT_FOUND)
 }
-
 
 /// Shared application configuration (cloned per-thread).
 #[derive(Clone, Debug)]
@@ -185,8 +194,9 @@ pub struct AppState {
     live: Arc<RwLock<bool>>,
     ready: Arc<RwLock<bool>>,
     registry: &'static Registry,
+    /// path where the signatures are stored on the file system
+    signatures_dir: String,
 }
-
 
 impl AppState {
     /// Creates a new State with the given arguments
@@ -195,12 +205,14 @@ impl AppState {
         live: Arc<RwLock<bool>>,
         ready: Arc<RwLock<bool>>,
         registry: &'static Registry,
+        signatures_dir: String,
     ) -> AppState {
         AppState {
             path_prefix,
             live,
             ready,
             registry,
+            signatures_dir,
         }
     }
 
