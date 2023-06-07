@@ -13,7 +13,7 @@ actix-files = "^0.6.2"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
 env_logger = "^0.9"
-flate2 = "^1.0.25"
+flate2 = "^1.0.26"
 futures = "0.3"
 itertools = "^0.10"
 lazy_static = "^1.2.0"
