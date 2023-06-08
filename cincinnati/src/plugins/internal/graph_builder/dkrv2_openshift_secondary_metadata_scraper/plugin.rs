@@ -13,7 +13,7 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 
 use tokio::sync::Mutex as FuturesMutex;
 
-pub static DEFAULT_OUTPUT_WHITELIST: &[&str] = &[
+pub static DEFAULT_OUTPUT_ALLOWLIST: &[&str] = &[
     "LICENSE",
     "/channels/.+\\.ya+ml",
     "blocked-edges/.+\\.ya+ml",
@@ -37,7 +37,7 @@ pub struct DkrV2OpenshiftSecondaryMetadataScraperSettings {
 
     /// Vector of regular expressions used as a positive output filter.
     /// An empty vector is regarded as a configuration error.
-    #[default(DEFAULT_OUTPUT_WHITELIST.iter().map(|s| (*s).to_string()).collect())]
+    #[default(DEFAULT_OUTPUT_ALLOWLIST.iter().map(|s| (*s).to_string()).collect())]
     output_allowlist: Vec<String>,
 
     /// The image registry.
@@ -445,7 +445,7 @@ mod network_tests {
                 signature_baseurl = {:?}
                 public_keys_path = {:?}
             "#,
-            DEFAULT_OUTPUT_WHITELIST
+            DEFAULT_OUTPUT_ALLOWLIST
                 .iter()
                 .map(|s| format!(r#"{:?}"#, s))
                 .collect::<Vec<_>>()
@@ -474,7 +474,7 @@ mod network_tests {
             })
             .await??;
 
-            let regexes = DEFAULT_OUTPUT_WHITELIST
+            let regexes = DEFAULT_OUTPUT_ALLOWLIST
                 .iter()
                 .map(|s| regex::Regex::new(s).unwrap())
                 .collect::<Vec<regex::Regex>>();
