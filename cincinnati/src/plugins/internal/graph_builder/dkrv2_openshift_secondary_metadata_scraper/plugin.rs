@@ -13,12 +13,12 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 
 use tokio::sync::Mutex as FuturesMutex;
 
-pub static DEFAULT_OUTPUT_WHITELIST: &[&str] = &[
-    "LICENSE",
-    "/channels/.+\\.ya+ml",
-    "blocked-edges/.+\\.ya+ml",
-    "raw/metadata.json",
-    "version",
+pub static DEFAULT_OUTPUT_ALLOWLIST: &[&str] = &[
+    "/LICENSE$",
+    "/channels/.+\\.ya+ml$",
+    "/blocked-edges/.+\\.ya+ml$",
+    "/raw/metadata.json$",
+    "/version$",
 ];
 
 pub static DEFAULT_METADATA_IMAGE_REGISTRY: &str = "";
@@ -37,7 +37,7 @@ pub struct DkrV2OpenshiftSecondaryMetadataScraperSettings {
 
     /// Vector of regular expressions used as a positive output filter.
     /// An empty vector is regarded as a configuration error.
-    #[default(DEFAULT_OUTPUT_WHITELIST.iter().map(|s| (*s).to_string()).collect())]
+    #[default(DEFAULT_OUTPUT_ALLOWLIST.iter().map(|s| (*s).to_string()).collect())]
     output_allowlist: Vec<String>,
 
     /// The image registry.
@@ -269,7 +269,6 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         let data_dir = tokio::task::block_in_place(|| async {
             let data_dir = self.create_data_dir(&mut io)?;
             self.unpack_layers(layers_blobs.as_slice(), &data_dir)?;
-            self.remove_disallowed_files(&data_dir)?;
 
             Result::<_, Error>::Ok(data_dir)
         })
@@ -346,7 +345,15 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         P: AsRef<Path>,
         P: std::fmt::Debug,
     {
-        dkregistry::render::unpack(layers_blobs, data_dir.as_ref())?;
+        let filter = |path: &Path| {
+            if let Some(path_str) = path.to_str() {
+                self.output_allowlist.iter().any(|re| re.is_match(path_str))
+            } else {
+                false
+            }
+        };
+
+        dkregistry::render::filter_unpack(layers_blobs, data_dir.as_ref(), filter)?;
         trace!(
             "Unpacked {}/{} with {} layers to {:?}",
             self.settings.registry,
@@ -356,46 +363,6 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         );
 
         Ok(())
-    }
-
-    fn remove_disallowed_files<P>(&self, data_dir: P) -> Fallible<()>
-    where
-        P: AsRef<Path>,
-        P: Copy,
-    {
-        walkdir::WalkDir::new(data_dir)
-            .into_iter()
-            .collect::<Vec<_>>()
-            .into_iter()
-            // start removing files from the leave and walk back to the root
-            .rev()
-            .try_for_each(|entry_result| -> Fallible<()> {
-                let entry = entry_result?;
-                let path = entry.path();
-                let path_stripped = path.strip_prefix(&data_dir)?;
-                if let Some(path_stripped_str) = path_stripped.to_str() {
-                    if !path_stripped_str.is_empty()
-                        && !self
-                            .output_allowlist
-                            .iter()
-                            .any(|re| re.is_match(path_stripped_str))
-                    {
-                        let ty = entry.file_type();
-                        if ty.is_file() || ty.is_symlink() {
-                            trace!("removing file at '{}'", &path_stripped_str);
-                            std::fs::remove_file(path)?;
-                        } else if ty.is_dir() {
-                            let readdir = std::fs::read_dir(path)?;
-                            if readdir.count() == 0 {
-                                trace!("removing empty directory at '{}'", &path_stripped_str);
-                                std::fs::remove_dir(path)?;
-                            }
-                        }
-                    }
-                }
-
-                Ok(())
-            })
     }
 
     async fn update_cache_state(&self, layers: Vec<String>, data_dir: TempDir) {
@@ -445,7 +412,7 @@ mod network_tests {
                 signature_baseurl = {:?}
                 public_keys_path = {:?}
             "#,
-            DEFAULT_OUTPUT_WHITELIST
+            DEFAULT_OUTPUT_ALLOWLIST
                 .iter()
                 .map(|s| format!(r#"{:?}"#, s))
                 .collect::<Vec<_>>()
@@ -474,7 +441,7 @@ mod network_tests {
             })
             .await??;
 
-            let regexes = DEFAULT_OUTPUT_WHITELIST
+            let regexes = DEFAULT_OUTPUT_ALLOWLIST
                 .iter()
                 .map(|s| regex::Regex::new(s).unwrap())
                 .collect::<Vec<regex::Regex>>();

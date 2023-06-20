@@ -9,7 +9,7 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use commons::{GRAPH_DATA_DIR_PARAM_KEY, SECONDARY_METADATA_PARAM_KEY};
 use tokio::sync::Mutex as FuturesMutex;
 
-pub static DEFAULT_OUTPUT_WHITELIST: &[&str] = &[
+pub static DEFAULT_OUTPUT_ALLOWLIST: &[&str] = &[
     "LICENSE",
     "version",
     "/channels/.+\\.ya+ml",
@@ -87,7 +87,7 @@ pub struct GithubOpenshiftSecondaryMetadataScraperSettings {
 
     /// Vector of regular expressions used as a positive output filter.
     /// An empty vector is regarded as a configuration error.
-    #[default(DEFAULT_OUTPUT_WHITELIST.iter().map(|s| (*s).to_string()).collect())]
+    #[default(DEFAULT_OUTPUT_ALLOWLIST.iter().map(|s| (*s).to_string()).collect())]
     output_allowlist: Vec<String>,
     oauth_token_path: Option<PathBuf>,
 }
@@ -518,7 +518,7 @@ mod network_tests {
                     output_directory = {:?}
                     oauth_token_path = {:?}
                 "#,
-                DEFAULT_OUTPUT_WHITELIST
+                DEFAULT_OUTPUT_ALLOWLIST
                     .iter()
                     .map(|s| format!(r#"{:?}"#, s))
                     .collect::<Vec<_>>()
@@ -540,7 +540,7 @@ mod network_tests {
                 },
             )))?;
 
-            let regexes = DEFAULT_OUTPUT_WHITELIST
+            let regexes = DEFAULT_OUTPUT_ALLOWLIST
                 .iter()
                 .map(|s| regex::Regex::new(s).unwrap())
                 .collect::<Vec<regex::Regex>>();

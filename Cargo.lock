@@ -1284,7 +1284,7 @@ dependencies = [
 [[package]]
 name = "dkregistry"
 version = "0.5.1-alpha.0"
-source = "git+https://github.com/camallo/dkregistry-rs.git?rev=abb58c140fba8bebae3d20ea4290c52147468e27#abb58c140fba8bebae3d20ea4290c52147468e27"
+source = "git+https://github.com/camallo/dkregistry-rs.git?rev=6c4ac7700f8870e58aaa5a906a28e65cdf254d58#6c4ac7700f8870e58aaa5a906a28e65cdf254d58"
 dependencies = [
  "async-stream",
  "base64 0.13.0",
