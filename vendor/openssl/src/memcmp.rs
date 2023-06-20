@@ -12,7 +12,7 @@
 //!
 //! # Examples
 //!
-//! To perform a constant-time comparision of two arrays of the same length but different
+//! To perform a constant-time comparison of two arrays of the same length but different
 //! values:
 //!
 //! ```
@@ -30,6 +30,7 @@
 //! assert!(!eq(&a, &c));
 //! ```
 use libc::size_t;
+use openssl_macros::corresponds;
 
 /// Returns `true` iff `a` and `b` contain the same bytes.
 ///
@@ -43,7 +44,7 @@ use libc::size_t;
 ///
 /// # Examples
 ///
-/// To perform a constant-time comparision of two arrays of the same length but different
+/// To perform a constant-time comparison of two arrays of the same length but different
 /// values:
 ///
 /// ```
@@ -60,6 +61,7 @@ use libc::size_t;
 /// assert!(!eq(&a, &b));
 /// assert!(!eq(&a, &c));
 /// ```
+#[corresponds(CRYPTO_memcmp)]
 pub fn eq(a: &[u8], b: &[u8]) -> bool {
     assert!(a.len() == b.len());
     let ret = unsafe {

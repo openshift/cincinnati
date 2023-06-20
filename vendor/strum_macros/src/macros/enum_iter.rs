@@ -66,6 +66,10 @@ pub fn enum_iter_inner(ast: &DeriveInput) -> syn::Result<TokenStream> {
 
     Ok(quote! {
         #[doc = "An iterator over the variants of [Self]"]
+        #[allow(
+            missing_copy_implementations,
+            missing_debug_implementations,
+        )]
         #vis struct #iter_name #ty_generics {
             idx: usize,
             back_idx: usize,
@@ -110,7 +114,7 @@ pub fn enum_iter_inner(ast: &DeriveInput) -> syn::Result<TokenStream> {
                     // so that it doesn't overflow if the user calls this repeatedly.
                     // See PR #76 for context.
                     self.idx = #variant_count;
-                    None
+                    ::core::option::Option::None
                 } else {
                     self.idx = idx;
                     self.get(idx - 1)
@@ -133,7 +137,7 @@ pub fn enum_iter_inner(ast: &DeriveInput) -> syn::Result<TokenStream> {
                     // so that it doesn't overflow if the user calls this repeatedly.
                     // See PR #76 for context.
                     self.back_idx = #variant_count;
-                    None
+                    ::core::option::Option::None
                 } else {
                     self.back_idx = back_idx;
                     self.get(#variant_count - self.back_idx)

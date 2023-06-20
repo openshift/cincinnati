@@ -4,7 +4,7 @@ replace-with = "vendored-sources"
 
 [source."https://github.com/camallo/dkregistry-rs.git"]
 git = "https://github.com/camallo/dkregistry-rs.git"
-rev = "37acecb4b8139dd1b1cc83795442f94f90e1ffc5"
+rev = "abb58c140fba8bebae3d20ea4290c52147468e27"
 replace-with = "vendored-sources"
 
 [source.vendored-sources]

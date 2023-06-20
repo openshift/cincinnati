@@ -1053,7 +1053,7 @@ impl NaiveDate {
         let year = self.year();
         let (mut year_div_400, year_mod_400) = div_mod_floor(year, 400);
         let cycle = internals::yo_to_cycle(year_mod_400 as u32, self.of().ordinal());
-        let cycle = try_opt!((cycle as i32).checked_add(try_opt!(rhs.num_days().to_i32())));
+        let cycle = (cycle as i32).checked_add(rhs.num_days().to_i32()?)?;
         let (cycle_div_400y, cycle) = div_mod_floor(cycle, 146_097);
         year_div_400 += cycle_div_400y;
 
@@ -1084,7 +1084,7 @@ impl NaiveDate {
         let year = self.year();
         let (mut year_div_400, year_mod_400) = div_mod_floor(year, 400);
         let cycle = internals::yo_to_cycle(year_mod_400 as u32, self.of().ordinal());
-        let cycle = try_opt!((cycle as i32).checked_sub(try_opt!(rhs.num_days().to_i32())));
+        let cycle = (cycle as i32).checked_sub(rhs.num_days().to_i32()?)?;
         let (cycle_div_400y, cycle) = div_mod_floor(cycle, 146_097);
         year_div_400 += cycle_div_400y;
 
@@ -1887,7 +1887,7 @@ impl fmt::Debug for NaiveDate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let year = self.year();
         let mdf = self.mdf();
-        if 0 <= year && year <= 9999 {
+        if (0..=9999).contains(&year) {
             write!(f, "{:04}-{:02}-{:02}", year, mdf.month(), mdf.day())
         } else {
             // ISO 8601 requires the explicit sign for out-of-range years

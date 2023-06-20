@@ -50,8 +50,8 @@ impl Client {
     ) -> Result<(TagsChunk, Option<String>)> {
         let url_paginated = match (paginate, link) {
             (Some(p), None) => format!("{}?n={}", base_url, p),
-            (None, Some(l)) => format!("{}?next_page={}", base_url, l),
-            (Some(p), Some(l)) => format!("{}?n={}&next_page={}", base_url, p, l),
+            (None, Some(l)) => format!("{}?{}", base_url, l),
+            (Some(_p), Some(l)) => format!("{}?{}", base_url, l),
             _ => base_url.to_string(),
         };
         let url = Url::parse(&url_paginated)?;
@@ -108,16 +108,9 @@ fn parse_link(hdr: Option<&header::HeaderValue>) -> Option<String> {
 
     // Query parameters for next page URL.
     let uri = sval.trim_end_matches(">; rel=\"next\"");
-    let query: Vec<&str> = uri.splitn(2, "next_page=").collect();
-    let params = match query.get(1) {
-        Some(v) if !v.is_empty() => v,
-        _ => return None,
-    };
-
-    // Last item in current page (pagination parameter).
-    let last: Vec<&str> = params.splitn(2, '&').collect();
-    match last.first().cloned() {
-        Some(v) if !v.is_empty() => Some(v.to_string()),
+    let query: Vec<&str> = uri.splitn(2, "?").collect();
+    match query.get(1) {  //use the entire query param string since some registries have different ways of pagination
+        Some(v) if !v.is_empty() => Some(v.to_string()), 
         _ => None,
     }
 }

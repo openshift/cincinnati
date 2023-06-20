@@ -2,10 +2,12 @@
 use libc::{c_char, c_int};
 
 use std::ffi::CStr;
+use std::ffi::CString;
 use std::str;
 
 use crate::cvt_p;
 use crate::error::ErrorStack;
+use openssl_macros::corresponds;
 
 /// The digest and public-key algorithms associated with a signature.
 pub struct SignatureAlgorithms {
@@ -42,26 +44,44 @@ pub struct SignatureAlgorithms {
 /// The following documentation provides context about `Nid`s and their usage
 /// in OpenSSL.
 ///
-/// - [Obj_nid2obj](https://www.openssl.org/docs/man1.1.0/crypto/OBJ_create.html)
+/// - [Obj_nid2obj](https://www.openssl.org/docs/manmaster/crypto/OBJ_create.html)
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Nid(c_int);
 
 #[allow(non_snake_case)]
 impl Nid {
     /// Create a `Nid` from an integer representation.
-    pub fn from_raw(raw: c_int) -> Nid {
+    pub const fn from_raw(raw: c_int) -> Nid {
         Nid(raw)
     }
 
     /// Return the integer representation of a `Nid`.
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn as_raw(&self) -> c_int {
+    pub const fn as_raw(&self) -> c_int {
         self.0
+    }
+
+    /// Creates a new `Nid` for the `oid` with short name `sn` and long name `ln`.
+    #[corresponds(OBJ_create)]
+    pub fn create(oid: &str, sn: &str, ln: &str) -> Result<Nid, ErrorStack> {
+        unsafe {
+            ffi::init();
+            let oid = CString::new(oid).unwrap();
+            let sn = CString::new(sn).unwrap();
+            let ln = CString::new(ln).unwrap();
+            let raw = ffi::OBJ_create(oid.as_ptr(), sn.as_ptr(), ln.as_ptr());
+            if raw == ffi::NID_undef {
+                Err(ErrorStack::get())
+            } else {
+                Ok(Nid(raw))
+            }
+        }
     }
 
     /// Returns the `Nid`s of the digest and public key algorithms associated with a signature ID.
     ///
     /// This corresponds to `OBJ_find_sigid_algs`.
+    #[corresponds(OBJ_find_sigid_algs)]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn signature_algorithms(&self) -> Option<SignatureAlgorithms> {
         unsafe {
@@ -78,10 +98,8 @@ impl Nid {
         }
     }
 
-    /// Return the string representation of a `Nid` (long)
-    /// This corresponds to [`OBJ_nid2ln`]
-    ///
-    /// [`OBJ_nid2ln`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_nid2ln.html
+    /// Returns the string representation of a `Nid` (long).
+    #[corresponds(OBJ_nid2ln)]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn long_name(&self) -> Result<&'static str, ErrorStack> {
         unsafe {
@@ -90,10 +108,8 @@ impl Nid {
         }
     }
 
-    /// Return the string representation of a `Nid` (short)
-    /// This corresponds to [`OBJ_nid2sn`]
-    ///
-    /// [`OBJ_nid2sn`]: https://www.openssl.org/docs/man1.1.0/crypto/OBJ_nid2sn.html
+    /// Returns the string representation of a `Nid` (short).
+    #[corresponds(OBJ_nid2sn)]
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn short_name(&self) -> Result<&'static str, ErrorStack> {
         unsafe {
@@ -104,9 +120,11 @@ impl Nid {
 
     pub const UNDEF: Nid = Nid(ffi::NID_undef);
     pub const ITU_T: Nid = Nid(ffi::NID_itu_t);
+    #[cfg(not(boringssl))]
     pub const CCITT: Nid = Nid(ffi::NID_ccitt);
     pub const ISO: Nid = Nid(ffi::NID_iso);
     pub const JOINT_ISO_ITU_T: Nid = Nid(ffi::NID_joint_iso_itu_t);
+    #[cfg(not(boringssl))]
     pub const JOINT_ISO_CCITT: Nid = Nid(ffi::NID_joint_iso_ccitt);
     pub const MEMBER_BODY: Nid = Nid(ffi::NID_member_body);
     pub const IDENTIFIED_ORGANIZATION: Nid = Nid(ffi::NID_identified_organization);
@@ -197,6 +215,12 @@ impl Nid {
     pub const SECT409R1: Nid = Nid(ffi::NID_sect409r1);
     pub const SECT571K1: Nid = Nid(ffi::NID_sect571k1);
     pub const SECT571R1: Nid = Nid(ffi::NID_sect571r1);
+    #[cfg(ossl110)]
+    pub const BRAINPOOL_P256R1: Nid = Nid(ffi::NID_brainpoolP256r1);
+    #[cfg(ossl110)]
+    pub const BRAINPOOL_P384R1: Nid = Nid(ffi::NID_brainpoolP384r1);
+    #[cfg(ossl110)]
+    pub const BRAINPOOL_P512R1: Nid = Nid(ffi::NID_brainpoolP512r1);
     pub const WAP_WSG_IDM_ECID_WTLS1: Nid = Nid(ffi::NID_wap_wsg_idm_ecid_wtls1);
     pub const WAP_WSG_IDM_ECID_WTLS3: Nid = Nid(ffi::NID_wap_wsg_idm_ecid_wtls3);
     pub const WAP_WSG_IDM_ECID_WTLS4: Nid = Nid(ffi::NID_wap_wsg_idm_ecid_wtls4);
@@ -1050,6 +1074,20 @@ impl Nid {
     pub const AES_128_CBC_HMAC_SHA1: Nid = Nid(ffi::NID_aes_128_cbc_hmac_sha1);
     pub const AES_192_CBC_HMAC_SHA1: Nid = Nid(ffi::NID_aes_192_cbc_hmac_sha1);
     pub const AES_256_CBC_HMAC_SHA1: Nid = Nid(ffi::NID_aes_256_cbc_hmac_sha1);
+    #[cfg(any(ossl111, libressl291))]
+    pub const SM3: Nid = Nid(ffi::NID_sm3);
+    #[cfg(ossl111)]
+    pub const SHA3_224: Nid = Nid(ffi::NID_sha3_224);
+    #[cfg(ossl111)]
+    pub const SHA3_256: Nid = Nid(ffi::NID_sha3_256);
+    #[cfg(ossl111)]
+    pub const SHA3_384: Nid = Nid(ffi::NID_sha3_384);
+    #[cfg(ossl111)]
+    pub const SHA3_512: Nid = Nid(ffi::NID_sha3_512);
+    #[cfg(ossl111)]
+    pub const SHAKE128: Nid = Nid(ffi::NID_shake128);
+    #[cfg(ossl111)]
+    pub const SHAKE256: Nid = Nid(ffi::NID_shake256);
 }
 
 #[cfg(test)]
@@ -1119,5 +1157,21 @@ mod test {
             undefined_nid.short_name().is_err(),
             "undefined_nid should not return a valid value"
         );
+    }
+
+    #[test]
+    fn test_create() {
+        let nid = Nid::create("1.2.3.4", "foo", "foobar").unwrap();
+        assert_eq!(nid.short_name().unwrap(), "foo");
+        assert_eq!(nid.long_name().unwrap(), "foobar");
+
+        // Due to a bug in OpenSSL 3.1.0, this test crashes on Windows
+        if !cfg!(ossl310) {
+            let invalid_oid = Nid::create("invalid_oid", "invalid", "invalid");
+            assert!(
+                invalid_oid.is_err(),
+                "invalid_oid should not return a valid value"
+            );
+        }
     }
 }

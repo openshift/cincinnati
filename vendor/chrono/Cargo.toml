@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "chrono"
-version = "0.4.20"
+version = "0.4.21"
 exclude = [
     "/ci/*",
     "/.travis.yml",
@@ -111,6 +111,7 @@ alloc = []
 clock = [
     "std",
     "winapi",
+    "iana-time-zone",
 ]
 default = [
     "clock",
@@ -134,6 +135,10 @@ version = "0.2"
 
 [target."cfg(all(target_arch = \"wasm32\", not(any(target_os = \"emscripten\", target_os = \"wasi\"))))".dev-dependencies.wasm-bindgen-test]
 version = "0.3"
+
+[target."cfg(not(any(target_os = \"emscripten\", target_os = \"wasi\", target_os = \"solaris\")))".dependencies.iana-time-zone]
+version = "0.1.41"
+optional = true
 
 [target."cfg(windows)".dependencies.winapi]
 version = "0.3.0"

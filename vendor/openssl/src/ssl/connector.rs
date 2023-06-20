@@ -4,11 +4,14 @@ use std::ops::{Deref, DerefMut};
 
 use crate::dh::Dh;
 use crate::error::ErrorStack;
+#[cfg(any(ossl111, libressl340))]
+use crate::ssl::SslVersion;
 use crate::ssl::{
     HandshakeError, Ssl, SslContext, SslContextBuilder, SslContextRef, SslMethod, SslMode,
     SslOptions, SslRef, SslStream, SslVerifyMode,
 };
 use crate::version;
+use std::net::IpAddr;
 
 const FFDHE_2048: &str = "
 -----BEGIN DH PARAMETERS-----
@@ -25,15 +28,19 @@ ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
 fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
     let mut ctx = SslContextBuilder::new(method)?;
 
-    let mut opts = SslOptions::ALL
-        | SslOptions::NO_COMPRESSION
-        | SslOptions::NO_SSLV2
-        | SslOptions::NO_SSLV3
-        | SslOptions::SINGLE_DH_USE
-        | SslOptions::SINGLE_ECDH_USE;
-    opts &= !SslOptions::DONT_INSERT_EMPTY_FRAGMENTS;
+    cfg_if! {
+        if #[cfg(not(boringssl))] {
+            let mut opts = SslOptions::ALL
+                | SslOptions::NO_COMPRESSION
+                | SslOptions::NO_SSLV2
+                | SslOptions::NO_SSLV3
+                | SslOptions::SINGLE_DH_USE
+                | SslOptions::SINGLE_ECDH_USE;
+            opts &= !SslOptions::DONT_INSERT_EMPTY_FRAGMENTS;
 
-    ctx.set_options(opts);
+            ctx.set_options(opts);
+        }
+    }
 
     let mut mode =
         SslMode::AUTO_RETRY | SslMode::ACCEPT_MOVING_WRITE_BUFFER | SslMode::ENABLE_PARTIAL_WRITE;
@@ -55,7 +62,7 @@ fn ctx(method: SslMethod) -> Result<SslContextBuilder, ErrorStack> {
 /// OpenSSL's default configuration is highly insecure. This connector manages the OpenSSL
 /// structures, configuring cipher suites, session options, hostname verification, and more.
 ///
-/// OpenSSL's built in hostname verification is used when linking against OpenSSL 1.0.2 or 1.1.0,
+/// OpenSSL's built-in hostname verification is used when linking against OpenSSL 1.0.2 or 1.1.0,
 /// and a custom implementation is used when linking against OpenSSL 1.0.1.
 #[derive(Clone, Debug)]
 pub struct SslConnector(SslContext);
@@ -101,7 +108,7 @@ impl SslConnector {
 
     /// Returns a shared reference to the inner raw `SslContext`.
     pub fn context(&self) -> &SslContextRef {
-        &*self.0
+        &self.0
     }
 }
 
@@ -171,9 +178,9 @@ impl ConnectConfiguration {
 
     /// Returns an `Ssl` configured to connect to the provided domain.
     ///
-    /// The domain is used for SNI and hostname verification if enabled.
+    /// The domain is used for SNI (if it is not an IP address) and hostname verification if enabled.
     pub fn into_ssl(mut self, domain: &str) -> Result<Ssl, ErrorStack> {
-        if self.sni {
+        if self.sni && domain.parse::<IpAddr>().is_err() {
             self.ssl.set_hostname(domain)?;
         }
 
@@ -235,7 +242,7 @@ impl SslAcceptor {
              ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
              DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"
         )?;
-        #[cfg(ossl111)]
+        #[cfg(any(ossl111, libressl340))]
         ctx.set_ciphersuites(
             "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256",
         )?;
@@ -247,13 +254,13 @@ impl SslAcceptor {
     /// This corresponds to the modern configuration of version 5 of Mozilla's server side TLS recommendations.
     /// See its [documentation][docs] for more details on specifics.
     ///
-    /// Requires OpenSSL 1.1.1 or newer.
+    /// Requires OpenSSL 1.1.1 or LibreSSL 3.4.0 or newer.
     ///
     /// [docs]: https://wiki.mozilla.org/Security/Server_Side_TLS
-    #[cfg(ossl111)]
+    #[cfg(any(ossl111, libressl340))]
     pub fn mozilla_modern_v5(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
-        ctx.set_options(SslOptions::NO_SSL_MASK & !SslOptions::NO_TLSV1_3);
+        ctx.set_min_proto_version(Some(SslVersion::TLS1_3))?;
         ctx.set_ciphersuites(
             "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256",
         )?;
@@ -271,7 +278,7 @@ impl SslAcceptor {
     pub fn mozilla_intermediate(method: SslMethod) -> Result<SslAcceptorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
         ctx.set_options(SslOptions::CIPHER_SERVER_PREFERENCE);
-        #[cfg(ossl111)]
+        #[cfg(any(ossl111, libressl340))]
         ctx.set_options(SslOptions::NO_TLSV1_3);
         let dh = Dh::params_from_pem(FFDHE_2048.as_bytes())?;
         ctx.set_tmp_dh(&dh)?;
@@ -301,7 +308,7 @@ impl SslAcceptor {
         ctx.set_options(
             SslOptions::CIPHER_SERVER_PREFERENCE | SslOptions::NO_TLSV1 | SslOptions::NO_TLSV1_1,
         );
-        #[cfg(ossl111)]
+        #[cfg(any(ossl111, libressl340))]
         ctx.set_options(SslOptions::NO_TLSV1_3);
         setup_curves(&mut ctx)?;
         ctx.set_cipher_list(
@@ -328,7 +335,7 @@ impl SslAcceptor {
 
     /// Returns a shared reference to the inner raw `SslContext`.
     pub fn context(&self) -> &SslContextRef {
-        &*self.0
+        &self.0
     }
 }
 

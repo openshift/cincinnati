@@ -1,6 +1,11 @@
-#![allow(clippy::inconsistent_digit_grouping, clippy::unusual_byte_groupings)]
+#![allow(
+    clippy::inconsistent_digit_grouping,
+    clippy::uninlined_format_args,
+    clippy::unusual_byte_groupings
+)]
 
-extern crate autocfg;
+#[cfg(feature = "bindgen")]
+extern crate bindgen;
 extern crate cc;
 #[cfg(feature = "vendored")]
 extern crate openssl_src;
@@ -12,17 +17,20 @@ use std::collections::HashSet;
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-
 mod cfgs;
 
 mod find_normal;
 #[cfg(feature = "vendored")]
 mod find_vendored;
+mod run_bindgen;
 
+#[derive(PartialEq)]
 enum Version {
+    Openssl3xx,
     Openssl11x,
     Openssl10x,
     Libressl,
+    Boringssl,
 }
 
 fn env_inner(name: &str) -> Option<OsString> {
@@ -38,12 +46,12 @@ fn env_inner(name: &str) -> Option<OsString> {
 }
 
 fn env(name: &str) -> Option<OsString> {
-    let prefix = env::var("TARGET").unwrap().to_uppercase().replace("-", "_");
+    let prefix = env::var("TARGET").unwrap().to_uppercase().replace('-', "_");
     let prefixed = format!("{}_{}", prefix, name);
     env_inner(&prefixed).or_else(|| env_inner(name))
 }
 
-fn find_openssl(target: &str) -> (PathBuf, PathBuf) {
+fn find_openssl(target: &str) -> (Vec<PathBuf>, PathBuf) {
     #[cfg(feature = "vendored")]
     {
         // vendor if the feature is present, unless
@@ -55,18 +63,24 @@ fn find_openssl(target: &str) -> (PathBuf, PathBuf) {
     find_normal::get_openssl(target)
 }
 
+fn check_ssl_kind() {
+    if cfg!(feature = "unstable_boringssl") {
+        println!("cargo:rustc-cfg=boringssl");
+        println!("cargo:boringssl=true");
+        // BoringSSL does not have any build logic, exit early
+        std::process::exit(0);
+    }
+}
+
 fn main() {
-    check_rustc_versions();
+    check_ssl_kind();
 
     let target = env::var("TARGET").unwrap();
 
-    let (lib_dir, include_dir) = find_openssl(&target);
+    let (lib_dirs, include_dir) = find_openssl(&target);
 
-    if !Path::new(&lib_dir).exists() {
-        panic!(
-            "OpenSSL library directory does not exist: {}",
-            lib_dir.to_string_lossy()
-        );
+    if !lib_dirs.iter().all(|p| Path::new(p).exists()) {
+        panic!("OpenSSL library directory does not exist: {:?}", lib_dirs);
     }
     if !Path::new(&include_dir).exists() {
         panic!(
@@ -75,17 +89,19 @@ fn main() {
         );
     }
 
-    println!(
-        "cargo:rustc-link-search=native={}",
-        lib_dir.to_string_lossy()
-    );
+    for lib_dir in lib_dirs.iter() {
+        println!(
+            "cargo:rustc-link-search=native={}",
+            lib_dir.to_string_lossy()
+        );
+    }
     println!("cargo:include={}", include_dir.to_string_lossy());
 
-    let version = validate_headers(&[include_dir]);
+    let version = postprocess(&[include_dir]);
 
     let libs_env = env("OPENSSL_LIBS");
     let libs = match libs_env.as_ref().and_then(|s| s.to_str()) {
-        Some(ref v) => {
+        Some(v) => {
             if v.is_empty() {
                 vec![]
             } else {
@@ -94,12 +110,14 @@ fn main() {
         }
         None => match version {
             Version::Openssl10x if target.contains("windows") => vec!["ssleay32", "libeay32"],
-            Version::Openssl11x if target.contains("windows-msvc") => vec!["libssl", "libcrypto"],
+            Version::Openssl3xx | Version::Openssl11x if target.contains("windows-msvc") => {
+                vec!["libssl", "libcrypto"]
+            }
             _ => vec!["ssl", "crypto"],
         },
     };
 
-    let kind = determine_mode(Path::new(&lib_dir), &libs);
+    let kind = determine_mode(&lib_dirs, &libs);
     for lib in libs.into_iter() {
         println!("cargo:rustc-link-lib={}={}", kind, lib);
     }
@@ -113,20 +131,25 @@ fn main() {
     }
 }
 
-fn check_rustc_versions() {
-    let cfg = autocfg::new();
+#[allow(clippy::let_and_return)]
+fn postprocess(include_dirs: &[PathBuf]) -> Version {
+    let version = validate_headers(include_dirs);
 
-    if cfg.probe_rustc_version(1, 31) {
-        println!("cargo:rustc-cfg=const_fn");
+    // Never run bindgen for BoringSSL, if it was needed we already ran it.
+    if version != Version::Boringssl {
+        #[cfg(feature = "bindgen")]
+        run_bindgen::run(&include_dirs);
     }
+
+    version
 }
 
 /// Validates the header files found in `include_dir` and then returns the
 /// version string of OpenSSL.
 #[allow(clippy::manual_strip)] // we need to support pre-1.45.0
 fn validate_headers(include_dirs: &[PathBuf]) -> Version {
-    // This `*-sys` crate only works with OpenSSL 1.0.1, 1.0.2, and 1.1.0. To
-    // correctly expose the right API from this crate, take a look at
+    // This `*-sys` crate only works with OpenSSL 1.0.1, 1.0.2, 1.1.0, 1.1.1 and 3.0.0.
+    // To correctly expose the right API from this crate, take a look at
     // `opensslv.h` to see what version OpenSSL claims to be.
     //
     // OpenSSL has a number of build-time configuration options which affect
@@ -137,6 +160,7 @@ fn validate_headers(include_dirs: &[PathBuf]) -> Version {
     // file of OpenSSL, `opensslconf.h`, and then dump out everything it defines
     // as our own #[cfg] directives. That way the `ossl10x.rs` bindings can
     // account for compile differences and such.
+    println!("cargo:rerun-if-changed=build/expando.c");
     let mut gcc = cc::Build::new();
     for include_dir in include_dirs {
         gcc.include(include_dir);
@@ -161,10 +185,12 @@ specific to your distribution:
     sudo pacman -S openssl
     # On Fedora
     sudo dnf install openssl-devel
+    # On Alpine Linux
+    apk add openssl-dev
 
-See rust-openssl README for more information:
+See rust-openssl documentation for more information:
 
-    https://github.com/sfackler/rust-openssl#linux
+    https://docs.rs/openssl
 ",
                 e
             );
@@ -175,22 +201,40 @@ See rust-openssl README for more information:
     let mut enabled = vec![];
     let mut openssl_version = None;
     let mut libressl_version = None;
+    let mut is_boringssl = false;
     for line in expanded.lines() {
         let line = line.trim();
 
         let openssl_prefix = "RUST_VERSION_OPENSSL_";
+        let new_openssl_prefix = "RUST_VERSION_NEW_OPENSSL_";
         let libressl_prefix = "RUST_VERSION_LIBRESSL_";
+        let boringsl_prefix = "RUST_OPENSSL_IS_BORINGSSL";
         let conf_prefix = "RUST_CONF_";
         if line.starts_with(openssl_prefix) {
             let version = &line[openssl_prefix.len()..];
             openssl_version = Some(parse_version(version));
+        } else if line.starts_with(new_openssl_prefix) {
+            let version = &line[new_openssl_prefix.len()..];
+            openssl_version = Some(parse_new_version(version));
         } else if line.starts_with(libressl_prefix) {
             let version = &line[libressl_prefix.len()..];
             libressl_version = Some(parse_version(version));
         } else if line.starts_with(conf_prefix) {
             enabled.push(&line[conf_prefix.len()..]);
+        } else if line.starts_with(boringsl_prefix) {
+            is_boringssl = true;
         }
     }
+
+    if is_boringssl {
+        println!("cargo:rustc-cfg=boringssl");
+        println!("cargo:boringssl=true");
+        run_bindgen::run_boringssl(include_dirs);
+        return Version::Boringssl;
+    }
+
+    // We set this for any non-BoringSSL lib.
+    println!("cargo:rustc-cfg=openssl");
 
     for enabled in &enabled {
         println!("cargo:rustc-cfg=osslconf=\"{}\"", enabled);
@@ -233,6 +277,14 @@ See rust-openssl README for more information:
             (3, 3, 0) => ('3', '3', '0'),
             (3, 3, 1) => ('3', '3', '1'),
             (3, 3, _) => ('3', '3', 'x'),
+            (3, 4, 0) => ('3', '4', '0'),
+            (3, 4, _) => ('3', '4', 'x'),
+            (3, 5, _) => ('3', '5', 'x'),
+            (3, 6, 0) => ('3', '6', '0'),
+            (3, 6, _) => ('3', '6', 'x'),
+            (3, 7, 0) => ('3', '7', '0'),
+            (3, 7, 1) => ('3', '7', '1'),
+            (3, 7, _) => ('3', '7', 'x'),
             _ => version_error(),
         };
 
@@ -244,8 +296,10 @@ See rust-openssl README for more information:
         let openssl_version = openssl_version.unwrap();
         println!("cargo:version_number={:x}", openssl_version);
 
-        if openssl_version >= 0x1_01_02_00_0 {
+        if openssl_version >= 0x4_00_00_00_0 {
             version_error()
+        } else if openssl_version >= 0x3_00_00_00_0 {
+            Version::Openssl3xx
         } else if openssl_version >= 0x1_01_01_00_0 {
             println!("cargo:version=111");
             Version::Openssl11x
@@ -272,8 +326,8 @@ fn version_error() -> ! {
     panic!(
         "
 
-This crate is only compatible with OpenSSL 1.0.1 through 1.1.1, or LibreSSL 2.5
-through 3.3.x, but a different version of OpenSSL was found. The build is now aborting
+This crate is only compatible with OpenSSL (version 1.0.1 through 1.1.1, or 3.0.0), or LibreSSL 2.5
+through 3.7.x, but a different version of OpenSSL was found. The build is now aborting
 due to this version mismatch.
 
 "
@@ -297,10 +351,21 @@ fn parse_version(version: &str) -> u64 {
     u64::from_str_radix(version, 16).unwrap()
 }
 
+// parses a string that looks like 3_0_0
+fn parse_new_version(version: &str) -> u64 {
+    println!("version: {}", version);
+    let mut it = version.split('_');
+    let major = it.next().unwrap().parse::<u64>().unwrap();
+    let minor = it.next().unwrap().parse::<u64>().unwrap();
+    let patch = it.next().unwrap().parse::<u64>().unwrap();
+
+    (major << 28) | (minor << 20) | (patch << 4)
+}
+
 /// Given a libdir for OpenSSL (where artifacts are located) as well as the name
 /// of the libraries we're linking to, figure out whether we should link them
 /// statically or dynamically.
-fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
+fn determine_mode(libdirs: &[PathBuf], libs: &[&str]) -> &'static str {
     // First see if a mode was explicitly requested
     let kind = env("OPENSSL_STATIC");
     match kind.as_ref().and_then(|s| s.to_str()) {
@@ -311,13 +376,18 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
 
     // Next, see what files we actually have to link against, and see what our
     // possibilities even are.
-    let files = libdir
-        .read_dir()
-        .unwrap()
-        .map(|e| e.unwrap())
-        .map(|e| e.file_name())
-        .filter_map(|e| e.into_string().ok())
-        .collect::<HashSet<_>>();
+    let mut files = HashSet::new();
+    for dir in libdirs {
+        for path in dir
+            .read_dir()
+            .unwrap()
+            .map(|e| e.unwrap())
+            .map(|e| e.file_name())
+            .filter_map(|e| e.into_string().ok())
+        {
+            files.insert(path);
+        }
+    }
     let can_static = libs
         .iter()
         .all(|l| files.contains(&format!("lib{}.a", l)) || files.contains(&format!("{}.lib", l)));
@@ -331,9 +401,9 @@ fn determine_mode(libdir: &Path, libs: &[&str]) -> &'static str {
         (false, true) => return "dylib",
         (false, false) => {
             panic!(
-                "OpenSSL libdir at `{}` does not contain the required files \
+                "OpenSSL libdir at `{:?}` does not contain the required files \
                  to either statically or dynamically link OpenSSL",
-                libdir.display()
+                libdirs
             );
         }
         (true, true) => {}

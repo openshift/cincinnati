@@ -15,14 +15,22 @@
 //!     Err(e) => println!("Parsing Error: {:?}", e),
 //! }
 //! ```
-use libc::{c_char, c_int, c_ulong};
+use cfg_if::cfg_if;
+use libc::{c_char, c_int};
 use std::borrow::Cow;
+#[cfg(boringssl)]
+use std::convert::TryInto;
 use std::error;
 use std::ffi::CStr;
 use std::fmt;
 use std::io;
 use std::ptr;
 use std::str;
+
+#[cfg(not(boringssl))]
+type ErrType = libc::c_ulong;
+#[cfg(boringssl)]
+type ErrType = libc::c_uint;
 
 /// Collection of [`Error`]s from OpenSSL.
 ///
@@ -90,9 +98,10 @@ impl From<ErrorStack> for fmt::Error {
 /// An error reported from OpenSSL.
 #[derive(Clone)]
 pub struct Error {
-    code: c_ulong,
-    file: *const c_char,
+    code: ErrType,
+    file: ShimStr,
     line: c_int,
+    func: Option<ShimStr>,
     data: Option<Cow<'static, str>>,
 }
 
@@ -107,9 +116,10 @@ impl Error {
 
             let mut file = ptr::null();
             let mut line = 0;
+            let mut func = ptr::null();
             let mut data = ptr::null();
             let mut flags = 0;
-            match ffi::ERR_get_error_line_data(&mut file, &mut line, &mut data, &mut flags) {
+            match ERR_get_error_all(&mut file, &mut line, &mut func, &mut data, &mut flags) {
                 0 => None,
                 code => {
                     // The memory referenced by data is only valid until that slot is overwritten
@@ -117,19 +127,32 @@ impl Error {
                     let data = if flags & ffi::ERR_TXT_STRING != 0 {
                         let bytes = CStr::from_ptr(data as *const _).to_bytes();
                         let data = str::from_utf8(bytes).unwrap();
+                        #[cfg(not(boringssl))]
                         let data = if flags & ffi::ERR_TXT_MALLOCED != 0 {
                             Cow::Owned(data.to_string())
                         } else {
                             Cow::Borrowed(data)
                         };
+                        #[cfg(boringssl)]
+                        let data = Cow::Borrowed(data);
                         Some(data)
                     } else {
                         None
                     };
+
+                    let file = ShimStr::new(file);
+
+                    let func = if func.is_null() {
+                        None
+                    } else {
+                        Some(ShimStr::new(func))
+                    };
+
                     Some(Error {
                         code,
                         file,
                         line,
+                        func,
                         data,
                     })
                 }
@@ -139,14 +162,9 @@ impl Error {
 
     /// Pushes the error back onto the OpenSSL error stack.
     pub fn put(&self) {
+        self.put_error();
+
         unsafe {
-            ffi::ERR_put_error(
-                ffi::ERR_GET_LIB(self.code),
-                ffi::ERR_GET_FUNC(self.code),
-                ffi::ERR_GET_REASON(self.code),
-                self.file,
-                self.line,
-            );
             let data = match self.data {
                 Some(Cow::Borrowed(data)) => Some((data.as_ptr() as *mut c_char, 0)),
                 Some(Cow::Owned(ref data)) => {
@@ -171,8 +189,38 @@ impl Error {
         }
     }
 
+    #[cfg(ossl300)]
+    fn put_error(&self) {
+        unsafe {
+            ffi::ERR_new();
+            ffi::ERR_set_debug(
+                self.file.as_ptr(),
+                self.line,
+                self.func.as_ref().map_or(ptr::null(), |s| s.as_ptr()),
+            );
+            ffi::ERR_set_error(self.library_code(), self.reason_code(), ptr::null());
+        }
+    }
+
+    #[cfg(not(ossl300))]
+    fn put_error(&self) {
+        #[cfg(not(boringssl))]
+        let line = self.line;
+        #[cfg(boringssl)]
+        let line = self.line.try_into().unwrap();
+        unsafe {
+            ffi::ERR_put_error(
+                self.library_code(),
+                ffi::ERR_GET_FUNC(self.code),
+                self.reason_code(),
+                self.file.as_ptr(),
+                line,
+            );
+        }
+    }
+
     /// Returns the raw OpenSSL error code for this error.
-    pub fn code(&self) -> c_ulong {
+    pub fn code(&self) -> ErrType {
         self.code
     }
 
@@ -188,16 +236,18 @@ impl Error {
         }
     }
 
+    /// Returns the raw OpenSSL error constant for the library reporting the
+    /// error.
+    // On BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
+    // OpenSSL/LibreSSL they're safe.
+    #[allow(unused_unsafe)]
+    pub fn library_code(&self) -> libc::c_int {
+        unsafe { ffi::ERR_GET_LIB(self.code) }
+    }
+
     /// Returns the name of the function reporting the error.
-    pub fn function(&self) -> Option<&'static str> {
-        unsafe {
-            let cstr = ffi::ERR_func_error_string(self.code);
-            if cstr.is_null() {
-                return None;
-            }
-            let bytes = CStr::from_ptr(cstr as *const _).to_bytes();
-            Some(str::from_utf8(bytes).unwrap())
-        }
+    pub fn function(&self) -> Option<RetStr<'_>> {
+        self.func.as_ref().map(|s| s.as_str())
     }
 
     /// Returns the reason for the error.
@@ -212,13 +262,17 @@ impl Error {
         }
     }
 
+    /// Returns the raw OpenSSL error constant for the reason for the error.
+    // On BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
+    // OpenSSL/LibreSSL they're safe.
+    #[allow(unused_unsafe)]
+    pub fn reason_code(&self) -> libc::c_int {
+        unsafe { ffi::ERR_GET_REASON(self.code) }
+    }
+
     /// Returns the name of the source file which encountered the error.
-    pub fn file(&self) -> &'static str {
-        unsafe {
-            assert!(!self.file.is_null());
-            let bytes = CStr::from_ptr(self.file as *const _).to_bytes();
-            str::from_utf8(bytes).unwrap()
-        }
+    pub fn file(&self) -> RetStr<'_> {
+        self.file.as_str()
     }
 
     /// Returns the line in the source file which encountered the error.
@@ -256,19 +310,22 @@ impl fmt::Debug for Error {
 }
 
 impl fmt::Display for Error {
+    // On BoringSSL ERR_GET_{LIB,FUNC,REASON} are `unsafe`, but on
+    // OpenSSL/LibreSSL they're safe.
+    #[allow(unused_unsafe)]
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "error:{:08X}", self.code())?;
         match self.library() {
             Some(l) => write!(fmt, ":{}", l)?,
-            None => write!(fmt, ":lib({})", ffi::ERR_GET_LIB(self.code()))?,
+            None => write!(fmt, ":lib({})", self.library_code())?,
         }
         match self.function() {
             Some(f) => write!(fmt, ":{}", f)?,
-            None => write!(fmt, ":func({})", ffi::ERR_GET_FUNC(self.code()))?,
+            None => write!(fmt, ":func({})", unsafe { ffi::ERR_GET_FUNC(self.code()) })?,
         }
         match self.reason() {
             Some(r) => write!(fmt, ":{}", r)?,
-            None => write!(fmt, ":reason({})", ffi::ERR_GET_REASON(self.code()))?,
+            None => write!(fmt, ":reason({})", self.reason_code())?,
         }
         write!(
             fmt,
@@ -281,3 +338,81 @@ impl fmt::Display for Error {
 }
 
 impl error::Error for Error {}
+
+cfg_if! {
+    if #[cfg(ossl300)] {
+        use std::ffi::{CString};
+        use ffi::ERR_get_error_all;
+
+        type RetStr<'a> = &'a str;
+
+        #[derive(Clone)]
+        struct ShimStr(CString);
+
+        impl ShimStr {
+            unsafe fn new(s: *const c_char) -> Self {
+                ShimStr(CStr::from_ptr(s).to_owned())
+            }
+
+            fn as_ptr(&self) -> *const c_char {
+                self.0.as_ptr()
+            }
+
+            fn as_str(&self) -> &str {
+                self.0.to_str().unwrap()
+            }
+        }
+    } else {
+        #[allow(bad_style)]
+        unsafe extern "C" fn ERR_get_error_all(
+            file: *mut *const c_char,
+            line: *mut c_int,
+            func: *mut *const c_char,
+            data: *mut *const c_char,
+            flags: *mut c_int,
+        ) -> ErrType {
+            let code = ffi::ERR_get_error_line_data(file, line, data, flags);
+            *func = ffi::ERR_func_error_string(code);
+            code
+        }
+
+        type RetStr<'a> = &'static str;
+
+        #[derive(Clone)]
+        struct ShimStr(*const c_char);
+
+        impl ShimStr {
+            unsafe fn new(s: *const c_char) -> Self {
+                ShimStr(s)
+            }
+
+            fn as_ptr(&self) -> *const c_char {
+                self.0
+            }
+
+            fn as_str(&self) -> &'static str {
+                unsafe {
+                    CStr::from_ptr(self.0).to_str().unwrap()
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[cfg(not(ossl310))]
+    use crate::nid::Nid;
+
+    #[test]
+    // Due to a bug in OpenSSL 3.1.0, this test can hang there. Skip for now.
+    #[cfg(not(ossl310))]
+    fn test_error_library_code() {
+        let stack = Nid::create("not-an-oid", "invalid", "invalid").unwrap_err();
+        let errors = stack.errors();
+        #[cfg(not(boringssl))]
+        assert_eq!(errors[0].library_code(), ffi::ERR_LIB_ASN1);
+        #[cfg(boringssl)]
+        assert_eq!(errors[0].library_code(), ffi::ERR_LIB_OBJ as libc::c_int);
+    }
+}
