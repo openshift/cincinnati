@@ -25,6 +25,7 @@ pub mod prelude_errors {
 }
 
 use actix_web::http::header::{HeaderMap, HeaderValue, ACCEPT};
+use actix_web::HttpRequest;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::collections::HashMap;
@@ -182,6 +183,44 @@ pub async fn create_tar(output_path: Box<Path>, data_path: Box<Path>) -> Result<
         return Err(prelude_errors::format_err!("{:?}", tar_status.unwrap_err()));
     }
     Ok(())
+}
+
+/// format the request before logging. Include only details that we need.
+pub fn format_request(req: &HttpRequest) -> String {
+    let no_user_agent = HeaderValue::from_str("user-agent not available").unwrap();
+    let no_accept_type = HeaderValue::from_str("accept value not available").unwrap();
+    let req_type = req.method().as_str();
+    let request = req.path();
+    let query = req.query_string();
+    let user_agent = req
+        .headers()
+        .get("user-agent")
+        .unwrap_or(&no_user_agent)
+        .to_str()
+        .unwrap();
+    let accept_type = req
+        .headers()
+        .get("accept")
+        .unwrap_or(&no_accept_type)
+        .to_str()
+        .unwrap();
+    format!(
+        "Method: '{}', Request: '{}', Query: '{}', User-Agent: '{}', Accept: '{}'",
+        req_type, request, query, user_agent, accept_type
+    )
+}
+
+/// logs api request error
+pub fn api_response_error(req: &HttpRequest, e: GraphError) -> GraphError {
+    log::error!(
+        "Error serving request \"{}\" from '{}': {:?}",
+        format_request(req),
+        req.peer_addr()
+            .map(|addr| addr.to_string())
+            .unwrap_or_else(|| "<not available>".into()),
+        e
+    );
+    e
 }
 
 #[cfg(test)]

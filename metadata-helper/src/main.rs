@@ -1,8 +1,17 @@
-//! Cincinnati backend: policy-engine server.
+// Copyright 2023 Pratik Mahajan
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#![deny(missing_docs)]
-
-#[macro_use]
 extern crate cincinnati;
 #[macro_use]
 extern crate commons;
@@ -20,21 +29,16 @@ extern crate structopt;
 extern crate custom_debug_derive;
 
 mod config;
-mod graph;
-mod openapi;
+mod signatures;
 mod status;
 
 use actix_cors::Cors;
 use actix_service::Service;
 use actix_web::http::StatusCode;
-use actix_web::{http, middleware, App, HttpRequest, HttpResponse, HttpServer};
-use cincinnati::plugins::BoxedPlugin;
+use actix_web::{middleware, App, HttpRequest, HttpResponse, HttpServer};
+use commons::metrics::{self, HasRegistry};
 use commons::prelude_errors::*;
 use commons::tracing::{get_tracer, init_tracer, set_span_tags};
-use commons::{
-    format_request,
-    metrics::{self, HasRegistry},
-};
 use futures::future;
 use opentelemetry::{
     trace::{mark_span_as_active, FutureExt, Tracer},
@@ -42,19 +46,16 @@ use opentelemetry::{
 };
 use parking_lot::RwLock;
 use prometheus::{labels, opts, Counter, Registry};
-use std::collections::HashSet;
 use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
+
+/// Common prefix for metadata-helper metrics.
+pub static METRICS_PREFIX: &str = "metadata-helper";
 
 #[allow(dead_code)]
 /// Build info
 mod built_info {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
-
-/// Common prefix for policy-engine metrics.
-pub static METRICS_PREFIX: &str = "cincinnati_pe";
 
 lazy_static! {
     static ref BUILD_INFO: Counter = Counter::with_opts(opts!(
@@ -82,28 +83,30 @@ async fn main() -> Result<(), Error> {
     ))?));
     registry.register(Box::new(BUILD_INFO.clone()))?;
 
-    // Main service.
-    let plugins = settings.validate_and_build_plugins(Some(registry))?;
+    let mut signatures_dir = settings.signatures_dir.clone();
+    if signatures_dir.is_empty() {
+        // create a temp data directory to store signatures.
+        // creating an empty temp dir instead of "" as we dont want to read
+        // system or other user files (for security purpose).
+        let temp_dir = tempfile::tempdir().expect("failed to create tempdir");
+        signatures_dir = temp_dir.as_ref().to_str().unwrap().to_string();
+        info!(
+            "signatures data directory not provided, using {}",
+            signatures_dir
+        );
+    }
 
     // Shared state.
     let state = {
-        let mandatory_params = settings.mandatory_client_parameters.clone();
         let path_prefix = settings.path_prefix.clone();
-        let plugins = Box::leak(Box::new(plugins));
         let live = Arc::new(RwLock::new(false));
         let ready = Arc::new(RwLock::new(false));
+        let signatures_dir = signatures_dir;
 
-        AppState::new(
-            mandatory_params,
-            path_prefix,
-            plugins,
-            live,
-            ready,
-            registry,
-        )
+        AppState::new(path_prefix, live, ready, registry, signatures_dir)
     };
 
-    graph::register_metrics(state.registry())?;
+    signatures::register_metrics(state.registry())?;
     let metric_state = state.clone();
     let metrics_server = HttpServer::new(move || {
         App::new()
@@ -126,7 +129,7 @@ async fn main() -> Result<(), Error> {
     .run();
 
     // Enable tracing
-    init_tracer("policy-engine", settings.tracing_endpoint.clone())?;
+    init_tracer(METRICS_PREFIX, settings.tracing_endpoint.clone())?;
     let main_state = state.clone();
     let main_server = HttpServer::new(move || {
         let app_prefix = main_state.path_prefix.clone();
@@ -145,21 +148,12 @@ async fn main() -> Result<(), Error> {
             )
             .app_data(actix_web::web::Data::<AppState>::new(main_state.clone()))
             .service(
-                // keeping this for backward compatibility
-                actix_web::web::resource(&format!("{}/v1/graph", app_prefix))
-                    .route(actix_web::web::get().to(graph::index)),
-            )
-            .service(
-                actix_web::web::resource(&format!("{}/graph", app_prefix))
-                    .route(actix_web::web::get().to(graph::index)),
-            )
-            .service(
-                actix_web::web::resource(&format!("{}/openapi", app_prefix))
-                    .route(actix_web::web::get().to(openapi::index)),
-            )
-            .service(
-                actix_web::web::resource(&format!("{}/v1/openapi", app_prefix))
-                    .route(actix_web::web::get().to(openapi::index)),
+                actix_web::web::resource(&format!(
+                    "{}{}",
+                    &format!("{}/signatures", app_prefix),
+                    "/{ALGO}/{DIGEST}/{SIGNATURE}"
+                ))
+                .route(actix_web::web::get().to(signatures::index)),
             )
             .default_service(actix_web::web::route().to(default_response))
     })
@@ -173,35 +167,7 @@ async fn main() -> Result<(), Error> {
 
     // metrics endpoints has started running
     *state.live.write() = true;
-
-    let http_req = actix_web::test::TestRequest::get()
-        .uri(&format!(
-            "{}?channel=stable-4.10",
-            "http://ready.probe/graph"
-        ))
-        .insert_header((
-            http::header::ACCEPT,
-            http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
-        ))
-        .to_http_request();
-
-    info!("waiting for the application to be ready");
-
-    // wait for the application to be initialized and the cache refreshed.
-    while *state.ready.read() == false {
-        thread::sleep(Duration::new(10, 0));
-        let resp = graph::index(
-            http_req.clone(),
-            actix_web::web::Data::<AppState>::new(state.clone()),
-        )
-        .await;
-        let status =
-            resp.unwrap_or_else(|err| HttpResponse::InternalServerError().body(err.to_string()));
-        if status.status().is_success() {
-            info!("application is ready");
-            *state.ready.write() = true;
-        }
-    }
+    *state.ready.write() = true;
 
     BUILD_INFO.inc();
     future::try_join(metrics_server, main_server).await?;
@@ -211,11 +177,11 @@ async fn main() -> Result<(), Error> {
 // log errors in case an incorrect endpoint is called
 async fn default_response(req: HttpRequest) -> HttpResponse {
     error!(
-        "Error serving request '{}' from '{}': Incorrect Endpoint",
-        format_request(&req),
+        "Error serving request from '{}': Incorrect Endpoint {}",
         req.peer_addr()
             .map(|addr| addr.to_string())
-            .unwrap_or_else(|| "<not available>".into())
+            .unwrap_or_else(|| "<not available>".into()),
+        req.path()
     );
     HttpResponse::new(StatusCode::NOT_FOUND)
 }
@@ -223,34 +189,30 @@ async fn default_response(req: HttpRequest) -> HttpResponse {
 /// Shared application configuration (cloned per-thread).
 #[derive(Clone, Debug)]
 pub struct AppState {
-    /// Query parameters that must be present in all client requests.
-    mandatory_params: HashSet<String>,
     /// Upstream cincinnati service.
     path_prefix: String,
-    /// Policy plugins.
-    plugins: &'static [BoxedPlugin],
     live: Arc<RwLock<bool>>,
     ready: Arc<RwLock<bool>>,
     registry: &'static Registry,
+    /// path where the signatures are stored on the file system
+    signatures_dir: String,
 }
 
 impl AppState {
     /// Creates a new State with the given arguments
     pub fn new(
-        mandatory_params: HashSet<String>,
         path_prefix: String,
-        plugins: &'static [BoxedPlugin],
         live: Arc<RwLock<bool>>,
         ready: Arc<RwLock<bool>>,
         registry: &'static Registry,
+        signatures_dir: String,
     ) -> AppState {
         AppState {
-            mandatory_params,
             path_prefix,
-            plugins,
             live,
             ready,
             registry,
+            signatures_dir,
         }
     }
 
@@ -262,22 +224,6 @@ impl AppState {
     /// Returns the boolean inside self.ready
     pub fn is_ready(&self) -> bool {
         *self.ready.read()
-    }
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        let registry: &'static Registry = Box::leak(Box::new(
-            metrics::new_registry(Some(METRICS_PREFIX.to_string())).unwrap(),
-        ));
-        AppState {
-            mandatory_params: Default::default(),
-            path_prefix: Default::default(),
-            plugins: Default::default(),
-            live: Default::default(),
-            ready: Default::default(),
-            registry,
-        }
     }
 }
 

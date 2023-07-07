@@ -8,7 +8,7 @@ use cincinnati::plugins::internal::versioned_graph::VersionedGraph;
 use cincinnati::plugins::{BoxedPlugin, InternalIO};
 use cincinnati::CONTENT_TYPE;
 use commons::tracing::get_tracer;
-use commons::{self, Fallible, GraphError};
+use commons::{self, api_response_error, format_request, Fallible, GraphError};
 use opentelemetry::{
     trace::{mark_span_as_active, FutureExt, Tracer},
     Context as ot_context,
@@ -90,44 +90,6 @@ async fn _index(
 
     timer.observe_duration();
     response
-}
-
-// logs api request error
-fn api_response_error(req: &HttpRequest, e: GraphError) -> GraphError {
-    error!(
-        "Error serving request \"{}\" from '{}': {:?}",
-        format_request(req),
-        req.peer_addr()
-            .map(|addr| addr.to_string())
-            .unwrap_or_else(|| "<not available>".into()),
-        e
-    );
-    e
-}
-
-// format the request before logging. Include only details that we need.
-pub fn format_request(req: &HttpRequest) -> String {
-    let no_user_agent = header::HeaderValue::from_str("user-agent not available").unwrap();
-    let no_accept_type = header::HeaderValue::from_str("Accept value unavailable").unwrap();
-    let req_type = req.method().as_str();
-    let request = req.path();
-    let query = req.query_string();
-    let user_agent = req
-        .headers()
-        .get("user-agent")
-        .unwrap_or(&no_user_agent)
-        .to_str()
-        .unwrap();
-    let accept_type = req
-        .headers()
-        .get("accept")
-        .unwrap_or(&no_accept_type)
-        .to_str()
-        .unwrap();
-    format!(
-        "Method: '{}', Request: '{}', Query: '{}', User-Agent: '{}', Accept: '{}'",
-        req_type, request, query, user_agent, accept_type
-    )
 }
 
 async fn process_plugins<P>(

@@ -1,0 +1,41 @@
+[package]
+name = "metadata-helper"
+version = "0.1.0"
+authors = ["Pratik Mahajan <pmahajan@redhat.com>"]
+edition = "2018"
+build = "src/build.rs"
+
+[dependencies]
+actix = "0.13.0"
+actix-cors = "^0.6.1"
+actix-files = "^0.6.2"
+actix-service = "2.0.2"
+actix-web = "^4.0.0-rc.3"
+cincinnati = { path = "../cincinnati" }
+commons = { path = "../commons" }
+custom_debug_derive = "^0.5"
+env_logger = "^0.9"
+futures = "^0.3"
+hyper = "^0.14"
+lazy_static = "^1.2.0"
+log = "^0.4.17"
+opentelemetry = "0.14.0"
+parking_lot = "^0.12"
+prometheus = "0.13"
+semver = { version = "^1.0.16", features = [ "serde" ] }
+serde = "^1.0.152"
+serde_derive = "^1.0.70"
+serde_json = "^1.0.91"
+smart-default = "0.7.1"
+structopt = "^0.3"
+tempfile = "^3.3.0"
+toml = "^0.5"
+url = "^2.3"
+
+[build-dependencies]
+built = { version = "^0.5.1", features = [ "git2" ]}
+
+[dev-dependencies]
+tokio = { version = "1.16", features = [ "rt-multi-thread" ] }
+memchr = "^2.5"
+mockito = "1.0.2"

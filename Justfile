@@ -149,6 +149,28 @@ display-graph:
 
 	jq -cM . | {{invocation_directory()}}/hack/graph.sh | dot -Tsvg > graph.svg; xdg-open graph.svg
 
+run-metadata-helper:
+	#!/usr/bin/env bash
+	export RUST_BACKTRACE=1
+
+	cargo run --package metadata-helper -- -c <(cat <<-EOF
+		verbosity = "vvv"
+
+		[service]
+		scrape_timeout_secs = 300
+		pause_secs = {{pause_secs}}
+		address = "127.0.0.1"
+		port = 8080
+		path_prefix = "{{path_prefix}}"
+		tracing_endpoint = "{{default_tracing_endpoint}}"
+
+		[status]
+		address = "127.0.0.1"
+		port = 9080
+	EOF
+	)
+
+
 run-graph-builder:
 	#!/usr/bin/env bash
 	export RUST_BACKTRACE=1
