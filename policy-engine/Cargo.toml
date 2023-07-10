@@ -11,7 +11,7 @@ actix-cors = "^0.6.1"
 actix-web = "^4.0.0-rc.3"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
-env_logger = "^0.9"
+env_logger = "^0.10"
 futures = "^0.3"
 hyper = "^0.14"
 lazy_static = "^1.2.0"
