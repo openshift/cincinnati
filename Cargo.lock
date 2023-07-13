@@ -781,7 +781,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serde_yaml",
- "smart-default 0.6.0",
+ "smart-default",
  "strum 0.25.0",
  "strum_macros 0.24.3",
  "tar",
@@ -1576,7 +1576,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "smart-default 0.6.0",
+ "smart-default",
  "structopt",
  "tar",
  "tempfile",
@@ -2068,7 +2068,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "smart-default 0.7.1",
+ "smart-default",
  "structopt",
  "tempfile",
  "tokio",
@@ -2630,7 +2630,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "smart-default 0.6.0",
+ "smart-default",
  "structopt",
  "tempfile",
  "tokio",
@@ -3309,17 +3309,6 @@ name = "smallvec"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
-
-[[package]]
-name = "smart-default"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "133659a15339456eeeb07572eb02a91c91e9815e9cbc89566944d2c8d3efdbf6"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
 
 [[package]]
 name = "smart-default"
