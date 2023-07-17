@@ -18,7 +18,7 @@ pub struct AppSettings {
     #[default(IpAddr::V4(Ipv4Addr::LOCALHOST))]
     pub address: IpAddr,
     /// Listening port for the main service.
-    #[default(9081)]
+    #[default(8082)]
     pub port: u16,
     /// Endpoints namespace for the main service.
     pub path_prefix: String,
@@ -27,7 +27,7 @@ pub struct AppSettings {
     #[default(IpAddr::V4(Ipv4Addr::LOCALHOST))]
     pub status_address: IpAddr,
     /// Listening port for the status service.
-    #[default(9091)]
+    #[default(9082)]
     pub status_port: u16,
 
     /// directory to store signatures

@@ -8,7 +8,7 @@ use cincinnati::plugins::internal::versioned_graph::VersionedGraph;
 use cincinnati::plugins::{BoxedPlugin, InternalIO};
 use cincinnati::CONTENT_TYPE;
 use commons::tracing::get_tracer;
-use commons::{self, api_response_error, format_request, Fallible, GraphError};
+use commons::{self, api_response_error, Fallible, GraphError};
 use opentelemetry::{
     trace::{mark_span_as_active, FutureExt, Tracer},
     Context as ot_context,

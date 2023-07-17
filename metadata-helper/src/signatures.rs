@@ -3,7 +3,7 @@ use crate::AppState;
 use actix_files::NamedFile;
 use actix_web::HttpRequest;
 use commons::tracing::get_tracer;
-use commons::{self, api_response_error, format_request, Fallible, GraphError};
+use commons::{self, api_response_error, Fallible, GraphError};
 use opentelemetry::trace::{mark_span_as_active, Tracer};
 use prometheus::{histogram_opts, Histogram, IntCounterVec, Opts, Registry};
 use std::collections::HashSet;
