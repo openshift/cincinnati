@@ -157,8 +157,6 @@ run-metadata-helper:
 		verbosity = "vvv"
 
 		[service]
-		scrape_timeout_secs = 300
-		pause_secs = {{pause_secs}}
 		address = "127.0.0.1"
 		port = 8082
 		path_prefix = "{{path_prefix}}"
