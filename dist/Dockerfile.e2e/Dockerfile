@@ -28,7 +28,7 @@ COPY . .
 COPY .git .git
 RUN hack/build_e2e.sh
 
-FROM registry.ci.openshift.org/openshift/release:golang-1.18 AS golang_builder
+FROM quay.io/centos/centos:stream9 AS vegeta_fetcher
 RUN curl -L https://github.com/tsenart/vegeta/releases/download/v12.8.4/vegeta_12.8.4_linux_amd64.tar.gz| tar xvzf - -C /usr/local/bin/ vegeta
 
 FROM quay.io/centos/centos:stream9
@@ -57,7 +57,7 @@ COPY --from=rust_builder /opt/app-root/src/dist/openshift/cincinnati.yaml dist/o
 COPY --from=rust_builder /opt/app-root/src/dist/openshift/cincinnati-e2e.yaml dist/openshift/
 COPY --from=rust_builder /opt/app-root/src/dist/openshift/observability.yaml dist/openshift/
 COPY --from=rust_builder /opt/app-root/src/dist/openshift/load-testing.yaml dist/openshift/
-COPY --from=golang_builder /usr/local/bin/vegeta /usr/bin
+COPY --from=vegeta_fetcher /usr/local/bin/vegeta /usr/bin
 COPY --from=rust_builder /opt/app-root/src/e2e/tests/testdata e2e/tests/testdata
 COPY --from=rust_builder /opt/app-root/src/dist/prepare_ci_credentials.sh dist/
 
