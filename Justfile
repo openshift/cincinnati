@@ -157,16 +157,14 @@ run-metadata-helper:
 		verbosity = "vvv"
 
 		[service]
-		scrape_timeout_secs = 300
-		pause_secs = {{pause_secs}}
 		address = "127.0.0.1"
-		port = 8080
+		port = 8082
 		path_prefix = "{{path_prefix}}"
 		tracing_endpoint = "{{default_tracing_endpoint}}"
 
 		[status]
 		address = "127.0.0.1"
-		port = 9080
+		port = 9082
 	EOF
 	)
 

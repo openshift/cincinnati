@@ -278,6 +278,20 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         self.update_cache_state(layers, data_dir).await;
 
         let graph_data_tar_path = self.settings.output_directory.join("graph-data.tar.gz");
+        let signatures_path = graph_data_dir.as_path().join("signatures");
+        let signatures_symlink = self.settings.output_directory.join("signatures");
+
+        // create a symlink to signatures directory for metadata-helper
+        // the secondary metadata scraper creates a temp directory to extract graph-data
+        // other containers wont have context of the directory that is being used.
+        // signatures symlink is at /signatures in the graph-data directory and will keep
+        // updating as newer graph-data is scraped.
+        if signatures_path
+            .try_exists()
+            .expect("Can't check if signatures exist")
+        {
+            tokio::fs::symlink(signatures_path, signatures_symlink).await?;
+        }
 
         commons::create_tar(
             graph_data_tar_path.clone().into_boxed_path(),

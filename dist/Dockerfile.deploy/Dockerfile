@@ -28,7 +28,8 @@ COPY .git/ ./.git/
 RUN cargo build --release && \
     mkdir -p /opt/cincinnati/bin && \
     cp -rvf $HOME/target/release/graph-builder /opt/cincinnati/bin && \
-    cp -rvf $HOME/target/release/policy-engine /opt/cincinnati/bin
+    cp -rvf $HOME/target/release/policy-engine /opt/cincinnati/bin && \
+    cp -rvf $HOME/target/release/metadata-helper /opt/cincinnati/bin 
 
 FROM registry.access.redhat.com/ubi8:latest
 

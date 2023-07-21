@@ -45,7 +45,6 @@ impl MergeOptions<CliOptions> for AppSettings {
 mod tests {
     use super::CliOptions;
     use crate::config::AppSettings;
-    use commons::MergeOptions;
     use structopt::StructOpt;
 
     #[test]
@@ -53,7 +52,6 @@ mod tests {
         let no_args = vec!["argv0"];
         let no_args_cli = CliOptions::from_iter_safe(no_args).unwrap();
         assert_eq!(no_args_cli.verbosity, 0);
-        assert_eq!(no_args_cli.upstream_method, None);
 
         let verbose_args = vec!["argv0", "-vvv"];
         let verbose_cli = CliOptions::from_iter_safe(verbose_args).unwrap();

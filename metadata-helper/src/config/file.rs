@@ -82,8 +82,9 @@ mod tests {
     #[test]
     fn toml_sample_config() {
         use super::FileOptions;
+        use std::net::{IpAddr, Ipv4Addr};
 
-        let input_url = hyper::Uri::from_static("0.0.0.0");
+        let input_url = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
         let opts = {
             use std::io::Write;
 

@@ -11,7 +11,8 @@ RUN dnf update -y \
     && cargo build --release \
     && mkdir -p /opt/cincinnati/bin \
     && cp -rvf target/release/graph-builder /opt/cincinnati/bin \
-    && cp -rvf target/release/policy-engine /opt/cincinnati/bin
+    && cp -rvf target/release/policy-engine /opt/cincinnati/bin \
+    && cp -rvf target/release/metadata-helper /opt/cincinnati/bin
 
 FROM registry.access.redhat.com/ubi8/ubi:latest
 ENV RUST_LOG=actix_web=error,dkregistry=error

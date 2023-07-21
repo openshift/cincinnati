@@ -19,7 +19,7 @@ use commons::prelude_errors::*;
 use commons::tracing::{get_context, get_tracer, init_tracer, set_span_tags};
 use futures::future;
 use graph_builder::{self, config, graph, status};
-use log::{debug, info};
+use log::info;
 use opentelemetry::{
     trace::{mark_span_as_active, FutureExt, Tracer},
     Context as ot_context,
