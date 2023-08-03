@@ -29,4 +29,4 @@ hamcrest2 = "0.3.0"
 
 [dev-dependencies]
 memchr = "^2.5"
-mockito = "^0.31.0"
+mockito = "^1.1.0"
