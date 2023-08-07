@@ -34,7 +34,7 @@ tokio-stream = { version = "0.1", features = ["fs"] }
 toml = "^0.5"
 url = "^2.3"
 parking_lot = "^0.12"
-tempfile = "^3.3.0"
+tempfile = "^3.7.1"
 async-trait = "^0.1"
 custom_debug_derive = "^0.5"
 opentelemetry = "0.14.0"
