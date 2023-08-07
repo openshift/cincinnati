@@ -765,7 +765,7 @@ dependencies = [
  "lazy_static",
  "log",
  "memchr",
- "mockito 0.31.1",
+ "mockito",
  "opentelemetry",
  "pgp",
  "pretty_assertions",
@@ -859,7 +859,7 @@ dependencies = [
  "lazy_static",
  "log",
  "memchr",
- "mockito 0.31.1",
+ "mockito",
  "opentelemetry",
  "opentelemetry-jaeger",
  "prometheus",
@@ -2060,7 +2060,7 @@ dependencies = [
  "lazy_static",
  "log",
  "memchr",
- "mockito 1.1.0",
+ "mockito",
  "opentelemetry",
  "parking_lot",
  "prometheus",
@@ -2120,24 +2120,6 @@ dependencies = [
  "log",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "mockito"
-version = "0.31.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80f9fece9bd97ab74339fe19f4bcaf52b76dcc18e5364c7977c1838f76b38de9"
-dependencies = [
- "assert-json-diff",
- "colored",
- "httparse",
- "lazy_static",
- "log",
- "rand 0.8.5",
- "regex",
- "serde_json",
- "serde_urlencoded",
- "similar",
 ]
 
 [[package]]
@@ -2621,7 +2603,7 @@ dependencies = [
  "lazy_static",
  "log",
  "memchr",
- "mockito 0.31.1",
+ "mockito",
  "openapiv3",
  "opentelemetry",
  "parking_lot",
