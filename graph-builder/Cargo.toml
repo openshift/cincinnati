@@ -29,7 +29,7 @@ serde_json = "^1.0.104"
 smart-default = "^0.7"
 structopt = "^0.3"
 tar = "^0.4.40"
-tokio = { version = "1.16", features = [ "fs",  "rt-multi-thread" ] }
+tokio = { version = "1.29", features = [ "fs",  "rt-multi-thread" ] }
 tokio-stream = { version = "0.1", features = ["fs"] }
 toml = "^0.5"
 url = "^2.3"
