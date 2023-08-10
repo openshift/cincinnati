@@ -121,7 +121,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperSettings {
                 "invalid signature base url",
             );
             ensure!(
-                !settings.public_keys_path.is_none(),
+                settings.public_keys_path.is_some(),
                 "empty public keys path",
             );
         }
