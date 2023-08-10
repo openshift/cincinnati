@@ -23,7 +23,7 @@ opentelemetry = "0.14.0"
 parking_lot = "^0.12"
 prometheus = "0.13"
 semver = { version = "^1.0.16", features = [ "serde" ] }
-serde = "^1.0.175"
+serde = "^1.0.179"
 serde_derive = "^1.0.70"
 serde_json = "^1.0.104"
 smart-default = "0.7.1"
