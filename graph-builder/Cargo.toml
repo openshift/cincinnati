@@ -31,7 +31,7 @@ structopt = "^0.3"
 tar = "^0.4.40"
 tokio = { version = "1.30", features = [ "fs",  "rt-multi-thread" ] }
 tokio-stream = { version = "0.1", features = ["fs"] }
-toml = "^0.5"
+toml = "^0.7"
 url = "^2.3"
 parking_lot = "^0.12"
 tempfile = "^3.7.1"
