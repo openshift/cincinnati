@@ -36,6 +36,6 @@ actix-service = "2.0.2"
 built = { version = "^0.6.1", features = [ "git2" ]}
 
 [dev-dependencies]
-tokio = { version = "1.16", features = [ "rt-multi-thread" ] }
+tokio = { version = "1.30", features = [ "rt-multi-thread" ] }
 memchr = "^2.5"
 mockito = "^1.1.0"
