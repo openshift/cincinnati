@@ -15,7 +15,7 @@ prometheus = "0.13"
 serde = "^1.0.175"
 serde_json = "^1.0.104"
 serde_derive = "^1.0.123"
-tokio = { version = "1.16", features = [ "rt-multi-thread" ] }
+tokio = { version = "1.30", features = [ "rt-multi-thread" ] }
 url = "^2.3"
 futures = "^0.3"
 flate2 = "^1.0.26"
