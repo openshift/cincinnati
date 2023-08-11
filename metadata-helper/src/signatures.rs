@@ -24,7 +24,7 @@ lazy_static! {
     ))
     .unwrap();
     // Supported Signatures Algo
-    static ref SUPPORTED_ALGO: HashSet<&'static str> = HashSet::from(["sha"]);
+    static ref SUPPORTED_ALGO: HashSet<&'static str> = HashSet::from(["sha", "sha256"]);
 }
 
 /// Register relevant metrics to a prometheus registry.
