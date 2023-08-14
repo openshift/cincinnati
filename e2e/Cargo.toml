@@ -18,7 +18,7 @@ test-case = { version = "1.2.3", features = ["hamcrest_assertions"] }
 hamcrest2 = "0.3.0"
 url = "^2.3"
 commons = { path = "../commons" }
-tokio = { version = "1.30", features = [ "fs", "rt-multi-thread" ] }
+tokio = { version = "1.31", features = [ "fs", "rt-multi-thread" ] }
 tokio-stream = { version = "0.1", features = ["fs"] }
 prometheus-query = { path = "../prometheus-query" }
 lazy_static = "^1.2.0"
