@@ -58,8 +58,18 @@ async fn _index(
     let timer = SIGNATURES_SERVE_HIST.start_timer();
 
     let params = req.match_info();
-    let algo = params.get("ALGO").unwrap();
-    let digest = params.get("DIGEST").unwrap();
+    let algo_digest_string = params.get("ALGO_DIGEST").unwrap();
+    let algo_digest: Vec<&str> = algo_digest_string.clone().split('=').collect();
+
+    if algo_digest.len() != 2 {
+        return Err(GraphError::InvalidParams(format!(
+            "provided digest is in incorrect format: {}",
+            algo_digest_string
+        )));
+    }
+
+    let algo = algo_digest[0];
+    let digest = algo_digest[1];
     let signature = params.get("SIGNATURE").unwrap();
 
     if !SUPPORTED_ALGO.contains(algo) {
@@ -78,8 +88,8 @@ async fn _index(
     if f.is_err() {
         timer.observe_duration();
         return Err(GraphError::DoesNotExist(format!(
-            "signature does not exist {}",
-            f.unwrap_err()
+            "signature {}/{}",
+            algo_digest_string, signature
         )));
     }
 

@@ -151,7 +151,7 @@ async fn main() -> Result<(), Error> {
                 actix_web::web::resource(&format!(
                     "{}{}",
                     &format!("{}/signatures", app_prefix),
-                    "/{ALGO}/{DIGEST}/{SIGNATURE}"
+                    "/{ALGO_DIGEST}/{SIGNATURE}"
                 ))
                 .route(actix_web::web::get().to(signatures::index)),
             )

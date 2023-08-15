@@ -165,6 +165,13 @@ run-metadata-helper:
 		[status]
 		address = "127.0.0.1"
 		port = 9082
+
+		## uncomment [signatures] block to add a custom graph-data directory. Without this config,
+		## metadata-helper will create temp dir to source signatures. MH does not have capability to fetch
+		## signatures from upstream. If directory is not provided, MH wont be able to serve signatures.
+
+		# [signatures]
+		# dir = "/tmp/graph-data/signatures"
 	EOF
 	)
 
