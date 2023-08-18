@@ -20,4 +20,4 @@ chrono = "^0.4.21"
 
 [dev-dependencies]
 env_logger = "^0.10"
-tokio = { version = "1.31", features = [ "rt-multi-thread" ] }
+tokio = { version = "1.32", features = [ "rt-multi-thread" ] }
