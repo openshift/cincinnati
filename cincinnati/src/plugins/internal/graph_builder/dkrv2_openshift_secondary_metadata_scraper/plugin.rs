@@ -24,6 +24,7 @@ pub static DEFAULT_OUTPUT_ALLOWLIST: &[&str] = &[
 pub static DEFAULT_METADATA_IMAGE_REGISTRY: &str = "";
 pub static DEFAULT_METADATA_IMAGE_REPOSITORY: &str = "";
 pub static DEFAULT_METADATA_IMAGE_TAG: &str = "latest";
+pub static DEFAULT_GRAPH_DATA_PATH: &str = "/";
 pub static DEFAULT_SIGNATURE_BASEURL: &str =
     "https://mirror.openshift.com/pub/openshift-v4/signatures/openshift/release/";
 pub static DEFAULT_SIGNATURE_FETCH_TIMEOUT_SECS: u64 = 30;
@@ -34,6 +35,11 @@ pub static DEFAULT_SIGNATURE_FETCH_TIMEOUT_SECS: u64 = 30;
 pub struct DkrV2OpenshiftSecondaryMetadataScraperSettings {
     /// Directory where the image will be unpacked. Will be created if it doesn't exist.
     output_directory: PathBuf,
+
+    /// Path inside the graph data image in which to find the graph data.
+    /// Defaults to "/"
+    #[default(DEFAULT_GRAPH_DATA_PATH.into())]
+    graph_data_path: PathBuf,
 
     /// Vector of regular expressions used as a positive output filter.
     /// An empty vector is regarded as a configuration error.
@@ -121,7 +127,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperSettings {
                 "invalid signature base url",
             );
             ensure!(
-                !settings.public_keys_path.is_none(),
+                settings.public_keys_path.is_some(),
                 "empty public keys path",
             );
         }
@@ -134,6 +140,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperSettings {
 pub struct State {
     cached_layers: Option<Vec<String>>,
     cached_data_dir: Option<TempDir>,
+    cached_graph_data_path: Option<PathBuf>,
 }
 
 /// This plugin implements downloading the secondary metadata container image
@@ -275,10 +282,20 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         .await?;
 
         let graph_data_dir = data_dir.path().to_path_buf();
-        self.update_cache_state(layers, data_dir).await;
+        let graph_data_path = PathBuf::from(
+            self.settings
+                .graph_data_path
+                .strip_prefix("/")
+                .unwrap_or(&self.settings.graph_data_path),
+        );
+        let graph_data_path = graph_data_dir.join(graph_data_path);
+
+        self.update_cache_state(layers, data_dir, graph_data_path.to_owned())
+            .await;
+        self.set_io_graph_data_dir(&mut io, &graph_data_path)?;
 
         let graph_data_tar_path = self.settings.output_directory.join("graph-data.tar.gz");
-        let signatures_path = graph_data_dir.as_path().join("signatures");
+        let signatures_path = graph_data_path.as_path().join("signatures");
         let signatures_symlink = self.settings.output_directory.join("signatures");
 
         // create a symlink to signatures directory for metadata-helper
@@ -295,7 +312,7 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 
         commons::create_tar(
             graph_data_tar_path.clone().into_boxed_path(),
-            graph_data_dir.into_boxed_path(),
+            graph_data_path.clone().into(),
         )
         .await
         .context("creating graph-data tar")?;
@@ -315,17 +332,14 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
     async fn are_layers_cached(&self, layers: &[String], io: &mut InternalIO) -> Fallible<bool> {
         let state = self.state.lock().await;
-        match (&state.cached_layers, &state.cached_data_dir) {
-            (Some(cached_layers), Some(cached_data_dir)) if cached_layers.as_slice() == layers => {
+        match &*state {
+            State {
+                cached_layers: Some(cached_layers),
+                cached_data_dir: Some(_cached_data_dir),
+                cached_graph_data_path: Some(cached_graph_data_path),
+            } if cached_layers.as_slice() == layers => {
                 trace!("Using cached data directory for tag {}", self.settings.tag);
-                io.parameters.insert(
-                    GRAPH_DATA_DIR_PARAM_KEY.to_string(),
-                    cached_data_dir
-                        .path()
-                        .to_str()
-                        .ok_or_else(|| format_err!("data_dir cannot be converted to str"))?
-                        .to_string(),
-                );
+                self.set_io_graph_data_dir(io, cached_graph_data_path)?;
                 Ok(true)
             }
 
@@ -335,15 +349,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 
     fn create_data_dir(&self, io: &mut InternalIO) -> Fallible<TempDir> {
         let data_dir = tempfile::tempdir_in(self.data_dir.path())?;
-
-        io.parameters.insert(
-            GRAPH_DATA_DIR_PARAM_KEY.to_string(),
-            data_dir
-                .path()
-                .to_str()
-                .ok_or_else(|| format_err!("data_dir cannot be converted to str"))?
-                .to_string(),
-        );
+        self.set_io_graph_data_dir(io, &data_dir)?;
 
         trace!(
             "Using data directory {:?} for tag {}",
@@ -352,6 +358,18 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         );
 
         Ok(data_dir)
+    }
+
+    fn set_io_graph_data_dir<P: AsRef<Path>>(&self, io: &mut InternalIO, dir: P) -> Fallible<()> {
+        io.parameters.insert(
+            GRAPH_DATA_DIR_PARAM_KEY.to_string(),
+            dir.as_ref()
+                .to_str()
+                .ok_or_else(|| format_err!("data_dir cannot be converted to str"))?
+                .to_string(),
+        );
+
+        Ok(())
     }
 
     fn unpack_layers<P>(&self, layers_blobs: &[Vec<u8>], data_dir: P) -> Fallible<()>
@@ -379,10 +397,16 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         Ok(())
     }
 
-    async fn update_cache_state(&self, layers: Vec<String>, data_dir: TempDir) {
+    async fn update_cache_state(
+        &self,
+        layers: Vec<String>,
+        data_dir: TempDir,
+        graph_data_path: PathBuf,
+    ) {
         let mut state = self.state.lock().await;
         state.cached_layers = Some(layers);
         state.cached_data_dir = Some(data_dir);
+        state.cached_graph_data_path = Some(graph_data_path);
     }
 }
 
