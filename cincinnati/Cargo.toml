@@ -16,7 +16,7 @@ log = "^0.4.20"
 prometheus = "0.13"
 protobuf = "2.20.0"
 quay = { path = "../quay" }
-regex = "^1.9.3"
+regex = "^1.9.4"
 reqwest = { version = "^0.11", features = ["gzip"] }
 serde = "1.0.183"
 serde_derive = "1.0.70"
