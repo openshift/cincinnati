@@ -28,7 +28,7 @@ toml = "^0.7.6"
 url = "^2.4"
 semver = { version = "^0.11", features = [ "serde" ] }
 async-trait = "^0.1"
-tempfile = "^3.7.1"
+tempfile = "^3.8.0"
 flate2 = "^1.0.27"
 tar = "^0.4.40"
 dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "6c4ac7700f8870e58aaa5a906a28e65cdf254d58" }
