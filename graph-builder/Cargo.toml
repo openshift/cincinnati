@@ -41,7 +41,7 @@ opentelemetry = "0.14.0"
 actix-service = "2.0.2"
 
 [build-dependencies]
-built = { version = "^0.6.1", features = [ "git2" ]}
+built = { version = "^0.7.0", features = [ "git2" ]}
 
 [dev-dependencies]
 memchr = "^2.5"
