@@ -46,7 +46,7 @@ hamcrest2 = "0.3.0"
 cached = "^0.44.0"
 
 [dev-dependencies]
-mockito = "^1.1.0"
+mockito = "^1.2.0"
 serde_json = "1.0.107"
 memchr = "^2.5"
 pretty_assertions = "1.4.0"
