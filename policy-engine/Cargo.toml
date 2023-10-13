@@ -20,7 +20,7 @@ openapiv3 = "1.0"
 parking_lot = "^0.12"
 prometheus = "0.13"
 semver = { version = "^0.11", features = [ "serde" ] }
-serde = "^1.0.183"
+serde = "^1.0.189"
 serde_derive = "^1.0.70"
 serde_json = "^1.0.107"
 smart-default = "^0.7"
