@@ -6,7 +6,7 @@ edition = "2018"
 build = "src/build.rs"
 
 [dependencies]
-actix = "0.13.0"
+actix = "0.13.1"
 actix-cors = "^0.6.1"
 actix-web = "^4.0.0-rc.3"
 cincinnati = { path = "../cincinnati" }
