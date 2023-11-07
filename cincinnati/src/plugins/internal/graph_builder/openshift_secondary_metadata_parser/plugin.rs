@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
-static SUPPORTED_VERSIONS: &[&str] = &["1.0.0", "1.1.0"];
+static SUPPORTED_VERSIONS: &[&str] = &["1.0.0", "1.1.0", "1.2.0"];
 
 pub mod graph_data_model {
     //! This module contains the data types corresponding to the graph data files.
