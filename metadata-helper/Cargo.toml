@@ -16,7 +16,7 @@ commons = { path = "../commons" }
 custom_debug_derive = "^0.5"
 env_logger = "^0.10"
 futures = "^0.3"
-hyper = "^0.14"
+hyper = "^1.1"
 lazy_static = "^1.2.0"
 log = "^0.4.20"
 opentelemetry = "0.14.0"
