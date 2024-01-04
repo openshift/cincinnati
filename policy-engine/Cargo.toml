@@ -13,7 +13,7 @@ cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
 env_logger = "^0.10"
 futures = "^0.3"
-hyper = "^0.14"
+hyper = "^1.1"
 lazy_static = "^1.2.0"
 log = "^0.4.20"
 openapiv3 = "1.0"
