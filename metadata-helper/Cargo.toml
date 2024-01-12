@@ -22,7 +22,7 @@ log = "^0.4.20"
 opentelemetry = "0.14.0"
 parking_lot = "^0.12"
 prometheus = "0.13"
-semver = { version = "^1.0.16", features = [ "serde" ] }
+semver = { version = "^1.0.17", features = [ "serde" ] }
 serde = "^1.0.189"
 serde_derive = "^1.0.70"
 serde_json = "^1.0.107"

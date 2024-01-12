@@ -26,7 +26,7 @@ tokio = { version = "1.32", features = [ "time", "fs", "macros", "rt-multi-threa
 tokio-stream = { version = "0.1", features = ["fs"] }
 toml = "^0.8.2"
 url = "^2.4"
-semver = { version = "^0.11", features = [ "serde" ] }
+semver = { version = "^1.0", features = [ "serde" ] }
 async-trait = "^0.1"
 tempfile = "^3.8.0"
 flate2 = "^1.0.27"
