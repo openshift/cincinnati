@@ -17,7 +17,7 @@ prometheus = "0.13"
 protobuf = "2.20.0"
 quay = { path = "../quay" }
 regex = "^1.9.6"
-reqwest = { version = "^0.11", features = ["gzip"] }
+reqwest = { version = "^0.11", features = ["gzip", "rustls-tls-native-roots", "native-tls"] }
 serde = "1.0.189"
 serde_derive = "1.0.70"
 serde_json = "^1.0.107"
@@ -31,7 +31,7 @@ async-trait = "^0.1"
 tempfile = "^3.8.0"
 flate2 = "^1.0.27"
 tar = "^0.4.40"
-dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "6c4ac7700f8870e58aaa5a906a28e65cdf254d58" }
+dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "0a3c99b7ede0c177a4389e0ffd9e566572633f8c" }
 itertools = "^0.11"
 serde_yaml = "^0.9.25"
 prettydiff = { version = "0.6", optional = true }

@@ -23,6 +23,7 @@ use futures::lock::Mutex as FuturesMutex;
 use futures::prelude::*;
 use futures::TryStreamExt;
 use log::{debug, error, trace, warn};
+use reqwest::Certificate;
 use semver::Version;
 use serde::Deserialize;
 use serde_json;
@@ -208,9 +209,10 @@ pub async fn new_registry_client(
     repo: &str,
     username: Option<&str>,
     password: Option<&str>,
+    root_certificates: Option<Vec<Certificate>>,
 ) -> Result<dkregistry::v2::Client, Error> {
     let client = {
-        let client_builder = dkregistry::v2::Client::configure()
+        let mut client_builder = dkregistry::v2::Client::configure()
             .registry(&registry.host_port_string())
             .insecure_registry(registry.insecure)
             .accepted_types(Some(vec![
@@ -219,6 +221,12 @@ pub async fn new_registry_client(
                 (ManifestList, Some(0.5)),
             ]));
         let scope = format!("repository:{}:pull", &repo);
+
+        if root_certificates.is_some() {
+            for cert in root_certificates.unwrap() {
+                client_builder = client_builder.add_root_certificate(cert);
+            }
+        }
 
         if username.is_some() && password.is_some() {
             client_builder
@@ -299,8 +307,10 @@ pub async fn fetch_releases(
     cache: cache::Cache,
     manifestref_key: &str,
     concurrency: usize,
+    certificates: Option<Vec<Certificate>>,
 ) -> Result<Vec<cincinnati::plugins::internal::graph_builder::release::Release>, Error> {
-    let registry_client = new_registry_client(registry, repo, username, password).await?;
+    let registry_client =
+        new_registry_client(registry, repo, username, password, certificates).await?;
 
     let registry_client_get_tags = registry_client.clone();
     let tags = Box::pin(get_tags(repo, &registry_client_get_tags).await);

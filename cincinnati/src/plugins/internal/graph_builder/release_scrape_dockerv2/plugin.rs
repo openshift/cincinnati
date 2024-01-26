@@ -1,9 +1,12 @@
 use super::registry;
 
 use crate as cincinnati;
+use crate::plugins::internal::graph_builder::commons::get_certs_from_dir;
 
 use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
+use commons::DEFAULT_ROOT_CERT_DIR;
+use reqwest::Certificate;
 
 use std::convert::TryInto;
 
@@ -48,6 +51,11 @@ pub struct ReleaseScrapeDockerv2Settings {
     /// Takes precedence over username and password
     #[default(Option::None)]
     pub credentials_path: Option<PathBuf>,
+
+    /// File containing the root certificates.
+    /// Accepts PEM encoded root certificates.
+    #[default(PathBuf::from(DEFAULT_ROOT_CERT_DIR.to_string()))]
+    pub root_certificate_dir: PathBuf,
 }
 
 impl PluginSettings for ReleaseScrapeDockerv2Settings {
@@ -143,6 +151,24 @@ impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
     async fn run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
+        let mut certificates: Vec<Certificate> = Vec::new();
+        if self.settings.root_certificate_dir.exists() {
+            let root_certs = get_certs_from_dir(&self.settings.root_certificate_dir);
+            if root_certs.is_err() {
+                debug!(
+                    "unable to read root certs form dir: {}, {}",
+                    &self
+                        .settings
+                        .root_certificate_dir
+                        .to_str()
+                        .unwrap_or_default(),
+                    root_certs.unwrap_err()
+                );
+            } else {
+                certificates = root_certs.unwrap();
+            }
+        };
+
         let releases = registry::fetch_releases(
             &self.registry,
             &self.settings.repository,
@@ -151,6 +177,7 @@ impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
             self.cache.clone(),
             &self.settings.manifestref_key,
             self.settings.fetch_concurrency,
+            Some(certificates),
         )
         .await
         .context(format!(

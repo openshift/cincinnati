@@ -1,8 +1,9 @@
 use crate as cincinnati;
 use crate::plugins::internal::dkrv2_openshift_secondary_metadata_scraper::gpg;
+use crate::plugins::internal::graph_builder::commons::get_certs_from_dir;
 use crate::plugins::internal::release_scrape_dockerv2::registry;
-use commons::{GRAPH_DATA_DIR_PARAM_KEY, SECONDARY_METADATA_PARAM_KEY};
-use reqwest::{Client, ClientBuilder};
+use commons::{DEFAULT_ROOT_CERT_DIR, GRAPH_DATA_DIR_PARAM_KEY, SECONDARY_METADATA_PARAM_KEY};
+use reqwest::{Certificate, Client, ClientBuilder};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tempfile::TempDir;
@@ -70,6 +71,11 @@ pub struct DkrV2OpenshiftSecondaryMetadataScraperSettings {
     /// Takes precedence over username and password
     #[default(Option::None)]
     credentials_path: Option<PathBuf>,
+
+    /// File containing the root certificates.
+    /// Accepts PEM encoded root certificates.
+    #[default(PathBuf::from(DEFAULT_ROOT_CERT_DIR.to_string()))]
+    root_certificate_dir: PathBuf,
 
     /// Ensure signatures are verified
     #[default(false)]
@@ -196,9 +202,28 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
             settings.username = username;
             settings.password = password;
         }
-        let http_client = ClientBuilder::new()
+
+        let mut http_client_builder: reqwest::ClientBuilder = ClientBuilder::new()
             .gzip(true)
             .timeout(Duration::from_secs(DEFAULT_SIGNATURE_FETCH_TIMEOUT_SECS))
+            .use_native_tls();
+
+        if settings.root_certificate_dir.exists() {
+            let root_certs = get_certs_from_dir(&settings.root_certificate_dir);
+            if root_certs.is_err() {
+                debug!(
+                    "unable to read root certs form dir: {}, {}",
+                    &settings.root_certificate_dir.to_str().unwrap_or_default(),
+                    root_certs.unwrap_err()
+                );
+            } else {
+                for cert in root_certs.unwrap() {
+                    http_client_builder = http_client_builder.add_root_certificate(cert);
+                }
+            }
+        };
+
+        let http_client = http_client_builder
             .build()
             .context("Building reqwest client")?;
 
@@ -225,11 +250,30 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
     async fn run_internal(&self, mut io: InternalIO) -> Fallible<InternalIO> {
+        let mut certificates: Vec<Certificate> = Vec::new();
+        if self.settings.root_certificate_dir.exists() {
+            let root_certs = get_certs_from_dir(&self.settings.root_certificate_dir);
+            if root_certs.is_err() {
+                debug!(
+                    "unable to read root certs form dir: {}, {}",
+                    &self
+                        .settings
+                        .root_certificate_dir
+                        .to_str()
+                        .unwrap_or_default(),
+                    root_certs.unwrap_err()
+                );
+            } else {
+                certificates = root_certs.unwrap();
+            }
+        };
+
         let registry_client = registry::new_registry_client(
             &self.registry,
             &self.settings.repository,
             self.settings.username.as_deref(),
             self.settings.password.as_deref(),
+            Some(certificates),
         )
         .await?;
 
