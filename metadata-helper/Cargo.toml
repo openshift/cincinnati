@@ -14,7 +14,7 @@ actix-web = "^4.4.1"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
 custom_debug_derive = "^0.5"
-env_logger = "^0.10"
+env_logger = "^0.11"
 futures = "^0.3"
 hyper = "^1.1"
 lazy_static = "^1.2.0"
