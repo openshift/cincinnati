@@ -1,5 +1,5 @@
 {
-    "openapi": "3.0.2",
+    "openapi": "3.0.3",
     "info": {
         "version": "0.0.0",
         "title": "OpenShift Cincinnati Policy-Engine",
@@ -71,7 +71,7 @@
         "/v1/graph": {
             "get": {
                 "summary": "Get the update graph",
-                "operationId": "getGraph",
+                "operationId": "getV1Graph",
                 "responses": {
                     "200": {
                         "description": "An update graph",

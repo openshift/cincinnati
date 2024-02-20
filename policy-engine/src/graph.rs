@@ -176,6 +176,40 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn offline_upstream() -> Result<(), Error> {
+        let rt = common_init();
+        let state = AppState {
+            plugins: Box::leak(Box::new(cincinnati::plugins::catalog::build_plugins(
+                &[plugin_config!(
+                    ("name", CincinnatiGraphFetchPlugin::PLUGIN_NAME),
+                    ("upstream", "http://offline.url.test")
+                )?],
+                None,
+            )?)),
+            ..Default::default()
+        };
+        let app_data = actix_web::web::Data::new(state);
+
+        let http_req = actix_web::test::TestRequest::get()
+            .insert_header((
+                http::header::ACCEPT,
+                http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
+            ))
+            .to_http_request();
+        let graph_call = graph::index(http_req, app_data);
+        let resp = rt.block_on(graph_call).unwrap_err();
+
+        assert_eq!(
+            resp,
+            graph::GraphError::FailedUpstreamFetch(
+                "error sending request for url (http://offline.url.test/): error trying to connect: dns error: failed to lookup address information: Name or service not known"
+                    .to_string(),
+            )
+        );
+        Ok(())
+    }
+
+    #[test]
     fn failed_plugin_execution() -> Result<(), Error> {
         let rt = common_init();
 
@@ -210,7 +244,7 @@ pub(crate) mod tests {
         let _m = mockito::mock("GET", "/")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(r#"{"nodes":[],"edges":[]}"#)
+            .with_body(r#"{"nodes":[],"edges":[],"conditionalEdges":[]}"#)
             .create();
 
         match rt.block_on(graph_call) {
@@ -249,7 +283,7 @@ pub(crate) mod tests {
             expected_result: TestResult,
         }
 
-        static SERVED_GRAPH_BODY: &str = r#"{"nodes":[],"edges":[]}"#;
+        static SERVED_GRAPH_BODY: &str = r#"{"nodes":[],"edges":[],"conditionalEdges":[]}"#;
 
         fn run_test(
             mandatory_params: &[&str],
@@ -282,7 +316,7 @@ pub(crate) mod tests {
 
             // prepare and run the policy-engine test-service
             let plugins = cincinnati::plugins::catalog::build_plugins(plugin_config, None)?;
-
+            trace!("plugin-config {:?}", plugins);
             let app = actix_web::App::new()
                 .app_data(actix_web::web::Data::new(AppState {
                     mandatory_params: mandatory_params.iter().map(|s| s.to_string()).collect(),
@@ -326,9 +360,19 @@ pub(crate) mod tests {
                 bail!("not a JSON object");
             };
 
+            toplevel.remove("version");
             match expected_result {
                 TestResult::Success(expected_body) => {
-                    assert_eq!(expected_body.to_owned(), body);
+                    assert_eq!(
+                        expected_body
+                            .to_owned()
+                            .parse::<serde_json::Value>()
+                            .unwrap(),
+                        serde_json::to_string(&toplevel)
+                            .unwrap()
+                            .parse::<serde_json::Value>()
+                            .unwrap()
+                    );
                 }
                 TestResult::Error(expected_error) => {
                     if let Some(kind) = toplevel.remove("kind") {
@@ -370,18 +414,6 @@ pub(crate) mod tests {
                     ("upstream", &mockito::server_url())
                 )?],
                 expected_result: TestResult::Success(SERVED_GRAPH_BODY.to_string()),
-            },
-            TestParams {
-                name: "offline upstream",
-                mandatory_params: &[],
-                passed_params: &[],
-                plugin_config: &[plugin_config!(
-                    ("name", CincinnatiGraphFetchPlugin::PLUGIN_NAME),
-                    ("upstream", "http://offline.url.test")
-                )?],
-                expected_result: TestResult::Error(commons::GraphError::FailedUpstreamFetch(
-                    "error sending request for url (http://offline.url.test/): error trying to connect".to_string(),
-                )),
             },
             TestParams {
                 name: "missing channel parameter",
