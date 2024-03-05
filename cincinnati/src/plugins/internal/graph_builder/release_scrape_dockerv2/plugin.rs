@@ -117,18 +117,21 @@ impl ReleaseScrapeDockerv2Plugin {
             prometheus_registry.register(Box::new(graph_upstream_raw_releases.clone()))?;
         }
 
-        let registry = registry::Registry::try_from_str(&settings.registry)
-            .context(format!("Parsing {} as Registry", &settings.registry))?;
+        let mut ns_registry = settings.registry.clone();
+        ns_registry.push_str(&format!("/{}", settings.repository));
+
+        let registry = registry::Registry::try_from_str(&ns_registry)
+            .context(format!("trying to extract Registry from {}", &ns_registry))?;
 
         if let Some(credentials_path) = &settings.credentials_path {
             let (username, password) = registry::read_credentials(
                 Some(credentials_path),
-                &registry.host_port_string(),
+                &registry.host_port_namespaced_string(),
             )
             .unwrap_or_else(|err| {
                 warn!(
                     "Error reading registry credentials from {:?}. Access to {:?} will be unauthenticated: {} ",
-                    credentials_path, &registry.host_port_string() ,err
+                    credentials_path, &registry.host_port_namespaced_string() ,err
                 );
                 (None, None)
             });

@@ -71,6 +71,7 @@ pub struct Registry {
     pub(crate) scheme: String,
     pub(crate) insecure: bool,
     pub(crate) host: String,
+    pub(crate) namespace: String,
     pub(crate) port: Option<u16>,
 }
 
@@ -89,8 +90,8 @@ impl Registry {
 
         process_regex!(
             capture,
-            // match scheme://h.o.s.t:port
-            r"^(?P<scheme>[a-z]+)(:/{2})(?P<host>([0-9a-zA-Z]+\.)*([0-9a-zA-Z]+)):(?P<port>[0-9]+)$",
+            // match scheme://h.o.s.t:port/p/a/t/h
+            r"^(?P<scheme>[a-z]+)(:/{2})(?P<host>([0-9a-zA-Z]+\.)*([0-9a-zA-Z]+)):(?P<port>[0-9]+)(?P<path>(\/[0-9a-zA-Z\-_]+)+)$",
             {
                 let scheme = capture["scheme"].to_string();
                 return Ok(Registry {
@@ -102,20 +103,22 @@ impl Registry {
                             .parse()
                             .expect("could not parse port as a number"),
                     ),
+                    namespace: capture["path"].to_string(),
                 });
             }
         );
 
         process_regex!(
             capture,
-            // match scheme://h.o.s.t
-            r"^(?P<scheme>[a-z]+)(:/{2})(?P<host>([0-9a-zA-Z]+\.)*([0-9a-zA-Z]+))$",
+            // match scheme://h.o.s.t/p/a/t/h
+            r"^(?P<scheme>[a-z]+)(:/{2})(?P<host>([0-9a-zA-Z]+\.)*([0-9a-zA-Z]+))(?P<path>(\/[0-9a-zA-Z\-_]+)*)$",
             {
                 let scheme = capture["scheme"].to_string();
                 return Ok(Registry {
                     insecure: Registry::insecure_scheme(&scheme)?,
                     scheme,
                     host: capture["host"].to_string(),
+                    namespace: capture["path"].to_string(),
                     ..Default::default()
                 });
             }
@@ -123,8 +126,8 @@ impl Registry {
 
         process_regex!(
             capture,
-            // match h.o.s.t:port
-            r"^(?P<host>([0-9a-zA-Z\-]+\.)+([0-9a-zA-Z]+)):(?P<port>[0-9]+)$",
+            // match h.o.s.t:port/p/a/t/h
+            r"^(?P<host>([0-9a-zA-Z\-]+\.)+([0-9a-zA-Z]+)):(?P<port>[0-9]+)(?P<path>(\/[0-9a-zA-Z\-]*)*)$",
             {
                 return Ok(Registry {
                     host: capture["host"].to_string(),
@@ -133,6 +136,7 @@ impl Registry {
                             .parse()
                             .expect("could not parse port as a number"),
                     ),
+                    namespace: capture["path"].to_string(),
                     ..Default::default()
                 });
             }
@@ -140,11 +144,12 @@ impl Registry {
 
         process_regex!(
             capture,
-            // match h.o.s.t
-            r"^(?P<host>([0-9a-zA-Z\-]+\.)*([0-9a-zA-Z]+))$",
+            // match h.o.s.t/p/a/t/h
+            r"^(?P<host>([0-9a-zA-Z\-]+\.)*[0-9a-zA-Z]+)(?P<path>(\/[0-9a-zA-Z]+)*)$",
             {
                 return Ok(Registry {
                     host: capture["host"].to_string(),
+                    namespace: capture["path"].to_string(),
                     ..Default::default()
                 });
             }
@@ -153,10 +158,16 @@ impl Registry {
         bail!("unsupported registry format {}", src)
     }
 
-    pub fn try_new(scheme: String, host: String, port: Option<u16>) -> Fallible<Self> {
+    pub fn try_new(
+        scheme: String,
+        host: String,
+        port: Option<u16>,
+        namespace: String,
+    ) -> Fallible<Self> {
         Ok(Registry {
             host,
             port,
+            namespace,
             insecure: Self::insecure_scheme(&scheme)?,
             scheme,
         })
@@ -184,6 +195,25 @@ impl Registry {
         )
     }
 
+    /// host port string with namespace included in the uri
+    pub fn host_port_namespaced_string(&self) -> String {
+        format!(
+            "{}{}{}{}",
+            if self.insecure && !self.scheme.is_empty() {
+                format!("{}://", self.scheme)
+            } else {
+                "".to_string()
+            },
+            self.host,
+            if let Some(port) = self.port {
+                format!(":{}", port)
+            } else {
+                "".to_string()
+            },
+            format!("{}", self.namespace),
+        )
+    }
+
     fn insecure_scheme(scheme: &str) -> Fallible<bool> {
         match scheme {
             "https" => Ok(false),
@@ -198,9 +228,31 @@ pub fn read_credentials(
     registry_host: &str,
 ) -> Result<(Option<String>, Option<String>), Error> {
     credentials_path.map_or(Ok((None, None)), |path| {
-        let file = File::open(&path).context(format!("could not open '{:?}'", path))?;
+        let mut registry: String = registry_host.to_string();
+        // we will not be checking the entire registry_host in credentials with the assumption that
+        // the last part after `/` is the repository
+        while registry.rfind('/').is_some() {
+            match registry.rfind('/') {
+                Some(index) => {
+                    // Split the string into two parts: before and after the last '/'
+                    let (before, _) = registry.split_at(index);
 
-        dkregistry::get_credentials(file, registry_host).map_err(|e| format_err!("{}", e))
+                    debug!("checking namespaced credentials for {}", &registry);
+                    let file = File::open(&path).context(format!("could not open '{:?}'", path))?;
+                    let creds = dkregistry::get_credentials(file, &registry);
+                    if creds.is_ok() {
+                        debug!("got credentials for registry '{}'", &registry);
+                        return creds.map_err(|e| format_err!("{}", e));
+                    }
+                    // Update `registry` to be the part before the last '/'
+                    registry = before.to_string();
+                }
+                None => break,
+            }
+        }
+        debug!("getting credentials for {}", &registry);
+        let file = File::open(&path).context(format!("could not open '{:?}'", path))?;
+        dkregistry::get_credentials(&file, &registry).map_err(|e| format_err!("{}", e))
     })
 }
 
@@ -637,6 +689,17 @@ mod tests {
                     insecure: true,
                     host: "localhost".to_string(),
                     port: Some(8080),
+                    namespace: "".to_string(),
+                },
+            ),
+            (
+                "http://localhost:8080/ns1/ns2",
+                Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2".to_string(),
                 },
             ),
             (
@@ -646,6 +709,17 @@ mod tests {
                     insecure: false,
                     host: "127.0.0.1".to_string(),
                     port: None,
+                    namespace: "".to_string(),
+                },
+            ),
+            (
+                "127.0.0.1/ns1/ns2",
+                Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "127.0.0.1".to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2".to_string(),
                 },
             ),
             (
@@ -655,6 +729,17 @@ mod tests {
                     insecure: false,
                     host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
                     port: Some(5000),
+                    namespace: "".to_string(),
+                },
+            ),
+            (
+                "sat-r220-02.lab.eng.rdu2.redhat.com:5000/ns1",
+                Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
+                    port: Some(5000),
+                    namespace: "/ns1".to_string(),
                 },
             ),
             (
@@ -664,6 +749,17 @@ mod tests {
                     insecure: false,
                     host: "quay.io".to_string(),
                     port: None,
+                    namespace: "".to_string(),
+                },
+            ),
+            (
+                "quay.io/ns1",
+                Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "quay.io".to_string(),
+                    port: None,
+                    namespace: "/ns1".to_string(),
                 },
             ),
         ];
