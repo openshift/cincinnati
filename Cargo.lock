@@ -852,7 +852,6 @@ dependencies = [
  "lazy_static",
  "log",
  "memchr",
- "mockito",
  "opentelemetry",
  "opentelemetry-jaeger",
  "prometheus",
@@ -2102,8 +2101,6 @@ dependencies = [
  "hyper 1.1.0",
  "lazy_static",
  "log",
- "memchr",
- "mockito",
  "opentelemetry",
  "parking_lot",
  "prometheus",
@@ -2167,21 +2164,20 @@ dependencies = [
 
 [[package]]
 name = "mockito"
-version = "1.2.0"
+version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8d3038e23466858569c2d30a537f691fa0d53b51626630ae08262943e3bbb8b"
+checksum = "80f9fece9bd97ab74339fe19f4bcaf52b76dcc18e5364c7977c1838f76b38de9"
 dependencies = [
  "assert-json-diff",
  "colored",
- "futures",
- "hyper 0.14.28",
+ "httparse",
+ "lazy_static",
  "log",
  "rand 0.8.5",
  "regex",
  "serde_json",
  "serde_urlencoded",
  "similar",
- "tokio",
 ]
 
 [[package]]
@@ -2361,9 +2357,9 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openapiv3"
-version = "1.0.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75e56d5c441965b6425165b7e3223cc933ca469834f4a8b4786817a1f9dc4f13"
+checksum = "cc02deea53ffe807708244e5914f6b099ad7015a207ee24317c22112e17d9c5c"
 dependencies = [
  "indexmap 2.0.0",
  "serde",
