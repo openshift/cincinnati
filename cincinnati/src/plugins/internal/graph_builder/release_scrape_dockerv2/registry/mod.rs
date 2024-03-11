@@ -34,6 +34,7 @@ use std::path::{Path, PathBuf};
 use std::string::String;
 use std::sync::Arc;
 use tar::Archive;
+use url::Url;
 
 use dkregistry::mediatypes::MediaTypes::{ManifestList, ManifestV2S1Signed, ManifestV2S2};
 use dkregistry::v2::Client;
@@ -77,85 +78,24 @@ pub struct Registry {
 
 impl Registry {
     pub fn try_from_str(src: &str) -> Fallible<Self> {
-        macro_rules! process_regex {
-            ($a:ident, $r:expr, $b:tt) => {
-                if let Some($a) = regex::Regex::new($r)
-                    .context(format!("could not compile regex pattern {}", $r))?
-                    .captures(src)
-                {
-                    $b
+        match parse_url(src) {
+            Ok((scheme, host, port, namespace)) => {
+                let mut registry = Registry {
+                    host,
+                    namespace,
+                    port,
+                    ..Default::default()
                 };
-            };
+
+                if scheme != "" {
+                    registry.insecure = Registry::insecure_scheme(&scheme)?;
+                    registry.scheme = scheme;
+                }
+
+                Ok(registry)
+            }
+            Err(e) => bail!("unable to parse registry {}: {}", src, e),
         }
-
-        process_regex!(
-            capture,
-            // match scheme://h.o.s.t:port/p/a/t/h
-            r"^(?P<scheme>[a-z]+)(:/{2})(?P<host>([0-9a-zA-Z]+\.)*([0-9a-zA-Z]+)):(?P<port>[0-9]+)(?P<path>(\/[0-9a-zA-Z\-_]+)+)$",
-            {
-                let scheme = capture["scheme"].to_string();
-                return Ok(Registry {
-                    insecure: Registry::insecure_scheme(&scheme)?,
-                    scheme,
-                    host: capture["host"].to_string(),
-                    port: Some(
-                        capture["port"]
-                            .parse()
-                            .expect("could not parse port as a number"),
-                    ),
-                    namespace: capture["path"].to_string(),
-                });
-            }
-        );
-
-        process_regex!(
-            capture,
-            // match scheme://h.o.s.t/p/a/t/h
-            r"^(?P<scheme>[a-z]+)(:/{2})(?P<host>([0-9a-zA-Z]+\.)*([0-9a-zA-Z]+))(?P<path>(\/[0-9a-zA-Z\-_]+)*)$",
-            {
-                let scheme = capture["scheme"].to_string();
-                return Ok(Registry {
-                    insecure: Registry::insecure_scheme(&scheme)?,
-                    scheme,
-                    host: capture["host"].to_string(),
-                    namespace: capture["path"].to_string(),
-                    ..Default::default()
-                });
-            }
-        );
-
-        process_regex!(
-            capture,
-            // match h.o.s.t:port/p/a/t/h
-            r"^(?P<host>([0-9a-zA-Z\-]+\.)+([0-9a-zA-Z]+)):(?P<port>[0-9]+)(?P<path>(\/[0-9a-zA-Z\-]*)*)$",
-            {
-                return Ok(Registry {
-                    host: capture["host"].to_string(),
-                    port: Some(
-                        capture["port"]
-                            .parse()
-                            .expect("could not parse port as a number"),
-                    ),
-                    namespace: capture["path"].to_string(),
-                    ..Default::default()
-                });
-            }
-        );
-
-        process_regex!(
-            capture,
-            // match h.o.s.t/p/a/t/h
-            r"^(?P<host>([0-9a-zA-Z\-]+\.)*[0-9a-zA-Z]+)(?P<path>(\/[0-9a-zA-Z]+)*)$",
-            {
-                return Ok(Registry {
-                    host: capture["host"].to_string(),
-                    namespace: capture["path"].to_string(),
-                    ..Default::default()
-                });
-            }
-        );
-
-        bail!("unsupported registry format {}", src)
     }
 
     pub fn try_new(
@@ -673,6 +613,34 @@ fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<Metadata, E
         }
         None => bail!(format!("'{}' not found", metadata_filename)),
     }
+}
+
+// Parse the url and returns its components
+fn parse_url(
+    input: &str,
+) -> Result<(String, String, Option<u16>, String), Box<dyn std::error::Error>> {
+    // Check if the URL has a scheme. If not, prepend "example://" to it.
+    let mut modified_input = String::from(input);
+    let mut modified_input_flag = false;
+    if !input.contains("://") {
+        modified_input.insert_str(0, "example://");
+        modified_input_flag = true;
+    }
+
+    let url = Url::parse(&modified_input).context("parsing registry url")?;
+
+    let mut scheme = url.scheme().to_string();
+    let host = url
+        .host_str()
+        .ok_or("Host is missing from the URL")?
+        .to_string();
+    let port = url.port();
+    let path = url.path().to_string();
+
+    if modified_input_flag {
+        scheme = "".to_string();
+    }
+    Ok((scheme, host, port, path))
 }
 
 #[cfg(test)]
