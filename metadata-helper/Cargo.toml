@@ -33,7 +33,7 @@ toml = "^0.8.2"
 url = "^2.4"
 
 [build-dependencies]
-built = { version = "^0.7.0", features = [ "git2" ]}
+built = { version = "^0.7.1", features = [ "git2" ]}
 
 [dev-dependencies]
 tokio = { version = "1.32", features = [ "rt-multi-thread" ] }
