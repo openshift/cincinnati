@@ -30,7 +30,7 @@ smart-default = "0.7.1"
 structopt = "^0.3"
 tempfile = "^3.8.0"
 toml = "^0.8.2"
-url = "^2.4"
+url = "^2.5"
 
 [build-dependencies]
 built = { version = "^0.7.1", features = [ "git2" ]}
