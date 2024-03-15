@@ -32,7 +32,7 @@ tar = "^0.4.40"
 tokio = { version = "1.32", features = [ "fs",  "rt-multi-thread" ] }
 tokio-stream = { version = "0.1", features = ["fs"] }
 toml = "^0.8.2"
-url = "^2.4"
+url = "^2.5"
 parking_lot = "^0.12"
 tempfile = "^3.8.0"
 async-trait = "^0.1"
