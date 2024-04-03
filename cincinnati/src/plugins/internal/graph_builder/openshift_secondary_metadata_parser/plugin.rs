@@ -10,7 +10,8 @@ use std::collections::HashSet;
 use std::path::Path;
 
 pub static DEFAULT_KEY_FILTER: &str = "io.openshift.upgrades.graph";
-static SUPPORTED_VERSIONS: &[&str] = &["1.0.0", "1.1.0", "1.2.0"];
+// we consider that MAX_SUPPORTED_VERSION is backward compatible.
+static MAX_SUPPORTED_VERSION: &str = "1.2.0";
 
 pub mod graph_data_model {
     //! This module contains the data types corresponding to the graph data files.
@@ -343,14 +344,30 @@ impl OpenshiftSecondaryMetadataParserPlugin {
             .context(format!("Reading {:?}", &path))?;
         let string_version = String::from_utf8_lossy(&version);
 
-        if SUPPORTED_VERSIONS.contains(&string_version.trim()) {
-            Ok(string_version.into_owned())
-        } else {
-            Err(format_err!(
-                "unrecognized graph-data version {}; supported versions: {:?}",
+        if semver::Version::parse(&string_version).is_err() {
+            return Err(format_err!("{} is not a valid semver", string_version));
+        }
+
+        let req_version = semver::Version::parse(&string_version).unwrap();
+        let max_version = semver::Version::parse(MAX_SUPPORTED_VERSION).unwrap();
+
+        if req_version.major != max_version.major {
+            return Err(format_err!(
+                "unrecognized graph-data version {}; {:?} and compatible versions are supported",
                 string_version,
-                SUPPORTED_VERSIONS
-            ))
+                MAX_SUPPORTED_VERSION
+            ));
+        }
+
+        if req_version.minor > max_version.minor {
+            info!("graph-data version {} may have features which our {:?} implementation does not support", string_version, MAX_SUPPORTED_VERSION);
+            return Ok(MAX_SUPPORTED_VERSION.to_string());
+        } else {
+            info!(
+                "graph-data version {} is compatible with our {:?} implementation",
+                string_version, MAX_SUPPORTED_VERSION
+            );
+            Ok(string_version.into_owned())
         }
     }
 
