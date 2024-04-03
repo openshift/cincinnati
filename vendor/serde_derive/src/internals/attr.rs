@@ -221,6 +221,7 @@ pub struct Container {
     is_packed: bool,
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
+    non_exhaustive: bool,
 }
 
 /// Styles of representing an enum.
@@ -306,9 +307,12 @@ impl Container {
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
+        let mut non_exhaustive = false;
 
         for attr in &item.attrs {
             if attr.path() != SERDE {
+                non_exhaustive |=
+                    matches!(&attr.meta, syn::Meta::Path(path) if path == NON_EXHAUSTIVE);
                 continue;
             }
 
@@ -587,6 +591,7 @@ impl Container {
             serde_path: serde_path.get(),
             is_packed,
             expecting: expecting.get(),
+            non_exhaustive,
         }
     }
 
@@ -672,6 +677,10 @@ impl Container {
     pub fn expecting(&self) -> Option<&str> {
         self.expecting.as_ref().map(String::as_ref)
     }
+
+    pub fn non_exhaustive(&self) -> bool {
+        self.non_exhaustive
+    }
 }
 
 fn decide_tag(
@@ -707,7 +716,7 @@ fn decide_tag(
             }
             TagType::Internal { tag }
         }
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), None) => {
+        (Some((untagged_tokens, ())), Some((tag_tokens, _)), None) => {
             let msg = "enum cannot be both untagged and internally tagged";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(tag_tokens, msg);
@@ -718,14 +727,14 @@ fn decide_tag(
             cx.error_spanned_by(content_tokens, msg);
             TagType::External
         }
-        (Some((untagged_tokens, _)), None, Some((content_tokens, _))) => {
+        (Some((untagged_tokens, ())), None, Some((content_tokens, _))) => {
             let msg = "untagged enum cannot have #[serde(content = \"...\")]";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(content_tokens, msg);
             TagType::External
         }
         (None, Some((_, tag)), Some((_, content))) => TagType::Adjacent { tag, content },
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), Some((content_tokens, _))) => {
+        (Some((untagged_tokens, ())), Some((tag_tokens, _)), Some((content_tokens, _))) => {
             let msg = "untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(tag_tokens, msg);
@@ -747,7 +756,7 @@ fn decide_identifier(
         variant_identifier.0.get_with_tokens(),
     ) {
         (_, None, None) => Identifier::No,
-        (_, Some((field_identifier_tokens, _)), Some((variant_identifier_tokens, _))) => {
+        (_, Some((field_identifier_tokens, ())), Some((variant_identifier_tokens, ()))) => {
             let msg =
                 "#[serde(field_identifier)] and #[serde(variant_identifier)] cannot both be set";
             cx.error_spanned_by(field_identifier_tokens, msg);

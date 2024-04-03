@@ -6,6 +6,7 @@
 //! # Example
 //!
 //!![Trace output from string example](https://raw.githubusercontent.com/winnow-rs/winnow/main/assets/trace.svg "Example output")
+#![cfg_attr(feature = "debug", allow(clippy::std_instead_of_core))]
 
 #[cfg(feature = "debug")]
 mod internals;
@@ -19,62 +20,41 @@ compile_error!("`debug` requires `std`");
 
 /// Trace the execution of the parser
 ///
-/// Note that [`Parser::context` also provides high level trace information.
+/// Note that [`Parser::context`] also provides high level trace information.
 ///
 /// See [`trace` module][self] for more details.
 ///
 /// # Example
 ///
 /// ```rust
-/// # use winnow::{error::ErrMode, error::{Error, ErrorKind}, error::Needed, IResult};
+/// # use winnow::{error::ErrMode, error::{InputError, ErrorKind}, error::Needed};
 /// # use winnow::token::take_while;
 /// # use winnow::stream::AsChar;
 /// # use winnow::prelude::*;
 /// use winnow::trace::trace;
 ///
-/// fn short_alpha(s: &[u8]) -> IResult<&[u8], &[u8]> {
+/// fn short_alpha<'s>(s: &mut &'s [u8]) -> PResult<&'s [u8], InputError<&'s [u8]>> {
 ///   trace("short_alpha",
 ///     take_while(3..=6, AsChar::is_alpha)
 ///   ).parse_next(s)
 /// }
 ///
-/// assert_eq!(short_alpha(b"latin123"), Ok((&b"123"[..], &b"latin"[..])));
-/// assert_eq!(short_alpha(b"lengthy"), Ok((&b"y"[..], &b"length"[..])));
-/// assert_eq!(short_alpha(b"latin"), Ok((&b""[..], &b"latin"[..])));
-/// assert_eq!(short_alpha(b"ed"), Err(ErrMode::Backtrack(Error::new(&b"ed"[..], ErrorKind::Slice))));
-/// assert_eq!(short_alpha(b"12345"), Err(ErrMode::Backtrack(Error::new(&b"12345"[..], ErrorKind::Slice))));
+/// assert_eq!(short_alpha.parse_peek(b"latin123"), Ok((&b"123"[..], &b"latin"[..])));
+/// assert_eq!(short_alpha.parse_peek(b"lengthy"), Ok((&b"y"[..], &b"length"[..])));
+/// assert_eq!(short_alpha.parse_peek(b"latin"), Ok((&b""[..], &b"latin"[..])));
+/// assert_eq!(short_alpha.parse_peek(b"ed"), Err(ErrMode::Backtrack(InputError::new(&b"ed"[..], ErrorKind::Slice))));
+/// assert_eq!(short_alpha.parse_peek(b"12345"), Err(ErrMode::Backtrack(InputError::new(&b"12345"[..], ErrorKind::Slice))));
 /// ```
 #[cfg_attr(not(feature = "debug"), allow(unused_variables))]
 #[cfg_attr(not(feature = "debug"), allow(unused_mut))]
 #[cfg_attr(not(feature = "debug"), inline(always))]
 pub fn trace<I: Stream, O, E>(
     name: impl crate::lib::std::fmt::Display,
-    mut parser: impl Parser<I, O, E>,
+    parser: impl Parser<I, O, E>,
 ) -> impl Parser<I, O, E> {
     #[cfg(feature = "debug")]
     {
-        let mut call_count = 0;
-        move |i: I| {
-            let depth = internals::Depth::new();
-            let original = i.clone();
-            internals::start(*depth, &name, call_count, &original);
-
-            let res = parser.parse_next(i);
-
-            let consumed = res.as_ref().ok().map(|(i, _)| {
-                if i.eof_offset() == 0 {
-                    // Sometimes, an unrelated empty string is returned which can break `offset_to`
-                    original.eof_offset()
-                } else {
-                    original.offset_to(i)
-                }
-            });
-            let severity = internals::Severity::with_result(&res);
-            internals::end(*depth, &name, call_count, consumed, severity);
-            call_count += 1;
-
-            res
-        }
+        internals::Trace::new(parser, name)
     }
     #[cfg(not(feature = "debug"))]
     {

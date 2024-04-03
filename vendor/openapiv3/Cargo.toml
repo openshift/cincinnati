@@ -10,9 +10,9 @@
 # See Cargo.toml.orig for the original contents.
 
 [package]
-edition = "2018"
+edition = "2021"
 name = "openapiv3"
-version = "1.0.2"
+version = "2.0.0"
 authors = ["Glade Miller <glademiller@gmail.com>"]
 description = "This crate provides data structures that represent the OpenAPI v3.0.x specification easily deserializable with serde."
 homepage = "https://github.com/glademiller/openapiv3"
@@ -25,8 +25,8 @@ license = "MIT/Apache-2.0"
 repository = "https://github.com/glademiller/openapiv3"
 
 [dependencies.indexmap]
-version = "1.0"
-features = ["serde-1"]
+version = "2.0.0"
+features = ["serde"]
 
 [dependencies.serde]
 version = "1.0"
@@ -36,10 +36,10 @@ features = ["derive"]
 version = "1.0"
 
 [dev-dependencies.newline-converter]
-version = "0.2.0"
+version = "0.3.0"
 
 [dev-dependencies.serde_yaml]
-version = "0.8"
+version = "0.9"
 
 [features]
 skip_serializing_defaults = []

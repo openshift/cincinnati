@@ -11,9 +11,9 @@
 
 [package]
 edition = "2021"
-rust-version = "1.56"
+rust-version = "1.63"
 name = "tokio-stream"
-version = "0.1.14"
+version = "0.1.15"
 authors = ["Tokio Contributors <team@tokio.rs>"]
 description = """
 Utilities to work with `Stream` and `tokio`.
@@ -22,7 +22,6 @@ homepage = "https://tokio.rs"
 categories = ["asynchronous"]
 license = "MIT"
 repository = "https://github.com/tokio-rs/tokio"
-resolver = "1"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -39,7 +38,7 @@ rustdoc-args = [
 version = "0.3.0"
 
 [dependencies.pin-project-lite]
-version = "0.2.0"
+version = "0.2.11"
 
 [dependencies.tokio]
 version = "1.15.0"

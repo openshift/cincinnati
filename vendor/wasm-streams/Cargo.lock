@@ -311,7 +311,7 @@ dependencies = [
 
 [[package]]
 name = "wasm-streams"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "futures-util",
  "js-sys",

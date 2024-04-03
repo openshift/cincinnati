@@ -2,10 +2,12 @@
 mod support;
 
 use futures_util::stream::StreamExt;
+use support::server;
+
+#[cfg(feature = "json")]
 use http::header::CONTENT_TYPE;
-use http::HeaderValue;
+#[cfg(feature = "json")]
 use std::collections::HashMap;
-use support::*;
 
 use reqwest::Client;
 
@@ -382,7 +384,7 @@ async fn test_allowed_methods() {
 fn add_json_default_content_type_if_not_set_manually() {
     let mut map = HashMap::new();
     map.insert("body", "json");
-    let content_type = HeaderValue::from_static("application/vnd.api+json");
+    let content_type = http::HeaderValue::from_static("application/vnd.api+json");
     let req = Client::new()
         .post("https://google.com/")
         .header(CONTENT_TYPE, &content_type)
@@ -405,4 +407,34 @@ fn update_json_content_type_if_set_manually() {
         .expect("request is not valid");
 
     assert_eq!("application/json", req.headers().get(CONTENT_TYPE).unwrap());
+}
+
+#[cfg(all(feature = "__tls", not(feature = "rustls-tls-manual-roots")))]
+#[tokio::test]
+async fn test_tls_info() {
+    let resp = reqwest::Client::builder()
+        .tls_info(true)
+        .build()
+        .expect("client builder")
+        .get("https://google.com")
+        .send()
+        .await
+        .expect("response");
+    let tls_info = resp.extensions().get::<reqwest::tls::TlsInfo>();
+    assert!(tls_info.is_some());
+    let tls_info = tls_info.unwrap();
+    let peer_certificate = tls_info.peer_certificate();
+    assert!(peer_certificate.is_some());
+    let der = peer_certificate.unwrap();
+    assert_eq!(der[0], 0x30); // ASN.1 SEQUENCE
+
+    let resp = reqwest::Client::builder()
+        .build()
+        .expect("client builder")
+        .get("https://google.com")
+        .send()
+        .await
+        .expect("response");
+    let tls_info = resp.extensions().get::<reqwest::tls::TlsInfo>();
+    assert!(tls_info.is_none());
 }

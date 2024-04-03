@@ -1,5 +1,4 @@
 #![cfg(feature = "openssl")]
-#![allow(clippy::uninlined_format_args)]
 
 extern crate tls_openssl as openssl;
 
@@ -321,8 +320,7 @@ async fn h2_body_length() {
     let mut srv = test_server(move || {
         HttpService::build()
             .h2(|_| async {
-                let body =
-                    once(async { Ok::<_, Infallible>(Bytes::from_static(STR.as_ref())) });
+                let body = once(async { Ok::<_, Infallible>(Bytes::from_static(STR.as_ref())) });
 
                 Ok::<_, Infallible>(
                     Response::ok().set_body(SizedStream::new(STR.len() as u64, body)),

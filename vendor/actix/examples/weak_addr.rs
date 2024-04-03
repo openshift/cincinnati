@@ -5,10 +5,9 @@
 //! stopped. Alternatively you'd have to check if the client's mailbox
 //! is still open.
 
-use actix::{prelude::*, WeakAddr};
-use actix::{Actor, Context};
-
 use std::time::{Duration, Instant};
+
+use actix::{prelude::*, Actor, Context, WeakAddr};
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
@@ -107,7 +106,7 @@ impl Handler<TimePing> for Client {
     type Result = ();
 
     fn handle(&mut self, msg: TimePing, _ctx: &mut Self::Context) -> Self::Result {
-        println!("🐰 client received ping: {:?}", msg);
+        println!("🐰 client received ping: {:?}", msg.0);
     }
 }
 

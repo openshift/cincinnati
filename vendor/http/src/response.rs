@@ -176,6 +176,7 @@ use crate::{Extensions, Result};
 /// #
 /// # fn main() {}
 /// ```
+#[derive(Clone)]
 pub struct Response<T> {
     head: Parts,
     body: T,
@@ -185,6 +186,7 @@ pub struct Response<T> {
 ///
 /// The HTTP response head consists of a status, version, and a set of
 /// header fields.
+#[derive(Clone)]
 pub struct Parts {
     /// The response's status
     pub status: StatusCode,
@@ -546,9 +548,6 @@ impl Builder {
 
     /// Set the HTTP status for this response.
     ///
-    /// This function will configure the HTTP status code of the `Response` that
-    /// will be returned from `Builder::build`.
-    ///
     /// By default this is `200`.
     ///
     /// # Examples
@@ -573,9 +572,6 @@ impl Builder {
     }
 
     /// Set the HTTP version for this response.
-    ///
-    /// This function will configure the HTTP version of the `Response` that
-    /// will be returned from `Builder::build`.
     ///
     /// By default this is HTTP/1.1
     ///
@@ -690,7 +686,7 @@ impl Builder {
     /// ```
     pub fn extension<T>(self, extension: T) -> Builder
     where
-        T: Any + Send + Sync + 'static,
+        T: Clone + Any + Send + Sync + 'static,
     {
         self.and_then(move |mut head| {
             head.extensions.insert(extension);

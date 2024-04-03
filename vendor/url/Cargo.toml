@@ -13,7 +13,7 @@
 edition = "2018"
 rust-version = "1.56"
 name = "url"
-version = "2.4.0"
+version = "2.5.0"
 authors = ["The rust-url developers"]
 include = [
     "src/**/*",
@@ -38,15 +38,15 @@ repository = "https://github.com/servo/rust-url"
 
 [package.metadata.docs.rs]
 features = ["serde"]
+rustdoc-args = ["--generate-link-to-definition"]
 
 [package.metadata.playground]
 features = ["serde"]
 
 [[test]]
-name = "debugger_visualizer"
-path = "tests/debugger_visualizer.rs"
-test = false
-required-features = ["debugger_visualizer"]
+name = "url_wpt"
+path = "tests/wpt.rs"
+harness = false
 
 [[bench]]
 name = "parse_url"
@@ -54,13 +54,13 @@ path = "benches/parse_url.rs"
 harness = false
 
 [dependencies.form_urlencoded]
-version = "1.2.0"
+version = "1.2.1"
 
 [dependencies.idna]
-version = "0.4.0"
+version = "0.5.0"
 
 [dependencies.percent-encoding]
-version = "2.3.0"
+version = "2.3.1"
 
 [dependencies.serde]
 version = "1.0"
@@ -70,11 +70,9 @@ optional = true
 [dev-dependencies.bencher]
 version = "0.1"
 
-[dev-dependencies.debugger_test]
-version = "0.1"
-
-[dev-dependencies.debugger_test_parser]
-version = "0.1"
+[dev-dependencies.serde]
+version = "1.0"
+features = ["derive"]
 
 [dev-dependencies.serde_json]
 version = "1.0"
@@ -83,9 +81,3 @@ version = "1.0"
 debugger_visualizer = []
 default = []
 expose_internals = []
-
-[badges.appveyor]
-repository = "Manishearth/rust-url"
-
-[badges.travis-ci]
-repository = "servo/rust-url"
