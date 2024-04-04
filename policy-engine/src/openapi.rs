@@ -156,7 +156,7 @@ mod tests {
             .cloned()
             .map(String::from)
             .collect();
-        let path_prefix = "test_prefix".to_string();
+        let path_prefix = "".to_string();
 
         let data = actix_web::web::Data::new(AppState {
             mandatory_params: mandatory_params.clone(),

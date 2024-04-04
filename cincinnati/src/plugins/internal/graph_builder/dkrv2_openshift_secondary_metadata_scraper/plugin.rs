@@ -1,8 +1,9 @@
 use crate as cincinnati;
 use crate::plugins::internal::dkrv2_openshift_secondary_metadata_scraper::gpg;
+use crate::plugins::internal::graph_builder::commons::get_certs_from_dir;
 use crate::plugins::internal::release_scrape_dockerv2::registry;
-use commons::{GRAPH_DATA_DIR_PARAM_KEY, SECONDARY_METADATA_PARAM_KEY};
-use reqwest::{Client, ClientBuilder};
+use commons::{DEFAULT_ROOT_CERT_DIR, GRAPH_DATA_DIR_PARAM_KEY, SECONDARY_METADATA_PARAM_KEY};
+use reqwest::{Certificate, Client, ClientBuilder};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tempfile::TempDir;
@@ -24,6 +25,7 @@ pub static DEFAULT_OUTPUT_ALLOWLIST: &[&str] = &[
 pub static DEFAULT_METADATA_IMAGE_REGISTRY: &str = "";
 pub static DEFAULT_METADATA_IMAGE_REPOSITORY: &str = "";
 pub static DEFAULT_METADATA_IMAGE_TAG: &str = "latest";
+pub static DEFAULT_GRAPH_DATA_PATH: &str = "/";
 pub static DEFAULT_SIGNATURE_BASEURL: &str =
     "https://mirror.openshift.com/pub/openshift-v4/signatures/openshift/release/";
 pub static DEFAULT_SIGNATURE_FETCH_TIMEOUT_SECS: u64 = 30;
@@ -34,6 +36,11 @@ pub static DEFAULT_SIGNATURE_FETCH_TIMEOUT_SECS: u64 = 30;
 pub struct DkrV2OpenshiftSecondaryMetadataScraperSettings {
     /// Directory where the image will be unpacked. Will be created if it doesn't exist.
     output_directory: PathBuf,
+
+    /// Path inside the graph data image in which to find the graph data.
+    /// Defaults to "/"
+    #[default(DEFAULT_GRAPH_DATA_PATH.into())]
+    graph_data_path: PathBuf,
 
     /// Vector of regular expressions used as a positive output filter.
     /// An empty vector is regarded as a configuration error.
@@ -64,6 +71,11 @@ pub struct DkrV2OpenshiftSecondaryMetadataScraperSettings {
     /// Takes precedence over username and password
     #[default(Option::None)]
     credentials_path: Option<PathBuf>,
+
+    /// File containing the root certificates.
+    /// Accepts PEM encoded root certificates.
+    #[default(PathBuf::from(DEFAULT_ROOT_CERT_DIR.to_string()))]
+    root_certificate_dir: PathBuf,
 
     /// Ensure signatures are verified
     #[default(false)]
@@ -121,7 +133,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperSettings {
                 "invalid signature base url",
             );
             ensure!(
-                !settings.public_keys_path.is_none(),
+                settings.public_keys_path.is_some(),
                 "empty public keys path",
             );
         }
@@ -134,6 +146,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperSettings {
 pub struct State {
     cached_layers: Option<Vec<String>>,
     cached_data_dir: Option<TempDir>,
+    cached_graph_data_path: Option<PathBuf>,
 }
 
 /// This plugin implements downloading the secondary metadata container image
@@ -175,23 +188,47 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 
         let data_dir = tempfile::tempdir_in(&settings.output_directory)?;
 
-        let registry = registry::Registry::try_from_str(&settings.registry)
-            .context(format!("Parsing {} as Registry", &settings.registry))?;
+        let mut ns_registry = settings.registry.clone();
+        ns_registry.push_str(&settings.repository);
+
+        let registry = registry::Registry::try_from_str(&ns_registry)
+            .context(format!("trying to extract Registry from {}", &ns_registry))?;
 
         if let Some(credentials_path) = &settings.credentials_path {
-            let (username, password) =
-                registry::read_credentials(Some(credentials_path), &registry.host_port_string())
-                    .context(format!(
-                        "Reading registry credentials from {:?}",
-                        credentials_path
-                    ))?;
+            let (username, password) = registry::read_credentials(
+                Some(credentials_path),
+                &registry.host_port_namespaced_string(),
+            )
+            .context(format!(
+                "Reading registry credentials from {:?}",
+                credentials_path
+            ))?;
 
             settings.username = username;
             settings.password = password;
         }
-        let http_client = ClientBuilder::new()
+
+        let mut http_client_builder: reqwest::ClientBuilder = ClientBuilder::new()
             .gzip(true)
             .timeout(Duration::from_secs(DEFAULT_SIGNATURE_FETCH_TIMEOUT_SECS))
+            .use_native_tls();
+
+        if settings.root_certificate_dir.exists() {
+            let root_certs = get_certs_from_dir(&settings.root_certificate_dir);
+            if root_certs.is_err() {
+                debug!(
+                    "unable to read root certs form dir: {}, {}",
+                    &settings.root_certificate_dir.to_str().unwrap_or_default(),
+                    root_certs.unwrap_err()
+                );
+            } else {
+                for cert in root_certs.unwrap() {
+                    http_client_builder = http_client_builder.add_root_certificate(cert);
+                }
+            }
+        };
+
+        let http_client = http_client_builder
             .build()
             .context("Building reqwest client")?;
 
@@ -218,11 +255,30 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
     async fn run_internal(&self, mut io: InternalIO) -> Fallible<InternalIO> {
+        let mut certificates: Vec<Certificate> = Vec::new();
+        if self.settings.root_certificate_dir.exists() {
+            let root_certs = get_certs_from_dir(&self.settings.root_certificate_dir);
+            if root_certs.is_err() {
+                debug!(
+                    "unable to read root certs form dir: {}, {}",
+                    &self
+                        .settings
+                        .root_certificate_dir
+                        .to_str()
+                        .unwrap_or_default(),
+                    root_certs.unwrap_err()
+                );
+            } else {
+                certificates = root_certs.unwrap();
+            }
+        };
+
         let registry_client = registry::new_registry_client(
             &self.registry,
             &self.settings.repository,
             self.settings.username.as_deref(),
             self.settings.password.as_deref(),
+            Some(certificates),
         )
         .await?;
 
@@ -275,10 +331,20 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         .await?;
 
         let graph_data_dir = data_dir.path().to_path_buf();
-        self.update_cache_state(layers, data_dir).await;
+        let graph_data_path = PathBuf::from(
+            self.settings
+                .graph_data_path
+                .strip_prefix("/")
+                .unwrap_or(&self.settings.graph_data_path),
+        );
+        let graph_data_path = graph_data_dir.join(graph_data_path);
+
+        self.update_cache_state(layers, data_dir, graph_data_path.to_owned())
+            .await;
+        self.set_io_graph_data_dir(&mut io, &graph_data_path)?;
 
         let graph_data_tar_path = self.settings.output_directory.join("graph-data.tar.gz");
-        let signatures_path = graph_data_dir.as_path().join("signatures");
+        let signatures_path = graph_data_path.as_path().join("signatures");
         let signatures_symlink = self.settings.output_directory.join("signatures");
 
         // create a symlink to signatures directory for metadata-helper
@@ -295,7 +361,7 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 
         commons::create_tar(
             graph_data_tar_path.clone().into_boxed_path(),
-            graph_data_dir.into_boxed_path(),
+            graph_data_path.clone().into(),
         )
         .await
         .context("creating graph-data tar")?;
@@ -315,17 +381,14 @@ impl InternalPlugin for DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
     async fn are_layers_cached(&self, layers: &[String], io: &mut InternalIO) -> Fallible<bool> {
         let state = self.state.lock().await;
-        match (&state.cached_layers, &state.cached_data_dir) {
-            (Some(cached_layers), Some(cached_data_dir)) if cached_layers.as_slice() == layers => {
+        match &*state {
+            State {
+                cached_layers: Some(cached_layers),
+                cached_data_dir: Some(_cached_data_dir),
+                cached_graph_data_path: Some(cached_graph_data_path),
+            } if cached_layers.as_slice() == layers => {
                 trace!("Using cached data directory for tag {}", self.settings.tag);
-                io.parameters.insert(
-                    GRAPH_DATA_DIR_PARAM_KEY.to_string(),
-                    cached_data_dir
-                        .path()
-                        .to_str()
-                        .ok_or_else(|| format_err!("data_dir cannot be converted to str"))?
-                        .to_string(),
-                );
+                self.set_io_graph_data_dir(io, cached_graph_data_path)?;
                 Ok(true)
             }
 
@@ -335,15 +398,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 
     fn create_data_dir(&self, io: &mut InternalIO) -> Fallible<TempDir> {
         let data_dir = tempfile::tempdir_in(self.data_dir.path())?;
-
-        io.parameters.insert(
-            GRAPH_DATA_DIR_PARAM_KEY.to_string(),
-            data_dir
-                .path()
-                .to_str()
-                .ok_or_else(|| format_err!("data_dir cannot be converted to str"))?
-                .to_string(),
-        );
+        self.set_io_graph_data_dir(io, &data_dir)?;
 
         trace!(
             "Using data directory {:?} for tag {}",
@@ -352,6 +407,18 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         );
 
         Ok(data_dir)
+    }
+
+    fn set_io_graph_data_dir<P: AsRef<Path>>(&self, io: &mut InternalIO, dir: P) -> Fallible<()> {
+        io.parameters.insert(
+            GRAPH_DATA_DIR_PARAM_KEY.to_string(),
+            dir.as_ref()
+                .to_str()
+                .ok_or_else(|| format_err!("data_dir cannot be converted to str"))?
+                .to_string(),
+        );
+
+        Ok(())
     }
 
     fn unpack_layers<P>(&self, layers_blobs: &[Vec<u8>], data_dir: P) -> Fallible<()>
@@ -379,10 +446,16 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         Ok(())
     }
 
-    async fn update_cache_state(&self, layers: Vec<String>, data_dir: TempDir) {
+    async fn update_cache_state(
+        &self,
+        layers: Vec<String>,
+        data_dir: TempDir,
+        graph_data_path: PathBuf,
+    ) {
         let mut state = self.state.lock().await;
         state.cached_layers = Some(layers);
         state.cached_data_dir = Some(data_dir);
+        state.cached_graph_data_path = Some(graph_data_path);
     }
 }
 

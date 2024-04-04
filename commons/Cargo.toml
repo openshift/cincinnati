@@ -5,18 +5,18 @@ authors = ["Stefan Junker <mail@stefanjunker.de>"]
 edition = "2018"
 
 [dependencies]
-actix-web = "^4.0.0-rc.3"
+actix-web = "^4.4.1"
 env_logger = "^0.10"
 anyhow = "1.0"
 thiserror = "1.0"
 lazy_static = "^1.2.0"
 log = "^0.4.20"
 prometheus = "0.13"
-serde = "^1.0.183"
-serde_json = "^1.0.104"
+serde = "^1.0.189"
+serde_json = "^1.0.107"
 serde_derive = "^1.0.123"
 tokio = { version = "1.32", features = [ "rt-multi-thread" ] }
-url = "^2.3"
+url = "^2.5"
 futures = "^0.3"
 flate2 = "^1.0.27"
 opentelemetry = "0.14.0"
@@ -28,5 +28,4 @@ actix-service = "^2.0.2"
 hamcrest2 = "0.3.0"
 
 [dev-dependencies]
-memchr = "^2.5"
-mockito = "^1.1.0"
+memchr = "^2.7"

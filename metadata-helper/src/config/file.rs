@@ -39,7 +39,7 @@ impl FileOptions {
 
         let mut content = vec![];
         bufrd.read_to_end(&mut content)?;
-        let cfg = toml::from_slice(&content).context(format!(
+        let cfg = toml::from_str(std::str::from_utf8(&content)?).context(format!(
             "failed to parse config file {}:\n{}",
             cfg_path.as_ref().display(),
             std::str::from_utf8(&content).unwrap_or("file not decodable")

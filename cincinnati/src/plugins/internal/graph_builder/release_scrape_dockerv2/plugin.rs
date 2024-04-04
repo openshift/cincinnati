@@ -1,9 +1,12 @@
 use super::registry;
 
 use crate as cincinnati;
+use crate::plugins::internal::graph_builder::commons::get_certs_from_dir;
 
 use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
+use commons::DEFAULT_ROOT_CERT_DIR;
+use reqwest::Certificate;
 
 use std::convert::TryInto;
 
@@ -48,6 +51,11 @@ pub struct ReleaseScrapeDockerv2Settings {
     /// Takes precedence over username and password
     #[default(Option::None)]
     pub credentials_path: Option<PathBuf>,
+
+    /// File containing the root certificates.
+    /// Accepts PEM encoded root certificates.
+    #[default(PathBuf::from(DEFAULT_ROOT_CERT_DIR.to_string()))]
+    pub root_certificate_dir: PathBuf,
 }
 
 impl PluginSettings for ReleaseScrapeDockerv2Settings {
@@ -109,18 +117,21 @@ impl ReleaseScrapeDockerv2Plugin {
             prometheus_registry.register(Box::new(graph_upstream_raw_releases.clone()))?;
         }
 
-        let registry = registry::Registry::try_from_str(&settings.registry)
-            .context(format!("Parsing {} as Registry", &settings.registry))?;
+        let mut ns_registry = settings.registry.clone();
+        ns_registry.push_str(&format!("/{}", settings.repository));
+
+        let registry = registry::Registry::try_from_str(&ns_registry)
+            .context(format!("trying to extract Registry from {}", &ns_registry))?;
 
         if let Some(credentials_path) = &settings.credentials_path {
             let (username, password) = registry::read_credentials(
                 Some(credentials_path),
-                &registry.host_port_string(),
+                &registry.host_port_namespaced_string(),
             )
             .unwrap_or_else(|err| {
                 warn!(
                     "Error reading registry credentials from {:?}. Access to {:?} will be unauthenticated: {} ",
-                    credentials_path, &registry.host_port_string() ,err
+                    credentials_path, &registry.host_port_namespaced_string() ,err
                 );
                 (None, None)
             });
@@ -143,6 +154,24 @@ impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
     const PLUGIN_NAME: &'static str = Self::PLUGIN_NAME;
 
     async fn run_internal(&self, io: InternalIO) -> Fallible<InternalIO> {
+        let mut certificates: Vec<Certificate> = Vec::new();
+        if self.settings.root_certificate_dir.exists() {
+            let root_certs = get_certs_from_dir(&self.settings.root_certificate_dir);
+            if root_certs.is_err() {
+                debug!(
+                    "unable to read root certs form dir: {}, {}",
+                    &self
+                        .settings
+                        .root_certificate_dir
+                        .to_str()
+                        .unwrap_or_default(),
+                    root_certs.unwrap_err()
+                );
+            } else {
+                certificates = root_certs.unwrap();
+            }
+        };
+
         let releases = registry::fetch_releases(
             &self.registry,
             &self.settings.repository,
@@ -151,6 +180,7 @@ impl InternalPlugin for ReleaseScrapeDockerv2Plugin {
             self.cache.clone(),
             &self.settings.manifestref_key,
             self.settings.fetch_concurrency,
+            Some(certificates),
         )
         .await
         .context(format!(

@@ -23,6 +23,7 @@ use futures::lock::Mutex as FuturesMutex;
 use futures::prelude::*;
 use futures::TryStreamExt;
 use log::{debug, error, trace, warn};
+use reqwest::Certificate;
 use semver::Version;
 use serde::Deserialize;
 use serde_json;
@@ -33,6 +34,7 @@ use std::path::{Path, PathBuf};
 use std::string::String;
 use std::sync::Arc;
 use tar::Archive;
+use url::Url;
 
 use dkregistry::mediatypes::MediaTypes::{ManifestList, ManifestV2S1Signed, ManifestV2S2};
 use dkregistry::v2::Client;
@@ -70,92 +72,42 @@ pub struct Registry {
     pub(crate) scheme: String,
     pub(crate) insecure: bool,
     pub(crate) host: String,
+    pub(crate) namespace: String,
     pub(crate) port: Option<u16>,
 }
 
 impl Registry {
     pub fn try_from_str(src: &str) -> Fallible<Self> {
-        macro_rules! process_regex {
-            ($a:ident, $r:expr, $b:tt) => {
-                if let Some($a) = regex::Regex::new($r)
-                    .context(format!("could not compile regex pattern {}", $r))?
-                    .captures(src)
-                {
-                    $b
+        match parse_url(src) {
+            Ok((scheme, host, port, namespace)) => {
+                let mut registry = Registry {
+                    host,
+                    namespace,
+                    port,
+                    ..Default::default()
                 };
-            };
+
+                if scheme != "" {
+                    registry.insecure = Registry::insecure_scheme(&scheme)?;
+                    registry.scheme = scheme;
+                }
+
+                Ok(registry)
+            }
+            Err(e) => bail!("unable to parse registry {}: {}", src, e),
         }
-
-        process_regex!(
-            capture,
-            // match scheme://h.o.s.t:port
-            r"^(?P<scheme>[a-z]+)(:/{2})(?P<host>([0-9a-zA-Z]+\.)*([0-9a-zA-Z]+)):(?P<port>[0-9]+)$",
-            {
-                let scheme = capture["scheme"].to_string();
-                return Ok(Registry {
-                    insecure: Registry::insecure_scheme(&scheme)?,
-                    scheme,
-                    host: capture["host"].to_string(),
-                    port: Some(
-                        capture["port"]
-                            .parse()
-                            .expect("could not parse port as a number"),
-                    ),
-                });
-            }
-        );
-
-        process_regex!(
-            capture,
-            // match scheme://h.o.s.t
-            r"^(?P<scheme>[a-z]+)(:/{2})(?P<host>([0-9a-zA-Z]+\.)*([0-9a-zA-Z]+))$",
-            {
-                let scheme = capture["scheme"].to_string();
-                return Ok(Registry {
-                    insecure: Registry::insecure_scheme(&scheme)?,
-                    scheme,
-                    host: capture["host"].to_string(),
-                    ..Default::default()
-                });
-            }
-        );
-
-        process_regex!(
-            capture,
-            // match h.o.s.t:port
-            r"^(?P<host>([0-9a-zA-Z\-]+\.)+([0-9a-zA-Z]+)):(?P<port>[0-9]+)$",
-            {
-                return Ok(Registry {
-                    host: capture["host"].to_string(),
-                    port: Some(
-                        capture["port"]
-                            .parse()
-                            .expect("could not parse port as a number"),
-                    ),
-                    ..Default::default()
-                });
-            }
-        );
-
-        process_regex!(
-            capture,
-            // match h.o.s.t
-            r"^(?P<host>([0-9a-zA-Z\-]+\.)*([0-9a-zA-Z]+))$",
-            {
-                return Ok(Registry {
-                    host: capture["host"].to_string(),
-                    ..Default::default()
-                });
-            }
-        );
-
-        bail!("unsupported registry format {}", src)
     }
 
-    pub fn try_new(scheme: String, host: String, port: Option<u16>) -> Fallible<Self> {
+    pub fn try_new(
+        scheme: String,
+        host: String,
+        port: Option<u16>,
+        namespace: String,
+    ) -> Fallible<Self> {
         Ok(Registry {
             host,
             port,
+            namespace,
             insecure: Self::insecure_scheme(&scheme)?,
             scheme,
         })
@@ -183,6 +135,25 @@ impl Registry {
         )
     }
 
+    /// host port string with namespace included in the uri
+    pub fn host_port_namespaced_string(&self) -> String {
+        format!(
+            "{}{}{}{}",
+            if self.insecure && !self.scheme.is_empty() {
+                format!("{}://", self.scheme)
+            } else {
+                "".to_string()
+            },
+            self.host,
+            if let Some(port) = self.port {
+                format!(":{}", port)
+            } else {
+                "".to_string()
+            },
+            format!("{}", self.namespace),
+        )
+    }
+
     fn insecure_scheme(scheme: &str) -> Fallible<bool> {
         match scheme {
             "https" => Ok(false),
@@ -197,9 +168,31 @@ pub fn read_credentials(
     registry_host: &str,
 ) -> Result<(Option<String>, Option<String>), Error> {
     credentials_path.map_or(Ok((None, None)), |path| {
-        let file = File::open(&path).context(format!("could not open '{:?}'", path))?;
+        let mut registry: String = registry_host.to_string();
+        // we will not be checking the entire registry_host in credentials with the assumption that
+        // the last part after `/` is the repository
+        while registry.rfind('/').is_some() {
+            match registry.rfind('/') {
+                Some(index) => {
+                    // Split the string into two parts: before and after the last '/'
+                    let (before, _) = registry.split_at(index);
 
-        dkregistry::get_credentials(file, registry_host).map_err(|e| format_err!("{}", e))
+                    debug!("checking namespaced credentials for {}", &registry);
+                    let file = File::open(&path).context(format!("could not open '{:?}'", path))?;
+                    let creds = dkregistry::get_credentials(file, &registry);
+                    if creds.is_ok() {
+                        debug!("got credentials for registry '{}'", &registry);
+                        return creds.map_err(|e| format_err!("{}", e));
+                    }
+                    // Update `registry` to be the part before the last '/'
+                    registry = before.to_string();
+                }
+                None => break,
+            }
+        }
+        debug!("getting credentials for {}", &registry);
+        let file = File::open(&path).context(format!("could not open '{:?}'", path))?;
+        dkregistry::get_credentials(&file, &registry).map_err(|e| format_err!("{}", e))
     })
 }
 
@@ -208,9 +201,10 @@ pub async fn new_registry_client(
     repo: &str,
     username: Option<&str>,
     password: Option<&str>,
+    root_certificates: Option<Vec<Certificate>>,
 ) -> Result<dkregistry::v2::Client, Error> {
     let client = {
-        let client_builder = dkregistry::v2::Client::configure()
+        let mut client_builder = dkregistry::v2::Client::configure()
             .registry(&registry.host_port_string())
             .insecure_registry(registry.insecure)
             .accepted_types(Some(vec![
@@ -219,6 +213,12 @@ pub async fn new_registry_client(
                 (ManifestList, Some(0.5)),
             ]));
         let scope = format!("repository:{}:pull", &repo);
+
+        if root_certificates.is_some() {
+            for cert in root_certificates.unwrap() {
+                client_builder = client_builder.add_root_certificate(cert);
+            }
+        }
 
         if username.is_some() && password.is_some() {
             client_builder
@@ -299,8 +299,10 @@ pub async fn fetch_releases(
     cache: cache::Cache,
     manifestref_key: &str,
     concurrency: usize,
+    certificates: Option<Vec<Certificate>>,
 ) -> Result<Vec<cincinnati::plugins::internal::graph_builder::release::Release>, Error> {
-    let registry_client = new_registry_client(registry, repo, username, password).await?;
+    let registry_client =
+        new_registry_client(registry, repo, username, password, certificates).await?;
 
     let registry_client_get_tags = registry_client.clone();
     let tags = Box::pin(get_tags(repo, &registry_client_get_tags).await);
@@ -613,6 +615,34 @@ fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<Metadata, E
     }
 }
 
+// Parse the url and returns its components
+fn parse_url(
+    input: &str,
+) -> Result<(String, String, Option<u16>, String), Box<dyn std::error::Error>> {
+    // Check if the URL has a scheme. If not, prepend "example://" to it.
+    let mut modified_input = String::from(input);
+    let mut modified_input_flag = false;
+    if !input.contains("://") {
+        modified_input.insert_str(0, "example://");
+        modified_input_flag = true;
+    }
+
+    let url = Url::parse(&modified_input).context("parsing registry url")?;
+
+    let mut scheme = url.scheme().to_string();
+    let host = url
+        .host_str()
+        .ok_or("Host is missing from the URL")?
+        .to_string();
+    let port = url.port();
+    let path = url.path().to_string();
+
+    if modified_input_flag {
+        scheme = "".to_string();
+    }
+    Ok((scheme, host, port, path))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -627,6 +657,17 @@ mod tests {
                     insecure: true,
                     host: "localhost".to_string(),
                     port: Some(8080),
+                    namespace: "".to_string(),
+                },
+            ),
+            (
+                "http://localhost:8080/ns1/ns2",
+                Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2".to_string(),
                 },
             ),
             (
@@ -636,6 +677,17 @@ mod tests {
                     insecure: false,
                     host: "127.0.0.1".to_string(),
                     port: None,
+                    namespace: "".to_string(),
+                },
+            ),
+            (
+                "127.0.0.1/ns1/ns2",
+                Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "127.0.0.1".to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2".to_string(),
                 },
             ),
             (
@@ -645,6 +697,17 @@ mod tests {
                     insecure: false,
                     host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
                     port: Some(5000),
+                    namespace: "".to_string(),
+                },
+            ),
+            (
+                "sat-r220-02.lab.eng.rdu2.redhat.com:5000/ns1",
+                Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
+                    port: Some(5000),
+                    namespace: "/ns1".to_string(),
                 },
             ),
             (
@@ -654,6 +717,17 @@ mod tests {
                     insecure: false,
                     host: "quay.io".to_string(),
                     port: None,
+                    namespace: "".to_string(),
+                },
+            ),
+            (
+                "quay.io/ns1",
+                Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "quay.io".to_string(),
+                    port: None,
+                    namespace: "/ns1".to_string(),
                 },
             ),
         ];

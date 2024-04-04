@@ -6,45 +6,45 @@ edition = "2018"
 build = "src/build.rs"
 
 [dependencies]
-actix = "0.13.0"
-actix-web = "^4.0.0-rc.3"
-chrono = "^0.4.21"
+actix = "0.13.2"
+actix-web = "^4.4.1"
+chrono = "^0.4.31"
 actix-files = "^0.6.2"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
 env_logger = "^0.10"
 flate2 = "^1.0.27"
 futures = "0.3"
-itertools = "^0.11"
+itertools = "^0.12"
 lazy_static = "^1.2.0"
 log = "^0.4.20"
 prometheus = "0.13"
 quay = { path = "../quay" }
-regex = "^1.9.3"
+regex = "^1.9.6"
 reqwest = "^0.11"
 semver = { version = "^0.11", features = [ "serde" ] }
-serde = "^1.0.183"
+serde = "^1.0.189"
 serde_derive = "^1.0.70"
-serde_json = "^1.0.104"
+serde_json = "^1.0.107"
 smart-default = "^0.7"
 structopt = "^0.3"
 tar = "^0.4.40"
 tokio = { version = "1.32", features = [ "fs",  "rt-multi-thread" ] }
 tokio-stream = { version = "0.1", features = ["fs"] }
-toml = "^0.5"
-url = "^2.3"
+toml = "^0.8.2"
+url = "^2.5"
 parking_lot = "^0.12"
-tempfile = "^3.7.1"
+tempfile = "^3.8.0"
 async-trait = "^0.1"
 custom_debug_derive = "^0.5"
 opentelemetry = "0.14.0"
 actix-service = "2.0.2"
 
 [build-dependencies]
-built = { version = "^0.6.1", features = [ "git2" ]}
+built = { version = "^0.7.1", features = [ "git2" ]}
 
 [dev-dependencies]
-memchr = "^2.5"
+memchr = "^2.7"
 
 [features]
 test-net = []

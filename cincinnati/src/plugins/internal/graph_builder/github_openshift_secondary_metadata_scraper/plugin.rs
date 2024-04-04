@@ -1,4 +1,5 @@
 use super::github_v3;
+use crate::plugins::internal::graph_builder::commons::get_certs_from_dir;
 use std::convert::{TryFrom, TryInto};
 
 use crate as cincinnati;
@@ -6,7 +7,7 @@ use crate as cincinnati;
 use self::cincinnati::plugins::prelude::*;
 use self::cincinnati::plugins::prelude_plugin_impl::*;
 
-use commons::{GRAPH_DATA_DIR_PARAM_KEY, SECONDARY_METADATA_PARAM_KEY};
+use commons::{DEFAULT_ROOT_CERT_DIR, GRAPH_DATA_DIR_PARAM_KEY, SECONDARY_METADATA_PARAM_KEY};
 use tokio::sync::Mutex as FuturesMutex;
 
 pub static DEFAULT_OUTPUT_ALLOWLIST: &[&str] = &[
@@ -84,6 +85,11 @@ pub struct GithubOpenshiftSecondaryMetadataScraperSettings {
     /// deserializing a `toml::Value` to enum newtype variants.
     #[serde(skip)]
     reference: Option<Reference>,
+
+    /// File containing the root certificates.
+    /// Accepts PEM encoded root certificates.
+    #[default(PathBuf::from(DEFAULT_ROOT_CERT_DIR.to_string()))]
+    root_certificate_dir: PathBuf,
 
     /// Vector of regular expressions used as a positive output filter.
     /// An empty vector is regarded as a configuration error.
@@ -190,6 +196,28 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
 
         let data_dir = tempfile::tempdir_in(&settings.output_directory)?;
 
+        let mut http_client_builder: reqwest::ClientBuilder =
+            reqwest::ClientBuilder::new().use_native_tls();
+
+        if settings.root_certificate_dir.exists() {
+            let root_certs = get_certs_from_dir(&settings.root_certificate_dir);
+            if root_certs.is_err() {
+                debug!(
+                    "unable to read root certs form dir: {}, {}",
+                    &settings.root_certificate_dir.to_str().unwrap_or_default(),
+                    root_certs.unwrap_err()
+                );
+            } else {
+                for cert in root_certs.unwrap() {
+                    http_client_builder = http_client_builder.add_root_certificate(cert);
+                }
+            }
+        };
+
+        let http_client = http_client_builder
+            .build()
+            .context("Building reqwest client")?;
+
         Ok(Self {
             reference: settings
                 .reference
@@ -201,7 +229,7 @@ impl GithubOpenshiftSecondaryMetadataScraperPlugin {
             data_dir,
 
             state: FuturesMutex::new(State::default()),
-            client: reqwest::Client::default(),
+            client: http_client,
         })
     }
 

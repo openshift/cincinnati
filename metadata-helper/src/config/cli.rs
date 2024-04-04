@@ -20,6 +20,10 @@ pub struct CliOptions {
     #[structopt(flatten)]
     pub service: options::ServiceOptions,
 
+    // Signature service options
+    #[structopt(flatten)]
+    pub signatures: options::SignaturesOptions,
+
     // Status service options
     #[structopt(flatten)]
     pub status: options::StatusOptions,
@@ -35,6 +39,7 @@ impl MergeOptions<CliOptions> for AppSettings {
         };
 
         self.try_merge(Some(opts.service))?;
+        self.try_merge(Some(opts.signatures))?;
         self.try_merge(Some(opts.status))?;
 
         Ok(())
@@ -60,6 +65,10 @@ mod tests {
         let svc_port_args = vec!["argv0", "--service.port", "9999"];
         let svc_port_cli = CliOptions::from_iter_safe(svc_port_args).unwrap();
         assert_eq!(svc_port_cli.service.port, Some(9999));
+
+        let sig_dir_args = vec!["argv0", "--signtures.dir", "/a/b"];
+        let sig_dir_cli = CliOptions::from_iter_safe(sig_dir_args).unwrap();
+        assert_eq!(sig_dir_cli.signatures.dir, Some("/a/b"));
     }
 
     #[test]
