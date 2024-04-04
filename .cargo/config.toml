@@ -1,0 +1,10 @@
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/camallo/dkregistry-rs.git?rev=0a3c99b7ede0c177a4389e0ffd9e566572633f8c"]
+git = "https://github.com/camallo/dkregistry-rs.git"
+rev = "0a3c99b7ede0c177a4389e0ffd9e566572633f8c"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"

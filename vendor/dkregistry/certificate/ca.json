@@ -1,0 +1,13 @@
+{
+  "CN": "Automated Testing CA",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "USA"
+    }
+  ]
+}
+
