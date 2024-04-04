@@ -1,0 +1,15 @@
+version: 2
+updates:
+- package-ecosystem: cargo
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: tokio
+    versions:
+    - 0.3.0
+    - 1.2.0
+  - dependency-name: reqwest
+    versions:
+    - 0.11.0
