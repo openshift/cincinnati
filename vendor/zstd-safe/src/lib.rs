@@ -19,6 +19,8 @@
 //! `experimental` feature.
 #![cfg_attr(feature = "doc-cfg", feature(doc_cfg))]
 
+// TODO: Use alloc feature instead to implement stuff for Vec
+// TODO: What about Cursor?
 #[cfg(feature = "std")]
 extern crate std;
 
@@ -33,12 +35,7 @@ pub use zstd_sys::ZSTD_strategy as Strategy;
 
 /// Reset directive.
 // pub use zstd_sys::ZSTD_ResetDirective as ResetDirective;
-
-#[cfg(feature = "std")]
-use std::os::raw::{c_char, c_int, c_ulonglong, c_void};
-
-#[cfg(not(feature = "std"))]
-use libc::{c_char, c_int, c_ulonglong, c_void};
+use core::ffi::{c_char, c_int, c_ulonglong, c_void};
 
 use core::marker::PhantomData;
 use core::num::{NonZeroU32, NonZeroU64};
@@ -147,7 +144,7 @@ pub fn max_c_level() -> CompressionLevel {
 /// Wraps the `ZSTD_compress` function.
 ///
 /// This will try to compress `src` entirely and write the result to `dst`, returning the number of
-/// bytes written.
+/// bytes written. If `dst` is too small to hold the compressed content, an error will be returned.
 ///
 /// For streaming operations that don't require to store the entire input/ouput in memory, see
 /// `compress_stream`.
@@ -171,6 +168,13 @@ pub fn compress<C: WriteBuf + ?Sized>(
 }
 
 /// Wraps the `ZSTD_decompress` function.
+///
+/// This is a one-step decompression (not streaming).
+///
+/// You will need to make sure `dst` is large enough to store all the decompressed content, or an
+/// error will be returned.
+///
+/// If decompression was a success, the number of bytes written will be returned.
 pub fn decompress<C: WriteBuf + ?Sized>(
     dst: &mut C,
     src: &[u8],
@@ -598,6 +602,10 @@ impl<'a> CCtx<'a> {
             ZSTD_c_experimentalParam13 as ZSTD_c_useBlockSplitter,
             ZSTD_c_experimentalParam14 as ZSTD_c_useRowMatchFinder,
             ZSTD_c_experimentalParam15 as ZSTD_c_deterministicRefPrefix,
+            ZSTD_c_experimentalParam16 as ZSTD_c_prefetchCDictTables,
+            ZSTD_c_experimentalParam17 as ZSTD_c_enableSeqProducerFallback,
+            ZSTD_c_experimentalParam18 as ZSTD_c_maxBlockSize,
+            ZSTD_c_experimentalParam19 as ZSTD_c_searchForExternalRepcodes,
             ZSTD_c_experimentalParam2 as ZSTD_c_format,
             ZSTD_c_experimentalParam3 as ZSTD_c_forceMaxWindow,
             ZSTD_c_experimentalParam4 as ZSTD_c_forceAttachDict,
@@ -620,6 +628,10 @@ impl<'a> CCtx<'a> {
             ForceMaxWindow(force) => (ZSTD_c_forceMaxWindow, force as c_int),
             #[cfg(feature = "experimental")]
             ForceAttachDict(force) => (ZSTD_c_forceAttachDict, force as c_int),
+            #[cfg(feature = "experimental")]
+            LiteralCompressionMode(mode) => {
+                (ZSTD_c_literalCompressionMode, mode as c_int)
+            }
             #[cfg(feature = "experimental")]
             TargetCBlockSize(value) => {
                 (ZSTD_c_targetCBlockSize, value as c_int)
@@ -654,6 +666,20 @@ impl<'a> CCtx<'a> {
             DeterministicRefPrefix(deterministic) => {
                 (ZSTD_c_deterministicRefPrefix, deterministic as c_int)
             }
+            #[cfg(feature = "experimental")]
+            PrefetchCDictTables(prefetch) => {
+                (ZSTD_c_prefetchCDictTables, prefetch as c_int)
+            }
+            #[cfg(feature = "experimental")]
+            EnableSeqProducerFallback(enable) => {
+                (ZSTD_c_enableSeqProducerFallback, enable as c_int)
+            }
+            #[cfg(feature = "experimental")]
+            MaxBlockSize(value) => (ZSTD_c_maxBlockSize, value as c_int),
+            #[cfg(feature = "experimental")]
+            SearchForExternalRepcodes(value) => {
+                (ZSTD_c_searchForExternalRepcodes, value as c_int)
+            }
             CompressionLevel(level) => (ZSTD_c_compressionLevel, level),
             WindowLog(value) => (ZSTD_c_windowLog, value as c_int),
             HashLog(value) => (ZSTD_c_hashLog, value as c_int),
@@ -662,10 +688,6 @@ impl<'a> CCtx<'a> {
             MinMatch(value) => (ZSTD_c_minMatch, value as c_int),
             TargetLength(value) => (ZSTD_c_targetLength, value as c_int),
             Strategy(strategy) => (ZSTD_c_strategy, strategy as c_int),
-            #[cfg(feature = "experimental")]
-            LiteralCompressionMode(mode) => {
-                (ZSTD_c_literalCompressionMode, mode as c_int)
-            }
             EnableLongDistanceMatching(flag) => {
                 (ZSTD_c_enableLongDistanceMatching, flag as c_int)
             }
@@ -799,22 +821,9 @@ unsafe impl<'a> Send for CCtx<'a> {}
 // CCtx can't be shared across threads, so it does not implement Sync.
 
 unsafe fn c_char_to_str(text: *const c_char) -> &'static str {
-    #[cfg(not(feature = "std"))]
-    {
-        // To be safe, we need to compute right now its length
-        let len = libc::strlen(text);
-        // Cast it to a slice
-        let slice = core::slice::from_raw_parts(text as *mut u8, len);
-        // And hope it's still text.
-        str::from_utf8(slice).expect("bad error message from zstd")
-    }
-
-    #[cfg(feature = "std")]
-    {
-        std::ffi::CStr::from_ptr(text)
-            .to_str()
-            .expect("bad error message from zstd")
-    }
+    core::ffi::CStr::from_ptr(text)
+        .to_str()
+        .expect("bad error message from zstd")
 }
 
 /// Returns the error string associated with an error code.
@@ -1647,7 +1656,7 @@ unsafe impl<'a> WriteBuf for OutBuffer<'a, [u8]> {
 ///
 /// `pos <= dst.capacity()`
 pub struct OutBuffer<'a, C: WriteBuf + ?Sized> {
-    pub dst: &'a mut C,
+    dst: &'a mut C,
     pos: usize,
 }
 
@@ -1692,9 +1701,9 @@ impl<'a, C: WriteBuf + ?Sized> OutBuffer<'a, C> {
     ///
     /// # Panics
     ///
-    /// If `pos >= dst.capacity()`.
+    /// If `pos > dst.capacity()`.
     pub fn around_pos(dst: &'a mut C, pos: usize) -> Self {
-        if pos >= dst.capacity() {
+        if pos > dst.capacity() {
             panic!("Given position outside of the buffer bounds.");
         }
 
@@ -1702,8 +1711,16 @@ impl<'a, C: WriteBuf + ?Sized> OutBuffer<'a, C> {
     }
 
     /// Returns the current cursor position.
+    ///
+    /// Guaranteed to be <= self.capacity()
     pub fn pos(&self) -> usize {
+        assert!(self.pos <= self.dst.capacity());
         self.pos
+    }
+
+    /// Returns the capacity of the underlying buffer.
+    pub fn capacity(&self) -> usize {
+        self.dst.capacity()
     }
 
     /// Sets the new cursor position.
@@ -1743,6 +1760,11 @@ impl<'a, C: WriteBuf + ?Sized> OutBuffer<'a, C> {
     {
         let pos = self.pos;
         &self.dst.as_slice()[..pos]
+    }
+
+    /// Returns a pointer to the start of this buffer.
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.dst.as_mut_ptr()
     }
 }
 
@@ -2027,6 +2049,22 @@ pub enum CParameter {
     #[cfg_attr(feature = "doc-cfg", doc(cfg(feature = "experimental")))]
     DeterministicRefPrefix(bool),
 
+    #[cfg(feature = "experimental")]
+    #[cfg_attr(feature = "doc-cfg", doc(cfg(feature = "experimental")))]
+    PrefetchCDictTables(ParamSwitch),
+
+    #[cfg(feature = "experimental")]
+    #[cfg_attr(feature = "doc-cfg", doc(cfg(feature = "experimental")))]
+    EnableSeqProducerFallback(bool),
+
+    #[cfg(feature = "experimental")]
+    #[cfg_attr(feature = "doc-cfg", doc(cfg(feature = "experimental")))]
+    MaxBlockSize(u32),
+
+    #[cfg(feature = "experimental")]
+    #[cfg_attr(feature = "doc-cfg", doc(cfg(feature = "experimental")))]
+    SearchForExternalRepcodes(ParamSwitch),
+
     /// Compression level to use.
     ///
     /// Compression levels are global presets for the other compression parameters.
@@ -2170,4 +2208,31 @@ pub fn decompress_bound(data: &[u8]) -> Result<u64, ErrorCode> {
     } else {
         Ok(bound)
     }
+}
+
+/// Given a buffer of size `src_size`, returns the maximum number of sequences that can ge
+/// generated.
+#[cfg(feature = "experimental")]
+#[cfg_attr(feature = "doc-cfg", doc(cfg(feature = "experimental")))]
+pub fn sequence_bound(src_size: usize) -> usize {
+    // Safety: Just FFI.
+    unsafe { zstd_sys::ZSTD_sequenceBound(src_size) }
+}
+
+/// Returns the minimum extra space when output and input buffer overlap.
+///
+/// When using in-place decompression, the output buffer must be at least this much bigger (in
+/// bytes) than the input buffer. The extra space must be at the front of the output buffer (the
+/// input buffer must be at the end of the output buffer).
+#[cfg(feature = "experimental")]
+#[cfg_attr(feature = "doc-cfg", doc(cfg(feature = "experimental")))]
+pub fn decompression_margin(
+    compressed_data: &[u8],
+) -> Result<usize, ErrorCode> {
+    parse_code(unsafe {
+        zstd_sys::ZSTD_decompressionMargin(
+            ptr_void(compressed_data),
+            compressed_data.len(),
+        )
+    })
 }

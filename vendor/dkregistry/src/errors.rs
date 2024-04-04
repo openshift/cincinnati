@@ -6,7 +6,7 @@ pub enum Error {
     #[error("base64 decode error")]
     Base64Decode(#[from] base64::DecodeError),
     #[error("header parse error")]
-    HeaderParse(#[from] http::header::ToStrError),
+    HeaderParse(#[from] reqwest::header::ToStrError),
     #[error("json error")]
     Json(#[from] serde_json::Error),
     #[error("http transport error: {0}")]
@@ -28,7 +28,7 @@ pub enum Error {
     #[error("missing authentication header {0}")]
     MissingAuthHeader(&'static str),
     #[error("unexpected HTTP status {0}")]
-    UnexpectedHttpStatus(http::StatusCode),
+    UnexpectedHttpStatus(reqwest::StatusCode),
     #[error("invalid auth token '{0}'")]
     InvalidAuthToken(String),
     #[error("API V2 not supported")]
@@ -38,9 +38,9 @@ pub enum Error {
     #[error("www-authenticate header parse error")]
     Www(#[from] crate::v2::WwwHeaderParseError),
     #[error("request failed with status {status}")]
-    Client { status: http::StatusCode },
+    Client { status: reqwest::StatusCode },
     #[error("request failed with status {status}")]
-    Server { status: http::StatusCode },
+    Server { status: reqwest::StatusCode },
     #[error("content digest error")]
     ContentDigestParse(#[from] crate::v2::ContentDigestError),
     #[error("no header Content-Type given and no workaround to apply")]

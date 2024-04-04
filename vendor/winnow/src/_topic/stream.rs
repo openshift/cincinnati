@@ -1,11 +1,11 @@
-//! # Custom [`Stream`][crate::stream::Stream]
+//! # Custom [`Stream`]
 //!
 //! `winnow` is batteries included with support for
 //! - Basic inputs like `&str`, newtypes with
-//! - Improved debug output like [`Bytes`][crate::Bytes]
-//! - [`Stateful`][crate::Stateful] for passing state through your parser, like tracking recursion
+//! - Improved debug output like [`Bytes`]
+//! - [`Stateful`] for passing state through your parser, like tracking recursion
 //!   depth
-//! - [`Located`][crate::Located] for looking up the absolute position of a token
+//! - [`Located`] for looking up the absolute position of a token
 //!
 //! But that won't always cut it for your parser.  For example, you might lex `&str` into
 //! a series of tokens and then want to parse a `TokenStream`.
@@ -13,14 +13,14 @@
 //! ## Implementing a custom stream
 //!
 //! Let's assume we have an input type we'll call `MyStream`. `MyStream` is a sequence of `MyItem` type.
-//! The goal is to define parsers with this signature: `MyStream -> IResult<MyStream, Output>`.
+//! The goal is to define parsers with this signature: `&mut MyStream -> PResult<Output>`.
 //!
 //! ```rust
 //! # use winnow::prelude::*;
 //! # use winnow::token::tag;
 //! # type MyStream<'i> = &'i str;
 //! # type Output<'i> = &'i str;
-//! fn parser(i: MyStream<'_>) -> IResult<MyStream<'_>, Output<'_>> {
+//! fn parser<'s>(i: &mut MyStream<'s>) -> PResult<Output<'s>> {
 //!     "test".parse_next(i)
 //! }
 //! ```

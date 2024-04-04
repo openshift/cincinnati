@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "libgit2-sys"
-version = "0.15.2+1.6.4"
+version = "0.16.1+1.7.1"
 authors = [
     "Josh Triplett <josh@joshtriplett.org>",
     "Alex Crichton <alex@alexcrichton.com>",
@@ -51,7 +51,7 @@ version = "1.0.43"
 features = ["parallel"]
 
 [build-dependencies.pkg-config]
-version = "0.3.7"
+version = "0.3.15"
 
 [features]
 https = ["openssl-sys"]
@@ -65,5 +65,5 @@ zlib-ng-compat = [
 ]
 
 [target."cfg(unix)".dependencies.openssl-sys]
-version = "0.9"
+version = "0.9.45"
 optional = true

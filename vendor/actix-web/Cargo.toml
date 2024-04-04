@@ -10,9 +10,10 @@
 # See Cargo.toml.orig for the original contents.
 
 [package]
-edition = "2018"
+edition = "2021"
+rust-version = "1.68"
 name = "actix-web"
-version = "4.3.1"
+version = "4.4.1"
 authors = [
     "Nikolay Kim <fafhrd91@gmail.com>",
     "Rob Ede <robjtede@icloud.com>",
@@ -34,14 +35,14 @@ categories = [
     "web-programming::websocket",
 ]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/actix/actix-web.git"
-resolver = "2"
+repository = "https://github.com/actix/actix-web"
 
 [package.metadata.docs.rs]
 features = [
     "macros",
     "openssl",
-    "rustls",
+    "rustls-0_20",
+    "rustls-0_21",
     "compress-brotli",
     "compress-gzip",
     "compress-zstd",
@@ -102,11 +103,8 @@ harness = false
 version = "0.5"
 
 [dependencies.actix-http]
-version = "3.3"
-features = [
-    "http2",
-    "ws",
-]
+version = "3.5"
+features = ["ws"]
 
 [dependencies.actix-macros]
 version = "0.2.3"
@@ -126,7 +124,7 @@ version = "2"
 version = "2"
 
 [dependencies.actix-tls]
-version = "3"
+version = "3.1"
 optional = true
 default-features = false
 
@@ -138,7 +136,7 @@ version = "4.2"
 optional = true
 
 [dependencies.ahash]
-version = "0.7"
+version = "0.8"
 
 [dependencies.bytes]
 version = "1"
@@ -167,9 +165,6 @@ default-features = false
 [dependencies.futures-util]
 version = "0.3.17"
 default-features = false
-
-[dependencies.http]
-version = "0.2.8"
 
 [dependencies.itoa]
 version = "1"
@@ -205,7 +200,7 @@ version = "0.7"
 version = "1.6.1"
 
 [dependencies.socket2]
-version = "0.4.0"
+version = "0.5"
 
 [dependencies.time]
 version = "0.3"
@@ -236,21 +231,32 @@ default = [
     "compress-gzip",
     "compress-zstd",
     "cookies",
+    "http2",
 ]
 experimental-io-uring = ["actix-server/io-uring"]
+http2 = ["actix-http/http2"]
 macros = [
     "actix-macros",
     "actix-web-codegen",
 ]
 openssl = [
+    "http2",
     "actix-http/openssl",
     "actix-tls/accept",
     "actix-tls/openssl",
 ]
-rustls = [
-    "actix-http/rustls",
+rustls = ["rustls-0_20"]
+rustls-0_20 = [
+    "http2",
+    "actix-http/rustls-0_20",
     "actix-tls/accept",
-    "actix-tls/rustls",
+    "actix-tls/rustls-0_20",
+]
+rustls-0_21 = [
+    "http2",
+    "actix-http/rustls-0_21",
+    "actix-tls/accept",
+    "actix-tls/rustls-0_21",
 ]
 secure-cookies = [
     "cookies",

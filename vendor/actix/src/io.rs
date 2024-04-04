@@ -1,10 +1,14 @@
-use std::cell::RefCell;
-use std::marker::PhantomData;
-use std::ops::DerefMut;
-use std::pin::Pin;
-use std::rc::Rc;
-use std::task::{Context, Poll};
-use std::{collections::VecDeque, io, task};
+use std::{
+    cell::RefCell,
+    collections::VecDeque,
+    io,
+    marker::PhantomData,
+    ops::DerefMut,
+    pin::Pin,
+    rc::Rc,
+    task,
+    task::{Context, Poll},
+};
 
 use bitflags::bitflags;
 use bytes::BytesMut;
@@ -12,8 +16,10 @@ use futures_sink::Sink;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio_util::codec::Encoder;
 
-use crate::actor::{Actor, ActorContext, AsyncContext, Running, SpawnHandle};
-use crate::fut::ActorFuture;
+use crate::{
+    actor::{Actor, ActorContext, AsyncContext, Running, SpawnHandle},
+    fut::ActorFuture,
+};
 
 /// A helper trait for write handling.
 ///
@@ -56,10 +62,7 @@ pub struct Writer<T: AsyncWrite, E: From<io::Error>> {
     inner: UnsafeWriter<T, E>,
 }
 
-struct UnsafeWriter<T: AsyncWrite, E: From<io::Error>>(
-    Rc<RefCell<InnerWriter<E>>>,
-    Rc<RefCell<T>>,
-);
+struct UnsafeWriter<T: AsyncWrite, E: From<io::Error>>(Rc<RefCell<InnerWriter<E>>>, Rc<RefCell<T>>);
 
 impl<T: AsyncWrite, E: From<io::Error>> Clone for UnsafeWriter<T, E> {
     fn clone(&self) -> Self {
@@ -405,8 +408,8 @@ impl<I, T: AsyncWrite + Unpin, U: Encoder<I>> Drop for FramedWrite<I, T, U> {
         let inner = self.inner.0.borrow_mut();
         if !inner.buffer.is_empty() {
             // Results must be ignored during drop, as the errors cannot be handled meaningfully
-            let _ = async_writer.write(&inner.buffer);
-            let _ = async_writer.flush();
+            drop(async_writer.write(&inner.buffer));
+            drop(async_writer.flush());
         }
     }
 }
@@ -510,16 +513,26 @@ where
         let this = self.get_mut();
         let inner = &mut this.inner.borrow_mut();
 
-        // ensure sink is ready to receive next item
-        match Pin::new(&mut inner.sink).poll_ready(cx) {
-            Poll::Ready(Ok(())) => {
-                if let Some(item) = inner.buffer.pop_front() {
-                    // send front of buffer to sink
-                    let _ = Pin::new(&mut inner.sink).start_send(item);
+        // Loop to ensure we either process all items in the buffer, or trigger the inner sink to be pending
+        // and wake this task later.
+        loop {
+            // ensure sink is ready to receive next item
+            match Pin::new(&mut inner.sink).poll_ready(cx) {
+                Poll::Ready(Ok(())) => {
+                    if let Some(item) = inner.buffer.pop_front() {
+                        // send front of buffer to sink
+                        let _ = Pin::new(&mut inner.sink).start_send(item);
+                    } else {
+                        break;
+                    }
+                }
+                Poll::Ready(Err(_err)) => {
+                    break;
+                }
+                Poll::Pending => {
+                    break;
                 }
             }
-            Poll::Ready(Err(_err)) => {}
-            Poll::Pending => {}
         }
 
         if !inner.closing_flag.contains(Flags::CLOSING) {

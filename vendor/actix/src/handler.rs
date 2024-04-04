@@ -2,9 +2,11 @@ use std::{fmt, future::Future, pin::Pin, sync::Arc};
 
 pub use tokio::sync::oneshot::Sender as OneshotSender;
 
-use crate::actor::{Actor, AsyncContext};
-use crate::address::Addr;
-use crate::fut::{ActorFuture, ActorFutureExt, LocalBoxActorFuture};
+use crate::{
+    actor::{Actor, AsyncContext},
+    address::Addr,
+    fut::{ActorFuture, ActorFutureExt, LocalBoxActorFuture},
+};
 
 /// Describes how to handle messages of a specific type.
 ///
@@ -58,7 +60,7 @@ where
 /// use actix::prelude::*;
 ///
 /// #[derive(Message)]
-/// #[rtype(result = "Response")]
+/// #[rtype(Response)]
 /// struct Msg;
 ///
 /// struct Response;
@@ -102,7 +104,7 @@ pub struct MessageResult<M: Message>(pub M::Result);
 /// # use std::time::Duration;
 /// #
 /// # #[derive(Message)]
-/// # #[rtype(result = "usize")]
+/// # #[rtype(usize)]
 /// # struct Msg;
 /// #
 /// # struct MyActor(usize);

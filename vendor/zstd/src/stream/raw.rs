@@ -95,11 +95,12 @@ impl Operation for NoOp {
     ) -> io::Result<usize> {
         // Skip the prelude
         let src = &input.src[input.pos..];
-        // Safe because `output.pos() <= output.dst.capacity()`.
-        let dst = unsafe { output.dst.as_mut_ptr().add(output.pos()) };
+        // Safe because `output.pos() <= output.capacity()`.
+        let output_pos = output.pos();
+        let dst = unsafe { output.as_mut_ptr().add(output_pos) };
 
         // Ignore anything past the end
-        let len = usize::min(src.len(), output.dst.capacity());
+        let len = usize::min(src.len(), output.capacity() - output_pos);
         let src = &src[..len];
 
         // Safe because:
@@ -107,7 +108,7 @@ impl Operation for NoOp {
         // * `src` and `dst` do not overlap because we have `&mut` to each.
         unsafe { std::ptr::copy_nonoverlapping(src.as_ptr(), dst, len) };
         input.set_pos(input.pos() + len);
-        unsafe { output.set_pos(output.pos() + len) };
+        unsafe { output.set_pos(output_pos + len) };
 
         Ok(0)
     }
@@ -117,7 +118,9 @@ impl Operation for NoOp {
 pub struct Status {
     /// Number of bytes expected for next input.
     ///
-    /// This is just a hint.
+    /// * If `remaining = 0`, then we are at the end of a frame.
+    /// * If `remaining > 0`, then it's just a hint for how much there is still
+    ///   to read.
     pub remaining: usize,
 
     /// Number of bytes read from the input.
@@ -192,7 +195,7 @@ impl Operation for Decoder<'_> {
         self.run(&mut InBuffer::around(&[]), output)?;
 
         // We don't _know_ how much (decompressed data) there is still in buffer.
-        if output.pos() < output.dst.capacity() {
+        if output.pos() < output.capacity() {
             // We only know when there's none (the output buffer is not full).
             Ok(0)
         } else {

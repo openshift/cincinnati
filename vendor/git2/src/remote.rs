@@ -1,5 +1,6 @@
 use libc;
 use raw::git_strarray;
+use std::iter::FusedIterator;
 use std::marker;
 use std::mem;
 use std::ops::Range;
@@ -40,6 +41,7 @@ pub struct RemoteHead<'remote> {
 /// Options which can be specified to various fetch operations.
 pub struct FetchOptions<'cb> {
     callbacks: Option<RemoteCallbacks<'cb>>,
+    depth: i32,
     proxy: Option<ProxyOptions<'cb>>,
     prune: FetchPrune,
     update_fetchhead: bool,
@@ -462,6 +464,7 @@ impl<'repo> DoubleEndedIterator for Refspecs<'repo> {
             .and_then(|i| self.remote.get_refspec(i))
     }
 }
+impl<'repo> FusedIterator for Refspecs<'repo> {}
 impl<'repo> ExactSizeIterator for Refspecs<'repo> {}
 
 #[allow(missing_docs)] // not documented in libgit2 :(
@@ -507,6 +510,7 @@ impl<'cb> FetchOptions<'cb> {
             follow_redirects: RemoteRedirect::Initial,
             custom_headers: Vec::new(),
             custom_headers_ptrs: Vec::new(),
+            depth: 0, // Not limited depth
         }
     }
 
@@ -533,6 +537,17 @@ impl<'cb> FetchOptions<'cb> {
     /// Defaults to `true`.
     pub fn update_fetchhead(&mut self, update: bool) -> &mut Self {
         self.update_fetchhead = update;
+        self
+    }
+
+    /// Set fetch depth, a value less or equal to 0 is interpreted as pull
+    /// everything (effectively the same as not declaring a limit depth).
+
+    // FIXME(blyxyas): We currently don't have a test for shallow functions
+    // because libgit2 doesn't support local shallow clones.
+    // https://github.com/rust-lang/git2-rs/pull/979#issuecomment-1716299900
+    pub fn depth(&mut self, depth: i32) -> &mut Self {
+        self.depth = depth.max(0);
         self
     }
 
@@ -588,6 +603,7 @@ impl<'cb> Binding for FetchOptions<'cb> {
             prune: crate::call::convert(&self.prune),
             update_fetchhead: crate::call::convert(&self.update_fetchhead),
             download_tags: crate::call::convert(&self.download_tags),
+            depth: self.depth,
             follow_redirects: self.follow_redirects.raw(),
             custom_headers: git_strarray {
                 count: self.custom_headers_ptrs.len(),

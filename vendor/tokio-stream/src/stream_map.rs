@@ -209,7 +209,7 @@ pub struct StreamMap<K, V> {
 impl<K, V> StreamMap<K, V> {
     /// An iterator visiting all key-value pairs in arbitrary order.
     ///
-    /// The iterator element type is &'a (K, V).
+    /// The iterator element type is `&'a (K, V)`.
     ///
     /// # Examples
     ///
@@ -232,7 +232,7 @@ impl<K, V> StreamMap<K, V> {
 
     /// An iterator visiting all key-value pairs mutably in arbitrary order.
     ///
-    /// The iterator element type is &'a mut (K, V).
+    /// The iterator element type is `&'a mut (K, V)`.
     ///
     /// # Examples
     ///
@@ -289,7 +289,7 @@ impl<K, V> StreamMap<K, V> {
 
     /// Returns an iterator visiting all keys in arbitrary order.
     ///
-    /// The iterator element type is &'a K.
+    /// The iterator element type is `&'a K`.
     ///
     /// # Examples
     ///
@@ -312,7 +312,7 @@ impl<K, V> StreamMap<K, V> {
 
     /// An iterator visiting all values in arbitrary order.
     ///
-    /// The iterator element type is &'a V.
+    /// The iterator element type is `&'a V`.
     ///
     /// # Examples
     ///
@@ -335,7 +335,7 @@ impl<K, V> StreamMap<K, V> {
 
     /// An iterator visiting all values mutably in arbitrary order.
     ///
-    /// The iterator element type is &'a mut V.
+    /// The iterator element type is `&'a mut V`.
     ///
     /// # Examples
     ///
@@ -518,8 +518,6 @@ where
 {
     /// Polls the next value, includes the vec entry index
     fn poll_next_entry(&mut self, cx: &mut Context<'_>) -> Poll<Option<(usize, V::Item)>> {
-        use Poll::*;
-
         let start = self::rand::thread_rng_n(self.entries.len() as u32) as usize;
         let mut idx = start;
 
@@ -527,8 +525,8 @@ where
             let (_, stream) = &mut self.entries[idx];
 
             match Pin::new(stream).poll_next(cx) {
-                Ready(Some(val)) => return Ready(Some((idx, val))),
-                Ready(None) => {
+                Poll::Ready(Some(val)) => return Poll::Ready(Some((idx, val))),
+                Poll::Ready(None) => {
                     // Remove the entry
                     self.entries.swap_remove(idx);
 
@@ -542,7 +540,7 @@ where
                         idx = idx.wrapping_add(1) % self.entries.len();
                     }
                 }
-                Pending => {
+                Poll::Pending => {
                     idx = idx.wrapping_add(1) % self.entries.len();
                 }
             }
@@ -550,9 +548,9 @@ where
 
         // If the map is empty, then the stream is complete.
         if self.entries.is_empty() {
-            Ready(None)
+            Poll::Ready(None)
         } else {
-            Pending
+            Poll::Pending
         }
     }
 }
@@ -660,9 +658,9 @@ mod rand {
 
     /// Fast random number generate
     ///
-    /// Implement xorshift64+: 2 32-bit xorshift sequences added together.
+    /// Implement `xorshift64+`: 2 32-bit `xorshift` sequences added together.
     /// Shift triplet `[17,7,16]` was calculated as indicated in Marsaglia's
-    /// Xorshift paper: <https://www.jstatsoft.org/article/view/v008i14/xorshift.pdf>
+    /// `Xorshift` paper: <https://www.jstatsoft.org/article/view/v008i14/xorshift.pdf>
     /// This generator passes the SmallCrush suite, part of TestU01 framework:
     /// <http://simul.iro.umontreal.ca/testu01/tu01.html>
     #[derive(Debug)]

@@ -119,12 +119,24 @@ See [serde documentation](https://serde.rs) for more information.
 url = { version = "2", features = ["serde"] }
 ```
 
+# Feature: `debugger_visualizer`
+
+If you enable the `debugger_visualizer` feature, the `url` crate will include
+a [natvis file](https://docs.microsoft.com/en-us/visualstudio/debugger/create-custom-views-of-native-objects)
+for [Visual Studio](https://www.visualstudio.com/) that allows you to view
+[`Url`](struct.Url.html) objects in the debugger.
+
+This feature requires Rust 1.71 or later.
+
+```toml
+url = { version = "2", features = ["debugger_visualizer"] }
+```
+
 */
 
-#![doc(html_root_url = "https://docs.rs/url/2.4.0")]
+#![doc(html_root_url = "https://docs.rs/url/2.5.0")]
 #![cfg_attr(
     feature = "debugger_visualizer",
-    feature(debugger_visualizer),
     debugger_visualizer(natvis_file = "../../debug_metadata/url.natvis")
 )]
 
@@ -193,6 +205,7 @@ pub struct Url {
 
 /// Full configuration for the URL parser.
 #[derive(Copy, Clone)]
+#[must_use]
 pub struct ParseOptions<'a> {
     base_url: Option<&'a Url>,
     encoding_override: EncodingOverride<'a>,
@@ -1486,7 +1499,7 @@ impl Url {
         if let Some(input) = fragment {
             self.fragment_start = Some(to_u32(self.serialization.len()).unwrap());
             self.serialization.push('#');
-            self.mutate(|parser| parser.parse_fragment(parser::Input::no_trim(input)))
+            self.mutate(|parser| parser.parse_fragment(parser::Input::new_no_trim(input)))
         } else {
             self.fragment_start = None;
             self.strip_trailing_spaces_from_opaque_path();
@@ -1549,12 +1562,14 @@ impl Url {
                 parser.parse_query(
                     scheme_type,
                     scheme_end,
-                    parser::Input::trim_tab_and_newlines(input, vfn),
+                    parser::Input::new_trim_tab_and_newlines(input, vfn),
                 )
             });
         } else {
             self.query_start = None;
-            self.strip_trailing_spaces_from_opaque_path();
+            if fragment.is_none() {
+                self.strip_trailing_spaces_from_opaque_path();
+            }
         }
 
         self.restore_already_parsed_fragment(fragment);
@@ -1670,10 +1685,14 @@ impl Url {
                     parser.serialization.push_str("%2F");
                     path = &path[1..];
                 }
-                parser.parse_cannot_be_a_base_path(parser::Input::new(path));
+                parser.parse_cannot_be_a_base_path(parser::Input::new_no_trim(path));
             } else {
                 let mut has_host = true; // FIXME
-                parser.parse_path_start(scheme_type, &mut has_host, parser::Input::new(path));
+                parser.parse_path_start(
+                    scheme_type,
+                    &mut has_host,
+                    parser::Input::new_no_trim(path),
+                );
             }
         });
         self.restore_after_path(old_after_path_pos, &after_path);
@@ -2343,7 +2362,7 @@ impl Url {
     #[allow(clippy::result_unit_err, clippy::suspicious_operation_groupings)]
     pub fn set_scheme(&mut self, scheme: &str) -> Result<(), ()> {
         let mut parser = Parser::for_setter(String::new());
-        let remaining = parser.parse_scheme(parser::Input::new(scheme))?;
+        let remaining = parser.parse_scheme(parser::Input::new_no_trim(scheme))?;
         let new_scheme_type = SchemeType::from(&parser.serialization);
         let old_scheme_type = SchemeType::from(self.scheme());
         // If url’s scheme is a special scheme and buffer is not a special scheme, then return.
@@ -2681,7 +2700,7 @@ impl Ord for Url {
 impl PartialOrd for Url {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        self.serialization.partial_cmp(&other.serialization)
+        Some(self.cmp(other))
     }
 }
 

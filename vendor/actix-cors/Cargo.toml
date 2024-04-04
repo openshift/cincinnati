@@ -10,9 +10,10 @@
 # See Cargo.toml.orig for the original contents.
 
 [package]
-edition = "2018"
+edition = "2021"
+rust-version = "1.68"
 name = "actix-cors"
-version = "0.6.4"
+version = "0.6.5"
 authors = [
     "Nikolay Kim <fafhrd91@gmail.com>",
     "Rob Ede <robjtede@icloud.com>",
@@ -29,14 +30,13 @@ keywords = [
 ]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/actix/actix-extras.git"
-resolver = "2"
 
 [package.metadata.docs.rs]
+all-features = true
 rustdoc-args = [
     "--cfg",
     "docsrs",
 ]
-all-features = true
 
 [dependencies.actix-utils]
 version = "3"
@@ -46,10 +46,11 @@ version = "4"
 default-features = false
 
 [dependencies.derive_more]
-version = "0.99.5"
+version = "0.99.7"
 
 [dependencies.futures-util]
-version = "0.3.7"
+version = "0.3.17"
+features = ["std"]
 default-features = false
 
 [dependencies.log]
@@ -59,7 +60,7 @@ version = "0.4"
 version = "1"
 
 [dependencies.smallvec]
-version = "1.6.1"
+version = "1"
 
 [features]
 draft-private-network-access = []

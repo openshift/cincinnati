@@ -128,11 +128,10 @@
 //!   # ;
 //!   ```
 //!
-//! - If using the nightly channel, or stable with `features = ["backtrace"]`, a
-//!   backtrace is captured and printed with the error if the underlying error
-//!   type does not already provide its own. In order to see backtraces, they
-//!   must be enabled through the environment variables described in
-//!   [`std::backtrace`]:
+//! - If using Rust &ge; 1.65, a backtrace is captured and printed with the
+//!   error if the underlying error type does not already provide its own. In
+//!   order to see backtraces, they must be enabled through the environment
+//!   variables described in [`std::backtrace`]:
 //!
 //!   - If you want panics and errors to both have backtraces, set
 //!     `RUST_BACKTRACE=1`;
@@ -140,10 +139,7 @@
 //!   - If you want only panics to have backtraces, set `RUST_BACKTRACE=1` and
 //!     `RUST_LIB_BACKTRACE=0`.
 //!
-//!   The tracking issue for this feature is [rust-lang/rust#53487].
-//!
 //!   [`std::backtrace`]: https://doc.rust-lang.org/std/backtrace/index.html#environment-variables
-//!   [rust-lang/rust#53487]: https://github.com/rust-lang/rust/issues/53487
 //!
 //! - Anyhow works with any error type that has an impl of `std::error::Error`,
 //!   including ones defined in your crate. We do not bundle a `derive(Error)`
@@ -210,16 +206,22 @@
 //! will require an explicit `.map_err(Error::msg)` when working with a
 //! non-Anyhow error type inside a function that returns Anyhow's error type.
 
-#![doc(html_root_url = "https://docs.rs/anyhow/1.0.75")]
-#![cfg_attr(backtrace, feature(error_generic_member_access))]
+#![doc(html_root_url = "https://docs.rs/anyhow/1.0.81")]
+#![cfg_attr(error_generic_member_access, feature(error_generic_member_access))]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 #![deny(dead_code, unused_imports, unused_mut)]
+#![cfg_attr(
+    not(anyhow_no_unsafe_op_in_unsafe_fn_lint),
+    deny(unsafe_op_in_unsafe_fn)
+)]
+#![cfg_attr(anyhow_no_unsafe_op_in_unsafe_fn_lint, allow(unused_unsafe))]
 #![allow(
     clippy::doc_markdown,
     clippy::enum_glob_use,
     clippy::explicit_auto_deref,
     clippy::extra_unused_type_parameters,
+    clippy::incompatible_msrv,
     clippy::let_underscore_untyped,
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
@@ -229,13 +231,24 @@
     clippy::new_ret_no_self,
     clippy::redundant_else,
     clippy::return_self_not_must_use,
+    clippy::struct_field_names,
     clippy::unused_self,
     clippy::used_underscore_binding,
     clippy::wildcard_imports,
     clippy::wrong_self_convention
 )]
 
+#[cfg(all(
+    anyhow_nightly_testing,
+    feature = "std",
+    not(error_generic_member_access)
+))]
+compile_error!("Build script probe failed to compile.");
+
 extern crate alloc;
+
+#[cfg(feature = "std")]
+extern crate std;
 
 #[macro_use]
 mod backtrace;

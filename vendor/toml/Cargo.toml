@@ -11,9 +11,9 @@
 
 [package]
 edition = "2021"
-rust-version = "1.64.0"
+rust-version = "1.66.0"
 name = "toml"
-version = "0.7.6"
+version = "0.8.2"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 include = [
     "build.rs",
@@ -47,6 +47,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/toml-rs/toml"
 
 [package.metadata.docs.rs]
+all-features = true
 rustdoc-args = [
     "--cfg",
     "docsrs",
@@ -132,7 +133,7 @@ version = "0.6.3"
 features = ["serde"]
 
 [dependencies.toml_edit]
-version = "0.19.12"
+version = "0.20.2"
 features = ["serde"]
 optional = true
 
@@ -146,8 +147,11 @@ version = "1.0.96"
 [dev-dependencies.snapbox]
 version = "0.4.11"
 
+[dev-dependencies.toml-test-data]
+version = "1.3.1"
+
 [dev-dependencies.toml-test-harness]
-version = "0.4.3"
+version = "0.4.5"
 
 [features]
 default = [

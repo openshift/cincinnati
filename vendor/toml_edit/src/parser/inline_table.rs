@@ -2,6 +2,7 @@ use winnow::combinator::cut_err;
 use winnow::combinator::delimited;
 use winnow::combinator::separated0;
 use winnow::token::one_of;
+use winnow::trace::trace;
 
 use crate::key::Key;
 use crate::parser::errors::CustomError;
@@ -17,19 +18,19 @@ use indexmap::map::Entry;
 // ;; Inline Table
 
 // inline-table = inline-table-open inline-table-keyvals inline-table-close
-pub(crate) fn inline_table(
+pub(crate) fn inline_table<'i>(
     check: RecursionCheck,
-) -> impl FnMut(Input<'_>) -> IResult<Input<'_>, InlineTable, ParserError<'_>> {
-    move |input| {
+) -> impl Parser<Input<'i>, InlineTable, ContextError> {
+    trace("inline-table", move |input: &mut Input<'i>| {
         delimited(
             INLINE_TABLE_OPEN,
             cut_err(inline_table_keyvals(check).try_map(|(kv, p)| table_from_pairs(kv, p))),
             cut_err(INLINE_TABLE_CLOSE)
-                .context(Context::Expression("inline table"))
-                .context(Context::Expected(ParserValue::CharLiteral('}'))),
+                .context(StrContext::Label("inline table"))
+                .context(StrContext::Expected(StrContextValue::CharLiteral('}'))),
         )
         .parse_next(input)
-    }
+    })
 }
 
 fn table_from_pairs(
@@ -43,6 +44,16 @@ fn table_from_pairs(
 
     for (path, kv) in v {
         let table = descend_path(&mut root, &path)?;
+
+        // "Likewise, using dotted keys to redefine tables already defined in [table] form is not allowed"
+        let mixed_table_types = table.is_dotted() == path.is_empty();
+        if mixed_table_types {
+            return Err(CustomError::DuplicateKey {
+                key: kv.key.get().into(),
+                table: None,
+            });
+        }
+
         let key: InternalString = kv.key.get_internal().into();
         match table.items.entry(key) {
             Entry::Vacant(o) => {
@@ -63,15 +74,26 @@ fn descend_path<'a>(
     mut table: &'a mut InlineTable,
     path: &'a [Key],
 ) -> Result<&'a mut InlineTable, CustomError> {
+    let dotted = !path.is_empty();
     for (i, key) in path.iter().enumerate() {
         let entry = table.entry_format(key).or_insert_with(|| {
             let mut new_table = InlineTable::new();
-            new_table.set_dotted(true);
+            new_table.set_implicit(dotted);
+            new_table.set_dotted(dotted);
 
             Value::InlineTable(new_table)
         });
         match *entry {
             Value::InlineTable(ref mut sweet_child_of_mine) => {
+                // Since tables cannot be defined more than once, redefining such tables using a
+                // [table] header is not allowed. Likewise, using dotted keys to redefine tables
+                // already defined in [table] form is not allowed.
+                if dotted && !sweet_child_of_mine.is_implicit() {
+                    return Err(CustomError::DuplicateKey {
+                        key: key.get().into(),
+                        table: None,
+                    });
+                }
                 table = sweet_child_of_mine;
             }
             ref v => {
@@ -96,12 +118,10 @@ pub(crate) const KEYVAL_SEP: u8 = b'=';
 // ( key keyval-sep val inline-table-sep inline-table-keyvals-non-empty ) /
 // ( key keyval-sep val )
 
-fn inline_table_keyvals(
+fn inline_table_keyvals<'i>(
     check: RecursionCheck,
-) -> impl FnMut(
-    Input<'_>,
-) -> IResult<Input<'_>, (Vec<(Vec<Key>, TableKeyValue)>, RawString), ParserError<'_>> {
-    move |input| {
+) -> impl Parser<Input<'i>, (Vec<(Vec<Key>, TableKeyValue)>, RawString), ContextError> {
+    move |input: &mut Input<'i>| {
         let check = check.recursing(input)?;
         (
             separated0(keyval(check), INLINE_TABLE_SEP),
@@ -111,16 +131,16 @@ fn inline_table_keyvals(
     }
 }
 
-fn keyval(
+fn keyval<'i>(
     check: RecursionCheck,
-) -> impl FnMut(Input<'_>) -> IResult<Input<'_>, (Vec<Key>, TableKeyValue), ParserError<'_>> {
-    move |input| {
+) -> impl Parser<Input<'i>, (Vec<Key>, TableKeyValue), ContextError> {
+    move |input: &mut Input<'i>| {
         (
             key,
             cut_err((
                 one_of(KEYVAL_SEP)
-                    .context(Context::Expected(ParserValue::CharLiteral('.')))
-                    .context(Context::Expected(ParserValue::CharLiteral('='))),
+                    .context(StrContext::Expected(StrContextValue::CharLiteral('.')))
+                    .context(StrContext::Expected(StrContextValue::CharLiteral('='))),
                 (ws.span(), value(check), ws.span()),
             )),
         )

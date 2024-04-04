@@ -1,41 +1,41 @@
-#[cfg(backtrace)]
+#[cfg(std_backtrace)]
 pub(crate) use std::backtrace::{Backtrace, BacktraceStatus};
 
-#[cfg(all(not(backtrace), feature = "backtrace"))]
+#[cfg(all(not(std_backtrace), feature = "backtrace"))]
 pub(crate) use self::capture::{Backtrace, BacktraceStatus};
 
-#[cfg(not(any(backtrace, feature = "backtrace")))]
+#[cfg(not(any(std_backtrace, feature = "backtrace")))]
 pub(crate) enum Backtrace {}
 
-#[cfg(backtrace)]
+#[cfg(std_backtrace)]
 macro_rules! impl_backtrace {
     () => {
         std::backtrace::Backtrace
     };
 }
 
-#[cfg(all(not(backtrace), feature = "backtrace"))]
+#[cfg(all(not(std_backtrace), feature = "backtrace"))]
 macro_rules! impl_backtrace {
     () => {
         impl core::fmt::Debug + core::fmt::Display
     };
 }
 
-#[cfg(any(backtrace, feature = "backtrace"))]
+#[cfg(any(std_backtrace, feature = "backtrace"))]
 macro_rules! backtrace {
     () => {
         Some(crate::backtrace::Backtrace::capture())
     };
 }
 
-#[cfg(not(any(backtrace, feature = "backtrace")))]
+#[cfg(not(any(std_backtrace, feature = "backtrace")))]
 macro_rules! backtrace {
     () => {
         None
     };
 }
 
-#[cfg(backtrace)]
+#[cfg(error_generic_member_access)]
 macro_rules! backtrace_if_absent {
     ($err:expr) => {
         match std::error::request_ref::<std::backtrace::Backtrace>($err as &dyn std::error::Error) {
@@ -45,27 +45,31 @@ macro_rules! backtrace_if_absent {
     };
 }
 
-#[cfg(all(feature = "std", not(backtrace), feature = "backtrace"))]
+#[cfg(all(
+    feature = "std",
+    not(error_generic_member_access),
+    any(std_backtrace, feature = "backtrace")
+))]
 macro_rules! backtrace_if_absent {
     ($err:expr) => {
         backtrace!()
     };
 }
 
-#[cfg(all(feature = "std", not(backtrace), not(feature = "backtrace")))]
+#[cfg(all(feature = "std", not(std_backtrace), not(feature = "backtrace")))]
 macro_rules! backtrace_if_absent {
     ($err:expr) => {
         None
     };
 }
 
-#[cfg(all(not(backtrace), feature = "backtrace"))]
+#[cfg(all(not(std_backtrace), feature = "backtrace"))]
 mod capture {
+    use alloc::borrow::Cow;
     use backtrace::{BacktraceFmt, BytesOrWideString, Frame, PrintFmt, SymbolName};
     use core::cell::UnsafeCell;
     use core::fmt::{self, Debug, Display};
     use core::sync::atomic::{AtomicUsize, Ordering};
-    use std::borrow::Cow;
     use std::env;
     use std::path::{self, Path, PathBuf};
     use std::sync::Once;

@@ -1,6 +1,7 @@
 use libc::{self, c_char, c_int, c_void};
 use std::cmp::Ordering;
 use std::ffi::{CStr, CString};
+use std::iter::FusedIterator;
 use std::marker;
 use std::mem;
 use std::ops::Range;
@@ -121,10 +122,6 @@ impl<'repo> Tree<'repo> {
         C: FnMut(&str, &TreeEntry<'_>) -> T,
         T: Into<i32>,
     {
-        #[allow(unused)]
-        struct TreeWalkCbData<'a, T> {
-            pub callback: &'a mut TreeWalkCb<'a, T>,
-        }
         unsafe {
             let mut data = TreeWalkCbData {
                 callback: &mut callback,
@@ -208,6 +205,10 @@ impl<'repo> Tree<'repo> {
 
 type TreeWalkCb<'a, T> = dyn FnMut(&str, &TreeEntry<'_>) -> T + 'a;
 
+struct TreeWalkCbData<'a, T> {
+    callback: &'a mut TreeWalkCb<'a, T>,
+}
+
 extern "C" fn treewalk_cb<T: Into<i32>>(
     root: *const c_char,
     entry: *const raw::git_tree_entry,
@@ -219,8 +220,9 @@ extern "C" fn treewalk_cb<T: Into<i32>>(
             _ => return -1,
         };
         let entry = entry_from_raw_const(entry);
-        let payload = payload as *mut &mut TreeWalkCb<'_, T>;
-        (*payload)(root, &entry).into()
+        let payload = &mut *(payload as *mut TreeWalkCbData<'_, T>);
+        let callback = &mut payload.callback;
+        callback(root, &entry).into()
     }) {
         Some(value) => value,
         None => -1,
@@ -401,6 +403,7 @@ impl<'tree> DoubleEndedIterator for TreeIter<'tree> {
         self.range.next_back().and_then(|i| self.tree.get(i))
     }
 }
+impl<'tree> FusedIterator for TreeIter<'tree> {}
 impl<'tree> ExactSizeIterator for TreeIter<'tree> {}
 
 #[cfg(test)]

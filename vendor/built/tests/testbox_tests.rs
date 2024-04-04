@@ -35,6 +35,7 @@ impl Project {
         } else {
             "[]"
         };
+
         self.add_file(
             "Cargo.toml",
             format!(
@@ -73,15 +74,35 @@ fn main() {
         Ok(self.root)
     }
 
-    fn create_and_run(self) {
+    fn create_and_run(self, extra_args: &[&str]) {
         let root = self.create().expect("Creating the project failed");
-        Self::run(root.as_ref());
+        Self::run(root.as_ref(), extra_args);
     }
 
-    fn run(root: &std::path::Path) {
+    fn create_and_build(self, extra_args: &[&str]) {
+        let root = self.create().expect("Creating the project failed");
+        Self::build(root.as_ref(), extra_args);
+    }
+
+    fn run(root: &std::path::Path, extra_args: &[&str]) {
         let cargo_result = process::Command::new("cargo")
             .current_dir(root)
             .arg("run")
+            .args(extra_args)
+            .output()
+            .expect("cargo failed");
+        assert!(
+            cargo_result.status.success(),
+            "cargo failed with {}",
+            String::from_utf8_lossy(&cargo_result.stderr)
+        );
+    }
+
+    fn build(root: &std::path::Path, extra_args: &[&str]) {
+        let cargo_result = process::Command::new("cargo")
+            .current_dir(root)
+            .arg("build")
+            .args(extra_args)
             .output()
             .expect("cargo failed");
         assert!(
@@ -122,7 +143,8 @@ fn get_built_root() -> path::PathBuf {
 }
 
 #[test]
-fn new_testbox() {
+#[ignore = "requires target x86_64-unknown-none"]
+fn nostd_testbox() {
     let mut p = Project::new();
 
     let built_root = get_built_root();
@@ -130,27 +152,192 @@ fn new_testbox() {
     p.add_file(
         "Cargo.toml",
         format!(
-            "
+            r#"
 [package]
-name = \"testbox\"
-version = \"1.2.3-rc1\"
-authors = [\"Joe\", \"Bob\", \"Harry:Potter\"]
-build = \"build.rs\"
-description = \"xobtset\"
-homepage = \"localhost\"
-repository = \"https://dev.example.com/sources/testbox/\"
-license = \"MIT\"
-
-[dependencies]
-built = {{ path = {:?}, features=[\"git2\", \"chrono\", \"semver\"] }}
+name = "nostd_testbox"
+version = "1.2.3-rc1"
+authors = ["Joe", "Bob"]
+build = "build.rs"
+description = "xobtset"
+homepage = "localhost"
+repository = "https://dev.example.com/sources/testbox/"
+license = "MIT"
 
 [build-dependencies]
-built = {{ path = {:?}, features=[\"git2\", \"chrono\", \"semver\"] }}
+built = {{ path = {:?}, default_features=false }}
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
 
 [features]
-default = [\"SuperAwesome\", \"MegaAwesome\"]
+default = ["SuperAwesome", "MegaAwesome"]
 SuperAwesome = []
-MegaAwesome = []",
+MegaAwesome = []"#,
+            &built_root,
+        ),
+    )
+    .add_file(
+        "build.rs",
+        r#"
+fn main() {
+    built::write_built_file().unwrap();
+}"#,
+    )
+    .add_file(
+        "src/main.rs",
+        r#"
+#![no_main]
+#![no_std]
+
+use core::panic::PanicInfo;
+
+mod built_info {
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
+
+#[panic_handler]
+fn panic(_panic: &PanicInfo<'_>) -> ! {
+    loop {}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn main() -> ! {
+    loop {}
+}
+"#,
+    );
+
+    p.create_and_build(&["--target", "x86_64-unknown-none"]);
+}
+
+#[test]
+fn minimal_testbox() {
+    let mut p = Project::new();
+
+    let built_root = get_built_root();
+
+    p.add_file(
+        "Cargo.toml",
+        format!(
+            r#"
+[package]
+name = "minimal_testbox"
+version = "1.2.3-rc1"
+authors = ["Joe", "Bob"]
+build = "build.rs"
+description = "xobtset"
+homepage = "localhost"
+repository = "https://dev.example.com/sources/testbox/"
+license = "MIT"
+
+[dependencies]
+built = {{ path = {:?}, default_features=false }}
+
+[build-dependencies]
+built = {{ path = {:?}, default_features=false }}
+
+[features]
+default = ["SuperAwesome", "MegaAwesome"]
+SuperAwesome = []
+MegaAwesome = []"#,
+            &built_root, &built_root
+        ),
+    );
+
+    p.add_file(
+        "build.rs",
+        r#"
+
+fn main() {
+    built::write_built_file().unwrap();
+}"#,
+    );
+
+    p.add_file(
+        "src/main.rs",
+        r#"
+//! The minimal testbox.
+
+mod built_info {
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
+
+fn main() {
+    assert_eq!(built_info::PKG_VERSION, "1.2.3-rc1");
+    assert_eq!(built_info::PKG_VERSION_MAJOR, "1");
+    assert_eq!(built_info::PKG_VERSION_MINOR, "2");
+    assert_eq!(built_info::PKG_VERSION_PATCH, "3");
+    assert_eq!(built_info::PKG_VERSION_PRE, "rc1");
+    assert_eq!(built_info::PKG_AUTHORS, "Joe:Bob");
+    assert_eq!(built_info::PKG_NAME, "minimal_testbox");
+    assert_eq!(built_info::PKG_DESCRIPTION, "xobtset");
+    assert_eq!(built_info::PKG_HOMEPAGE, "localhost");
+    assert_eq!(built_info::PKG_LICENSE, "MIT");
+    assert_eq!(built_info::PKG_REPOSITORY, "https://dev.example.com/sources/testbox/");
+    assert!(built_info::NUM_JOBS > 0);
+    assert!(built_info::OPT_LEVEL == "0");
+    assert!(built_info::DEBUG);
+    assert_eq!(built_info::PROFILE, "debug");
+    assert_eq!(built_info::FEATURES,
+               ["DEFAULT", "MEGAAWESOME", "SUPERAWESOME"]);
+    assert_eq!(built_info::FEATURES_STR,
+               "DEFAULT, MEGAAWESOME, SUPERAWESOME");
+    assert_eq!(built_info::FEATURES_LOWERCASE,
+               ["default", "megaawesome", "superawesome"]);
+    assert_eq!(built_info::FEATURES_LOWERCASE_STR,
+               "default, megaawesome, superawesome");
+    assert_ne!(built_info::RUSTC_VERSION, "");
+    assert_ne!(built_info::RUSTDOC_VERSION, "");
+    assert_ne!(built_info::HOST, "");
+    assert_ne!(built_info::TARGET, "");
+    assert_ne!(built_info::RUSTC, "");
+    assert_ne!(built_info::RUSTDOC, "");
+    assert_ne!(built_info::CFG_TARGET_ARCH, "");
+    assert_ne!(built_info::CFG_ENDIAN, "");
+    assert_ne!(built_info::CFG_FAMILY, "");
+    assert_ne!(built_info::CFG_OS, "");
+    assert_ne!(built_info::CFG_POINTER_WIDTH, "");
+    // For CFG_ENV, empty string is a possible value.
+    let _: &'static str = built_info::CFG_ENV;
+}"#,
+    );
+
+    p.create_and_run(&[]);
+}
+
+#[test]
+fn full_testbox() {
+    let mut p = Project::new();
+
+    let built_root = get_built_root();
+
+    p.add_file(
+        "Cargo.toml",
+        format!(
+            r#"
+[package]
+name = "testbox"
+version = "1.2.3-rc1"
+authors = ["Joe", "Bob", "Harry:Potter"]
+build = "build.rs"
+description = "xobtset"
+homepage = "localhost"
+repository = "https://dev.example.com/sources/testbox/"
+license = "MIT"
+
+[dependencies]
+built = {{ path = {:?}, features=["cargo-lock", "dependency-tree", "git2", "chrono", "semver"] }}
+
+[build-dependencies]
+built = {{ path = {:?}, features=["cargo-lock", "dependency-tree", "git2", "chrono", "semver"] }}
+
+[features]
+default = ["SuperAwesome", "MegaAwesome"]
+SuperAwesome = []
+MegaAwesome = []"#,
             &built_root, &built_root
         ),
     );
@@ -166,11 +353,7 @@ fn main() {
     // Teleport to a CI-platform, should get detected
     env::set_var("CONTINUOUS_INTEGRATION", "1");
 
-    let mut options = built::Options::default();
-    options.set_dependencies(true);
-    let src = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let dst = path::Path::new(&env::var("OUT_DIR").unwrap()).join("built.rs");
-    built::write_built_file_with_opts(&options, src.as_ref(), &dst).unwrap();
+    built::write_built_file().unwrap();
 }"#,
     );
 
@@ -216,6 +399,8 @@ fn main() {
     assert_ne!(built_info::RUSTC_VERSION, "");
     assert_ne!(built_info::RUSTDOC_VERSION, "");
     assert_ne!(built_info::DEPENDENCIES_STR, "");
+    assert_ne!(built_info::DIRECT_DEPENDENCIES_STR, "");
+    assert_ne!(built_info::INDIRECT_DEPENDENCIES_STR, "");
     assert_ne!(built_info::HOST, "");
     assert_ne!(built_info::TARGET, "");
     assert_ne!(built_info::RUSTC, "");
@@ -231,10 +416,34 @@ fn main() {
     assert!(built::util::parse_versions(built_info::DEPENDENCIES.iter())
         .any(|(name, ver)| name == "toml" && ver >= built::semver::Version::parse("0.1.0").unwrap()));
 
+    assert_eq!(built_info::DIRECT_DEPENDENCIES.len(), 1);
+    assert_eq!(built_info::DIRECT_DEPENDENCIES[0].0, "built");
+
     assert!((built::chrono::offset::Utc::now() - built::util::strptime(built_info::BUILT_TIME_UTC)).num_days() <= 1);
 }"#,
     );
-    p.create_and_run();
+    p.create_and_run(&[]);
+}
+
+#[test]
+#[cfg(feature = "git2")]
+fn git_no_git() {
+    // `root` isn't even a git-repo
+    let mut p = Project::new();
+    p.bootstrap().add_file(
+        "src/main.rs",
+        r#"
+mod built_info {
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
+
+fn main() {
+    assert_eq!(built_info::GIT_DIRTY, None);
+}
+"#,
+    );
+
+    p.create_and_run(&[]);
 }
 
 #[test]
@@ -272,7 +481,7 @@ fn main() {
         &[],
     )
     .unwrap();
-    Project::run(root.as_ref());
+    Project::run(root.as_ref(), &[]);
 
     let mut f = std::fs::OpenOptions::new()
         .write(true)
@@ -296,7 +505,7 @@ fn main() {
     )
     .unwrap();
 
-    Project::run(root.as_ref());
+    Project::run(root.as_ref(), &[]);
 }
 
 #[test]
@@ -315,7 +524,7 @@ fn main() {}
 "#,
     );
     p.init_git();
-    p.create_and_run();
+    p.create_and_run(&[]);
 }
 
 #[cfg(target_os = "windows")]

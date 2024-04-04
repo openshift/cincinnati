@@ -6,8 +6,6 @@ use proc_macro2::{Literal, Span, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet;
 use std::ptr;
-#[cfg(precompiled)]
-use std::sync::atomic::Ordering;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{parse_quote, Ident, Index, Member};
@@ -301,11 +299,6 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
 
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<Stmts> {
-    #[cfg(precompiled)]
-    if !crate::DESERIALIZE_IN_PLACE.load(Ordering::Relaxed) {
-        return None;
-    }
-
     // Only remote derives have getters, and we do not generate
     // deserialize_in_place for remote derives.
     assert!(!params.has_getter);
@@ -1744,7 +1737,6 @@ fn deserialize_untagged_enum_after(
                 quote!(__deserializer),
             ))
         });
-    let attempts = first_attempt.into_iter().chain(attempts);
     // TODO this message could be better by saving the errors from the failed
     // attempts. The heuristic used by TOML was to count the number of fields
     // processed before an error, and use the error that happened after the
@@ -1757,9 +1749,22 @@ fn deserialize_untagged_enum_after(
     );
     let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
 
+    // Ignore any error associated with non-untagged deserialization so that we
+    // can fall through to the untagged variants. This may be infallible so we
+    // need to provide the error type.
+    let first_attempt = first_attempt.map(|expr| {
+        quote! {
+            if let _serde::__private::Result::<_, __D::Error>::Ok(__ok) = (|| #expr)() {
+                return _serde::__private::Ok(__ok);
+            }
+        }
+    });
+
     quote_block! {
         let __content = <_serde::__private::de::Content as _serde::Deserialize>::deserialize(__deserializer)?;
         let __deserializer = _serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
+
+        #first_attempt
 
         #(
             if let _serde::__private::Ok(__ok) = #attempts {

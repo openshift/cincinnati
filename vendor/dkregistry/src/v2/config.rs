@@ -1,4 +1,5 @@
 use crate::{mediatypes::MediaTypes, v2::*};
+use reqwest::Certificate;
 
 /// Configuration for a `Client`.
 #[derive(Debug)]
@@ -9,6 +10,7 @@ pub struct Config {
     username: Option<String>,
     password: Option<String>,
     accept_invalid_certs: bool,
+    root_certificates: Vec<Certificate>,
     accepted_types: Option<Vec<(MediaTypes, Option<f64>)>>,
 }
 
@@ -28,6 +30,12 @@ impl Config {
     /// Set whether or not to accept invalid certificates.
     pub fn accept_invalid_certs(mut self, accept_invalid_certs: bool) -> Self {
         self.accept_invalid_certs = accept_invalid_certs;
+        self
+    }
+
+    /// Add a root certificate the client should trust for TLS verification
+    pub fn add_root_certificate(mut self, certificate: Certificate) -> Self {
+        self.root_certificates.push(certificate);
         self
     }
 
@@ -87,9 +95,15 @@ impl Config {
                 p.unwrap_or_else(|| "".into()),
             )),
         };
-        let client = reqwest::ClientBuilder::new()
-            .danger_accept_invalid_certs(self.accept_invalid_certs)
-            .build()?;
+
+        let mut builder =
+            reqwest::ClientBuilder::new().danger_accept_invalid_certs(self.accept_invalid_certs);
+
+        for ca in self.root_certificates {
+            builder = builder.add_root_certificate(ca)
+        }
+
+        let client = builder.build()?;
 
         let accepted_types = match self.accepted_types {
             Some(a) => a,
@@ -130,6 +144,7 @@ impl Default for Config {
             index: "registry-1.docker.io".into(),
             insecure_registry: false,
             accept_invalid_certs: false,
+            root_certificates: Default::default(),
             accepted_types: None,
             user_agent: Some(crate::USER_AGENT.to_owned()),
             username: None,

@@ -1,28 +1,31 @@
-use std::fmt;
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::{
+    fmt,
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 use bitflags::bitflags;
 use futures_core::ready;
 use smallvec::SmallVec;
 
-use crate::actor::{
-    Actor, ActorContext, ActorState, AsyncContext, Running, SpawnHandle, Supervised,
+use crate::{
+    actor::{Actor, ActorContext, ActorState, AsyncContext, Running, SpawnHandle, Supervised},
+    address::{Addr, AddressSenderProducer},
+    contextitems::ActorWaitItem,
+    fut::ActorFuture,
+    mailbox::Mailbox,
 };
-use crate::address::{Addr, AddressSenderProducer};
-use crate::contextitems::ActorWaitItem;
-use crate::fut::ActorFuture;
-use crate::mailbox::Mailbox;
 
 bitflags! {
-    /// internal context state
+    /// Internal context state.
+    #[derive(Debug)]
     struct ContextFlags: u8 {
-    const STARTED =  0b0000_0001;
-    const RUNNING =  0b0000_0010;
-    const STOPPING = 0b0000_0100;
-    const STOPPED =  0b0001_0000;
-    const MB_CAP_CHANGED = 0b0010_0000;
+        const STARTED =  0b0000_0001;
+        const RUNNING =  0b0000_0010;
+        const STOPPING = 0b0000_0100;
+        const STOPPED =  0b0001_0000;
+        const MB_CAP_CHANGED = 0b0010_0000;
     }
 }
 
@@ -170,7 +173,10 @@ where
         Addr::new(self.addr.sender())
     }
 
-    /// Restart context. Cleanup all futures, except address queue.
+    /// Restarts this [`ContextParts`] by:
+    /// - canceling all the [`ActorFuture`]s spawned via [`ContextParts::spawn`];
+    /// - clearing the [`ContextParts::wait`] queue;
+    /// - changing the [`Actor`] state to [`ActorState::Running`].
     #[inline]
     pub(crate) fn restart(&mut self) {
         self.flags = ContextFlags::RUNNING;
@@ -273,9 +279,20 @@ where
         }
     }
 
-    /// Restart context. Cleanup all futures, except address queue.
+    /// Restarts the [`AsyncContext`] of this [`ContextFut`] returning whether the [`Context`] was
+    /// restarted.
+    ///
+    /// Restarting the [`Context`] means:
+    /// - canceling all the [`ActorFuture`]s spawned by the [`AsyncContext`];
+    /// - clearing the [`ActorFuture`] await queue of the [`AsyncContext`];
+    /// - changing the [`Actor`] state to [`ActorState::Running`];
+    /// - calling [`Supervised::restarting`] on the [`Actor`].
+    ///
+    /// Restart may fail only if the [`Mailbox`] is not [`connected`].
+    ///
+    /// [`connected`]: Mailbox::connected
     #[inline]
-    pub(crate) fn restart(&mut self) -> bool
+    pub fn restart(&mut self) -> bool
     where
         A: Supervised,
     {
@@ -451,9 +468,7 @@ where
             // check state
             if this.ctx.parts().flags.contains(ContextFlags::RUNNING) {
                 // possible stop condition
-                if !this.alive()
-                    && Actor::stopping(&mut this.act, &mut this.ctx) == Running::Stop
-                {
+                if !this.alive() && Actor::stopping(&mut this.act, &mut this.ctx) == Running::Stop {
                     this.ctx.parts().flags = ContextFlags::STOPPED | ContextFlags::STARTED;
                     Actor::stopped(&mut this.act, &mut this.ctx);
                     return Poll::Ready(());

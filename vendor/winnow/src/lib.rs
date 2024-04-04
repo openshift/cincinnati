@@ -49,6 +49,7 @@
 #![cfg_attr(docsrs, feature(extended_key_value_attributes))]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
+#![warn(clippy::std_instead_of_core)]
 // BEGIN - Embark standard lints v6 for Rust 1.55+
 // do not change or add/remove here, but one can add exceptions after this section
 // for more info see: <https://github.com/EmbarkStudios/rust-ecosystem/issues/59>
@@ -137,7 +138,7 @@
 #![allow(clippy::unnested_or_patterns)]
 #[cfg_attr(nightly, warn(rustdoc::missing_doc_code_examples))]
 #[cfg(feature = "alloc")]
-#[macro_use]
+#[cfg_attr(test, macro_use)]
 extern crate alloc;
 #[cfg(doctest)]
 extern crate doc_comment;
@@ -175,6 +176,7 @@ pub(crate) mod lib {
     #[cfg(feature = "std")]
     /// internal std exports for `no_std` compatibility
     pub mod std {
+        #![allow(clippy::std_instead_of_core)]
         #[doc(hidden)]
         pub use std::{
             alloc, borrow, boxed, cmp, collections, convert, fmt, hash, iter, mem, ops, option,
@@ -201,14 +203,7 @@ pub mod stream;
 
 pub mod ascii;
 pub mod binary;
-pub mod bits;
-pub mod branch;
-pub mod bytes;
-pub mod character;
 pub mod combinator;
-pub mod multi;
-pub mod number;
-pub mod sequence;
 pub mod token;
 pub mod trace;
 
@@ -220,7 +215,7 @@ pub mod _tutorial;
 /// Core concepts available for glob import
 ///
 /// Including
-/// - [`FinishIResult`]
+/// - [`StreamIsPartial`][crate::stream::StreamIsPartial]
 /// - [`Parser`]
 ///
 /// ## Example
@@ -228,7 +223,7 @@ pub mod _tutorial;
 /// ```rust
 /// use winnow::prelude::*;
 ///
-/// fn parse_data(input: &str) -> IResult<&str, u64> {
+/// fn parse_data(input: &mut &str) -> PResult<u64> {
 ///     // ...
 /// #   winnow::ascii::dec_uint(input)
 /// }
@@ -240,15 +235,13 @@ pub mod _tutorial;
 /// ```
 pub mod prelude {
     pub use crate::stream::StreamIsPartial as _;
-    #[allow(deprecated)]
-    pub use crate::FinishIResult as _;
     pub use crate::IResult;
+    pub use crate::PResult;
     pub use crate::Parser;
 }
 
-#[allow(deprecated)]
-pub use error::FinishIResult;
 pub use error::IResult;
+pub use error::PResult;
 pub use parser::*;
 pub use stream::BStr;
 pub use stream::Bytes;

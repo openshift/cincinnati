@@ -10,16 +10,27 @@
 # See Cargo.toml.orig for the original contents.
 
 [package]
-edition = "2018"
+edition = "2021"
+rust-version = "1.68"
 name = "actix"
-version = "0.13.0"
-authors = ["Nikolay Kim <fafhrd91@gmail.com>", "fakeshadow <24548779@qq.com>"]
-exclude = [".gitignore", ".cargo/config", ".github/**", "codecov.yml"]
+version = "0.13.2"
+authors = [
+    "Nikolay Kim <fafhrd91@gmail.com>",
+    "fakeshadow <24548779@qq.com>",
+]
 description = "Actor framework for Rust"
-documentation = "https://docs.rs/actix"
 readme = "README.md"
-keywords = ["actor", "futures", "actix", "async", "tokio"]
-categories = ["network-programming", "asynchronous"]
+keywords = [
+    "actor",
+    "futures",
+    "actix",
+    "async",
+    "tokio",
+]
+categories = [
+    "network-programming",
+    "asynchronous",
+]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/actix/actix"
 
@@ -42,16 +53,21 @@ required-features = ["macros"]
 [[example]]
 name = "weak_recipient"
 required-features = ["macros"]
+
+[dependencies.actix-macros]
+version = "0.2"
+optional = true
+
 [dependencies.actix-rt]
-version = "2.0.0"
+version = "2"
 default-features = false
 
 [dependencies.actix_derive]
-version = "0.6.0"
+version = "0.6"
 optional = true
 
 [dependencies.bitflags]
-version = "1.2"
+version = "2"
 
 [dependencies.bytes]
 version = "1"
@@ -60,19 +76,19 @@ version = "1"
 version = "0.5"
 
 [dependencies.futures-core]
-version = "0.3.7"
+version = "0.3.22"
 default-features = false
 
 [dependencies.futures-sink]
-version = "0.3.7"
+version = "0.3.22"
 default-features = false
 
 [dependencies.futures-task]
-version = "0.3.7"
+version = "0.3.22"
 default-features = false
 
 [dependencies.futures-util]
-version = "0.3.7"
+version = "0.3.22"
 default-features = false
 
 [dependencies.log]
@@ -92,7 +108,10 @@ version = "1.6.1"
 
 [dependencies.tokio]
 version = "1"
-features = ["io-util", "sync"]
+features = [
+    "io-util",
+    "sync",
+]
 
 [dependencies.tokio-util]
 version = "0.7"
@@ -100,5 +119,11 @@ features = ["codec"]
 
 [features]
 default = ["macros"]
-macros = ["actix_derive"]
+macros = [
+    "actix-macros",
+    "actix_derive",
+]
 mailbox_assert = []
+
+[badges.maintenance]
+status = "passively-maintained"

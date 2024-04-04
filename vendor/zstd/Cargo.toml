@@ -11,11 +11,14 @@
 
 [package]
 edition = "2018"
-rust-version = "1.43"
+rust-version = "1.64"
 name = "zstd"
-version = "0.12.3+zstd.1.5.2"
+version = "0.13.0"
 authors = ["Alexandre Bury <alexandre.bury@gmail.com>"]
-exclude = ["assets/*.zst"]
+exclude = [
+    "assets/*.zst",
+    "/.github",
+]
 description = "Binding for the zstd compression library."
 documentation = "https://docs.rs/zstd"
 readme = "Readme.md"
@@ -44,7 +47,7 @@ name = "train"
 required-features = ["zdict_builder"]
 
 [dependencies.zstd-safe]
-version = "6.0.3"
+version = "7.0.0"
 features = ["std"]
 default-features = false
 

@@ -5,25 +5,28 @@
   </p>
   <p>
 
+<!-- prettier-ignore-start -->
+
 [![crates.io](https://img.shields.io/crates/v/actix?label=latest)](https://crates.io/crates/actix)
-[![Documentation](https://docs.rs/actix/badge.svg?version=0.13.0)](https://docs.rs/actix/0.13.0)
-![Minimum Supported Rust Version](https://img.shields.io/badge/rustc-1.54+-ab6000.svg)
+[![Documentation](https://docs.rs/actix/badge.svg?version=0.13.2)](https://docs.rs/actix/0.13.2)
+![Minimum Supported Rust Version](https://img.shields.io/badge/rustc-1.68+-ab6000.svg)
 ![License](https://img.shields.io/crates/l/actix.svg)
-[![Dependency Status](https://deps.rs/crate/actix/0.13.0/status.svg)](https://deps.rs/crate/actix/0.13.0)
+[![Dependency Status](https://deps.rs/crate/actix/0.13.2/status.svg)](https://deps.rs/crate/actix/0.13.2)
 <br />
-[![build status](https://github.com/actix/actix/workflows/CI%20%28Linux%29/badge.svg?branch=master&event=push)](https://github.com/actix/actix/actions)
+[![CI](https://github.com/actix/actix/actions/workflows/ci.yml/badge.svg)](https://github.com/actix/actix/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/actix/actix/branch/master/graph/badge.svg)](https://codecov.io/gh/actix/actix)
 ![Downloads](https://img.shields.io/crates/d/actix.svg)
 [![Chat on Discord](https://img.shields.io/discord/771444961383153695?label=chat&logo=discord)](https://discord.gg/GMuKN5b8aR)
+
+<!-- prettier-ignore-end -->
 
   </p>
 </div>
 
 ## Documentation
 
-- [User Guide](https://actix.rs/book/actix)
+- [User Guide](https://actix.rs/docs/actix)
 - [API Documentation](https://docs.rs/actix)
-- [API Documentation (master branch)](https://actix.rs/actix/actix)
 
 ## Features
 
@@ -32,7 +35,7 @@
 - Uses [futures](https://crates.io/crates/futures) for asynchronous message handling
 - Actor supervision
 - Typed messages (No `Any` type)
-- Runs on stable Rust 1.54+
+- Runs on stable Rust 1.68+
 
 ## Usage
 
@@ -40,7 +43,7 @@ To use `actix`, add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-actix = "0.12"
+actix = "0.13"
 ```
 
 ### Initialize Actix
@@ -55,54 +58,43 @@ fn main() {
 }
 ```
 
-Actix uses the [Tokio](https://github.com/tokio-rs/tokio) runtime. `System::new()` creates a new
-event loop. `System.run()` starts the Tokio event loop, and will finish once the `System` actor
-receives the `SystemExit` message.
+Actix uses the [Tokio](https://github.com/tokio-rs/tokio) runtime. `System::new()` creates a new event loop. `System.run()` starts the Tokio event loop, and will finish once the `System` actor receives the `SystemExit` message.
 
 ### Implementing an Actor
 
-In order to define an actor you need to define a struct and have it implement
-the [`Actor`](https://actix.github.io/actix/actix/trait.Actor.html) trait.
+In order to define an actor you need to define a struct and have it implement the [`Actor`](https://docs.rs/actix/latest/actix/trait.Actor.html) trait.
 
 ```rust
-use actix::{Actor, Addr, Context, System};
+use actix::{Actor, Context, System};
 
 struct MyActor;
 
 impl Actor for MyActor {
     type Context = Context<Self>;
 
-    fn started(&mut self, ctx: &mut Self::Context) {
+    fn started(&mut self, _ctx: &mut Self::Context) {
         println!("I am alive!");
         System::current().stop(); // <- stop system
     }
 }
 
 fn main() {
-    let mut system = System::new();
+    let system = System::new();
 
-    let addr = system.block_on(async { MyActor.start() });
+    let _addr = system.block_on(async { MyActor.start() });
 
-    system.run();
+    system.run().unwrap();
 }
 ```
 
-Spawning a new actor is achieved via the `start` and `create` methods of the [Actor trait].
-It provides several different ways of creating actors; for details, check the docs. You can
-implement the `started`, `stopping` and `stopped` methods of the Actor trait. `started` gets called
-when the actor starts and `stopping` when the actor finishes. Check the API docs
-for more information on [the actor lifecycle].
+Spawning a new actor is achieved via the `start` and `create` methods of the [Actor trait]. It provides several different ways of creating actors; for details, check the docs. You can implement the `started`, `stopping` and `stopped` methods of the Actor trait. `started` gets called when the actor starts and `stopping` when the actor finishes. Check the API docs for more information on [the actor lifecycle].
 
-[Actor trait]: [https://actix.github.io/actix/actix/trait.Actor.html]
-[the actor lifecycle]: [https://actix.github.io/actix/actix/trait.Actor.html#actor-lifecycle]
+[Actor trait]: https://docs.rs/actix/latest/actix/trait.Actor.html
+[the actor lifecycle]: https://actix.rs/docs/actix/actor#actor-lifecycle
 
 ### Handle Messages
 
-An Actor communicates with another Actor by sending messages. In actix all messages are typed.
-Let's define a simple `Sum` message with two `usize` parameters and an actor which will accept this
-message and return the sum of those two numbers. Here we use the `#[actix::main]` attribute as an
-easier way to start our `System` and drive our main function so we can easily `.await` for the
-responses sent back from the `Actor`.
+An Actor communicates with another Actor by sending messages. In actix all messages are typed. Let's define a simple `Sum` message with two `usize` parameters and an actor which will accept this message and return the sum of those two numbers. Here we use the `#[actix::main]` attribute as an easier way to start our `System` and drive our main function so we can easily `.await` for the responses sent back from the `Actor`.
 
 ```rust
 use actix::prelude::*;
@@ -110,7 +102,7 @@ use actix::prelude::*;
 // this is our Message
 // we have to define the response type (rtype)
 #[derive(Message)]
-#[rtype(result = "usize")]
+#[rtype(usize)]
 struct Sum(usize, usize);
 
 // Actor definition
@@ -124,7 +116,7 @@ impl Actor for Calculator {
 impl Handler<Sum> for Calculator {
     type Result = usize; // <- Message response type
 
-    fn handle(&mut self, msg: Sum, ctx: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, msg: Sum, _ctx: &mut Context<Self>) -> Self::Result {
         msg.0 + msg.1
     }
 }
@@ -141,18 +133,13 @@ async fn main() {
 }
 ```
 
-All communications with actors go through an `Addr` object. You can `do_send` a message
-without waiting for a response, or you can `send` an actor a specific message. The `Message`
-trait defines the result type for a message.
+All communications with actors go through an `Addr` object. You can `do_send` a message without waiting for a response, or you can `send` an actor a specific message. The `Message` trait defines the result type for a message.
 
 ### Actor State And Subscription For Specific Messages
 
-You may have noticed that the methods of the `Actor` and `Handler` traits accept `&mut self`, so you are
-welcome to store anything in an actor and mutate it whenever necessary.
+You may have noticed that the methods of the `Actor` and `Handler` traits accept `&mut self`, so you are welcome to store anything in an actor and mutate it whenever necessary.
 
-Address objects require an actor type, but if we just want to send a specific message to
-an actor that can handle the message, we can use the `Recipient` interface. Let's create
-a new actor that uses `Recipient`.
+Address objects require an actor type, but if we just want to send a specific message to an actor that can handle the message, we can use the `Recipient` interface. Let's create a new actor that uses `Recipient`.
 
 ```rust
 use actix::prelude::*;
@@ -196,12 +183,12 @@ impl Handler<Ping> for Game {
 }
 
 fn main() {
-    let mut system = System::new();
+    let system = System::new();
 
-    // To get a Recipient object, we need to use a different builder method
-    // which will allow postponing actor creation
-    let addr = system.block_on(async {
-        Game::create(|ctx| {
+    system.block_on(async {
+        // To create a cyclic game link, we need to use a different constructor
+        // method to get access to its recipient before it starts.
+        let _game = Game::create(|ctx| {
             // now we can get an address of the first actor and create the second actor
             let addr = ctx.address();
 
@@ -224,7 +211,8 @@ fn main() {
         });
     });
 
-    system.run();
+    // let the actors all run until they've shut themselves down
+    system.run().unwrap();
 }
 ```
 
@@ -232,7 +220,7 @@ fn main() {
 
 See this [chat example] which shows more comprehensive usage in a networking client/server service.
 
-[chat example]: https://github.com/actix/examples/tree/HEAD/websockets/tcp-chat
+[chat example]: https://github.com/actix/examples/tree/HEAD/websockets/chat-tcp
 
 ## Contributing
 
@@ -249,5 +237,4 @@ at your option.
 
 ## Code of Conduct
 
-Contribution to the actix repo is organized under the terms of the Contributor Covenant.
-The Actix team promises to intervene to uphold that code of conduct.
+Contribution to the actix repo is organized under the terms of the Contributor Covenant. The Actix team promises to intervene to uphold that code of conduct.
