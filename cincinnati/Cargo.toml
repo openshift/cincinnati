@@ -36,7 +36,7 @@ itertools = "^0.12"
 serde_yaml = "^0.9.25"
 prettydiff = { version = "0.6", optional = true }
 opentelemetry = "0.14.0"
-strum = "^0.25"
+strum = "^0.26"
 strum_macros = "^0.25"
 walkdir = "2.4.0"
 bytes = "^1.5"
