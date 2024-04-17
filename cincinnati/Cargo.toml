@@ -20,7 +20,7 @@ regex = "^1.9.6"
 reqwest = { version = "^0.11", features = ["gzip", "rustls-tls-native-roots", "native-tls"] }
 serde = "1.0.189"
 serde_derive = "1.0.70"
-serde_json = "^1.0.107"
+serde_json = "^1.0.109"
 smart-default = "^0.7"
 tokio = { version = "1.32", features = [ "time", "fs", "macros", "rt-multi-thread" ] }
 tokio-stream = { version = "0.1", features = ["fs"] }
@@ -47,7 +47,7 @@ cached = "^0.44.0"
 
 [dev-dependencies]
 mockito = "0.31.1"
-serde_json = "1.0.107"
+serde_json = "1.0.109"
 memchr = "^2.7"
 pretty_assertions = "1.4.0"
 test-case = "1.2.3"
