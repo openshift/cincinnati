@@ -16,7 +16,7 @@ serde_json = "^1.0.109"
 strum = "^0.26"
 strum_macros = "^0.25"
 log = "^0.4.20"
-chrono = "^0.4.31"
+chrono = "^0.4.38"
 
 [dev-dependencies]
 env_logger = "^0.10"
