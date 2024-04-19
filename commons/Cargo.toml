@@ -18,7 +18,7 @@ serde_derive = "^1.0.123"
 tokio = { version = "1.32", features = [ "rt-multi-thread" ] }
 url = "^2.5"
 futures = "^0.3"
-flate2 = "^1.0.27"
+flate2 = "^1.0.28"
 opentelemetry = "0.14.0"
 opentelemetry-jaeger = "0.13.0"
 reqwest = "^0.11"
