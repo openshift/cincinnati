@@ -29,7 +29,7 @@ url = "^2.5"
 semver = { version = "^0.11", features = [ "serde" ] }
 async-trait = "^0.1"
 tempfile = "^3.8.0"
-flate2 = "^1.0.27"
+flate2 = "^1.0.28"
 tar = "^0.4.40"
 dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "0a3c99b7ede0c177a4389e0ffd9e566572633f8c" }
 itertools = "^0.12"
