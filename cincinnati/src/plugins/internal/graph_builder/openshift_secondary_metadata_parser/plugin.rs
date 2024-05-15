@@ -23,6 +23,7 @@ pub mod graph_data_model {
     use std::collections::HashMap;
     /// Represents the blocked edges files in the data repository.
     #[derive(Debug, Deserialize)]
+    #[serde(deny_unknown_fields)]
     pub struct BlockedEdge {
         pub to: semver::Version,
         pub from: RegexWrapper,
@@ -205,11 +206,6 @@ where
     use tokio_stream::wrappers::ReadDirStream;
     use tokio_stream::StreamExt;
 
-    let mut is_conditional_edge = false;
-    if TypeId::of::<T>() == TypeId::of::<graph_data_model::ConditionalEdgeYaml>() {
-        is_conditional_edge = true;
-    }
-
     // Even though we don't use concurrent threads, the usage of async forces us
     // to guarantee that the error container is thread-safe
     let error: Arc<Mutex<Option<Error>>> = Arc::new(Mutex::new(None));
@@ -288,19 +284,19 @@ where
             Ok(yaml) => match serde_yaml::from_slice(&yaml) {
                 Ok(value) => t_vec.push(value),
                 Err(e) => {
-                    let mut old_block: Option<graph_data_model::BlockedEdge> = None;
-                    if is_conditional_edge {
-                        // conditional-edge file threw error while parsing the file but matched
-                        // blocked-edge, so not committing error. It'll be considered as blocked-edge
-                        // till we're able to parse conditional-edge file without errors.
-                        // we'll throw an error if the file is not able to match blocked-edge
-                        // as well as conditional-edge
-                        old_block = match serde_yaml::from_slice(&yaml) {
-                            Ok(value) => value,
-                            Err(_e) => None,
-                        };
-                    }
-                    if old_block.is_none() {
+                    // conditional-edge file threw error while parsing but matched blocked-edge or
+                    // blocked-edge file threw an error and matched conditional edge, dont throw a warning, these are expected
+                    // and doesnt need warning as at the end of the process, it'll match atleast one block.
+                    // if its neither blocked edge nor conditional edge, throw a warning to make sure we log this as an issue.
+                    if (!(serde_yaml::from_slice::<graph_data_model::BlockedEdge>(&yaml).is_ok())
+                        && (TypeId::of::<T>()
+                            == TypeId::of::<graph_data_model::ConditionalEdgeYaml>()))
+                        || (!(serde_yaml::from_slice::<graph_data_model::ConditionalEdgeYaml>(
+                            &yaml,
+                        )
+                        .is_ok())
+                            && (TypeId::of::<T>() == TypeId::of::<graph_data_model::BlockedEdge>()))
+                    {
                         warn!("Failed to deserialize file at {:?}: {}", &path, e);
                         commit_error!(error, DeserializeDirectoryFilesError::Deserialize(path, e));
                     }
