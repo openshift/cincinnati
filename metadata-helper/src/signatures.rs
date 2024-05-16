@@ -59,7 +59,7 @@ async fn _index(
 
     let params = req.match_info();
     let algo_digest_string = params.get("ALGO_DIGEST").unwrap();
-    let algo_digest: Vec<&str> = algo_digest_string.clone().split('=').collect();
+    let algo_digest: Vec<&str> = algo_digest_string.split('=').collect();
 
     if algo_digest.len() != 2 {
         return Err(GraphError::InvalidParams(format!(

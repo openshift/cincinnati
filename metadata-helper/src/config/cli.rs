@@ -68,7 +68,7 @@ mod tests {
 
         let sig_dir_args = vec!["argv0", "--signtures.dir", "/a/b"];
         let sig_dir_cli = CliOptions::from_iter_safe(sig_dir_args).unwrap();
-        assert_eq!(sig_dir_cli.signatures.dir, Some("/a/b"));
+        assert_eq!(sig_dir_cli.signatures.dir, Some("/a/b".to_string()));
     }
 
     #[test]
