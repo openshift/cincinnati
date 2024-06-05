@@ -322,7 +322,26 @@ pub async fn fetch_releases(
 
         async move {
             let (arch, manifestref, mut layers_digests) =
-                get_manifest_layers(tag.to_owned(), &repo, &registry_client).await?;
+                match get_manifest_layers(tag.to_owned(), &repo, &registry_client).await
+                {
+                    // todo: we're ignoring the images which we do not understand with this change. 
+                    // this change is required because we dont want cincinnati to error out on encountering
+                    // cosign signatures.
+                    // unintended consequence of this change can be that cincinnati continues with a log when it encounters 
+                    // incorrect image whereas it should error out. Cincinnati won't include this image in the update graph.
+                    // We should ideally try to ignore only the cosign .sig signatures. this change acts a 
+                    // stopgap till we teach cincinnati to deal with signatures
+                    Ok(result) => result,
+                    Err(e) => {
+                        warn!(
+                            "error fetching manifest and manifestref for {}:{}: {}, ignoring this image",
+                            &repo,
+                            &tag,
+                            e
+                        );
+                        return Ok(()) ;
+                    }
+                };
 
             // if the image is multi arch, we will have to get one image from the manifest list and
             // use its metadata, because manifest lists are just collections of manifests and don't
