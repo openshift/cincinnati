@@ -551,6 +551,30 @@ impl OpenshiftSecondaryMetadataParserPlugin {
             conditional_edges.len()
         );
 
+        // get all the architectures in the graph.
+        let architectures = {
+            let mut collection = std::collections::BTreeSet::<Vec<semver::Identifier>>::new();
+
+            let _ = graph.find_by_fn_mut(|release| {
+                match semver::Version::from_str(release.version()) {
+                    Ok(version_semver) => {
+                        collection.insert(version_semver.build);
+                    }
+                    Err(e) => warn!("{} is not SemVer compliant: {}", release.version(), e),
+                };
+
+                // we don't care about this result
+                false
+            });
+
+            collection.into_iter().collect::<Vec<_>>()
+        };
+
+        trace!(
+            "Will remove the edges and add conditional edges for these architectures by default: {:?}",
+            &architectures
+        );
+
         conditional_edges
             .into_iter()
             .try_for_each(|cey| -> Fallible<()> {
@@ -561,13 +585,64 @@ impl OpenshiftSecondaryMetadataParserPlugin {
                     },
                     edges: vec![],
                     risks: vec![ConditionalUpdateRisk {
-                        url: cey.url,
-                        name: cey.name,
-                        message: cey.message,
-                        matching_rules: cey.matching_rules,
+                        url: cey.url.clone(),
+                        name: cey.name.clone(),
+                        message: cey.message.clone(),
+                        matching_rules: cey.matching_rules.clone(),
                     }],
                 };
+                // add the edge to conditional edges.
                 graph.conditional_edges.as_mut().unwrap().push(ce);
+
+                // remove the edge from edges and just keep the conditional edge
+
+                // evaluate the target version of all architectures to be removed
+                let target_versions: Vec<semver::Version> = {
+                    let to = cey.to.clone();
+
+                    // Default to blocking all architectsures
+                    architectures
+                        .iter()
+                        .map(|blocked_architecture| {
+                            let mut to = to.clone();
+                            to.build = blocked_architecture.clone();
+                            to
+                        })
+                        .collect()
+                };
+
+                // find all versions in the graph
+                target_versions.iter().for_each(|to| {
+                    match graph.find_by_version(&to.to_string()) {
+                        Some(release_id) => {
+                            // add metadata to block edge using the `previous.remove_regex` metadata
+                            match &mut graph.get_metadata_as_ref_mut(&release_id).context(format!(
+                                "[conditional_edges] Getting mutable metadata for {} failed.",
+                                &to.to_string()
+                            )) {
+                                Ok(metadata) => {
+                                    let rx_key = format!(
+                                        "{}.{}",
+                                        self.settings.key_prefix, "previous.remove_regex"
+                                    );
+
+                                    match metadata.get_mut(&rx_key) {
+                                        Some(key) => {
+                                            key.push_str(&format!("|{}", cey.from.to_string()))
+                                        }
+                                        None => {
+                                            metadata.insert(rx_key, cey.from.to_string());
+                                        }
+                                    }
+                                }
+                                Err(e) => debug!("{}", e),
+                            };
+                        }
+                        None => {
+                            debug!("Release with version {} not found in graph", to);
+                        }
+                    };
+                });
 
                 Ok(())
             })?;
