@@ -230,7 +230,7 @@ objects:
       name: cincinnati-pdb
       namespace: cincinnati
     spec:
-      minAvailable: ${{PDB_MIN}}
+      maxUnavailable: 1
       selector:
         matchLabels:
           app: cincinnati
@@ -394,6 +394,4 @@ parameters:
   - name: ENVIRONMENT_SECRETS
     value: '{ "CINCINNATI_GITHUB_SCRAPER_OAUTH_TOKEN_PATH": "/etc/secrets/github_token.key" }'
   - name: REPLICAS
-    value: "1"
-  - name: PDB_MIN
     value: "1"
