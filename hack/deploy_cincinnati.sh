@@ -16,7 +16,7 @@ oc create secret generic cincinnati-credentials --from-literal="foo=bar"
 
 
 # Apply oc template
-oc new-app -f dist/openshift/cincinnati.yaml \
+oc new-app -f dist/openshift/cincinnati-deployment.yaml \
   -p IMAGE_TAG=${IMAGE_TAG}\
   -p GB_PAUSE_SECS=300 \
   -p GB_PLUGIN_SETTINGS="$(cat <<-EOF

@@ -6,7 +6,7 @@ APP-SRE publishes the Cincinnati container images at [Quay registry](https://qua
 
 We need an image tag from the [Quay registry](https://quay.io/repository/app-sre/cincinnati) to use with the deployment config.
 
-The Cincinnati deploymentconfig is available [here](../../dist/openshift/cincinnati.yaml).
+The Cincinnati deployment is available [here](../../dist/openshift/cincinnati-deployment.yaml).
 
 ### Steps
 
@@ -52,7 +52,7 @@ For more information around use of the container registry, see the section on [c
 
 ```shell
 export IMAGE_TAG=<TAG>
-oc new-app -f cincinnati.yaml \
+oc new-app -f cincinnati-deployment \
   -p IMAGE_TAG=${IMAGE_TAG}
 ```
 
@@ -109,7 +109,7 @@ You can change the default registry in Cincinnati deployment config when you sta
 Example:
 
 ```shell
-oc new-app -f dist/openshift/cincinnati.yaml \
+oc new-app -f dist/openshift/cincinnati-deployment.yaml \
   -p GB_PLUGIN_SETTINGS="$(cat <<-EOF
       [[plugin_settings]]
       name = "release-scrape-dockerv2"

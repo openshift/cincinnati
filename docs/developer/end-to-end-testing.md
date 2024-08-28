@@ -12,7 +12,7 @@ In Cincinnati PRs Openshift CI (Prow) is [configured](https://github.com/openshi
 This script installs Cincinnati on a cluster. In detail it does the following:
 * create a new project
 * use cluster's pull secret as a pull secret for Cincinnati
-* apply Cincinnati deploy manifests (see [openshift template](../../dist/openshift/cincinnati.yaml))
+* apply Cincinnati deploy manifests (see [openshift template](../../dist/openshift/cincinnati-deployment.yaml))
 * use prod-like configuration for graph-builder and policy-engine
 * wait for Cincinnati to rollout, expecting liveness/readiness probes to pass
 
