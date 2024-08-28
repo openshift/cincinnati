@@ -25,7 +25,14 @@ pub fn get_certs_from_dir(dir: &Path) -> Fallible<Vec<Certificate>, Error> {
                                     let mut cert_buf = Vec::new();
                                     std::fs::File::open(&path.path())?
                                         .read_to_end(&mut cert_buf)?;
-                                    let certificate = reqwest::Certificate::from_pem(&cert_buf);
+
+                                    // rename "TRUSTED CERTIFICATE" to "CERTIFICATE" in case of non-standard trusted certificates
+                                    let pem_str = String::from_utf8(cert_buf).unwrap();
+                                    let pem_str =
+                                        pem_str.replace("TRUSTED CERTIFICATE", "CERTIFICATE");
+
+                                    let certificate =
+                                        reqwest::Certificate::from_pem(&pem_str.as_bytes());
                                     if certificate.is_ok() {
                                         debug!(
                                             "Adding {} to certificates",
