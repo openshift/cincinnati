@@ -11,7 +11,7 @@ objects:
         app: cincinnati
       name: cincinnati
     spec:
-      replicas: ${{REPLICAS}}
+      replicas: ${{MIN_REPLICAS}}
       selector:
         matchLabels:
           app: cincinnati
@@ -174,6 +174,30 @@ objects:
                 name: cincinnati-configs
       triggers:
         - type: ConfigChange
+  - apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    metadata:
+      name: cincinnati-hpa
+      labels:
+        app: cincinnati
+    spec:
+      scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: cincinnati
+      minReplicas: ${{MIN_REPLICAS}}
+      maxReplicas: ${{MAX_REPLICAS}}
+      metrics:
+        - type: Pods
+          pods:
+            metric:
+              name: cincinnati_pe_graph_incoming_requests_per_second
+              selector:
+                matchLabels:
+                  uri_path: "/api/upgrades_info/v1/graph"
+            target:
+              type: AverageValue
+              averageValue: "${{PE_REQ_AVG}}"
   - apiVersion: v1
     kind: Service
     metadata:
@@ -393,5 +417,9 @@ parameters:
     value: "/etc/configs/gb.toml"
   - name: ENVIRONMENT_SECRETS
     value: '{ "CINCINNATI_GITHUB_SCRAPER_OAUTH_TOKEN_PATH": "/etc/secrets/github_token.key" }'
-  - name: REPLICAS
+  - name: MIN_REPLICAS
     value: "1"
+  - name: MAX_REPLICAS
+    value: "3"
+  - name: PE_REQ_AVG
+    value: "50"
