@@ -7,7 +7,8 @@ cargo_test_flags["cincinnati"]="--features test-net"
 cargo_test_flags["commons"]=""
 cargo_test_flags["graph-builder"]="--features test-net"
 cargo_test_flags["policy-engine"]=""
-# TODO: Are we missing metadata-helper and rh-manifest-generator here?
+cargo_test_flags["metadata-helper"]=""
+cargo_test_flags["rh-manifest-generator"]=""
 cargo_test_flags["prometheus-query"]=""
 cargo_test_flags["quay"]="--features test-net"
 
