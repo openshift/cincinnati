@@ -1,0 +1,8 @@
+[profile.ci]
+# Print out output for failing tests only at the end of the run (it is ugly otherwise)
+failure-output = "final"
+# Do not cancel the test run on the first failure.
+fail-fast = false
+
+[profile.ci.junit]  # this can be some other profile, too
+path = "junit.xml"

@@ -7,6 +7,8 @@ cargo_test_flags["cincinnati"]="--features test-net"
 cargo_test_flags["commons"]=""
 cargo_test_flags["graph-builder"]="--features test-net"
 cargo_test_flags["policy-engine"]=""
+cargo_test_flags["metadata-helper"]=""
+cargo_test_flags["rh-manifest-generator"]=""
 cargo_test_flags["prometheus-query"]=""
 cargo_test_flags["quay"]="--features test-net"
 
@@ -22,52 +24,36 @@ fi
 declare -A executors
 executors["cargo"]="execute_native"
 
+# Spurious dead code warning
+# shellcheck disable=SC2317
 function run_tests() {
   set -x
+  export ARTIFACT_DIR=${ARTIFACT_DIR:-.}
   export CARGO_TARGET_DIR="$PWD/target"
 
-  if [[ $(type -f kcov) ]]; then
-    export HAS_KOV="${HAS_KOV:-1}"
-    rm -rf "${CARGO_TARGET_DIR}"/cov
+  RUNNER="nextest"
+  if ! cargo nextest --version; then
+    echo "Preferred runner nextest not found"
+    if [ -n "$CI" ]; then
+      echo "Fallback to standard test runner not desirable in CI: exiting"
+      exit 1
+    else
+      echo "Falling back from $RUNNER to standard Rust runner"
+      RUNNER="test"
+    fi
   fi
 
   has_failed=false
   for directory in ${!cargo_test_flags[*]}; do
-    if [[ "${HAS_KOV}" -eq "1" ]]; then
-      # we want to prevent completely untested functions to be stripped
-      export RUSTFLAGS='-C link-dead-code'
+    # intentional, flags need to expand to multiple strings
+    # shellcheck disable=SC2086
+    if [ "$RUNNER" == "nextest" ]; then
+      cargo nextest run --profile ci ${cargo_test_flags[$directory]} --package "${directory}" || has_failed=true
+      cp -r "${CARGO_TARGET_DIR}/nextest/ci/junit.xml" "${ARTIFACT_DIR}/junit_${directory}.xml"
+    else
+      cargo test ${cargo_test_flags[$directory]} --package "${directory}" || has_failed=true
     fi
-
-    if ! /usr/bin/env bash -c "\
-        set -xe
-        cd ${directory}
-        cargo test --no-run
-        mapfile -t tests < <(
-          cargo test --no-run --message-format=json ${cargo_test_flags[${directory}]} | \
-            jq -r 'select(.profile.test == true) | .executable'
-        )
-        for test in \${tests[@]}; do
-          if [[ \"${HAS_KOV}\" -eq \"1\" ]]; then
-            kcov \
-              --exclude-pattern=$HOME/.cargo \
-              --verify \
-              ${CARGO_TARGET_DIR}/cov \
-              \$test
-          else
-            \$test
-          fi
-        done
-      "; then
-      has_failed=true
-    fi
-
   done
-
-  if [[ "${HAS_KOV}" -eq "1" && -n "${ARTIFACTS_DIR}" ]]; then
-    mkdir -p "${ARTIFACTS_DIR}"
-    [[ ! -e "${ARTIFACTS_DIR}"/cov ]] || rm -rf "${ARTIFACTS_DIR}"/cov
-    cp -rf "${CARGO_TARGET_DIR}"/cov "${ARTIFACTS_DIR}"/
-  fi
 
   if [ "${has_failed}" == true ]; then
     echo "at least one error has occurred while running tests; check the output for more information"
