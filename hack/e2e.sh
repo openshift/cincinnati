@@ -160,20 +160,23 @@ metadata:
 type: kubernetes.io/service-account-token
 EOF
 
+set +x # Do not disclose sensitive data in the logs, such as the Prometheus token
 DELAY=30
 for i in $(seq 1 10); do
   # extract the prometheus token
+  echo "extracting the prometheus token"
   export PROM_TOKEN=$(oc extract secret/prometheus-robot-secret --to=- --keys=token -n openshift-monitoring) || continue
   grep "waiting for prometheus token" <<< "${PROM_TOKEN}" || continue && break
   sleep ${DELAY}
 done
 
 for i in $(seq 1 10); do
+  echo "requesting the cincinnati_gb_build_info metric"
   PROM_OUTPUT=$(curl -kLs -H "Authorization: Bearer ${PROM_TOKEN}" "${PROM_ENDPOINT}/api/v1/query?query=cincinnati_gb_build_info") || continue
   grep "metric" <<< "${PROM_OUTPUT}" || continue && break
-
   sleep ${DELAY}
 done
+set -x
 
 # Show test failure details
 export RUST_BACKTRACE="1"
