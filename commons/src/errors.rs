@@ -85,6 +85,10 @@ pub enum GraphError {
     /// Resource does not exist
     #[error("does not exist: {}", _0)]
     DoesNotExist(String),
+
+    /// No version were found.
+    #[error("no versions found: {}", _0)]
+    NoVersionsFound(String),
 }
 
 impl actix_web::error::ResponseError for GraphError {
@@ -129,6 +133,7 @@ impl GraphError {
             GraphError::ArchVersionError(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
             GraphError::FileOpenError(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
             GraphError::DoesNotExist(_) => http::StatusCode::NOT_FOUND,
+            GraphError::NoVersionsFound(_) => http::StatusCode::BAD_REQUEST,
         }
     }
 
@@ -146,6 +151,7 @@ impl GraphError {
             GraphError::ArchVersionError(_) => "arch_version_error",
             GraphError::FileOpenError(_) => "file_open_err",
             GraphError::DoesNotExist(_) => "does_not_exist",
+            GraphError::NoVersionsFound(_) => "no_versions_found",
         };
         kind.to_string()
     }
