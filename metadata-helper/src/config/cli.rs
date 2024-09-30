@@ -66,7 +66,7 @@ mod tests {
         let svc_port_cli = CliOptions::from_iter_safe(svc_port_args).unwrap();
         assert_eq!(svc_port_cli.service.port, Some(9999));
 
-        let sig_dir_args = vec!["argv0", "--signtures.dir", "/a/b"];
+        let sig_dir_args = vec!["argv0", "--signatures.dir", "/a/b"];
         let sig_dir_cli = CliOptions::from_iter_safe(sig_dir_args).unwrap();
         assert_eq!(sig_dir_cli.signatures.dir, Some("/a/b".to_string()));
     }
