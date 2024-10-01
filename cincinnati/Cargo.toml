@@ -52,6 +52,7 @@ memchr = "^2.7"
 pretty_assertions = "1.4.0"
 test-case = "1.2.3"
 prettydiff = "0.6"
+similar = "2.6.0"
 
 [build-dependencies]
 protoc-rust = "2.28"
