@@ -239,6 +239,9 @@ mod tests {
                     parameters: Default::default(),
                 });
 
+                // TODO: This check is not reliable, it seems the individual tests interact with each other somehow?
+                // Apparently sometimes the plugins talk to a different mock than expected (such as one created in
+                // "failure" tests). Reproduce by commenting out failure tests, suddenly all success tests pass.
                 let processed_graph = runtime
                     .block_on(future_processed_graph)
                     .expect("plugin run failed")
@@ -302,6 +305,9 @@ mod tests {
                     parameters: Default::default(),
                 });
 
+                // TODO: This check is not reliable, it seems the individual tests interact with each other somehow?
+                // Apparently sometimes the plugins talk to a different mock than expected (such as one created in
+                // "success" tests). Reproduce by commenting out success tests, suddenly all failure tests pass.
                 assert!(runtime.block_on(future_result).is_err());
 
                 assert_eq!(1, plugin.http_upstream_reqs.get() as usize);
