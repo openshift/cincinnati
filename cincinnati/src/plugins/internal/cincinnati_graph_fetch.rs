@@ -161,18 +161,26 @@ impl CincinnatiGraphFetchPlugin {
         }
 
         trace!("getting graph from upstream at {}", self.upstream);
-        let call_result = cached_graph(&self.client, &self.upstream, headers).await?;
-        // Increase request counter only if actual call was made
-        if !call_result.was_cached {
-            self.http_upstream_reqs.inc();
+        let result = cached_graph(&self.client, &self.upstream, headers).await;
+        match result {
+            Ok(call) => {
+                // Increase request counter only if actual call was made
+                if !call.was_cached {
+                    self.http_upstream_reqs.inc();
+                }
+                get_active_span(|span| {
+                    span.set_attribute(Key::new("cached").bool(call.was_cached));
+                });
+                Ok(InternalIO {
+                    graph: call.value,
+                    parameters: io.parameters,
+                })
+            }
+            Err(e) => {
+                self.http_upstream_reqs.inc();
+                Err(Error::from(e))
+            }
         }
-        get_active_span(|span| {
-            span.set_attribute(Key::new("cached").bool(call_result.was_cached));
-        });
-        Ok(InternalIO {
-            graph: call_result.value,
-            parameters: io.parameters,
-        })
     }
 }
 
