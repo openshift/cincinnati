@@ -230,11 +230,9 @@ mod tests {
                 let timeout: u64 = 30;
                 let plugin =
                     CincinnatiGraphFetchPlugin::try_new(mockito::server_url(), timeout, None)?;
-                let http_upstream_reqs = plugin.http_upstream_reqs.clone();
-                let http_upstream_errors_total = plugin.http_upstream_errors_total.clone();
 
-                assert_eq!(0, http_upstream_reqs.clone().get() as u64);
-                assert_eq!(0, http_upstream_errors_total.clone().get() as u64);
+                assert_eq!(0, plugin.http_upstream_reqs.get() as u64);
+                assert_eq!(0, plugin.http_upstream_errors_total.get() as u64);
 
                 let future_processed_graph = plugin.run_internal(InternalIO {
                     graph: Default::default(),
@@ -248,8 +246,8 @@ mod tests {
 
                 assert_eq!($expected_graph, processed_graph);
 
-                assert_eq!(1, http_upstream_reqs.get() as u64);
-                assert_eq!(0, http_upstream_errors_total.get() as u64);
+                assert_eq!(1, plugin.http_upstream_reqs.get() as u64);
+                assert_eq!(0, plugin.http_upstream_errors_total.get() as u64);
 
                 Ok(())
             }
@@ -295,11 +293,9 @@ mod tests {
                     .create();
 
                 let plugin = CincinnatiGraphFetchPlugin::try_new($upstream.to_string(), 30, None)?;
-                let http_upstream_reqs = plugin.http_upstream_reqs.clone();
-                let http_upstream_errors_total = plugin.http_upstream_errors_total.clone();
 
-                assert_eq!(0, http_upstream_reqs.clone().get() as u64);
-                assert_eq!(0, http_upstream_errors_total.clone().get() as u64);
+                assert_eq!(0, plugin.http_upstream_reqs.get() as u64);
+                assert_eq!(0, plugin.http_upstream_errors_total.get() as u64);
 
                 let future_result = plugin.run_internal(InternalIO {
                     graph: Default::default(),
@@ -308,8 +304,8 @@ mod tests {
 
                 assert!(runtime.block_on(future_result).is_err());
 
-                assert_eq!(1, http_upstream_reqs.get() as usize);
-                assert_eq!(1, http_upstream_errors_total.get() as usize);
+                assert_eq!(1, plugin.http_upstream_reqs.get() as usize);
+                assert_eq!(1, plugin.http_upstream_errors_total.get() as usize);
 
                 Ok(())
             }
