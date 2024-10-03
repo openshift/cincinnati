@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn toml_merge_settings() {
         let mut settings = AppSettings::default();
-        assert_eq!(settings.status_port, 9081);
+        assert_eq!(settings.status_port, 9082);
 
         let toml_input = "status.port = 2222";
         let file_opts: FileOptions = toml::from_str(toml_input).unwrap();
