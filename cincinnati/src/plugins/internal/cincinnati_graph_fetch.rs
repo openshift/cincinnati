@@ -161,18 +161,26 @@ impl CincinnatiGraphFetchPlugin {
         }
 
         trace!("getting graph from upstream at {}", self.upstream);
-        let call_result = cached_graph(&self.client, &self.upstream, headers).await?;
-        // Increase request counter only if actual call was made
-        if !call_result.was_cached {
-            self.http_upstream_reqs.inc();
+        let result = cached_graph(&self.client, &self.upstream, headers).await;
+        match result {
+            Ok(call) => {
+                // Increase request counter only if actual call was made
+                if !call.was_cached {
+                    self.http_upstream_reqs.inc();
+                }
+                get_active_span(|span| {
+                    span.set_attribute(Key::new("cached").bool(call.was_cached));
+                });
+                Ok(InternalIO {
+                    graph: call.value,
+                    parameters: io.parameters,
+                })
+            }
+            Err(e) => {
+                self.http_upstream_reqs.inc();
+                Err(Error::from(e))
+            }
         }
-        get_active_span(|span| {
-            span.set_attribute(Key::new("cached").bool(call_result.was_cached));
-        });
-        Ok(InternalIO {
-            graph: call_result.value,
-            parameters: io.parameters,
-        })
     }
 }
 
@@ -222,17 +230,18 @@ mod tests {
                 let timeout: u64 = 30;
                 let plugin =
                     CincinnatiGraphFetchPlugin::try_new(mockito::server_url(), timeout, None)?;
-                let http_upstream_reqs = plugin.http_upstream_reqs.clone();
-                let http_upstream_errors_total = plugin.http_upstream_errors_total.clone();
 
-                assert_eq!(0, http_upstream_reqs.clone().get() as u64);
-                assert_eq!(0, http_upstream_errors_total.clone().get() as u64);
+                assert_eq!(0, plugin.http_upstream_reqs.get() as u64);
+                assert_eq!(0, plugin.http_upstream_errors_total.get() as u64);
 
                 let future_processed_graph = plugin.run_internal(InternalIO {
                     graph: Default::default(),
                     parameters: Default::default(),
                 });
 
+                // TODO: This check is not reliable, it seems the individual tests interact with each other somehow?
+                // Apparently sometimes the plugins talk to a different mock than expected (such as one created in
+                // "failure" tests). Reproduce by commenting out failure tests, suddenly all success tests pass.
                 let processed_graph = runtime
                     .block_on(future_processed_graph)
                     .expect("plugin run failed")
@@ -240,8 +249,8 @@ mod tests {
 
                 assert_eq!($expected_graph, processed_graph);
 
-                assert_eq!(1, http_upstream_reqs.get() as u64);
-                assert_eq!(0, http_upstream_errors_total.get() as u64);
+                assert_eq!(1, plugin.http_upstream_reqs.get() as u64);
+                assert_eq!(0, plugin.http_upstream_errors_total.get() as u64);
 
                 Ok(())
             }
@@ -287,21 +296,22 @@ mod tests {
                     .create();
 
                 let plugin = CincinnatiGraphFetchPlugin::try_new($upstream.to_string(), 30, None)?;
-                let http_upstream_reqs = plugin.http_upstream_reqs.clone();
-                let http_upstream_errors_total = plugin.http_upstream_errors_total.clone();
 
-                assert_eq!(0, http_upstream_reqs.clone().get() as u64);
-                assert_eq!(0, http_upstream_errors_total.clone().get() as u64);
+                assert_eq!(0, plugin.http_upstream_reqs.get() as u64);
+                assert_eq!(0, plugin.http_upstream_errors_total.get() as u64);
 
                 let future_result = plugin.run_internal(InternalIO {
                     graph: Default::default(),
                     parameters: Default::default(),
                 });
 
+                // TODO: This check is not reliable, it seems the individual tests interact with each other somehow?
+                // Apparently sometimes the plugins talk to a different mock than expected (such as one created in
+                // "success" tests). Reproduce by commenting out success tests, suddenly all failure tests pass.
                 assert!(runtime.block_on(future_result).is_err());
 
-                assert_eq!(1, http_upstream_reqs.get() as usize);
-                assert_eq!(1, http_upstream_errors_total.get() as usize);
+                assert_eq!(1, plugin.http_upstream_reqs.get() as usize);
+                assert_eq!(1, plugin.http_upstream_errors_total.get() as usize);
 
                 Ok(())
             }
