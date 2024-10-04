@@ -1084,34 +1084,44 @@ pub mod testing {
 
         let edges_left = left.get_edges(false)?;
         let edges_right = right.get_edges(false)?;
+        let diff_radius = 25;
         output.push("edges: ".into());
         output.push(
-            prettydiff::diff_lines(
+            similar::TextDiff::from_lines(
                 &serde_json::to_string_pretty(&edges_left)?,
                 &serde_json::to_string_pretty(&edges_right)?,
             )
-            .format(),
+            .unified_diff()
+            .context_radius(diff_radius)
+            .header("left", "right")
+            .to_string(),
         );
 
         let releases_left: std::collections::BTreeSet<Release> = (&left).into();
         let releases_right: std::collections::BTreeSet<Release> = (&right).into();
         output.push("nodes:".into());
         output.push(
-            prettydiff::diff_lines(
+            similar::TextDiff::from_lines(
                 Box::leak(Box::new(serde_json::to_string_pretty(&releases_left)?)),
                 Box::leak(Box::new(serde_json::to_string_pretty(&releases_right)?)),
             )
-            .format(),
+            .unified_diff()
+            .context_radius(diff_radius)
+            .header("left", "right")
+            .to_string(),
         );
 
         if !settings.unwanted_metadata_keys.is_empty() {
             output.push("removed metadata:".into());
             output.push(
-                prettydiff::diff_lines(
+                similar::TextDiff::from_lines(
                     &serde_json::to_string_pretty(&removed_keys_left)?,
                     &serde_json::to_string_pretty(&removed_keys_right)?,
                 )
-                .format(),
+                .unified_diff()
+                .context_radius(diff_radius)
+                .header("left", "right")
+                .to_string(),
             );
         }
 
