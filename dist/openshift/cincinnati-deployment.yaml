@@ -187,17 +187,26 @@ objects:
         name: cincinnati
       minReplicas: ${{MIN_REPLICAS}}
       maxReplicas: ${{MAX_REPLICAS}}
+      # Using 'Pods' type, as the metric is summed by pod, so each pod has its own value and
+      # HPA will automatically average across all pods. We want to scale based on per-pod metrics
       metrics:
         - type: Pods
           pods:
             metric:
-              name: cincinnati_pe_graph_incoming_requests_per_second
-              selector:
-                matchLabels:
-                  uri_path: "/api/upgrades_info/v1/graph"
+              name: cincinnati_policy_engine_graph_incoming_requests_rate
             target:
               type: AverageValue
-              averageValue: "${{PE_REQ_AVG}}"
+              averageValue: ${{PE_REQ_AVG}}
+  - apiVersion: monitoring.coreos.com/v1
+    kind: PrometheusRule
+    metadata:
+      name: cincinnati-recording-rule
+    spec:
+      groups:
+        - name: cincinnati.rules
+          rules:
+            - record: cincinnati_policy_engine_graph_incoming_requests_rate
+              expr: sum by (pod) (rate(cincinnati_pe_graph_incoming_requests_total[2m]))
   - apiVersion: v1
     kind: Service
     metadata:
