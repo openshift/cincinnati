@@ -691,6 +691,9 @@ impl Serialize for Graph {
 
 #[cfg(any(test, feature = "test"))]
 impl PartialEq for Graph {
+    /// Compares two Graphs.
+    ///
+    /// Does not take into account the `conditional_edges` field of Graphs.
     fn eq(&self, other: &Graph) -> bool {
         let mut releases = self
             .dag
@@ -1035,6 +1038,7 @@ pub mod testing {
     }
 
     /// Compares two Versioned Graphs and gives a verbose error if not equal
+    /// Currently does not take into account conditional edges.
     pub fn compare_versioned_graphs_verbose(
         versioned_left: VersionedGraph,
         versioned_right: VersionedGraph,
@@ -1051,6 +1055,7 @@ pub mod testing {
     }
 
     /// Compares two Graphs and gives a verbose error if not equal.
+    /// Currently does not take into account conditional edges.
     pub fn compare_graphs_verbose(
         mut left: Graph,
         mut right: Graph,
