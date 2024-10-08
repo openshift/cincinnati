@@ -179,10 +179,8 @@ pub struct Empty;
 
 /// Errors that can be returned by the methods in this library
 pub mod errors {
-    use commons::prelude_errors::*;
-
     /// Edge already exists
-    #[derive(Debug, Fail, Eq, PartialEq)]
+    #[derive(Debug, thiserror::Error, Eq, PartialEq)]
     #[error("edge from {:?} to {:?} already exists", from, to)]
     pub struct EdgeAlreadyExists {
         pub(crate) from: String,
@@ -190,7 +188,7 @@ pub mod errors {
     }
 
     /// Edge doesn't exist
-    #[derive(Debug, Fail, Eq, PartialEq)]
+    #[derive(Debug, thiserror::Error, Eq, PartialEq)]
     #[error("edge from '{:?}' to '{:?}' doesn't exist", from, to)]
     pub struct EdgeDoesntExist {
         pub(crate) from: String,
@@ -198,7 +196,7 @@ pub mod errors {
     }
 
     /// Missing node weight
-    #[derive(Debug, Fail, Eq, PartialEq)]
+    #[derive(Debug, thiserror::Error, Eq, PartialEq)]
     #[error("NodeWeight with index {} is missing", 0)]
     pub struct NodeWeightMissing(pub(crate) usize);
 }
