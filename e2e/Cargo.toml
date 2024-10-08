@@ -21,7 +21,7 @@ commons = { path = "../commons" }
 tokio = { version = "1.32", features = [ "fs", "rt-multi-thread" ] }
 tokio-stream = { version = "0.1", features = ["fs"] }
 prometheus-query = { path = "../prometheus-query" }
-lazy_static = "^1.2.0"
+lazy_static = "^1.5.0"
 cincinnati = { path = "../cincinnati", features = ["test"] }
 
 [features]
