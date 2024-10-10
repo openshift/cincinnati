@@ -175,7 +175,7 @@ impl PluginSettings for OpenshiftSecondaryMetadataParserSettings {
     }
 }
 
-#[derive(Debug, Fail, strum_macros::EnumDiscriminants)]
+#[derive(Debug, thiserror::Error, strum_macros::EnumDiscriminants)]
 #[strum(serialize_all = "snake_case")]
 #[strum_discriminants(derive(Hash, Serialize, Deserialize), serde(rename_all = "snake_case"))]
 pub enum DeserializeDirectoryFilesError {

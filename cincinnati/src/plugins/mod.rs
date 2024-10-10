@@ -95,7 +95,7 @@ pub enum PluginIO {
 }
 
 /// Error type which corresponds to interface::PluginError
-#[derive(Debug, Fail)]
+#[derive(Debug, thiserror::Error)]
 pub enum ExternalError {
     #[error("PluginError: {:?}", 0)]
     PluginError(PluginError),

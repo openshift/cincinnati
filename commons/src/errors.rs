@@ -11,9 +11,6 @@ pub mod prelude {
     pub use anyhow::Context;
     pub use anyhow::Error;
     pub use anyhow::Result as Fallible;
-
-    // Macro imports
-    pub use thiserror::Error as Fail;
 }
 pub use prelude::*;
 
