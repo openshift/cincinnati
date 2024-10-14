@@ -6305,7 +6305,7 @@
         "description": "",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:999a6a4bd731075e389ae601b373194c6cb2c7b4dadd1ad06ef607e86476b129",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8",
-        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*"
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*|4\\.6\\..*|.*"
       }
     },
     {
@@ -6347,7 +6347,7 @@
       "payload": "quay.io/openshift-release-dev/ocp-release@sha256:475367e4991d6e8ea3617cf3dfe2dd472db76a89f23484f118932d6bdd6f53e9",
       "metadata": {
         "url": "https://access.redhat.com/errata/RHSA-2021:0957",
-        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*|4\\.6\\..*|.*",
         "description": "",
         "io.openshift.upgrades.graph.release.arch": "ppc64le",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:475367e4991d6e8ea3617cf3dfe2dd472db76a89f23484f118932d6bdd6f53e9",
@@ -6384,7 +6384,7 @@
         "io.openshift.upgrades.graph.release.arch": "s390x",
         "description": "",
         "url": "https://access.redhat.com/errata/RHSA-2021:0957",
-        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*",
+        "io.openshift.upgrades.graph.previous.remove_regex": "4\\.6\\..*|4\\.6\\..*|.*",
         "io.openshift.upgrades.graph.release.manifestref": "sha256:90be6b7e97d8da9fbb2afc7fe6d7dd4da6265fb847ec440e46bda1a25c224b0c",
         "io.openshift.upgrades.graph.release.channels": "candidate-4.7,fast-4.7,stable-4.7,candidate-4.8,fast-4.8,stable-4.8"
       }
