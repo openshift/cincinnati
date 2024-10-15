@@ -113,6 +113,12 @@ where
         Err(other_error) => GraphError::FailedPluginExecution(other_error.to_string()),
     })?;
 
+    if internal_io.graph.releases_count() == 0 {
+        return Err(GraphError::NoVersionsFound(
+            "the specified architecture and/or channel does not contain any versions".to_string(),
+        ));
+    }
+
     let versioned_graph = add_version_information(&internal_io);
 
     let graph_json = serde_json::to_string(&versioned_graph)
