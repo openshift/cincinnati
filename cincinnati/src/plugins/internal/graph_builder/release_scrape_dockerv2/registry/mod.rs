@@ -638,11 +638,12 @@ fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<Metadata, E
 fn parse_url(
     input: &str,
 ) -> Result<(String, String, Option<u16>, String), Box<dyn std::error::Error>> {
-    // Check if the URL has a scheme. If not, prepend "example://" to it.
+    // Check if the URL has a scheme. If not, prepend "http://" to it.
+    // This is done so that the URL library correctly parses the URL.
     let mut modified_input = String::from(input);
     let mut modified_input_flag = false;
     if !input.contains("://") {
-        modified_input.insert_str(0, "example://");
+        modified_input.insert_str(0, "http://");
         modified_input_flag = true;
     }
 
@@ -676,7 +677,7 @@ mod tests {
                     insecure: true,
                     host: "localhost".to_string(),
                     port: Some(8080),
-                    namespace: "".to_string(),
+                    namespace: "/".to_string(),
                 },
             ),
             (
@@ -696,7 +697,7 @@ mod tests {
                     insecure: false,
                     host: "127.0.0.1".to_string(),
                     port: None,
-                    namespace: "".to_string(),
+                    namespace: "/".to_string(),
                 },
             ),
             (
@@ -716,7 +717,7 @@ mod tests {
                     insecure: false,
                     host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
                     port: Some(5000),
-                    namespace: "".to_string(),
+                    namespace: "/".to_string(),
                 },
             ),
             (
@@ -736,7 +737,7 @@ mod tests {
                     insecure: false,
                     host: "quay.io".to_string(),
                     port: None,
-                    namespace: "".to_string(),
+                    namespace: "/".to_string(),
                 },
             ),
             (
