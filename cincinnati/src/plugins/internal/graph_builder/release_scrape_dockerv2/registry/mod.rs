@@ -754,7 +754,7 @@ mod tests {
         for (input, expected) in tests {
             let registry: Registry = Registry::try_from_str(input)
                 .unwrap_or_else(|_| panic!("could not parse {} to registry", input));
-            assert_eq!(registry, expected);
+            assert_eq!(expected, registry);
             assert_eq!(input, registry.host_port_string());
         }
     }
