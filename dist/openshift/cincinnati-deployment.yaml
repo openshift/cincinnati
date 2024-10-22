@@ -11,6 +11,7 @@ objects:
         app: cincinnati
       name: cincinnati
     spec:
+      replicas: ${{MIN_REPLICAS}}
       selector:
         matchLabels:
           app: cincinnati
