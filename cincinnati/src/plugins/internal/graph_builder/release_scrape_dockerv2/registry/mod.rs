@@ -638,11 +638,12 @@ fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<Metadata, E
 fn parse_url(
     input: &str,
 ) -> Result<(String, String, Option<u16>, String), Box<dyn std::error::Error>> {
-    // Check if the URL has a scheme. If not, prepend "example://" to it.
+    // Check if the URL has a scheme. If not, prepend "http://" to it.
+    // This is done so that the URL library correctly parses the URL.
     let mut modified_input = String::from(input);
     let mut modified_input_flag = false;
     if !input.contains("://") {
-        modified_input.insert_str(0, "example://");
+        modified_input.insert_str(0, "http://");
         modified_input_flag = true;
     }
 
@@ -666,96 +667,365 @@ fn parse_url(
 mod tests {
     use super::*;
 
+    struct TestCase {
+        input: String,
+        expected_registry: Registry,
+        expected_registry_host_port_string: String,
+        expected_registry_host_port_namespaced_string: String,
+    }
+
+    fn setup_test_cases() -> Vec<TestCase> {
+        vec![
+            TestCase {
+                input: "localhost".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "localhost".to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "localhost".to_string(),
+                expected_registry_host_port_namespaced_string: "localhost/".to_string(),
+            },
+            TestCase {
+                input: "http://localhost".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "http://localhost".to_string(),
+                expected_registry_host_port_namespaced_string: "http://localhost/".to_string(),
+            },
+            TestCase {
+                input: "https://localhost".to_string(),
+                expected_registry: Registry {
+                    scheme: "https".to_string(),
+                    insecure: false,
+                    host: "localhost".to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "localhost".to_string(),
+                expected_registry_host_port_namespaced_string: "localhost/".to_string(),
+            },
+            TestCase {
+                input: "localhost:8080".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "localhost:8080/".to_string(),
+            },
+            TestCase {
+                input: "http://localhost:8080".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "http://localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "http://localhost:8080/".to_string(),
+            },
+            TestCase {
+                input: "https://localhost:8080/".to_string(),
+                expected_registry: Registry {
+                    scheme: "https".to_string(),
+                    insecure: false,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "localhost:8080/".to_string(),
+            },
+            TestCase {
+                input: "localhost:8080/ns1/ns2".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: "localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "localhost:8080/ns1/ns2".to_string(),
+            },
+            TestCase {
+                input: "localhost:8080/ns1/ns2/".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2/".to_string(),
+                },
+                expected_registry_host_port_string: "localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "localhost:8080/ns1/ns2/"
+                    .to_string(),
+            },
+            TestCase {
+                input: "http://localhost:8080/ns1/ns2".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: "http://localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "http://localhost:8080/ns1/ns2"
+                    .to_string(),
+            },
+            TestCase {
+                input: "http://localhost:8080/ns1/ns2/".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2/".to_string(),
+                },
+                expected_registry_host_port_string: "http://localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "http://localhost:8080/ns1/ns2/"
+                    .to_string(),
+            },
+            TestCase {
+                input: "http://localhost/ns1/ns2".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: "http://localhost".to_string(),
+                expected_registry_host_port_namespaced_string: "http://localhost/ns1/ns2"
+                    .to_string(),
+            },
+            TestCase {
+                input: "http://localhost/ns1/ns2/".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2/".to_string(),
+                },
+                expected_registry_host_port_string: "http://localhost".to_string(),
+                expected_registry_host_port_namespaced_string: "http://localhost/ns1/ns2/"
+                    .to_string(),
+            },
+            TestCase {
+                input: "127.0.0.1".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "127.0.0.1".to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "127.0.0.1".to_string(),
+                expected_registry_host_port_namespaced_string: "127.0.0.1/".to_string(),
+            },
+            TestCase {
+                input: "127.0.0.1/".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "127.0.0.1".to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "127.0.0.1".to_string(),
+                expected_registry_host_port_namespaced_string: "127.0.0.1/".to_string(),
+            },
+            TestCase {
+                input: "127.0.0.1:8080".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "127.0.0.1".to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "127.0.0.1:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "127.0.0.1:8080/".to_string(),
+            },
+            TestCase {
+                input: "127.0.0.1/ns1/ns2".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "127.0.0.1".to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: "127.0.0.1".to_string(),
+                expected_registry_host_port_namespaced_string: "127.0.0.1/ns1/ns2".to_string(),
+            },
+            TestCase {
+                input: "http://127.0.0.1/ns1/ns2".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "127.0.0.1".to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: "http://127.0.0.1".to_string(),
+                expected_registry_host_port_namespaced_string: "http://127.0.0.1/ns1/ns2"
+                    .to_string(),
+            },
+            TestCase {
+                input: "sat-r220-02.lab.eng.rdu2.redhat.com:5000".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
+                    port: Some(5000),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "sat-r220-02.lab.eng.rdu2.redhat.com:5000"
+                    .to_string(),
+                expected_registry_host_port_namespaced_string:
+                    "sat-r220-02.lab.eng.rdu2.redhat.com:5000/".to_string(),
+            },
+            TestCase {
+                input: "sat-r220-02.lab.eng.rdu2.redhat.com:5000/".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
+                    port: Some(5000),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "sat-r220-02.lab.eng.rdu2.redhat.com:5000"
+                    .to_string(),
+                expected_registry_host_port_namespaced_string:
+                    "sat-r220-02.lab.eng.rdu2.redhat.com:5000/".to_string(),
+            },
+            TestCase {
+                input: "http://sat-r220-02.lab.eng.rdu2.redhat.com:5000".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
+                    port: Some(5000),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string:
+                    "http://sat-r220-02.lab.eng.rdu2.redhat.com:5000".to_string(),
+                expected_registry_host_port_namespaced_string:
+                    "http://sat-r220-02.lab.eng.rdu2.redhat.com:5000/".to_string(),
+            },
+            TestCase {
+                input: "sat-r220-02.lab.eng.rdu2.redhat.com:5000/ns1".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
+                    port: Some(5000),
+                    namespace: "/ns1".to_string(),
+                },
+                expected_registry_host_port_string: "sat-r220-02.lab.eng.rdu2.redhat.com:5000"
+                    .to_string(),
+                expected_registry_host_port_namespaced_string:
+                    "sat-r220-02.lab.eng.rdu2.redhat.com:5000/ns1".to_string(),
+            },
+            TestCase {
+                input: "quay.io".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "quay.io".to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "quay.io".to_string(),
+                expected_registry_host_port_namespaced_string: "quay.io/".to_string(),
+            },
+            TestCase {
+                input: "quay.io/".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "quay.io".to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "quay.io".to_string(),
+                expected_registry_host_port_namespaced_string: "quay.io/".to_string(),
+            },
+            TestCase {
+                input: "quay.io:8080".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "quay.io".to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "quay.io:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "quay.io:8080/".to_string(),
+            },
+            TestCase {
+                input: "quay.io/ns1".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "quay.io".to_string(),
+                    port: None,
+                    namespace: "/ns1".to_string(),
+                },
+                expected_registry_host_port_string: "quay.io".to_string(),
+                expected_registry_host_port_namespaced_string: "quay.io/ns1".to_string(),
+            },
+        ]
+    }
+
     #[test]
     fn registry_try_parse_valid() {
-        let tests = vec![
-            (
-                "http://localhost:8080",
-                Registry {
-                    scheme: "http".to_string(),
-                    insecure: true,
-                    host: "localhost".to_string(),
-                    port: Some(8080),
-                    namespace: "".to_string(),
-                },
-            ),
-            (
-                "http://localhost:8080/ns1/ns2",
-                Registry {
-                    scheme: "http".to_string(),
-                    insecure: true,
-                    host: "localhost".to_string(),
-                    port: Some(8080),
-                    namespace: "/ns1/ns2".to_string(),
-                },
-            ),
-            (
-                "127.0.0.1",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "127.0.0.1".to_string(),
-                    port: None,
-                    namespace: "".to_string(),
-                },
-            ),
-            (
-                "127.0.0.1/ns1/ns2",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "127.0.0.1".to_string(),
-                    port: None,
-                    namespace: "/ns1/ns2".to_string(),
-                },
-            ),
-            (
-                "sat-r220-02.lab.eng.rdu2.redhat.com:5000",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
-                    port: Some(5000),
-                    namespace: "".to_string(),
-                },
-            ),
-            (
-                "sat-r220-02.lab.eng.rdu2.redhat.com:5000/ns1",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
-                    port: Some(5000),
-                    namespace: "/ns1".to_string(),
-                },
-            ),
-            (
-                "quay.io",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "quay.io".to_string(),
-                    port: None,
-                    namespace: "".to_string(),
-                },
-            ),
-            (
-                "quay.io/ns1",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "quay.io".to_string(),
-                    port: None,
-                    namespace: "/ns1".to_string(),
-                },
-            ),
-        ];
+        let tests = setup_test_cases();
+        for test in tests {
+            let registry: Registry = Registry::try_from_str(&test.input)
+                .unwrap_or_else(|_| panic!("could not parse {} to registry", &test.input));
+            assert_eq!(test.expected_registry, registry);
+        }
+    }
 
-        for (input, expected) in tests {
-            let registry: Registry = Registry::try_from_str(input)
-                .unwrap_or_else(|_| panic!("could not parse {} to registry", input));
-            assert_eq!(registry, expected);
-            assert_eq!(input, registry.host_port_string());
+    #[test]
+    fn registry_host_port_string() {
+        let tests = setup_test_cases();
+        for test in tests {
+            let registry: Registry = Registry::try_from_str(&test.input)
+                .unwrap_or_else(|_| panic!("could not parse {} to registry", &test.input));
+            assert_eq!(
+                test.expected_registry_host_port_string,
+                registry.host_port_string()
+            );
+        }
+    }
+
+    #[test]
+    fn registry_host_port_namespaced_string() {
+        let tests = setup_test_cases();
+        for test in tests {
+            let registry: Registry = Registry::try_from_str(&test.input)
+                .unwrap_or_else(|_| panic!("could not parse {} to registry", &test.input));
+            assert_eq!(
+                test.expected_registry_host_port_namespaced_string,
+                registry.host_port_namespaced_string()
+            );
         }
     }
 }
