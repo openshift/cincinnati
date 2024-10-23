@@ -689,6 +689,42 @@ mod tests {
                 expected_registry_host_port_namespaced_string: "localhost/".to_string(),
             },
             TestCase {
+                input: "http://localhost".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "http://localhost".to_string(),
+                expected_registry_host_port_namespaced_string: "http://localhost/".to_string(),
+            },
+            TestCase {
+                input: "https://localhost".to_string(),
+                expected_registry: Registry {
+                    scheme: "https".to_string(),
+                    insecure: false,
+                    host: "localhost".to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "localhost".to_string(),
+                expected_registry_host_port_namespaced_string: "localhost/".to_string(),
+            },
+            TestCase {
+                input: "localhost:8080".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "localhost:8080/".to_string(),
+            },
+            TestCase {
                 input: "http://localhost:8080".to_string(),
                 expected_registry: Registry {
                     scheme: "http".to_string(),
@@ -699,6 +735,43 @@ mod tests {
                 },
                 expected_registry_host_port_string: "http://localhost:8080".to_string(),
                 expected_registry_host_port_namespaced_string: "http://localhost:8080/".to_string(),
+            },
+            TestCase {
+                input: "https://localhost:8080/".to_string(),
+                expected_registry: Registry {
+                    scheme: "https".to_string(),
+                    insecure: false,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "localhost:8080/".to_string(),
+            },
+            TestCase {
+                input: "localhost:8080/ns1/ns2".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: "localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "localhost:8080/ns1/ns2".to_string(),
+            },
+            TestCase {
+                input: "localhost:8080/ns1/ns2/".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2/".to_string(),
+                },
+                expected_registry_host_port_string: "localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "localhost:8080/ns1/ns2/"
+                    .to_string(),
             },
             TestCase {
                 input: "http://localhost:8080/ns1/ns2".to_string(),
@@ -714,6 +787,45 @@ mod tests {
                     .to_string(),
             },
             TestCase {
+                input: "http://localhost:8080/ns1/ns2/".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2/".to_string(),
+                },
+                expected_registry_host_port_string: "http://localhost:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "http://localhost:8080/ns1/ns2/"
+                    .to_string(),
+            },
+            TestCase {
+                input: "http://localhost/ns1/ns2".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: "http://localhost".to_string(),
+                expected_registry_host_port_namespaced_string: "http://localhost/ns1/ns2"
+                    .to_string(),
+            },
+            TestCase {
+                input: "http://localhost/ns1/ns2/".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "localhost".to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2/".to_string(),
+                },
+                expected_registry_host_port_string: "http://localhost".to_string(),
+                expected_registry_host_port_namespaced_string: "http://localhost/ns1/ns2/"
+                    .to_string(),
+            },
+            TestCase {
                 input: "127.0.0.1".to_string(),
                 expected_registry: Registry {
                     scheme: "".to_string(),
@@ -724,6 +836,30 @@ mod tests {
                 },
                 expected_registry_host_port_string: "127.0.0.1".to_string(),
                 expected_registry_host_port_namespaced_string: "127.0.0.1/".to_string(),
+            },
+            TestCase {
+                input: "127.0.0.1/".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "127.0.0.1".to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "127.0.0.1".to_string(),
+                expected_registry_host_port_namespaced_string: "127.0.0.1/".to_string(),
+            },
+            TestCase {
+                input: "127.0.0.1:8080".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "127.0.0.1".to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "127.0.0.1:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "127.0.0.1:8080/".to_string(),
             },
             TestCase {
                 input: "127.0.0.1/ns1/ns2".to_string(),
@@ -738,6 +874,19 @@ mod tests {
                 expected_registry_host_port_namespaced_string: "127.0.0.1/ns1/ns2".to_string(),
             },
             TestCase {
+                input: "http://127.0.0.1/ns1/ns2".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "127.0.0.1".to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: "http://127.0.0.1".to_string(),
+                expected_registry_host_port_namespaced_string: "http://127.0.0.1/ns1/ns2"
+                    .to_string(),
+            },
+            TestCase {
                 input: "sat-r220-02.lab.eng.rdu2.redhat.com:5000".to_string(),
                 expected_registry: Registry {
                     scheme: "".to_string(),
@@ -750,6 +899,34 @@ mod tests {
                     .to_string(),
                 expected_registry_host_port_namespaced_string:
                     "sat-r220-02.lab.eng.rdu2.redhat.com:5000/".to_string(),
+            },
+            TestCase {
+                input: "sat-r220-02.lab.eng.rdu2.redhat.com:5000/".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
+                    port: Some(5000),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "sat-r220-02.lab.eng.rdu2.redhat.com:5000"
+                    .to_string(),
+                expected_registry_host_port_namespaced_string:
+                    "sat-r220-02.lab.eng.rdu2.redhat.com:5000/".to_string(),
+            },
+            TestCase {
+                input: "http://sat-r220-02.lab.eng.rdu2.redhat.com:5000".to_string(),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
+                    port: Some(5000),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string:
+                    "http://sat-r220-02.lab.eng.rdu2.redhat.com:5000".to_string(),
+                expected_registry_host_port_namespaced_string:
+                    "http://sat-r220-02.lab.eng.rdu2.redhat.com:5000/".to_string(),
             },
             TestCase {
                 input: "sat-r220-02.lab.eng.rdu2.redhat.com:5000/ns1".to_string(),
@@ -776,6 +953,30 @@ mod tests {
                 },
                 expected_registry_host_port_string: "quay.io".to_string(),
                 expected_registry_host_port_namespaced_string: "quay.io/".to_string(),
+            },
+            TestCase {
+                input: "quay.io/".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "quay.io".to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "quay.io".to_string(),
+                expected_registry_host_port_namespaced_string: "quay.io/".to_string(),
+            },
+            TestCase {
+                input: "quay.io:8080".to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: "quay.io".to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: "quay.io:8080".to_string(),
+                expected_registry_host_port_namespaced_string: "quay.io:8080/".to_string(),
             },
             TestCase {
                 input: "quay.io/ns1".to_string(),
