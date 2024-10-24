@@ -32,6 +32,7 @@ use std::io::Read;
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::string::String;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tar::Archive;
 use url::Url;
@@ -315,31 +316,36 @@ pub async fn fetch_releases(
         Arc::new(FuturesMutex::new(Vec::with_capacity(estimated_releases)))
     };
 
+    // releases containing signatures that we want to ignore
+    let ignored_sig_releases = Arc::new(AtomicUsize::new(0));
+    // releases that had some issues and were not included in the graph
+    let ignored_releases = Arc::new(AtomicUsize::new(0));
     tags.try_for_each_concurrent(concurrency, |tag| {
         let registry_client = registry_client.clone();
         let cache = cache.clone();
         let releases = releases.clone();
+        let sig_releases = ignored_sig_releases.clone();
+        let skip_releases = ignored_releases.clone();
 
         async move {
             let (arch, manifestref, mut layers_digests) =
-                match get_manifest_layers(tag.to_owned(), &repo, &registry_client).await
-                {
-                    // todo: we're ignoring the images which we do not understand with this change. 
-                    // this change is required because we dont want cincinnati to error out on encountering
-                    // cosign signatures.
-                    // unintended consequence of this change can be that cincinnati continues with a log when it encounters 
-                    // incorrect image whereas it should error out. Cincinnati won't include this image in the update graph.
-                    // We should ideally try to ignore only the cosign .sig signatures. this change acts a 
-                    // stopgap till we teach cincinnati to deal with signatures
+                match get_manifest_layers(tag.to_owned(), &repo, &registry_client).await {
                     Ok(result) => result,
                     Err(e) => {
-                        warn!(
-                            "error fetching manifest and manifestref for {}:{}: {}, ignoring this image",
-                            &repo,
-                            &tag,
-                            e
+                        if tag.contains(".sig") {
+                            debug!(
+                                "encountered a signature for {}:{}: {}, ignoring this image",
+                                &repo, &tag, e
+                            );
+                            sig_releases.fetch_add(1, Ordering::SeqCst);
+                            return Ok(());
+                        }
+                        error!(
+                            "fetching manifest and manifestref for {}:{}: {}",
+                            &repo, &tag, e
                         );
-                        return Ok(()) ;
+                        skip_releases.fetch_add(1, Ordering::SeqCst);
+                        return Ok(());
                     }
                 };
 
@@ -388,6 +394,22 @@ pub async fn fetch_releases(
         }
     })
     .await?;
+
+    let ignored_sig_count = ignored_sig_releases.load(Ordering::SeqCst);
+    if ignored_sig_count > 0 {
+        info!(
+            "ignored {} releases containing only signatures",
+            ignored_sig_count
+        );
+    }
+
+    let ignored_release_count = ignored_releases.load(Ordering::SeqCst);
+    if ignored_release_count > 0 {
+        warn!(
+            "ignored {} releases and were not included in graph",
+            ignored_release_count
+        );
+    }
 
     let releases = Arc::<
         FuturesMutex<Vec<cincinnati::plugins::internal::graph_builder::release::Release>>,
