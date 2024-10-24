@@ -593,17 +593,41 @@ async fn find_first_release_metadata(
         trace!("[{}] Downloading layer {}", &tag, &layer_digest);
         let (repo, tag) = (repo.clone(), tag.clone());
 
-        let blob = registry_client
-            .get_blob(&repo, &layer_digest)
-            .map_err(|e| {
-                format_err!(
-                    "fetching blob for repo {} with layer_digest {}: {}",
-                    &repo,
-                    &layer_digest,
-                    e
-                )
-            })
-            .await?;
+        let blob = {
+            let mut attempts = 0;
+            const MAX_ATTEMPTS: u32 = 3;
+            const RETRY_DELAY: Duration = Duration::from_secs(1);
+            loop {
+                attempts += 1;
+                match registry_client
+                    .get_blob(&repo, &layer_digest)
+                    .map_err(|e| {
+                        format_err!(
+                            "fetching blob for repo {} with layer_digest {}: {}",
+                            &repo,
+                            &layer_digest,
+                            e
+                        )
+                    })
+                    .await
+                {
+                    Ok(layer_blob) => break layer_blob,
+                    Err(e) => {
+                        if attempts >= MAX_ATTEMPTS {
+                            return Err(e);
+                        }
+
+                        warn!(
+                            "getting blob failed (attempt {}/{}): {}, retrying...",
+                            attempts, MAX_ATTEMPTS, e
+                        );
+
+                        // Wait before retrying
+                        sleep(RETRY_DELAY).await;
+                    }
+                }
+            }
+        };
 
         let metadata_filename = "release-manifests/release-metadata";
 
