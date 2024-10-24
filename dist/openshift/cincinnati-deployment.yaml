@@ -19,7 +19,7 @@ objects:
         rollingParams:
           intervalSeconds: 1
           maxSurge: 25%
-          maxUnavailable: 25%
+          maxUnavailable: 0
           timeoutSeconds: 1200
           updatePeriodSeconds: 1
         type: RollingUpdate
