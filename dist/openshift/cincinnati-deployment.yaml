@@ -256,7 +256,6 @@ objects:
     kind: PodDisruptionBudget
     metadata:
       name: cincinnati-pdb
-      namespace: cincinnati
     spec:
       maxUnavailable: 1
       selector:
