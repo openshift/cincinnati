@@ -34,7 +34,9 @@ use std::path::{Path, PathBuf};
 use std::string::String;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tar::Archive;
+use tokio::time::sleep;
 use url::Url;
 
 use dkregistry::mediatypes::MediaTypes::{ManifestList, ManifestV2S1Signed, ManifestV2S2};
@@ -527,17 +529,49 @@ async fn get_manifest_and_ref(
     registry_client: &dkregistry::v2::Client,
 ) -> Result<(String, dkregistry::v2::manifest::Manifest, String), Error> {
     trace!("[{}] Processing {}", &tag, &repo);
-    let (manifest, manifestref) = registry_client
-        .get_manifest_and_ref(&repo, &tag)
-        .map_err(|e| {
-            format_err!(
-                "fetching manifest and manifestref for {}:{}: {}",
-                &repo,
-                &tag,
-                e
-            )
-        })
-        .await?;
+
+    let (manifest, manifestref) = {
+        let mut attempts = 0;
+        const MAX_ATTEMPTS: u32 = 3;
+        const RETRY_DELAY: Duration = Duration::from_secs(1);
+
+        loop {
+            attempts += 1;
+
+            match registry_client
+                .get_manifest_and_ref(&repo, &tag)
+                .map_err(|e| {
+                    format_err!(
+                        "fetching manifest and manifestref for {}:{}: {}",
+                        &repo,
+                        &tag,
+                        e
+                    )
+                })
+                .await
+            {
+                Ok(manifest_and_ref) => break manifest_and_ref,
+                Err(e) => {
+                    // signatures are not identified by dkregistry and not useful for cincinnati graph, dont retry and return error
+                    if tag.contains(".sig") {
+                        return Err(e);
+                    }
+
+                    if attempts >= MAX_ATTEMPTS {
+                        return Err(e);
+                    }
+
+                    warn!(
+                        "getting manifest and manifestref failed (attempt {}/{}): {}, retrying...",
+                        attempts, MAX_ATTEMPTS, e
+                    );
+
+                    // Wait before retrying
+                    sleep(RETRY_DELAY).await;
+                }
+            }
+        }
+    };
 
     let manifestref =
         manifestref.ok_or_else(|| format_err!("no manifestref found for {}:{}", &repo, &tag))?;
