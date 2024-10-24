@@ -191,17 +191,7 @@ objects:
             serverAddress: http://prometheus-app-sre.openshift-customer-monitoring.svc.cluster.local:9090
             metricName: cincinnati_policy_engine_graph_incoming_requests_rate
             threshold: "${PE_REQ_AVG}"
-            query: avg(cincinnati_policy_engine_graph_incoming_requests_rate)
-  - apiVersion: monitoring.coreos.com/v1
-    kind: PrometheusRule
-    metadata:
-      name: cincinnati-recording-rule
-    spec:
-      groups:
-        - name: cincinnati.rules
-          rules:
-            - record: cincinnati_policy_engine_graph_incoming_requests_rate
-              expr: sum by (pod) (rate(cincinnati_pe_graph_incoming_requests_total[2m]))
+            query: avg(sum by (pod) (rate(cincinnati_pe_graph_incoming_requests_total[2m])))
   - apiVersion: v1
     kind: Service
     metadata:
