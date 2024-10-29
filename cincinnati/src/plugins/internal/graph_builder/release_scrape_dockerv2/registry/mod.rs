@@ -674,10 +674,7 @@ mod tests {
         expected_registry_host_port_namespaced_string: String,
     }
 
-    fn setup_test_cases() -> Vec<TestCase> {
-        vec![
-            TestCase {
-                input: "localhost".to_string(),
+    fn get_test_cases() -> Vec<TestCase> {
                 expected_registry: Registry {
                     scheme: "".to_string(),
                     insecure: false,
@@ -995,7 +992,7 @@ mod tests {
 
     #[test]
     fn registry_try_parse_valid() {
-        let tests = setup_test_cases();
+        let tests = get_test_cases();
         for test in tests {
             let registry: Registry = Registry::try_from_str(&test.input)
                 .unwrap_or_else(|_| panic!("could not parse {} to registry", &test.input));
@@ -1005,7 +1002,7 @@ mod tests {
 
     #[test]
     fn registry_host_port_string() {
-        let tests = setup_test_cases();
+        let tests = get_test_cases();
         for test in tests {
             let registry: Registry = Registry::try_from_str(&test.input)
                 .unwrap_or_else(|_| panic!("could not parse {} to registry", &test.input));
@@ -1018,7 +1015,7 @@ mod tests {
 
     #[test]
     fn registry_host_port_namespaced_string() {
-        let tests = setup_test_cases();
+        let tests = get_test_cases();
         for test in tests {
             let registry: Registry = Registry::try_from_str(&test.input)
                 .unwrap_or_else(|_| panic!("could not parse {} to registry", &test.input));
