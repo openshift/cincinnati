@@ -718,11 +718,12 @@ fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<Metadata, E
 fn parse_url(
     input: &str,
 ) -> Result<(String, String, Option<u16>, String), Box<dyn std::error::Error>> {
-    // Check if the URL has a scheme. If not, prepend "example://" to it.
+    // Check if the URL has a scheme. If not, prepend "http://" to it.
+    // This is done so that the URL library correctly parses the URL.
     let mut modified_input = String::from(input);
     let mut modified_input_flag = false;
     if !input.contains("://") {
-        modified_input.insert_str(0, "example://");
+        modified_input.insert_str(0, "http://");
         modified_input_flag = true;
     }
 
@@ -746,96 +747,301 @@ fn parse_url(
 mod tests {
     use super::*;
 
+    struct TestCase {
+        name: String,
+        input: String,
+        expected_registry: Registry,
+        expected_registry_host_port_string: String,
+        expected_registry_host_port_namespaced_string: String,
+    }
+
+    fn get_test_cases() -> Vec<TestCase> {
+        let mut test_cases = vec![];
+        let hosts = vec![
+            "127.0.0.1",
+            "localhost",
+            "quay.io",
+            "sat-r220-02.lab.eng.rdu2.redhat.com",
+        ];
+        for host in hosts {
+            test_cases.push(TestCase {
+                name: format!("host: {} - no scheme, no port, no path", host),
+                input: host.to_string(),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: host.to_string(),
+                expected_registry_host_port_namespaced_string: format!("{}/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - http scheme, no port, no path", host),
+                input: format!("http://{}", host),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: host.to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: format!("http://{}", host),
+                expected_registry_host_port_namespaced_string: format!("http://{}/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - https scheme, no port, no path", host),
+                input: format!("https://{}", host),
+                expected_registry: Registry {
+                    scheme: "https".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: host.to_string(),
+                expected_registry_host_port_namespaced_string: format!("{}/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - no scheme, 8080 port, no path", host),
+                input: format!("{}:8080", host),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: format!("{}:8080", host),
+                expected_registry_host_port_namespaced_string: format!("{}:8080/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - http scheme, 8080 port, no path", host),
+                input: format!("http://{}:8080", host),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: host.to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: format!("http://{}:8080", host),
+                expected_registry_host_port_namespaced_string: format!("http://{}:8080/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - https scheme, 8080 port, no path", host),
+                input: format!("https://{}:8080", host),
+                expected_registry: Registry {
+                    scheme: "https".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: format!("{}:8080", host),
+                expected_registry_host_port_namespaced_string: format!("{}:8080/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - no scheme, no port, / path", host),
+                input: format!("{}/", host),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: host.to_string(),
+                expected_registry_host_port_namespaced_string: format!("{}/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - http scheme, no port, / path", host),
+                input: format!("http://{}/", host),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: host.to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: format!("http://{}", host),
+                expected_registry_host_port_namespaced_string: format!("http://{}/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - https scheme, no port, / path", host),
+                input: format!("https://{}/", host),
+                expected_registry: Registry {
+                    scheme: "https".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: None,
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: host.to_string(),
+                expected_registry_host_port_namespaced_string: format!("{}/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - no scheme, 8080 port, / path", host),
+                input: format!("{}:8080/", host),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: format!("{}:8080", host),
+                expected_registry_host_port_namespaced_string: format!("{}:8080/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - http scheme, 8080 port, / path", host),
+                input: format!("http://{}:8080/", host),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: host.to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: format!("http://{}:8080", host),
+                expected_registry_host_port_namespaced_string: format!("http://{}:8080/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - https scheme, 8080 port, / path", host),
+                input: format!("https://{}:8080/", host),
+                expected_registry: Registry {
+                    scheme: "https".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: Some(8080),
+                    namespace: "/".to_string(),
+                },
+                expected_registry_host_port_string: format!("{}:8080", host),
+                expected_registry_host_port_namespaced_string: format!("{}:8080/", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - no scheme, no port, /ns1/ns2 path", host),
+                input: format!("{}/ns1/ns2", host),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: host.to_string(),
+                expected_registry_host_port_namespaced_string: format!("{}/ns1/ns2", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - http scheme, no port, /ns1/ns2 path", host),
+                input: format!("http://{}/ns1/ns2", host),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: host.to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: format!("http://{}", host),
+                expected_registry_host_port_namespaced_string: format!("http://{}/ns1/ns2", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - https scheme, no port, /ns1/ns2 path", host),
+                input: format!("https://{}/ns1/ns2", host),
+                expected_registry: Registry {
+                    scheme: "https".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: None,
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: host.to_string(),
+                expected_registry_host_port_namespaced_string: format!("{}/ns1/ns2", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - no scheme, 8080 port, /ns1/ns2 path", host),
+                input: format!("{}:8080/ns1/ns2", host),
+                expected_registry: Registry {
+                    scheme: "".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: format!("{}:8080", host),
+                expected_registry_host_port_namespaced_string: format!("{}:8080/ns1/ns2", host),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - http scheme, 8080 port, /ns1/ns2 path", host),
+                input: format!("http://{}:8080/ns1/ns2", host),
+                expected_registry: Registry {
+                    scheme: "http".to_string(),
+                    insecure: true,
+                    host: host.to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: format!("http://{}:8080", host),
+                expected_registry_host_port_namespaced_string: format!(
+                    "http://{}:8080/ns1/ns2",
+                    host
+                ),
+            });
+            test_cases.push(TestCase {
+                name: format!("host: {} - https scheme, 8080 port, /ns1/ns2 path", host),
+                input: format!("https://{}:8080/ns1/ns2", host),
+                expected_registry: Registry {
+                    scheme: "https".to_string(),
+                    insecure: false,
+                    host: host.to_string(),
+                    port: Some(8080),
+                    namespace: "/ns1/ns2".to_string(),
+                },
+                expected_registry_host_port_string: format!("{}:8080", host),
+                expected_registry_host_port_namespaced_string: format!("{}:8080/ns1/ns2", host),
+            });
+        }
+        test_cases
+    }
+
     #[test]
     fn registry_try_parse_valid() {
-        let tests = vec![
-            (
-                "http://localhost:8080",
-                Registry {
-                    scheme: "http".to_string(),
-                    insecure: true,
-                    host: "localhost".to_string(),
-                    port: Some(8080),
-                    namespace: "".to_string(),
-                },
-            ),
-            (
-                "http://localhost:8080/ns1/ns2",
-                Registry {
-                    scheme: "http".to_string(),
-                    insecure: true,
-                    host: "localhost".to_string(),
-                    port: Some(8080),
-                    namespace: "/ns1/ns2".to_string(),
-                },
-            ),
-            (
-                "127.0.0.1",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "127.0.0.1".to_string(),
-                    port: None,
-                    namespace: "".to_string(),
-                },
-            ),
-            (
-                "127.0.0.1/ns1/ns2",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "127.0.0.1".to_string(),
-                    port: None,
-                    namespace: "/ns1/ns2".to_string(),
-                },
-            ),
-            (
-                "sat-r220-02.lab.eng.rdu2.redhat.com:5000",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
-                    port: Some(5000),
-                    namespace: "".to_string(),
-                },
-            ),
-            (
-                "sat-r220-02.lab.eng.rdu2.redhat.com:5000/ns1",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "sat-r220-02.lab.eng.rdu2.redhat.com".to_string(),
-                    port: Some(5000),
-                    namespace: "/ns1".to_string(),
-                },
-            ),
-            (
-                "quay.io",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "quay.io".to_string(),
-                    port: None,
-                    namespace: "".to_string(),
-                },
-            ),
-            (
-                "quay.io/ns1",
-                Registry {
-                    scheme: "".to_string(),
-                    insecure: false,
-                    host: "quay.io".to_string(),
-                    port: None,
-                    namespace: "/ns1".to_string(),
-                },
-            ),
-        ];
+        let tests = get_test_cases();
+        for test in tests {
+            let registry: Registry = Registry::try_from_str(&test.input)
+                .unwrap_or_else(|_| panic!("could not parse {} to registry", &test.input));
+            assert_eq!(test.expected_registry, registry, "test case: {}", test.name);
+        }
+    }
 
-        for (input, expected) in tests {
-            let registry: Registry = Registry::try_from_str(input)
-                .unwrap_or_else(|_| panic!("could not parse {} to registry", input));
-            assert_eq!(registry, expected);
-            assert_eq!(input, registry.host_port_string());
+    #[test]
+    fn registry_host_port_string() {
+        let tests = get_test_cases();
+        for test in tests {
+            let registry: Registry = Registry::try_from_str(&test.input)
+                .unwrap_or_else(|_| panic!("could not parse {} to registry", &test.input));
+            assert_eq!(
+                test.expected_registry_host_port_string,
+                registry.host_port_string(),
+                "test case: {}",
+                test.name
+            );
+        }
+    }
+
+    #[test]
+    fn registry_host_port_namespaced_string() {
+        let tests = get_test_cases();
+        for test in tests {
+            let registry: Registry = Registry::try_from_str(&test.input)
+                .unwrap_or_else(|_| panic!("could not parse {} to registry", &test.input));
+            assert_eq!(
+                test.expected_registry_host_port_namespaced_string,
+                registry.host_port_namespaced_string(),
+                "test case: {}",
+                test.name
+            );
         }
     }
 }
