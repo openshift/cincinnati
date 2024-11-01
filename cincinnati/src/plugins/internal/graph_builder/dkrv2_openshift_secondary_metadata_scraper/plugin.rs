@@ -189,7 +189,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         let data_dir = tempfile::tempdir_in(&settings.output_directory)?;
 
         let mut ns_registry = settings.registry.clone();
-        ns_registry.push_str(&settings.repository);
+        ns_registry.push_str(&format!("/{}", settings.repository));
 
         let registry = registry::Registry::try_from_str(&ns_registry)
             .context(format!("trying to extract Registry from {}", &ns_registry))?;
