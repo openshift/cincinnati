@@ -12,8 +12,8 @@ CINCINNATI_CI_PUBLIC_DOCKERJSON_PATH=$(mktemp)
 if (
     set -xeuo pipefail
 
-    oc get secrets --namespace=cincinnati-ci ci-image-sa-dockercfg-vjdrw -o 'go-template={{index .data ".dockercfg"}}' | base64 -d > "${CINCINNATI_CI_DOCKERCFG_PATH}"
-    oc get secrets --namespace=cincinnati-ci-public ci-image-sa-dockercfg-cwj4w -o 'go-template={{index .data ".dockercfg"}}' | base64 -d > "${CINCINNATI_CI_PUBLIC_DOCKERCFG_PATH}"
+    oc get secrets --namespace=cincinnati-ci ci-image-sa-dockercfg-fcq47 -o 'go-template={{index .data ".dockercfg"}}' | base64 -d > "${CINCINNATI_CI_DOCKERCFG_PATH}"
+    oc get secrets --namespace=cincinnati-ci-public ci-image-sa-dockercfg-68k8s -o 'go-template={{index .data ".dockercfg"}}' | base64 -d > "${CINCINNATI_CI_PUBLIC_DOCKERCFG_PATH}"
 
     export CINCINNATI_CI_DOCKERCFG_PATH
     export CINCINNATI_CI_PUBLIC_DOCKERCFG_PATH
