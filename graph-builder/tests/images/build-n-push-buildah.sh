@@ -15,7 +15,7 @@ for target in "${@}"; do
   tag="${tag_raw/_/-}"
 
   full_tag="${REPO_BASE}-${repo}:${tag}"
-  buildah bud -t "${full_tag}" "${target}"
+  buildah bud -t "${full_tag}" --format docker "${target}"
 
   if [[ -e "${arch_file}" ]]; then
     img_arch="$(head -n1 ${arch_file})"
