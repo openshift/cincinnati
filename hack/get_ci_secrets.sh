@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# This script helps to set up a local development environment with secrets that are stored on the CI cluster.
+# This script helps to set up a local development environment with secrets that are stored on the app.ci cluster.
 # It fetches these secrets and populates local files with them.
 # The script needs to be `source`d to work: `source hack/get_ci_secrets.sh`.
 
