@@ -38,4 +38,4 @@ built = { version = "^0.7.4", features = [ "git2" ]}
 [dev-dependencies]
 tokio = { version = "1.33", features = [ "rt-multi-thread" ] }
 memchr = "^2.7"
-mockito = "0.31.1"
+mockito = "1.6.0"
