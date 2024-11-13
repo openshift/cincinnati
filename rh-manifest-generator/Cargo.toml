@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cargo-lock = "9.0"
+cargo-lock = "10.0"
 lazy_static = "1.5"
 reqwest = { version = "0.11", features = ["blocking"] }
 serde = "1.0"
