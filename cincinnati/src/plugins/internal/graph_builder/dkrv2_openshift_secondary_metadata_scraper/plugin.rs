@@ -460,6 +460,167 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 }
 
 #[cfg(test)]
+mod tests {
+    use crate::plugins::internal::dkrv2_openshift_secondary_metadata_scraper::plugin::DEFAULT_OUTPUT_ALLOWLIST;
+
+    #[test]
+    fn default_output_allowlist() {
+        struct TestCase {
+            name: String,
+            filepath: String,
+            expected_match: bool,
+        }
+        let test_cases = vec![
+            // Expected Match == True
+            // Required files from the graph-data repository
+            TestCase {
+                name: String::from("Should match a required file"),
+                filepath: String::from("LICENSE"),
+                expected_match: true,
+            },
+            TestCase {
+                name: String::from("Should match a required type of files"),
+                filepath: String::from("channels/name-x.y.z.yaml"),
+                expected_match: true,
+            },
+            TestCase {
+                name: String::from("Should match a required type of files"),
+                filepath: String::from("blocked-edges/x.y.z-name.yaml"),
+                expected_match: true,
+            },
+            TestCase {
+                name: String::from("Should match a required file"),
+                filepath: String::from("raw/metadata.json"),
+                expected_match: true,
+            },
+            TestCase {
+                name: String::from("Should match a required file"),
+                filepath: String::from("version"),
+                expected_match: true,
+            },
+            // Expected Match == False
+            // Some of the other files present in the graph-data repository
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("build-suggestions/4.17.yaml"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from(".github/dependabot.yml"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("deploy/1-image-stream.yaml"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("graph-data.rs/src/main.rs"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("hack/OWNERS"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("internal-channels/stable.yaml"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("raw/OWNERS"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from(".gitignore"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("CONTRIBUTING.md"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("Dockerfile"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("OWNERS"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("OWNERS_ALIASES"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("README.md"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("requirements.txt"),
+                expected_match: false,
+            },
+            // Expected Match == False
+            // System files
+            TestCase {
+                name: String::from("Should not match system files"),
+                filepath: String::from("/etc/alternatives/unversioned-python-man"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match system files"),
+                filepath: String::from(
+                    "/usr/lib/python3.6/site-packages/setuptools-39.2.0.dist-info/LICENSE.txt",
+                ),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match system files"),
+                filepath: String::from("/usr/lib/example/LICENSE"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match system files"),
+                filepath: String::from("/usr/lib/example/version"),
+                expected_match: false,
+            },
+        ];
+        let mut regexes = Vec::new();
+        for str_regex in DEFAULT_OUTPUT_ALLOWLIST {
+            match regex::Regex::new(&str_regex) {
+                Ok(regex) => regexes.push(regex),
+                Err(err) => panic!(
+                    "invalid regex pattern {} in DEFAULT_OUTPUT_ALLOWLIST\nerr: {}",
+                    str_regex, err
+                ),
+            }
+        }
+        for tc in test_cases {
+            let actual = regexes.iter().any(|re| re.is_match(&tc.filepath));
+            assert_eq!(
+                tc.expected_match,
+                actual,
+                "matching default output allowlist regexes failed\ntest case: {}: {}\nexpected match {}; got {}",
+                &tc.name,
+                tc.filepath,
+                tc.expected_match,
+                actual
+            );
+        }
+    }
+}
+
+#[cfg(test)]
 #[cfg(feature = "test-net")]
 mod network_tests {
     use super::*;
