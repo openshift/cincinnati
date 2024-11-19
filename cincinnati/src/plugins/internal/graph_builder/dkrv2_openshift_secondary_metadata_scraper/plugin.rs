@@ -15,11 +15,11 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use tokio::sync::Mutex as FuturesMutex;
 
 pub static DEFAULT_OUTPUT_ALLOWLIST: &[&str] = &[
-    "LICENSE$",
-    "channels/.+\\.ya+ml$",
-    "blocked-edges/.+\\.ya+ml$",
-    "raw/metadata.json$",
-    "version$",
+    "^LICENSE$",
+    "^channels/.+\\.ya+ml$",
+    "^blocked-edges/.+\\.ya+ml$",
+    "^raw/metadata.json$",
+    "^version$",
 ];
 
 pub static DEFAULT_METADATA_IMAGE_REGISTRY: &str = "";
@@ -555,8 +555,14 @@ mod network_tests {
                 .map(Result::unwrap)
                 .filter(|entry| entry.file_type().is_file())
                 .filter_map(|file| {
-                    let path = file.path();
-                    path.to_str().map(str::to_owned)
+                    let path = file.path().strip_prefix(&data_dir.as_path());
+                    match path {
+                        Ok(path) => path.to_str().map(str::to_owned),
+                        Err(err) => panic!(
+                            "Stripping the prefix has failed. This should not happen.\n{}",
+                            err
+                        ),
+                    }
                 })
                 .collect();
             assert!(!extracted_paths.is_empty(), "no files were extracted");
