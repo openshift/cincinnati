@@ -15,11 +15,14 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use tokio::sync::Mutex as FuturesMutex;
 
 pub static DEFAULT_OUTPUT_ALLOWLIST: &[&str] = &[
-    "^LICENSE$",
-    "^channels/.+\\.ya+ml$",
-    "^blocked-edges/.+\\.ya+ml$",
-    "^raw/metadata.json$",
-    "^version$",
+    // The patterns may be potentially matched against different relative
+    // paths depending on the underlying decoder or the specific archive.
+    // for example: `archive/version` or `version`
+    "(^|/)LICENSE$",
+    "(^|/)channels/.+\\.ya+ml$",
+    "(^|/)blocked-edges/.+\\.ya+ml$",
+    "(^|/)raw/metadata.json$",
+    "(^|/)version$",
 ];
 
 pub static DEFAULT_METADATA_IMAGE_REGISTRY: &str = "";
@@ -584,16 +587,6 @@ mod tests {
                 ),
                 expected_match: false,
             },
-            TestCase {
-                name: String::from("Should not match system files"),
-                filepath: String::from("/usr/lib/example/LICENSE"),
-                expected_match: false,
-            },
-            TestCase {
-                name: String::from("Should not match system files"),
-                filepath: String::from("/usr/lib/example/version"),
-                expected_match: false,
-            },
         ];
         let mut regexes = Vec::new();
         for str_regex in DEFAULT_OUTPUT_ALLOWLIST {
@@ -611,6 +604,20 @@ mod tests {
                 tc.expected_match,
                 actual,
                 "matching default output allowlist regexes failed\ntest case: {}: {}\nexpected match {}; got {}",
+                &tc.name,
+                tc.filepath,
+                tc.expected_match,
+                actual
+            );
+            // The matching should not change in case the files are prefixed with the
+            // archive directory
+            let actual = regexes
+                .iter()
+                .any(|re| re.is_match(&format!("archive/{}", tc.filepath)));
+            assert_eq!(
+                tc.expected_match,
+                actual,
+                "matching default output allowlist regexes failed\ntest case (with a prefixed archive): {}: {}\nexpected match {}; got {}",
                 &tc.name,
                 tc.filepath,
                 tc.expected_match,
@@ -716,14 +723,8 @@ mod network_tests {
                 .map(Result::unwrap)
                 .filter(|entry| entry.file_type().is_file())
                 .filter_map(|file| {
-                    let path = file.path().strip_prefix(&data_dir.as_path());
-                    match path {
-                        Ok(path) => path.to_str().map(str::to_owned),
-                        Err(err) => panic!(
-                            "Stripping the prefix has failed. This should not happen.\n{}",
-                            err
-                        ),
-                    }
+                    let path = file.path();
+                    path.to_str().map(str::to_owned)
                 })
                 .collect();
             assert!(!extracted_paths.is_empty(), "no files were extracted");
