@@ -69,14 +69,14 @@ objects:
                 httpGet:
                   path: /liveness
                   port: ${{GB_STATUS_PORT}}
-                initialDelaySeconds: 150
+                initialDelaySeconds: ${{LIVENESS_DELAY}}
                 periodSeconds: 30
                 timeoutSeconds: 3
               readinessProbe:
                 httpGet:
                   path: /readiness
                   port: ${{GB_STATUS_PORT}}
-                initialDelaySeconds: 150
+                initialDelaySeconds: ${{READINESS_DELAY}}
                 periodSeconds: 30
                 timeoutSeconds: 3
               resources:
@@ -148,14 +148,14 @@ objects:
                 httpGet:
                   path: /livez
                   port: ${{PE_STATUS_PORT}}
-                initialDelaySeconds: 300
+                initialDelaySeconds: ${{LIVENESS_DELAY}}
                 periodSeconds: 30
                 timeoutSeconds: 3
               readinessProbe:
                 httpGet:
                   path: /readyz
                   port: ${{PE_STATUS_PORT}}
-                initialDelaySeconds: 300
+                initialDelaySeconds: ${{READINESS_DELAY}}
                 periodSeconds: 30
                 timeoutSeconds: 3
               resources:
@@ -342,6 +342,12 @@ parameters:
     value: "350m"
     displayName: "Policy-engine CPU request"
     description: "Requested amount of CPU (millicores) allowed for policy-engine (default: 350m)"
+  - name: READINESS_DELAY
+    value: "700"
+    displayName: Time to wait before we start querying containers for readiness
+  - name: LIVENESS_DELAY
+    value: "700"
+    displayName: Time to wait before we start querying containers for liveness
   - name: GB_SCRAPE_TIMEOUT_SECS
     value: "300"
     displayName: Graph-builder scrape timeout in seconds
