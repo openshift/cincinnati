@@ -16,13 +16,10 @@ objects:
         matchLabels:
           app: cincinnati
       strategy:
+        type: RollingUpdate
         rollingParams:
-          intervalSeconds: 1
           maxSurge: 25%
           maxUnavailable: 0
-          timeoutSeconds: 1200
-          updatePeriodSeconds: 1
-        type: RollingUpdate
       template:
         metadata:
           labels:
