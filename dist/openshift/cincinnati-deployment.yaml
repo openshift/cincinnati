@@ -17,7 +17,7 @@ objects:
           app: cincinnati
       strategy:
         type: RollingUpdate
-        rollingParams:
+        rollingUpdate:
           maxSurge: 25%
           maxUnavailable: 0
       template:
