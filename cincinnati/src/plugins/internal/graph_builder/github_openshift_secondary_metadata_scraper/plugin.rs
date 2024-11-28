@@ -484,6 +484,15 @@ impl InternalPlugin for GithubOpenshiftSecondaryMetadataScraperPlugin {
                 .to_string(),
         );
 
+        let graph_data_tar_path = self.settings.output_directory.join("graph-data.tar.gz");
+        io.parameters.insert(
+            SECONDARY_METADATA_PARAM_KEY.to_string(),
+            graph_data_tar_path
+                .to_str()
+                .ok_or_else(|| format_err!("secondary_metadata path cannot be converted to str"))?
+                .to_string(),
+        );
+
         let should_update = self
             .refresh_commit_wanted()
             .await
@@ -499,7 +508,6 @@ impl InternalPlugin for GithubOpenshiftSecondaryMetadataScraperPlugin {
                 .await
                 .context("Extracting tarball")?;
 
-            let graph_data_tar_path = self.settings.output_directory.join("graph-data.tar.gz");
             let signatures_path = graph_data_dir.as_path().join("signatures");
             let signatures_symlink = self.settings.output_directory.join("signatures");
 
@@ -521,16 +529,6 @@ impl InternalPlugin for GithubOpenshiftSecondaryMetadataScraperPlugin {
             )
             .await
             .context("creating graph-data tar")?;
-
-            io.parameters.insert(
-                SECONDARY_METADATA_PARAM_KEY.to_string(),
-                graph_data_tar_path
-                    .to_str()
-                    .ok_or_else(|| {
-                        format_err!("secondary_metadata path cannot be converted to str")
-                    })?
-                    .to_string(),
-            );
         };
 
         Ok(io)
@@ -548,6 +546,12 @@ mod network_tests {
 
         let tmpdir = tempfile::tempdir()?;
 
+        // Path to the GitHub API token file; we need to use it in tests
+        // because GitHub rate limits unauthenticated API access.
+        // In CI this value comes from cincy-credentials secret in Vault, see:
+        // https://github.com/openshift/release/blob/cca454f13b1d8482a3a568bf557b37eeed4c7519/ci-operator/config/openshift/cincinnati/openshift-cincinnati-master.yaml#L109-L110
+        //
+        // Note: The token in CI may expire.
         let oauth_token_path = std::env::var(GITHUB_SCRAPER_TOKEN_PATH_ENV)?;
 
         let settings = GithubOpenshiftSecondaryMetadataScraperSettings::deserialize_config(
@@ -575,12 +579,30 @@ mod network_tests {
         let plugin = settings.build_plugin(None)?;
 
         for _ in 0..2 {
-            let _ = runtime.block_on(plugin.run(cincinnati::plugins::PluginIO::InternalIO(
+            let io = runtime.block_on(plugin.run(cincinnati::plugins::PluginIO::InternalIO(
                 InternalIO {
                     graph: Default::default(),
                     parameters: Default::default(),
                 },
             )))?;
+
+            let io = match io {
+                cincinnati::plugins::PluginIO::InternalIO(io) => io,
+                cincinnati::plugins::PluginIO::ExternalIO(_) => {
+                    bail!("expected plugin to return InternalIO")
+                }
+            };
+
+            let tar_path = io
+                .parameters
+                .get(SECONDARY_METADATA_PARAM_KEY)
+                .map(PathBuf::from)
+                .unwrap();
+
+            assert!(
+                tar_path.exists(),
+                "ensure the plugin creates a tar file in a specified directory"
+            );
 
             let regexes = DEFAULT_OUTPUT_ALLOWLIST
                 .iter()
@@ -588,7 +610,18 @@ mod network_tests {
                 .collect::<Vec<regex::Regex>>();
             assert!(!regexes.is_empty(), "no regexes compiled");
 
-            let extracted_paths: HashSet<String> = walkdir::WalkDir::new(tmpdir.path())
+            let data_dir = io
+                .parameters
+                .get(GRAPH_DATA_DIR_PARAM_KEY)
+                .map(PathBuf::from)
+                .unwrap();
+
+            assert!(
+                data_dir.starts_with(tmpdir.path()),
+                "ensure the plugin reports a directory which is in our tmpdir"
+            );
+
+            let extracted_paths: HashSet<String> = walkdir::WalkDir::new(data_dir)
                 .into_iter()
                 .map(Result::unwrap)
                 .filter(|entry| entry.file_type().is_file())
