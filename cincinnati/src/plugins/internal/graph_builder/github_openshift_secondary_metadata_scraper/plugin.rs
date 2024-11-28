@@ -575,12 +575,20 @@ mod network_tests {
         let plugin = settings.build_plugin(None)?;
 
         for _ in 0..2 {
-            let _ = runtime.block_on(plugin.run(cincinnati::plugins::PluginIO::InternalIO(
+            let io = runtime.block_on(plugin.run(cincinnati::plugins::PluginIO::InternalIO(
                 InternalIO {
                     graph: Default::default(),
                     parameters: Default::default(),
                 },
             )))?;
+
+            let io = match io {
+                cincinnati::plugins::PluginIO::InternalIO(io) => io,
+                cincinnati::plugins::PluginIO::ExternalIO(_) => {
+                    bail!("expected plugin to return InternalIO")
+                }
+            };
+
 
             let regexes = DEFAULT_OUTPUT_ALLOWLIST
                 .iter()
@@ -588,7 +596,18 @@ mod network_tests {
                 .collect::<Vec<regex::Regex>>();
             assert!(!regexes.is_empty(), "no regexes compiled");
 
-            let extracted_paths: HashSet<String> = walkdir::WalkDir::new(tmpdir.path())
+            let data_dir = io
+                .parameters
+                .get(GRAPH_DATA_DIR_PARAM_KEY)
+                .map(PathBuf::from)
+                .unwrap();
+
+            assert!(
+                data_dir.starts_with(tmpdir.path()),
+                "ensure the plugin reports a directory which is in our tmpdir"
+            );
+
+            let extracted_paths: HashSet<String> = walkdir::WalkDir::new(data_dir)
                 .into_iter()
                 .map(Result::unwrap)
                 .filter(|entry| entry.file_type().is_file())
