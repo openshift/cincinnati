@@ -1,0 +1,1 @@
+Test https://issues.redhat.com/browse/OTA-1379
