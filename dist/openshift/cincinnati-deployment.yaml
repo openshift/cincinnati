@@ -8,13 +8,13 @@ objects:
     kind: Deployment
     metadata:
       labels:
-        app: cincinnati
-      name: cincinnati
+        app: cincinnati-graph-builder
+      name: cincinnati-graph-builder
     spec:
-      replicas: ${{MAX_REPLICAS}}
+      replicas: ${{GB_MAX_REPLICAS}}
       selector:
         matchLabels:
-          app: cincinnati
+          app: cincinnati-graph-builder
       strategy:
         type: RollingUpdate
         rollingUpdate:
@@ -23,7 +23,7 @@ objects:
       template:
         metadata:
           labels:
-            app: cincinnati
+            app: cincinnati-graph-builder
         spec:
           affinity:
             podAntiAffinity:
@@ -35,7 +35,7 @@ objects:
                         - key: app
                           operator: In
                           values:
-                            - cincinnati
+                            - cincinnati-graph-builder
                     topologyKey: kubernetes.io/hostname
           containers:
             - image: ${IMAGE}:${IMAGE_TAG}
@@ -52,9 +52,7 @@ objects:
                     name: environment-secrets
               command:
                 - ${GB_BINARY}
-              args: [
-                "-c", "${GB_CONFIG_PATH}"
-              ]
+              args: ["-c", "${GB_CONFIG_PATH}"]
               ports:
                 - name: graph-builder
                   containerPort: ${{GB_PORT}}
@@ -90,6 +88,50 @@ objects:
                 - name: configs
                   mountPath: /etc/configs
                   readOnly: true
+          volumes:
+            - name: secrets
+              secret:
+                secretName: cincinnati-credentials
+            - name: configs
+              configMap:
+                name: cincinnati-configs
+      triggers:
+        - type: ConfigChange
+
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app: cincinnati-policy-engine
+      name: cincinnati-policy-engine
+    spec:
+      replicas: ${{PE_MAX_REPLICAS}}
+      selector:
+        matchLabels:
+          app: cincinnati-policy-engine
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxSurge: 25%
+          maxUnavailable: 0
+      template:
+        metadata:
+          labels:
+            app: cincinnati-policy-engine
+        spec:
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchExpressions:
+                        - key: app
+                          operator: In
+                          values:
+                            - cincinnati-policy-engine
+                    topologyKey: kubernetes.io/hostname
+          containers:
             - image: ${IMAGE}:${IMAGE_TAG}
               name: cincinnati-policy-engine
               imagePullPolicy: Always
@@ -126,16 +168,24 @@ objects:
                       name: cincinnati
               command:
                 - ${PE_BINARY}
-              args: [
-                "-$(PE_LOG_VERBOSITY)",
-                "--service.address", "$(ADDRESS)",
-                "--service.mandatory_client_parameters", "$(PE_MANDATORY_CLIENT_PARAMETERS)",
-                "--service.path_prefix", "${PE_PATH_PREFIX}",
-                "--service.port", "${PE_PORT}",
-                "--status.address", "$(PE_STATUS_ADDRESS)",
-                "--status.port", "${PE_STATUS_PORT}",
-                "--upstream.cincinnati.url", "$(UPSTREAM)",
-              ]
+              args:
+                [
+                  "-$(PE_LOG_VERBOSITY)",
+                  "--service.address",
+                  "$(ADDRESS)",
+                  "--service.mandatory_client_parameters",
+                  "$(PE_MANDATORY_CLIENT_PARAMETERS)",
+                  "--service.path_prefix",
+                  "${PE_PATH_PREFIX}",
+                  "--service.port",
+                  "${PE_PORT}",
+                  "--status.address",
+                  "$(PE_STATUS_ADDRESS)",
+                  "--status.port",
+                  "${PE_STATUS_PORT}",
+                  "--upstream.cincinnati.url",
+                  "$(UPSTREAM)",
+                ]
               ports:
                 - name: policy-engine
                   containerPort: ${{PE_PORT}}
@@ -171,34 +221,7 @@ objects:
                 name: cincinnati-configs
       triggers:
         - type: ConfigChange
-  - apiVersion: keda.sh/v1alpha1
-    kind: ScaledObject
-    metadata:
-      name: cincinnati-scaler
-      labels:
-        app: cincinnati
-    spec:
-      scaleTargetRef:
-        name: cincinnati
-      maxReplicaCount: ${{MAX_REPLICAS}}
-      minReplicaCount: ${{MIN_REPLICAS}}
-      triggers:
-        - type: prometheus
-          metadata:
-            serverAddress: http://prometheus-app-sre.openshift-customer-monitoring.svc.cluster.local:9090
-            metricName: cincinnati_policy_engine_graph_incoming_requests_rate
-            threshold: "${PE_REQ_AVG}"
-            query: avg(cincinnati_policy_engine_graph_incoming_requests_rate)
-  - apiVersion: monitoring.coreos.com/v1
-    kind: PrometheusRule
-    metadata:
-      name: cincinnati-recording-rule
-    spec:
-      groups:
-        - name: cincinnati.rules
-          rules:
-            - record: cincinnati_policy_engine_graph_incoming_requests_rate
-              expr: sum by (pod) (rate(cincinnati_pe_graph_incoming_requests_total[2m]))
+
   - apiVersion: v1
     kind: Service
     metadata:
@@ -216,7 +239,7 @@ objects:
           port: ${{GB_STATUS_PORT}}
           targetPort: ${{GB_STATUS_PORT}}
       selector:
-        app: cincinnati
+        app: cincinnati-graph-builder
   - apiVersion: v1
     kind: Service
     metadata:
@@ -230,7 +253,7 @@ objects:
           port: ${{GB_PUBLIC_PORT}}
           targetPort: ${{GB_PUBLIC_PORT}}
       selector:
-        app: cincinnati
+        app: cincinnati-graph-builder
   - apiVersion: v1
     kind: Service
     metadata:
@@ -248,16 +271,27 @@ objects:
           port: ${{PE_STATUS_PORT}}
           targetPort: ${{PE_STATUS_PORT}}
       selector:
-        app: cincinnati
+        app: cincinnati-policy-engine
+
   - apiVersion: policy/v1
     kind: PodDisruptionBudget
     metadata:
-      name: cincinnati-pdb
+      name: cincinnati-gb-pdb
     spec:
       maxUnavailable: 1
       selector:
         matchLabels:
-          app: cincinnati
+          app: cincinnati-graph-builder
+  - apiVersion: policy/v1
+    kind: PodDisruptionBudget
+    metadata:
+      name: cincinnati-pe-pdb
+    spec:
+      maxUnavailable: 1
+      selector:
+        matchLabels:
+          app: cincinnati-policy-engine
+
   - apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -266,7 +300,7 @@ objects:
       gb.rust_backtrace: "${RUST_BACKTRACE}"
       pe.address: "0.0.0.0"
       pe.status.address: "0.0.0.0"
-      pe.upstream: "http://localhost:8080${GB_PATH_PREFIX}/graph"
+      pe.upstream: "${PE_UPSTREAM_URL}"
       pe.log.verbosity: ${{PE_LOG_VERBOSITY}}
       pe.mandatory_client_parameters: "channel"
       pe.rust_backtrace: "${RUST_BACKTRACE}"
@@ -298,6 +332,26 @@ objects:
         port = ${GB_STATUS_PORT}
 
         ${GB_PLUGIN_SETTINGS}
+
+  - apiVersion: keda.sh/v1alpha1
+    kind: ScaledObject
+    metadata:
+      name: cincinnati-pe-scaler
+      labels:
+        app: cincinnati-policy-engine
+    spec:
+      scaleTargetRef:
+        name: cincinnati-policy-engine
+      maxReplicaCount: ${{PE_MAX_REPLICAS}}
+      minReplicaCount: ${{PE_MIN_REPLICAS}}
+      triggers:
+        - type: prometheus
+          metadata:
+            serverAddress: http://prometheus-app-sre.openshift-customer-monitoring.svc.cluster.local:9090
+            metricName: cincinnati_policy_engine_graph_incoming_requests_rate
+            threshold: "${PE_REQ_AVG}"
+            query: sum by (pod) (rate(cincinnati_pe_graph_incoming_requests_total[2m]))
+
 parameters:
   - name: IMAGE
     value: "quay.io/app-sre/cincinnati"
@@ -410,6 +464,10 @@ parameters:
 
       [[plugin_settings]]
       name = "edge-add-remove"
+  - name: PE_UPSTREAM_URL
+    value: "http://cincinnati-graph-builder.cincinnati.svc.cluster.local:8080${GB_PATH_PREFIX}/graph"
+    displayName: "Policy engine upstream URL"
+    description: "URL for the policy engine to connect to graph builder"
   - name: RUST_BACKTRACE
     value: "0"
     displayName: Set RUST_BACKTRACE env var
@@ -417,9 +475,13 @@ parameters:
     value: "/etc/configs/gb.toml"
   - name: ENVIRONMENT_SECRETS
     value: '{ "CINCINNATI_GITHUB_SCRAPER_OAUTH_TOKEN_PATH": "/etc/secrets/github_token.key" }'
-  - name: MIN_REPLICAS
+  - name: GB_MIN_REPLICAS
     value: "1"
-  - name: MAX_REPLICAS
+  - name: PE_MIN_REPLICAS
+    value: "1"
+  - name: GB_MAX_REPLICAS
+    value: "3"
+  - name: PE_MAX_REPLICAS
     value: "3"
   - name: PE_REQ_AVG
     value: "50"
