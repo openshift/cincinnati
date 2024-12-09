@@ -15,11 +15,14 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use tokio::sync::Mutex as FuturesMutex;
 
 pub static DEFAULT_OUTPUT_ALLOWLIST: &[&str] = &[
-    "/LICENSE$",
-    "/channels/.+\\.ya+ml$",
-    "/blocked-edges/.+\\.ya+ml$",
-    "/raw/metadata.json$",
-    "/version$",
+    // The patterns may be potentially matched against different relative
+    // paths depending on the underlying decoder or the specific archive.
+    // for example: `archive/version` or `version`
+    "(^|/)LICENSE$",
+    "(^|/)channels/.+\\.ya+ml$",
+    "(^|/)blocked-edges/.+\\.ya+ml$",
+    "(^|/)raw/metadata.json$",
+    "(^|/)version$",
 ];
 
 pub static DEFAULT_METADATA_IMAGE_REGISTRY: &str = "";
@@ -189,7 +192,7 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
         let data_dir = tempfile::tempdir_in(&settings.output_directory)?;
 
         let mut ns_registry = settings.registry.clone();
-        ns_registry.push_str(&settings.repository);
+        ns_registry.push_str(&format!("/{}", settings.repository));
 
         let registry = registry::Registry::try_from_str(&ns_registry)
             .context(format!("trying to extract Registry from {}", &ns_registry))?;
@@ -460,6 +463,171 @@ impl DkrV2OpenshiftSecondaryMetadataScraperPlugin {
 }
 
 #[cfg(test)]
+mod tests {
+    use crate::plugins::internal::dkrv2_openshift_secondary_metadata_scraper::plugin::DEFAULT_OUTPUT_ALLOWLIST;
+
+    #[test]
+    fn default_output_allowlist() {
+        struct TestCase {
+            name: String,
+            filepath: String,
+            expected_match: bool,
+        }
+        let test_cases = vec![
+            // Expected Match == True
+            // Required files from the graph-data repository
+            TestCase {
+                name: String::from("Should match a required file"),
+                filepath: String::from("LICENSE"),
+                expected_match: true,
+            },
+            TestCase {
+                name: String::from("Should match a required type of files"),
+                filepath: String::from("channels/name-x.y.z.yaml"),
+                expected_match: true,
+            },
+            TestCase {
+                name: String::from("Should match a required type of files"),
+                filepath: String::from("blocked-edges/x.y.z-name.yaml"),
+                expected_match: true,
+            },
+            TestCase {
+                name: String::from("Should match a required file"),
+                filepath: String::from("raw/metadata.json"),
+                expected_match: true,
+            },
+            TestCase {
+                name: String::from("Should match a required file"),
+                filepath: String::from("version"),
+                expected_match: true,
+            },
+            // Expected Match == False
+            // Some of the other files present in the graph-data repository
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("build-suggestions/4.17.yaml"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from(".github/dependabot.yml"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("deploy/1-image-stream.yaml"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("graph-data.rs/src/main.rs"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("hack/OWNERS"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("internal-channels/stable.yaml"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("raw/OWNERS"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from(".gitignore"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("CONTRIBUTING.md"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("Dockerfile"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("OWNERS"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("OWNERS_ALIASES"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("README.md"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match other graph-data files"),
+                filepath: String::from("requirements.txt"),
+                expected_match: false,
+            },
+            // Expected Match == False
+            // System files
+            TestCase {
+                name: String::from("Should not match system files"),
+                filepath: String::from("/etc/alternatives/unversioned-python-man"),
+                expected_match: false,
+            },
+            TestCase {
+                name: String::from("Should not match system files"),
+                filepath: String::from(
+                    "/usr/lib/python3.6/site-packages/setuptools-39.2.0.dist-info/LICENSE.txt",
+                ),
+                expected_match: false,
+            },
+        ];
+        let mut regexes = Vec::new();
+        for str_regex in DEFAULT_OUTPUT_ALLOWLIST {
+            match regex::Regex::new(&str_regex) {
+                Ok(regex) => regexes.push(regex),
+                Err(err) => panic!(
+                    "invalid regex pattern {} in DEFAULT_OUTPUT_ALLOWLIST\nerr: {}",
+                    str_regex, err
+                ),
+            }
+        }
+        for tc in test_cases {
+            let actual = regexes.iter().any(|re| re.is_match(&tc.filepath));
+            assert_eq!(
+                tc.expected_match,
+                actual,
+                "matching default output allowlist regexes failed\ntest case: {}: {}\nexpected match {}; got {}",
+                &tc.name,
+                tc.filepath,
+                tc.expected_match,
+                actual
+            );
+            // The matching should not change in case the files are prefixed with the
+            // archive directory
+            let actual = regexes
+                .iter()
+                .any(|re| re.is_match(&format!("archive/{}", tc.filepath)));
+            assert_eq!(
+                tc.expected_match,
+                actual,
+                "matching default output allowlist regexes failed\ntest case (with a prefixed archive): {}: {}\nexpected match {}; got {}",
+                &tc.name,
+                tc.filepath,
+                tc.expected_match,
+                actual
+            );
+        }
+    }
+}
+
+#[cfg(test)]
 #[cfg(feature = "test-net")]
 mod network_tests {
     use super::*;
@@ -468,6 +636,8 @@ mod network_tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn openshift_secondary_metadata_extraction() -> Fallible<()> {
+        env_logger::init();
+
         let fixtures = PathBuf::from(
             "./src/plugins/internal/graph_builder/dkrv2_openshift_secondary_metadata_scraper/test_fixtures",
         );
@@ -480,7 +650,7 @@ mod network_tests {
 
         let _m = mockito::mock(
             "GET",
-            "/sha256=3d8d70c6090d4b843f885c8a0c80d01c5fb78dd7c8d16e20929ffc32a15e2fde/signature-3",
+            "/sha256=c38b30c516858d763a705b3e1a709617c1a04704b2e635d91c7fe52d906816ae/signature-3",
         )
         .with_status(200)
         .with_body_from_file(signature_path.canonicalize()?)
