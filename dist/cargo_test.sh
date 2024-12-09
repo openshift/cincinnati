@@ -12,6 +12,16 @@ cargo_test_flags["rh-manifest-generator"]=""
 cargo_test_flags["prometheus-query"]=""
 cargo_test_flags["quay"]="--features test-net"
 
+declare -A cargo_nextest_flags
+cargo_nextest_flags["cincinnati"]=""
+cargo_nextest_flags["commons"]=""
+cargo_nextest_flags["graph-builder"]=""
+cargo_nextest_flags["policy-engine"]=""
+cargo_nextest_flags["metadata-helper"]=""
+cargo_nextest_flags["rh-manifest-generator"]="--no-tests=pass"
+cargo_nextest_flags["prometheus-query"]=""
+cargo_nextest_flags["quay"]=""
+
 if [[ -n "${CINCINNATI_TEST_CREDENTIALS_PATH}" && -n "${CINCINNATI_TEST_QUAY_API_TOKEN_PATH}" ]]; then
     echo Secrets available, enabling private tests...
     cargo_test_flags["cincinnati"]+=",test-net-private"
@@ -48,7 +58,12 @@ function run_tests() {
     # intentional, flags need to expand to multiple strings
     # shellcheck disable=SC2086
     if [ "$RUNNER" == "nextest" ]; then
-      cargo nextest run --profile ci ${cargo_test_flags[$directory]} --package "${directory}" || has_failed=true
+      cargo nextest run                     \
+        --profile ci                        \
+        ${cargo_test_flags[$directory]}     \
+        ${cargo_nextest_flags[$directory]}  \
+        --package "${directory}"            \
+        || has_failed=true
       cp -r "${CARGO_TARGET_DIR}/nextest/ci/junit.xml" "${ARTIFACT_DIR}/junit_${directory}.xml"
     else
       cargo test ${cargo_test_flags[$directory]} --package "${directory}" || has_failed=true
