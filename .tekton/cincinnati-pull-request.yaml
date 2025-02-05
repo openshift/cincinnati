@@ -2,7 +2,7 @@ apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   annotations:
-    build.appstudio.openshift.io/repo: https://github.com/openshift/cincinnati?rev={{revision}}
+    build.appstudio.openshift.io/repo: https://gitlab.cee.redhat.com/ota/cincinnati.git?rev={{revision}}
     build.appstudio.redhat.com/commit_sha: '{{revision}}'
     build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
@@ -11,11 +11,11 @@ metadata:
       == "cpaas-release"
   creationTimestamp: null
   labels:
-    appstudio.openshift.io/application: osus
-    appstudio.openshift.io/component: cincinnati
+    appstudio.openshift.io/application: openshift-update-service
+    appstudio.openshift.io/component: osus-operand
     pipelines.appstudio.openshift.io/type: build
-  name: cincinnati-on-pull-request
-  namespace: pratikam-tenant
+  name: osus-operand-on-pull-request
+  namespace: osus-tenant
 spec:
   params:
   - name: git-url
@@ -23,7 +23,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/pratikam-tenant/cincinnati:on-pr-{{revision}}
+    value: quay.io/redhat-user-workloads/osus-tenant/osus-operand:on-pr-{{revision}}
   - name: image-expires-after
     value: 5d
   - name: dockerfile
