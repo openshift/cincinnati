@@ -23,7 +23,7 @@ WORKDIR "${HOME}/cincinnati"
 
 # Get oc CLI
 RUN mkdir -p ${HOME}/bin && \
-    curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux-amd64-rhel8.tar.gz 2>/dev/null | tar xzf - -C "${HOME}/bin/" oc
+    curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz 2>/dev/null | tar xzf - -C "${HOME}/bin/" oc
 ENV PATH="${PATH}:${HOME}/bin"
 
 COPY --from=rust_builder /opt/cincinnati/bin/e2e /usr/bin/cincinnati-e2e-test
