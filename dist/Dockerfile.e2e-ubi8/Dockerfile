@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi:latest as rust_builder
+FROM registry.access.redhat.com/ubi9/ubi:latest as rust_builder
 WORKDIR /opt/app-root/src/
 COPY . .
 # copy git information for built crate
@@ -11,10 +11,10 @@ RUN dnf update -y \
 
 RUN hack/build_e2e.sh
 
-FROM registry.access.redhat.com/ubi8/ubi:latest AS vegeta_fetcher
+FROM registry.access.redhat.com/ubi9/ubi:latest AS vegeta_fetcher
 RUN curl -L https://github.com/tsenart/vegeta/releases/download/v12.8.4/vegeta_12.8.4_linux_amd64.tar.gz| tar xvzf - -C /usr/local/bin/ vegeta
 
-FROM registry.access.redhat.com/ubi8/ubi:latest
+FROM registry.access.redhat.com/ubi9/ubi:latest
 
 ENV HOME="/root"
 
