@@ -22,8 +22,6 @@ RUN \
   find $HOME/. -type f -exec chmod ugo+rw {} \;
 
 COPY . .
-# copy git information for built crate
-COPY .git/ ./.git/
 
 RUN cargo build --release && \
     mkdir -p /opt/cincinnati/bin && \

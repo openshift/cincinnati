@@ -1,8 +1,6 @@
 FROM registry.access.redhat.com/ubi8/ubi:latest as builder
 WORKDIR /opt/app-root/src/
 COPY . .
-# copy git information for built crate
-COPY .git/ ./.git/
 USER 0
 RUN dnf update -y \
     && dnf install -y jq rust cargo \
