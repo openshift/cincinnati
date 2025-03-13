@@ -12,15 +12,15 @@ WORKDIR "${HOME}/cincinnati"
 COPY --from=rust_builder /opt/cincinnati/bin/e2e /usr/bin/cincinnati-e2e-test
 COPY --from=rust_builder /opt/cincinnati/bin/prometheus_query /usr/bin/cincinnati-prometheus_query-test
 COPY --from=rust_builder /opt/cincinnati/bin/slo /usr/bin/cincinnati-e2e-slo
-COPY --from=rust_builder /opt/app-root/src/hack/e2e.sh hack/
-COPY --from=rust_builder /opt/app-root/src/hack/vegeta.targets hack/
-COPY --from=rust_builder /opt/app-root/src/dist/openshift/cincinnati-deployment.yaml dist/openshift/
-COPY --from=rust_builder /opt/app-root/src/dist/openshift/cincinnati-e2e.yaml dist/openshift/
-COPY --from=rust_builder /opt/app-root/src/dist/openshift/observability.yaml dist/openshift/
-COPY --from=rust_builder /opt/app-root/src/dist/openshift/load-testing.yaml dist/openshift/
-COPY --from=rust_builder /opt/app-root/src/e2e/tests/testdata e2e/tests/testdata
-COPY --from=rust_builder /opt/app-root/src/dist/prepare_ci_credentials.sh dist/
-COPY --from=rust_builder /opt/app-root/src/dist/cargo_test.sh dist/
+COPY ./hack/e2e.sh hack/
+COPY ./hack/vegeta.targets hack/
+COPY ./dist/openshift/cincinnati-deployment.yaml dist/openshift/
+COPY ./dist/openshift/cincinnati-e2e.yaml dist/openshift/
+COPY ./dist/openshift/observability.yaml dist/openshift/
+COPY ./dist/openshift/load-testing.yaml dist/openshift/
+COPY ./e2e/tests/testdata e2e/tests/testdata
+COPY ./dist/prepare_ci_credentials.sh dist/
+COPY ./dist/cargo_test.sh dist/
 
 ENV E2E_TESTDATA_DIR "e2e/tests/testdata"
 
