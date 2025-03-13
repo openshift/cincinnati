@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8:latest as builder
+FROM registry.access.redhat.com/ubi9:latest as builder
 
 
 # build: system utilities and libraries
@@ -29,7 +29,7 @@ RUN cargo build --release && \
     cp -rvf $HOME/target/release/policy-engine /opt/cincinnati/bin && \
     cp -rvf $HOME/target/release/metadata-helper /opt/cincinnati/bin 
 
-FROM registry.access.redhat.com/ubi8:latest
+FROM registry.access.redhat.com/ubi9:latest
 
 ENV RUST_LOG=actix_web=error,dkregistry=error
 

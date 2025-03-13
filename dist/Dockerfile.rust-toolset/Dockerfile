@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi:latest as builder
+FROM registry.access.redhat.com/ubi9/ubi:latest as builder
 WORKDIR /opt/app-root/src/
 COPY . .
 USER 0
@@ -12,7 +12,7 @@ RUN dnf update -y \
     && cp -rvf target/release/policy-engine /opt/cincinnati/bin \
     && cp -rvf target/release/metadata-helper /opt/cincinnati/bin
 
-FROM registry.access.redhat.com/ubi8/ubi:latest
+FROM registry.access.redhat.com/ubi9/ubi:latest
 ENV RUST_LOG=actix_web=error,dkregistry=error
 COPY --from=builder /opt/cincinnati/bin/* /usr/bin/
 
