@@ -212,13 +212,6 @@ objects:
                 requests:
                   cpu: ${PE_CPU_REQUEST}
                   memory: ${PE_MEMORY_REQUEST}
-          volumes:
-            - name: secrets
-              secret:
-                secretName: cincinnati-credentials
-            - name: configs
-              configMap:
-                name: cincinnati-configs
       triggers:
         - type: ConfigChange
 
@@ -300,7 +293,7 @@ objects:
       gb.rust_backtrace: "${RUST_BACKTRACE}"
       pe.address: "0.0.0.0"
       pe.status.address: "0.0.0.0"
-      pe.upstream: "${PE_UPSTREAM_URL}"
+      pe.upstream: "${PE_UPSTREAM_URL}${GB_PATH_PREFIX}/graph"
       pe.log.verbosity: ${{PE_LOG_VERBOSITY}}
       pe.mandatory_client_parameters: "channel"
       pe.rust_backtrace: "${RUST_BACKTRACE}"
@@ -465,7 +458,7 @@ parameters:
       [[plugin_settings]]
       name = "edge-add-remove"
   - name: PE_UPSTREAM_URL
-    value: "http://cincinnati-graph-builder.cincinnati.svc.cluster.local:8080${GB_PATH_PREFIX}/graph"
+    value: "http://cincinnati-graph-builder:8080"
     displayName: "Policy engine upstream URL"
     description: "URL for the policy engine to connect to graph builder"
   - name: RUST_BACKTRACE
@@ -475,8 +468,6 @@ parameters:
     value: "/etc/configs/gb.toml"
   - name: ENVIRONMENT_SECRETS
     value: '{ "CINCINNATI_GITHUB_SCRAPER_OAUTH_TOKEN_PATH": "/etc/secrets/github_token.key" }'
-  - name: GB_MIN_REPLICAS
-    value: "1"
   - name: PE_MIN_REPLICAS
     value: "1"
   - name: GB_MAX_REPLICAS
