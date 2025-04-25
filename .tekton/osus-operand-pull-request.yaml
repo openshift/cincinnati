@@ -580,7 +580,8 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-osus-operand
   workspaces:
   - name: git-auth
     secret:
