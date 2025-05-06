@@ -1,7 +1,7 @@
 {
   "critical": {
     "image": {
-      "docker-manifest-digest": "sha256:c38b30c516858d763a705b3e1a709617c1a04704b2e635d91c7fe52d906816ae"
+      "docker-manifest-digest": "sha256:d93f2f4672685bf03b59d9e4dc1de13d22118865a807008fdbafe0abee7e561f"
     },
     "type": "atomic container signature",
     "identity": {
