@@ -141,7 +141,7 @@ Clients may provide additional parameters as URL query parameters in the request
 
 ### Response ###
 
-The response to the `/graph` endpoint is a JSON representation of the release graph. Each of the releases are represented in an entry in the top-level `nodes` array. Each of these entries includes the release version label, a payload identifier and any metadata according to the following schema:
+The response to the `/graph` endpoint is called [Cincinnati JSON](#response), a JSON representation of the update graph. Each of the releases are represented in an entry in the top-level `nodes` array. Each of these entries includes the release version, a payload identifier and any metadata according to the following schema:
 
 |   Key    | Optional | Description                                                                             |
 |:--------:|:--------:|:----------------------------------------------------------------------------------------|
@@ -154,7 +154,7 @@ The transitions between releases are represented as an array in the top-level `e
 ### Errors ###
 
 Errors on the `/graph` endpoint are returned to the client as JSON objects, with a 4xx or 5xx HTTP status code.
-Error values carry a type identifier and a textual description, according to the folloowing schema:
+Error values carry a type identifier and a textual description, according to the following schema:
 
 |  Key   | Optional | Description                                                  |
 |:------:|:--------:|:-------------------------------------------------------------|
@@ -205,6 +205,15 @@ The following response represents the graph shown in Figure 2:
 }
 ```
 
+The following response represents an error (with HTTP status code 400):
+
+```json
+{
+  "kind": "missing_params",
+  "value": "mandatory client parameters missing: channel"
+}
+```
+
 ### Traversal ###
 
 Determining valid graph traversals can be tricky to do by hand. The following [`jq`][jq] expression can be used to determine the next possible versions, given a current version:
@@ -229,9 +238,8 @@ Sample output:
     "version": "4.2.16",
     "payload": "quay.io/openshift-release-dev/ocp-release@sha256:e5a6e348721c38a78d9299284fbb5c60fb340135a86b674b038500bf190ad514",
     "metadata": {
-      "description": "",
-      "io.openshift.upgrades.graph.release.manifestref": "sha256:e5a6e348721c38a78d9299284fbb5c60fb340135a86b674b038500bf190ad514",
       "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2,fast-4.3",
+      "io.openshift.upgrades.graph.release.manifestref": "sha256:e5a6e348721c38a78d9299284fbb5c60fb340135a86b674b038500bf190ad514",
       "url": "https://access.redhat.com/errata/RHBA-2020:0107"
     }
   },
@@ -239,10 +247,9 @@ Sample output:
     "version": "4.2.14",
     "payload": "quay.io/openshift-release-dev/ocp-release@sha256:3fabe939da31f9a31f509251b9f73d321e367aba2d09ff392c2f452f6433a95a",
     "metadata": {
-      "url": "https://access.redhat.com/errata/RHBA-2020:0066",
       "io.openshift.upgrades.graph.release.channels": "candidate-4.2,fast-4.2,stable-4.2",
-      "description": "",
-      "io.openshift.upgrades.graph.release.manifestref": "sha256:3fabe939da31f9a31f509251b9f73d321e367aba2d09ff392c2f452f6433a95a"
+      "io.openshift.upgrades.graph.release.manifestref": "sha256:3fabe939da31f9a31f509251b9f73d321e367aba2d09ff392c2f452f6433a95a",
+      "url": "https://access.redhat.com/errata/RHBA-2020:0066"
     }
   }
 ]

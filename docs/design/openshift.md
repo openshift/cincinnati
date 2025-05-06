@@ -122,12 +122,18 @@ The response from the policy engine will conform to the [Cincinnati Graph API re
 
 ### Update Payload ###
 
-The Update Payloads served by Cincinnati to the Cluster Version Operator are formatted as a JSON document containing a reference to a container image. This document is versioned so that it may change over time. An example of this document is shown below:
+The Update Payloads served by Cincinnati to the Cluster Version Operator are formatted as a JSON document containing a reference to a container image. An example of this document is shown below:
 
-```json
+```bash
+$ curl -s 'https://api.openshift.com/api/upgrades_info/graph?channel=candidate-4.16' | jq '.nodes[0]'
 {
-    "kind": "update.openshift.io/v0",
-    "image": "quay.io/openshift/manifest:v4.0.0"
+  "version": "4.16.0-ec.0",
+  "payload": "quay.io/openshift-release-dev/ocp-release@sha256:6bc8bf6309779c3fae09c2ad61d52948235da0960ded92951615603f235740e8",
+  "metadata": {
+    "io.openshift.upgrades.graph.previous.remove_regex": "^4[.]15[.]([0-9]|10)[+].*$|4[.]15[.].*|.*",
+    "io.openshift.upgrades.graph.release.channels": "candidate-4.16,candidate-4.17,candidate-4.18",
+    "io.openshift.upgrades.graph.release.manifestref": "sha256:6bc8bf6309779c3fae09c2ad61d52948235da0960ded92951615603f235740e8"
+  }
 }
 ```
 
@@ -136,8 +142,51 @@ The image field references the Update Image which contains the actual update to 
 
 ## Update Image ##
 
-The Update Image is a container image consisting of a series of Kubernetes manifests describing the Second-Level Operators (SLOs), the `release-metadata` file required by Cincinnati, and a manifest specific to OpenShift. In the future, this image may be expanded to include other assets.
+The Update Image is a container image consisting of a series of Kubernetes manifests describing the First-Level Operators (FLOs) and the Second-Level Operators (SLOs), the `release-metadata` file required by Cincinnati, and a manifest specific to OpenShift. In the future, this image may be expanded to include other assets.
+The OpenShift manifest describes the format of the Update Image.
 
-The OpenShift manifest describes the format of the Update Image and provides a cryptographic signature of the surrounding image. The details of this manifest have not yet been finalized.
+```
+# extract payloads from a release image
+$ mkdir -p ./manifests ./release-manifests
+$ oc image extract quay.io/openshift-release-dev/ocp-release:4.16.15-x86_64 --path /manifests/:./manifests/ --path /release-manifests/:./release-manifests/
+
+# examples of FLO manifests
+$ ls manifests | head -n 3
+0000_00_cluster-version-operator_00_namespace.yaml
+0000_00_cluster-version-operator_01_adminack_configmap.yaml
+0000_00_cluster-version-operator_01_admingate_configmap.yaml
+
+# examples of SLO manifests
+$ ls release-manifests | head -n 3
+0000_00_config-operator_00_namespace.yaml
+0000_03_cloud-credential-operator_00_namespace.yaml
+0000_03_cloud-credential-operator_01_crd.yaml
+
+# release-metadata
+$ cat release-manifests/release-metadata
+{
+  "kind": "cincinnati-metadata-v0",
+  "version": "4.16.15",
+  "previous": [
+    "4.15.18",
+    ...
+    "4.16.9"
+  ],
+  "metadata": {
+    "url": "https://access.redhat.com/errata/RHSA-2024:7174"
+  }
+}
+
+# OpenShift manifest
+$ cat release-manifests/image-references | head -n 10
+{
+  "kind": "ImageStream",
+  "apiVersion": "image.openshift.io/v1",
+  "metadata": {
+    "name": "4.16.15",
+    ...
+  }
+}
+```
 
 [image-config-properties]: https://github.com/opencontainers/image-spec/blob/v1.0.1/config.md#properties
