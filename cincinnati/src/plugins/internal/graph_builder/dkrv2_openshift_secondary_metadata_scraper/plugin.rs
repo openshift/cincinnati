@@ -650,7 +650,7 @@ mod network_tests {
 
         let _m = mockito::mock(
             "GET",
-            "/sha256=c38b30c516858d763a705b3e1a709617c1a04704b2e635d91c7fe52d906816ae/signature-3",
+            "/sha256=d93f2f4672685bf03b59d9e4dc1de13d22118865a807008fdbafe0abee7e561f/signature-3",
         )
         .with_status(200)
         .with_body_from_file(signature_path.canonicalize()?)
