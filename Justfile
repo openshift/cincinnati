@@ -18,7 +18,7 @@ metadata_reference_revision:
 	read -r var <"{{testdata_dir}}"/metadata_revision; printf $var
 
 format:
-	cargo fmt --all
+	cargo fmt --all -- --check
 
 clippy:
 	cargo clippy --all-targets --all-features
