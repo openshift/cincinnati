@@ -49,7 +49,7 @@ $ buildah push --authfile ~/.docker/config.json quay.io/openshift-ota/openshift-
 
 We have to use `--format docker` to build the image when using `buildah`. Otherwise, the default `oci` would lead to an image that `graph-builder` yields "unknown media type ManifestV2S1" error to and then ignores. See [the supported media types](https://github.com/camallo/dkregistry-rs/blob/3e242ee9e39646da6ff4a886e080085cc1810d37/src/v2/manifest/mod.rs#L74-L96).
 
-We cannot use `postman` to build the image because `podman build --format docker` does not work. See [podman/issues/21294](https://github.com/containers/podman/issues/21294).
+We cannot use `podman` to build the image because `podman build --format docker` does not work. See [podman/issues/21294](https://github.com/containers/podman/issues/21294).
 
 ```console
 $ docker manifest inspect quay.io/openshift-ota/openshift-cincinnati-test-public-manual:4.18.12-x86_64-podman
