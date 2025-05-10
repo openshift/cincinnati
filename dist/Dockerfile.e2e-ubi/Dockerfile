@@ -1,7 +1,6 @@
-FROM registry.ci.openshift.org/cincinnati-ci-public/rust:ubi9 as rust_builder
+FROM registry.ci.openshift.org/cincinnati-ci-public/rust:boot-root-1.79.0 as rust_builder
 WORKDIR /opt/app-root/src/
 COPY . .
-USER 0
 RUN hack/build_e2e.sh
 
 FROM registry.ci.openshift.org/cincinnati-ci-public/rust:e2e-test-ubi9
