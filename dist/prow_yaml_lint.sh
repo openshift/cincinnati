@@ -3,6 +3,8 @@
 set -euxo pipefail
 
 cfg="$(mktemp)"
+trap 'rm -vf -- "$cfg"' EXIT
+
 cat >"$cfg" <<EOF
 extends: default
 

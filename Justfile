@@ -26,8 +26,33 @@ clippy:
 commit +args="": format
 	git commit {{args}}
 
-build:
-	cargo build
+build *args:
+	cargo build {{args}}
+	just copy_bin "{{bin_folder}}"
+
+bin_folder := env('bin_folder', "")
+copy_bin:
+	@[[ -z "{{bin_folder}}" ]] || just _copy_bin
+
+_copy_bin:
+	@echo "copying binaries to {{bin_folder}}"
+	mkdir -vp "{{bin_folder}}"
+	for file in graph-builder policy-engine metadata-helper; do cp -vf "target/release/${file}" "{{bin_folder}}/"; done
+
+build_e2e:
+	hack/build_e2e.sh
+
+run_e2e:
+	hack/e2e.sh
+
+cargo_test:
+	dist/cargo_test.sh
+
+prepare_ci_credentials:
+	dist/prepare_ci_credentials.sh
+
+yamllint:
+	dist/prow_yaml_lint.sh
 
 _coverage:
 	cargo kcov --verbose --all --no-clean-rebuild --open
