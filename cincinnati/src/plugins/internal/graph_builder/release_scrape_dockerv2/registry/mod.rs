@@ -322,12 +322,15 @@ pub async fn fetch_releases(
     let ignored_sig_releases = Arc::new(AtomicUsize::new(0));
     // releases that had some issues and were not included in the graph
     let ignored_releases = Arc::new(AtomicUsize::new(0));
+    // images that were retrived after not being found in the cache
+    let cache_misses = Arc::new(AtomicUsize::new(0));
     tags.try_for_each_concurrent(concurrency, |tag| {
         let registry_client = registry_client.clone();
         let cache = cache.clone();
         let releases = releases.clone();
         let sig_releases = ignored_sig_releases.clone();
         let skip_releases = ignored_releases.clone();
+        let misses = cache_misses.clone();
 
         async move {
             let (arch, manifestref, mut layers_digests) =
@@ -376,6 +379,7 @@ pub async fn fetch_releases(
                 repo.to_owned(),
                 tag.to_owned(),
                 &cache,
+                &misses,
                 manifestref.clone(),
                 manifestref_key.to_string(),
                 arch,
@@ -413,6 +417,11 @@ pub async fn fetch_releases(
         );
     }
 
+    let miss_count = cache_misses.load(Ordering::SeqCst);
+    if miss_count > 0 {
+        info!("{} cache misses while fetching releases", miss_count);
+    }
+
     let releases = Arc::<
         FuturesMutex<Vec<cincinnati::plugins::internal::graph_builder::release::Release>>,
     >::try_unwrap(releases)
@@ -439,6 +448,7 @@ async fn lookup_or_fetch(
     repo: String,
     tag: String,
     cache: &cache::Cache,
+    cache_misses: &AtomicUsize,
     manifestref: String,
     manifestref_key: String,
     arch: Option<String>,
@@ -458,6 +468,7 @@ async fn lookup_or_fetch(
             cached_metadata
         }
         None => {
+            cache_misses.fetch_add(1, Ordering::SeqCst);
             let placeholder = Option::from(Metadata {
                 kind: MetadataKind::V0,
                 version: Version::new(0, 0, 0),
