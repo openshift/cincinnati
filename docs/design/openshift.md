@@ -87,6 +87,8 @@ For example, this may be because a bug was discovered in 1.1.0 and fixed in 1.1.
 For release issues serious enough to warrent exclusion from the Beta channel, the Alpha-channel edge will also be removed to avoid funneling Alpha clusters to the degraded release.
 However, the degraded release will remain in the Alpha channel to allow existing clusters to upgrade away from it.
 
+OpenShift stores the data about the channels and the releases in these channels in [cincinnati-graph-data](https://github.com/openshift/cincinnati-graph-data) which, together with releases in Quay, forms the data store for the Cincinnati implementation for OpenShift to determine the update graph.
+
 ### Client API ###
 
 The policy engine client API conforms to the [Cincinnati Graph API](cincinnati.md#graph-api). The Cluster Version Operator running within the cluster will periodically call this client API to determine whether or not an update is available. The format of this request and response is detailed below.
