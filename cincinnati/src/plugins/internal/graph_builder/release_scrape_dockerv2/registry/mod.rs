@@ -386,7 +386,16 @@ pub async fn fetch_releases(
             )
             .await?
             {
-                Some(release) => release,
+                Some(mut release) => {
+                    let (layer_metadata_arch, registry_manifest_arch) =
+                        release.metadata.metadata_arch_id();
+                    if layer_metadata_arch == "multi" && registry_manifest_arch != "multi" {
+                        // single arch shard of multiarch release. dont want it
+                        return Ok(());
+                    } else {
+                        release
+                    }
+                }
                 None => {
                     // Reminder: this means the layer_digests point to layers
                     // without any release and we've cached this before
