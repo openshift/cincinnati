@@ -478,42 +478,43 @@ async fn lookup_or_fetch(
         }
         None => {
             cache_misses.fetch_add(1, Ordering::SeqCst);
-            let placeholder = Option::from(Metadata {
-                kind: MetadataKind::V0,
-                version: Version::new(0, 0, 0),
-                previous: vec![],
-                next: vec![],
-                metadata: Default::default(),
-            });
-            cache.write().await.insert(manifestref.clone(), placeholder);
+            cache.write().await.insert(manifestref.clone(), None);
 
-            let metadata = find_first_release_metadata(
+            let metadata = match find_first_release_metadata(
                 layer_digests,
                 registry_client,
                 repo.clone(),
                 tag.clone(),
             )
             .await
-            .context("failed to find first release")?
-            .map(|mut metadata| {
-                // Attach the manifestref this release was found in for further processing
-                metadata
-                    .metadata
-                    .insert(manifestref_key, manifestref.clone());
-
-                // Process the manifest architecture if given
-                if let Some(arch) = arch {
-                    // Encode the architecture as SemVer information
-                    metadata.version.build = vec![semver::Identifier::AlphaNumeric(arch.clone())];
-
-                    // Attach the architecture for later processing
+            {
+                Ok(Some(mut metadata)) => {
+                    // Attach the manifestref this release was found in for further processing
                     metadata
                         .metadata
-                        .insert("io.openshift.upgrades.graph.release.arch".to_owned(), arch);
-                };
+                        .insert(manifestref_key, manifestref.clone());
 
-                metadata
-            });
+                    // Process the manifest architecture if given
+                    if let Some(arch) = arch {
+                        // Encode the architecture as SemVer information
+                        metadata.version.build =
+                            vec![semver::Identifier::AlphaNumeric(arch.clone())];
+
+                        // Attach the architecture for later processing
+                        metadata
+                            .metadata
+                            .insert("io.openshift.upgrades.graph.release.arch".to_owned(), arch);
+                    };
+
+                    Some(metadata)
+                }
+                Ok(None) => None,
+                Err(e) => {
+                    cache.write().await.remove(&manifestref);
+                    error!("Failed to find release metadata for {}: {}", &tag, e);
+                    return Err(e);
+                }
+            };
 
             trace!("[{}] Caching release metadata", &tag);
             cache
@@ -660,16 +661,21 @@ async fn find_first_release_metadata(
         );
 
         match tokio::task::spawn_blocking(move || assemble_metadata(&blob, metadata_filename))
-            .await?
-        {
+            .await
+            .context(format!(
+                "[{}] Could not assemble metadata from layer ({})",
+                &tag, &layer_digest
+            ))? {
             Ok(metadata) => {
                 return Ok(Some(metadata));
             }
             Err(e) => {
-                debug!(
+                return Err(format_err!(
                     "[{}] Could not assemble metadata from layer ({}): {}",
-                    &tag, &layer_digest, e,
-                );
+                    &tag,
+                    &layer_digest,
+                    e
+                ))
             }
         }
     }
