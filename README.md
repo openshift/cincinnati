@@ -9,35 +9,33 @@ Prepare custom environment variables
 ```console
 # Please change these accordingly
 export CINCINNATI_REGISTRY="https://quay.io"
-export CINCINNATI_REPO="redhat/openshift-cincinnati-test-public-manual"
+export CINCINNATI_REPO="openshift-ota/openshift-cincinnati-test-public-manual"
 ```
+
+See the details about [pushing images to the above repo](./docs/developer/push-to-openshift-cincinnati-test-public-manual.md).
 
 ### Executables on the build host
 
 ```console
 cargo run --package graph-builder -- --service.address 0.0.0.0 --upstream.registry.url "${CINCINNATI_REGISTRY}" --upstream.registry.repository "${CINCINNATI_REPO}" &
 cargo run --package policy-engine -- --service.address 0.0.0.0 &
- curl --verbose --header 'Accept:application/json' http://localhost:8081/graph\?channel=a
+ curl -s 'Accept:application/json' http://localhost:8081/graph\?channel\=candidate-4.18 | jq
 {
-    "nodes":
-    [{
-        "version":"0.0.0",
-        "payload":"quay.io/redhat/openshift-cincinnati-test-public-manual@sha256:a264db3ac5288c9903dc3db269fca03a0b122fe4af80b57fc5087b329995013d",
-        "metadata":{
-            "io.openshift.upgrades.graph.release.channels":"a",
-            "io.openshift.upgrades.graph.release.manifestref":"sha256:a264db3ac5288c9903dc3db269fca03a0b122fe4af80b57fc5087b329995013d"
-        }
-    },
+  "version": 1,
+  "nodes": [
     {
-        "version":"0.0.1",
-        "payload":"quay.io/redhat/openshift-cincinnati-test-public-manual@sha256:73df5efa869eaf57d4125f7655e05e1a72b59d05e55fea06d3701ea5b59234ff",
-        "metadata":{
-            "io.openshift.upgrades.graph.release.manifestref":"sha256:73df5efa869eaf57d4125f7655e05e1a72b59d05e55fea06d3701ea5b59234ff",
-            "io.openshift.upgrades.graph.release.channels":"a",
-            "kind":"test"
-        }
-    }],
-    "edges":[[0,1]]
+      "version": "4.18.3",
+      "payload": "quay.io/openshift-ota/openshift-cincinnati-test-public-manual@sha256:fdcb3da3a1086d664df31a1fa2a629c77780f844d458af956928cca297da343c",
+      "metadata": {
+        "io.openshift.upgrades.graph.release.manifestref": "sha256:fdcb3da3a1086d664df31a1fa2a629c77780f844d458af956928cca297da343c",
+        "io.openshift.upgrades.graph.release.channels": "candidate-4.18,eus-4.18,fast-4.18,stable-4.18,candidate-4.19",
+        "io.openshift.upgrades.graph.previous.remove_regex": ".*|4[.]17[.].*|4[.](17[.](1[01]|0-.*|[0-9])|18.0-(ec[.].*|rc[.][0-3]))",
+        "url": "https://access.redhat.com/errata/RHBA-2025:2229"
+      }
+    }
+  ],
+  "edges": [],
+  "conditionalEdges": []
 }
 ```
 
