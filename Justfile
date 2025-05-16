@@ -28,7 +28,7 @@ commit +args="": format
 
 build *args:
 	cargo build {{args}}
-	just copy_bin "{{bin_folder}}"
+	just copy_bin
 
 bin_folder := env('bin_folder', "")
 copy_bin:
