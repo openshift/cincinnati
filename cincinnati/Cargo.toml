@@ -31,7 +31,7 @@ async-trait = "^0.1"
 tempfile = "^3.8.0"
 flate2 = "^1.0.34"
 tar = "^0.4.40"
-dkregistry = { git = "https://github.com/hongkailiu/dkregistry-rs.git", rev = "11b974e1703987f837dfee1b68e73316c0348dd2" }
+dkregistry = { git = "https://github.com/camallo/dkregistry-rs.git", rev = "89d190c313653afabee66032a4c88efd804f0829" }
 itertools = "^0.13"
 serde_yaml = "^0.9.34"
 opentelemetry = "0.14.0"
