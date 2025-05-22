@@ -21,7 +21,7 @@ log = "^0.4.20"
 prometheus = "0.13"
 quay = { path = "../quay" }
 regex = "^1.11.1"
-reqwest = "^0.11"
+reqwest = "^0.12"
 semver = { version = "^0.11", features = [ "serde" ] }
 serde = "^1.0.189"
 serde_derive = "^1.0.70"

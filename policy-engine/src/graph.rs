@@ -202,8 +202,7 @@ pub(crate) mod tests {
         assert_eq!(
             resp,
             graph::GraphError::FailedUpstreamFetch(
-                "error sending request for url (http://offline.url.test/): error trying to connect: dns error: failed to lookup address information: Name or service not known"
-                    .to_string(),
+                "error sending request for url (http://offline.url.test/)".to_string(),
             )
         );
         Ok(())
