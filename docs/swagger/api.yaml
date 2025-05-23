@@ -1,0 +1,121 @@
+---
+openapi: 3.0.4
+info:
+  title: OpenShift Update Service
+  description: |-
+    Red Hat hosts a public OpenShift Update Service (OSUS), which serves a graph of update
+    possibilities based on the OpenShift Container Platform release images in the official
+    registry. The graph contains update information for any public OCP release.
+
+    OpenShift Container Platform clusters are configured to connect to the OSUS by default,
+    and the OSUS responds to clusters with information about known update targets.
+
+    Some useful links:
+    - https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/updating_clusters/understanding-openshift-updates-1
+  version: 1.0.0
+externalDocs:
+  description: Find out more about OpenShift Update Service
+  url: https://catalog.redhat.com/software/container-stacks/detail/5f0f35842991b4207fcdb202
+servers:
+  - url: https://api.openshift.com/api/upgrades_info/v1
+tags:
+  - name: graph
+    description: OpenShift Update Graph
+paths:
+  /graph:
+    get:
+      tags:
+        - graph
+      summary: Get update graph.
+      description: Returns a upgrade graph.
+      parameters:
+        - name: channel
+          in: query
+          description: |
+            Update channels are the mechanism by which users declare the OpenShift Container Platform
+            minor version they intend to update their clusters to. They also allow users to choose the
+            timing and level of support their updates will have through the fast, stable, candidate,
+            and eus channel options.
+            Update channels correspond to a minor version of OpenShift Container Platform. The version
+            number in the channel represents the target minor version that the cluster will eventually
+            be updated to, even if it is higher than the cluster’s current minor version.
+          required: true
+          schema:
+            type: string
+            example: stable-4.16
+        - in: query
+          name: arch
+          description: Architecture is the architecture for the OpenShift releases in the graph
+          schema:
+            type: string
+            default: amd64
+            enum: [amd64, arm64, s390x, ppc64le, multi]
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Graph'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security: []
+components:
+  schemas:
+    Graph:
+      required:
+        - version
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int32
+          example: 1
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Node"
+    Metadata:
+      type: object
+      properties:
+        url:
+          type: string
+          example: https://access.redhat.com/errata/RHBA-2025:2229
+    Node:
+      required:
+        - version
+        - payload
+      type: object
+      properties:
+        version:
+          type: string
+          example: 4.16.3
+        payload:
+          type: string
+          example: quay.io/openshift-release-dev/ocp-release@sha256:abcdefg123
+        metadata:
+          type: object
+          items:
+            $ref: "#/components/schemas/Metadata"
+    Error:
+      type: object
+      properties:
+        kind:
+          type: string
+        value:
+          type: string
+      required:
+        - kind
+        - value
+  requestBodies:
+    Graph:
+      description: upgrade graph
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Graph'
+  securitySchemes: {}
