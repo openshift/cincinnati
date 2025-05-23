@@ -96,22 +96,21 @@ The policy engine client API conforms to the [Cincinnati Graph API](cincinnati.m
 
 #### Request ####
 
-HTTP GET requests are used to fetch updates from the policy engine. Requests are made to `/graph` and must include the following URL parameters:
+HTTP GET requests are used to fetch updates from the policy engine. Requests are made to `/graph` and include the following URL parameters:
 
 |   Key   | Optional | Description                                                                                                                                             |
 |:-------:|:--------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | arch    | optional | [the architecture identifier][image-config-properties] for the currently installed cluster, or `multi` for payloads that support heterogeneous clusters |
-| version | required | the version number of the currently installed cluster                                                                                                   |
 | channel | required | the name of the channel to which this cluster is subscribed                                                                                             |
-|   id    | required | the unique identifier (UUID v4) of the cluster                                                                                                          |
-|    *    | optional | any other parameters will be passed to upstream requests                                                                                                |
+
+See [api-spec.yaml](api-spec.yaml) for the complete API specification.
 
 ##### Example ######
 
-An OpenShift cluster on the fast channel:
+An OpenShift cluster on the `fast-4.16` channel:
 
 ```
-/graph?version=4.0.3&channel=fast&id=ceb3b0bb-c689-4db9-bb6a-0122237e33fd
+/graph?channel=fast-4.16
 ```
 
 

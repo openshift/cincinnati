@@ -1,0 +1,217 @@
+---
+openapi: 3.1.1
+info:
+  title: OpenShift Update Service
+  description: |-
+    Red Hat hosts a public OpenShift Update Service (OSUS), which serves a graph of update
+    possibilities based on the OpenShift Container Platform release images in the official
+    registry. The graph contains update information for any public OCP release.
+
+    OpenShift Container Platform clusters are configured to connect to the OSUS by default,
+    and the OSUS responds to clusters with information about known update targets.
+
+    Some useful links:
+    - https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/updating_clusters/understanding-openshift-updates-1
+  version: 1.0.0
+externalDocs:
+  description: Find out more about OpenShift Update Service
+  url: https://catalog.redhat.com/software/container-stacks/detail/5f0f35842991b4207fcdb202
+servers:
+  - url: https://api.openshift.com/api/upgrades_info/v1
+tags:
+  - name: graph
+    description: OpenShift Update Graph
+paths:
+  /graph:
+    get:
+      tags:
+        - graph
+      summary: Get update graph.
+      description: Returns a upgrade graph.
+      parameters:
+        - name: channel
+          in: query
+          description: |
+            Update channels are the mechanism by which users declare the OpenShift Container Platform
+            minor version they intend to update their clusters to. They also allow users to choose the
+            timing and level of support their updates will have through the fast, stable, candidate,
+            and eus channel options.
+            Update channels correspond to a minor version of OpenShift Container Platform. The version
+            number in the channel represents the target minor version that the cluster will eventually
+            be updated to, even if it is higher than the cluster’s current minor version.
+          required: true
+          schema:
+            type: string
+            example: stable-4.16
+        - in: query
+          name: arch
+          description: |
+            The architecture identifier for the currently installed cluster, or "multi" for payloads that
+            support heterogeneous clusters. The allowed values of an architecture identifier are listed
+            in the Go Language document for $GOARCH. See https://go.dev/doc/install/source#environment.
+          schema:
+            type: string
+            example: amd64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Graph'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security: []
+components:
+  schemas:
+    Version:
+      type: string
+      description: The version of an OpenShift release
+      example: 4.16.3
+    Graph:
+      required:
+        - version
+      type: object
+      properties:
+        version:
+          type: integer
+          example: 1
+        nodes:
+          type: array
+          description: the nodes of the graph
+          items:
+            required:
+              - version
+              - payload
+            type: object
+            description: a node represents a OpenShift release
+            properties:
+              version:
+                $ref: "#/components/schemas/Version"
+              payload:
+                type: string
+                example: quay.io/openshift-release-dev/ocp-release@sha256:abcdefg123
+              metadata:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    example: https://access.redhat.com/errata/RHBA-2025:2229
+                  "release.openshift.io/architecture":
+                    type: string
+                    example: "multi"
+          example:
+            - {version: 4.2.3, payload: "quay.io/openshift-release-dev/ocp-release@sha256:abcdefg333"}
+            - {version: 4.2.6, payload: "quay.io/openshift-release-dev/ocp-release@sha256:abcdefg666"}
+        edges:
+          type: array
+          description: the edges of the graph
+          example: [[0, 1]]
+          items:
+            type: array
+            description: an edge represents an update path from an OpenShift release to another.
+            items:
+              type: integer
+              description: a node index in the nodes of the graph.
+              maxLength: 2
+              minLength: 2
+        conditionalEdges:
+          type: object
+          description: the conditional edges of the graph.
+          properties:
+            edges:
+              type: array
+              example: {from: "4.17.18", to: "4.17.19"}
+              items:
+                required:
+                  - from
+                  - to
+                type: object
+                description: |
+                  a conditional edge represents a conditional update path
+                  from an OpenShift release to another.
+                properties:
+                  from:
+                    description: the version from which the upgrade is
+                    $ref: "#/components/schemas/Version"
+                  to:
+                    description: the version to which the upgrade is
+                    $ref: "#/components/schemas/Version"
+            risks:
+              type: array
+              description: a set of risks for the associated conditional update path
+              example:
+                - url: https://docs.openshift.com/container-platform/4.18/release_notes/ocp-4-18-release-notes.html
+                  name: PreRelease
+                  message: |
+                    This is a prerelease version, and you should update to 4.18.1 or later releases, even if that
+                    means updating to a newer 4.17 first.
+                  matchingRules:
+                    - type: Always
+              items:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: the URI documenting the risk
+                  name:
+                    type: string
+                    description: the name of the risk
+                  message:
+                    type: string
+                    description: a human-oriented message describing the risk
+                  matchingRules:
+                    type: array
+                    description: |
+                      It defines the conditions for deciding which clusters have the update recommended
+                      and which do not.
+                      The array is ordered by decreasing precedence. Consumers should walk the array in order.
+                      For a given entry, if a condition type is unrecognized, or fails to evaluate, consumers
+                      should proceed to the next entry.
+                      If a condition successfully evaluates (either as a match or as an explicit does-not-match),
+                      that result is used, and no further entries should be attempted.
+                      If no condition can be successfully evaluated, the update should not be recommended.
+                    example:
+                      - type: Always
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          description: the type of the matching rule
+                          enum: [Always, PromQL]
+                        promql:
+                          type: object
+                          required:
+                            - promql
+                          description: the matching rule of type PromQL.
+                          properties:
+                            promql:
+                              type: string
+                              example: |
+                                group(cluster_operator_conditions{_id="",name="aro"})
+                                or
+                                0 * group(cluster_operator_conditions{_id=""})
+    Error:
+      type: object
+      example: {kind: "missing_params", value:"mandatory client parameters missing: channel"}
+      properties:
+        kind:
+          type: string
+        value:
+          type: string
+      required:
+        - kind
+        - value
+  requestBodies:
+    Graph:
+      description: upgrade graph
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Graph'
+  securitySchemes: {}
