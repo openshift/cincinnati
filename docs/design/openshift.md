@@ -191,4 +191,70 @@ $ cat release-manifests/image-references | head -n 10
 }
 ```
 
+## Update Image's Architecture ##
+
+The architecture of a release image is determined by the following algorithm:
+
+- check if it is a manifest list of length > 1 by [media-types](https://github.com/openshift/docker-distribution/blob/main/docs/spec/manifest-v2-2.md#media-types).
+
+  ```console
+  ### manifest list quay.io/openshift-release-dev/ocp-release:4.15.5-multi
+  $ curl -sIH 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' https://quay.io/v2/openshift-release-dev/ocp-release/manifests/4.15.5-multi | grep content-type
+  content-type: application/vnd.docker.distribution.manifest.list.v2+json
+
+  $ curl -sH 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' https://quay.io/v2/openshift-release-dev/ocp-release/manifests/4.15.5-multi | jq '.manifests|length'
+  4
+
+  ### manifest list for quay.io/openshift-release-dev/ocp-release:4.15.5-s390x ---> image manifest format
+  $ curl -sIH 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' https://quay.io/v2/openshift-release-dev/ocp-release/manifests/4.15.5-s390x | grep content-type
+  content-type: application/vnd.docker.distribution.manifest.v1+json
+
+  $ curl -sH 'Accept: application/vnd.docker.distribution.manifest.v2+json' https://quay.io/v2/openshift-release-dev/ocp-release/manifests/4.15.5-s390x | jq -r .config.digest
+  sha256:f248e9ed76c19e97844606ba3454e7335f1510230a8b8aafd663c9c869332aa0
+
+  $ curl -sL https://quay.io/v2/openshift-release-dev/ocp-release/blobs/sha256:f248e9ed76c19e97844606ba3454e7335f1510230a8b8aafd663c9c869332aa0 | jq -r .architecture
+  s390x
+  ```
+
+* If it is a manifest list of `length > 1`, then the architecture is `multi`. 
+
+* If `length == 1` which is an very uncommon case in practice, it is counted as single-arch whose architecture can be calculated by the following command:
+
+  ```console
+  $ curl -sH 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' https://quay.io/v2/openshift-release-dev/ocp-release/manifests/4.15.5-multi | jq '.manifests[0].platform.architecture'
+  ```
+
+* If it is an image, its architecture is showed in its blob like `s390x` in the last twos commands above unless `release-manifests/release-metadata` [extracted from the release image](#update-image) indicates otherwise:
+
+  ```console
+  $ jq -r '.metadata."release.openshift.io/architecture"' release-manifests/release-metadata
+  multi
+  ```
+
+  It is to rule out the noise from the multi's per-arch shards. E.g.,
+
+  ```console
+  ### get the digest for the ppc64le shard
+  $ curl -sH 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' https://quay.io/v2/openshift-release-dev/ocp-release/manifests/4.15.5-multi | jq -r '.manifests[]|select(.platform.architecture=="ppc64le")|.digest'
+  sha256:4a7c0f888b0a89157d7e9f48df55a361a9bfc009f63be560de79c24aa8acf8d0
+
+  $ curl -sIH 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' https://quay.io/v2/openshift-release-dev/ocp-release/manifests/sha256:4a7c0f888b0a89157d7e9f48df55a361a9bfc009f63be560de79c24aa8acf8d0 | grep content-type
+  content-type: application/vnd.docker.distribution.manifest.v2+json
+
+  $ curl -sH 'Accept: application/vnd.docker.distribution.manifest.v2+json' https://quay.io/v2/openshift-release-dev/ocp-release/manifests/sha256:4a7c0f888b0a89157d7e9f48df55a361a9bfc009f63be560de79c24aa8acf8d0 | jq -r .config.digest
+  sha256:ba2c81793c38caa70f19a1e4ac1a960043dfd326936875e51c1fbab5d54e0b89
+
+  $ curl -sL https://quay.io/v2/openshift-release-dev/ocp-release/blobs/sha256:ba2c81793c38caa70f19a1e4ac1a960043dfd326936875e51c1fbab5d54e0b89 | jq -r .architecture
+  ppc64le
+  ```
+
+  Even if the last three commands above show that it is an image for `ppc64le`, it is actually the `ppc64le` shard for `multi`:
+
+  ```console
+  $ mkdir -p ./release-manifests
+  $ oc image extract quay.io/openshift-release-dev/ocp-release@sha256:4a7c0f888b0a89157d7e9f48df55a361a9bfc009f63be560de79c24aa8acf8d0 --path /release-manifests/:./release-manifests/
+  $ jq -r '.metadata."release.openshift.io/architecture"' release-manifests/release-metadata
+  multi
+  ```
+
 [image-config-properties]: https://github.com/opencontainers/image-spec/blob/v1.0.1/config.md#properties
