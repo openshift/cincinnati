@@ -11,6 +11,34 @@
     "servers": [],
     "paths": {
         "/graph": {
+            "parameters": [
+                {
+                    "in": "query",
+                    "name": "arch",
+                    "description": "The architecture identifier for the currently installed cluster, or \"multi\" for payloads that support heterogeneous clusters. The returned update graph contains the updates only for the provided architecture. The allowed values of an architecture identifier are listed in the Go Language document for $GOARCH. See https://go.dev/doc/install/source#environment.",
+                    "schema": {
+                        "type": "string",
+                        "default": "amd64"
+                    }
+                },
+                {
+                    "in": "query",
+                    "name": "version",
+                    "description": "The current version of the cluster.",
+                    "schema": {
+                        "$ref": "#/components/schemas/Version"
+                    }
+                },
+                {
+                    "in": "query",
+                    "name": "id",
+                    "description": "The unique identifier of the cluster.",
+                    "schema": {
+                        "type": "string",
+                        "example": "ceb3b0bb-c689-4db9-bb6a-0122237e33fd"
+                    }
+                }
+            ],
             "get": {
                 "summary": "Get the update graph",
                 "operationId": "getGraph",
@@ -69,6 +97,34 @@
             }
         },
         "/v1/graph": {
+            "parameters": [
+                {
+                    "in": "query",
+                    "name": "arch",
+                    "description": "The architecture identifier for the currently installed cluster, or \"multi\" for payloads that support heterogeneous clusters. The returned update graph contains the updates only for the provided architecture. The allowed values of an architecture identifier are listed in the Go Language document for $GOARCH. See https://go.dev/doc/install/source#environment.",
+                    "schema": {
+                        "type": "string",
+                        "default": "amd64"
+                    }
+                },
+                {
+                    "in": "query",
+                    "name": "version",
+                    "description": "The current version of the cluster.",
+                    "schema": {
+                        "$ref": "#/components/schemas/Version"
+                    }
+                },
+                {
+                    "in": "query",
+                    "name": "id",
+                    "description": "The unique identifier of the cluster.",
+                    "schema": {
+                        "type": "string",
+                        "example": "ceb3b0bb-c689-4db9-bb6a-0122237e33fd"
+                    }
+                }
+            ],
             "get": {
                 "summary": "Get the update graph",
                 "operationId": "getV1Graph",

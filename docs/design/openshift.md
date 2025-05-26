@@ -96,15 +96,18 @@ The policy engine client API conforms to the [Cincinnati Graph API](cincinnati.m
 
 #### Request ####
 
-HTTP GET requests are used to fetch updates from the policy engine. Requests are made to `/graph` and must include the following URL parameters:
+HTTP GET requests to `/graph` are used to fetch updates from the policy engine with the following URL parameters:
 
 |   Key   | Optional | Description                                                                                                                                             |
 |:-------:|:--------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | arch    | optional | [the architecture identifier][image-config-properties] for the currently installed cluster, or `multi` for payloads that support heterogeneous clusters |
-| version | required | the version number of the currently installed cluster                                                                                                   |
+| version | optional | the version number of the currently installed cluster                                                                                                   |
 | channel | required | the name of the channel to which this cluster is subscribed                                                                                             |
-|   id    | required | the unique identifier (UUID v4) of the cluster                                                                                                          |
-|    *    | optional | any other parameters will be passed to upstream requests                                                                                                |
+|   id    | optional | the unique identifier (UUID v4) of the cluster                                                                                                          |
+
+See [openapiv3.json](../../policy-engine/src/openapiv3.json) for the complete API specification.
+Note that any parameters undefined in the above table are ignored and do not trigger errors in the response.
+There is no way to express _allow/disable unknown query parameters_ in the OpenAPI specs [OpenAPI-Specification/issues/2511](https://github.com/OAI/OpenAPI-Specification/issues/2511) at the moment.
 
 ##### Example ######
 
