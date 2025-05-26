@@ -13,6 +13,27 @@
         "/graph": {
             "get": {
                 "summary": "Get the update graph",
+                "parameters": [
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "description": "Update channels are the mechanism by which users declare the OpenShift Container Platform\nminor version they intend to update their clusters to. They also allow users to choose the\ntiming and level of support their updates will have through the fast, stable, candidate,\nand eus channel options.\nUpdate channels correspond to a minor version of OpenShift Container Platform. The version\nnumber in the channel represents the target minor version that the cluster will eventually\nbe updated to, even if it is higher than the cluster’s current minor version.\n",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "stable-4.16"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "arch",
+                        "description": "The architecture identifier for the currently installed cluster, or \"multi\" for payloads that\nsupport heterogeneous clusters. The allowed values of an architecture identifier are listed\nin the Go Language document for $GOARCH. See https://go.dev/doc/install/source#environment.\n",
+                        "schema": {
+                            "type": "string",
+                            "example": "amd64"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "An update graph",
