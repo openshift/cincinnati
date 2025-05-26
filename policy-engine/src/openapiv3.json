@@ -73,8 +73,17 @@
     },
     "components": {
         "schemas": {
+            "Version": {
+                "type": "string",
+                "description": "The version of an OpenShift release",
+                "example": "4.16.3"
+            },
             "Graph": {
                 "properties": {
+                    "version": {
+                        "type": "integer",
+                        "example": 1
+                    },
                     "nodes": {
                         "type": "array",
                         "items": {
@@ -85,6 +94,12 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/Edge"
+                        }
+                    },
+                    "conditionalEdges": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ConditionalEdges"
                         }
                     }
                 }
@@ -115,6 +130,107 @@
                 "items": {
                     "type": "integer",
                     "format": "int32"
+                }
+            },
+            "ConditionalEdges": {
+                "type": "object",
+                "description": "the conditional edges of the graph.",
+                "properties": {
+                    "edges": {
+                        "type": "array",
+                        "example": [
+                            {
+                                "from": "4.17.18",
+                                "to": "4.17.19"
+                            }
+                        ],
+                        "items": {
+                            "required": [
+                                "from",
+                                "to"
+                            ],
+                            "type": "object",
+                            "description": "a conditional edge represents a conditional update path\nfrom an OpenShift release to another.\n",
+                            "properties": {
+                                "from": {
+                                    "description": "the version from which the upgrade is",
+                                    "$ref": "#/components/schemas/Version"
+                                },
+                                "to": {
+                                    "description": "the version to which the upgrade is",
+                                    "$ref": "#/components/schemas/Version"
+                                }
+                            }
+                        }
+                    },
+                    "risks": {
+                        "type": "array",
+                        "description": "a set of risks for the associated conditional update path",
+                        "example": [
+                            {
+                                "url": "https://docs.openshift.com/container-platform/4.18/release_notes/ocp-4-18-release-notes.html",
+                                "name": "PreRelease",
+                                "message": "This is a prerelease version, and you should update to 4.18.1 or later releases, even if that\nmeans updating to a newer 4.17 first.\n",
+                                "matchingRules": [
+                                    {
+                                        "type": "Always"
+                                    }
+                                ]
+                            }
+                        ],
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "url": {
+                                    "type": "string",
+                                    "description": "the URI documenting the risk"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "description": "the name of the risk"
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "description": "a human-oriented message describing the risk"
+                                },
+                                "matchingRules": {
+                                    "type": "array",
+                                    "description": "It defines the conditions for deciding which clusters have the update recommended\nand which do not.\nThe array is ordered by decreasing precedence. Consumers should walk the array in order.\nFor a given entry, if a condition type is unrecognized, or fails to evaluate, consumers\nshould proceed to the next entry.\nIf a condition successfully evaluates (either as a match or as an explicit does-not-match),\nthat result is used, and no further entries should be attempted.\nIf no condition can be successfully evaluated, the update should not be recommended.\n",
+                                    "example": [
+                                        {
+                                            "type": "Always"
+                                        }
+                                    ],
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "description": "the type of the matching rule",
+                                                "enum": [
+                                                    "Always",
+                                                    "PromQL"
+                                                ]
+                                            },
+                                            "promql": {
+                                                "type": "object",
+                                                "required": [
+                                                    "promql"
+                                                ],
+                                                "description": "the matching rule of type PromQL.",
+                                                "properties": {
+                                                    "promql": {
+                                                        "type": "string",
+                                                        "example": "group(cluster_operator_conditions{_id=\"\",name=\"aro\"})\nor\n0 * group(cluster_operator_conditions{_id=\"\"})\n"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             },
             "GraphError": {
