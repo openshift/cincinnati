@@ -52,7 +52,8 @@ We have to use `--format docker` to build the image when using `buildah`. Otherw
 We cannot use `podman` to build the image because `podman build --format docker` does not work. See [podman/issues/21294](https://github.com/containers/podman/issues/21294).
 
 ```console
-$ skopeo inspect --raw docker://quay.io/openshift-ota/openshift-cincinnati-test-public-manual:4.18.12-x86_64-podman | jq{
+$ skopeo inspect --raw docker://quay.io/openshift-ota/openshift-cincinnati-test-public-manual:4.18.12-x86_64-podman | jq
+{
   "schemaVersion": 2,
   "mediaType": "application/vnd.oci.image.manifest.v1+json",
   ...
