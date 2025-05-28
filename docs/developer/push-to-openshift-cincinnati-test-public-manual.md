@@ -52,20 +52,28 @@ We have to use `--format docker` to build the image when using `buildah`. Otherw
 We cannot use `podman` to build the image because `podman build --format docker` does not work. See [podman/issues/21294](https://github.com/containers/podman/issues/21294).
 
 ```console
+$ skopeo inspect --raw docker://quay.io/openshift-ota/openshift-cincinnati-test-public-manual:4.18.12-x86_64-podman | jq
+{
+  "schemaVersion": 2,
+  "mediaType": "application/vnd.oci.image.manifest.v1+json",
+  ...
+}
+
 $ docker manifest inspect quay.io/openshift-ota/openshift-cincinnati-test-public-manual:4.18.12-x86_64-podman
 {
-	"schemaVersion": 2,
-	"mediaType": "application/vnd.oci.image.manifest.v1+json",
-    ...
+  "schemaVersion": 2,
+  "mediaType": "application/vnd.oci.image.manifest.v1+json",
+  ...
 }
 ```
 
-Note that `podman manifest inspect` the above image led to errors. So does `buildah`. However, `docker` works.
+Note that `podman manifest inspect` the above image led to errors. So does `buildah`. However, either `skopeo` or `docker` works.
 
 Besides `buildah`, `openshift/build` generates the images that `graph-builder` is happy with. The following table contains the testing results about these build tools.
 
 | command         | version                                                       | os                                    | install                     | working |
 |-----------------|---------------------------------------------------------------|---------------------------------------|-----------------------------|---------|
 | buildah         | buildah version 1.39.2 (image-spec 1.1.0, runtime-spec 1.2.0) | Fedora Linux 40 (Workstation Edition) | sudo dnf -y install buildah | yes     |
+| skopeo          | skopeo version 1.18.0                                         | Fedora Linux 40 (Workstation Edition) | sudo dnf -y install skopeo  | yes     |
 | openshift-build | OSD 4.18.11                                                   | n/a                                   | n/a                         | yes     |
 | podman          | podman version 5.4.2                                          | macOS Sequoia 15.4.1 (24E263)         | brew  install podman        | no      |
