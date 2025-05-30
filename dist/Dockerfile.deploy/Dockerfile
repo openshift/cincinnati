@@ -13,8 +13,8 @@ ENV PATH="${HOME}/.cargo/bin:${PATH}"
 WORKDIR ${HOME}
 
 # build: Rust stable toolchain
-RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.76.0 -y && \
-  rustup install 1.76.0
+RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain 1.84.1 -y && \
+  rustup install 1.84.1
 
 RUN \
   mkdir -p $HOME/.cargo/git/ && \
