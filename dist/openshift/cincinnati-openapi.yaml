@@ -1,0 +1,57 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cincinnati-openapi
+  labels:
+    app: cincinnati-openapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cincinnati-openapi
+  template:
+    metadata:
+      labels:
+        app: cincinnati-openapi
+    spec:
+      containers:
+        - name: nginx
+          image: quay.io/nginx/nginx-unprivileged:alpine3.21-perl
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: config
+          configMap:
+            name: openapi-configs
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openapi-configs
+data:
+  default.conf: |
+    server {
+        listen 8080;
+        location = /api/updates_info/openapi {
+            proxy_pass https://raw.githubusercontent.com/openshift/cincinnati/refs/heads/master/dist/openshift/load-testing.yaml;
+        }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cincinnati-openapi
+  labels:
+    app: cincinnati-openapi
+spec:
+  ports:
+    - name: openapi
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+  selector:
+    app: cincinnati-openapi

@@ -48,6 +48,20 @@ run_e2e:
 cargo_test:
 	dist/cargo_test.sh
 
+deploy_openapi:
+	oc create namespace cincinnati-openapi --dry-run=client -o yaml | oc apply -f -
+	oc -n cincinnati-openapi create -f dist/openshift/cincinnati-openapi.yaml --dry-run=client -o yaml | oc apply -f -
+	oc -n cincinnati-openapi rollout status deployment/cincinnati-openapi --timeout=2m
+
+test_openapi: deploy_openapi
+	#!/usr/bin/env bash
+	set -euxo pipefail
+	oc -n cincinnati-openapi delete pod test --ignore-not-found
+	pod_name=$(oc -n cincinnati-openapi get pod -l app=cincinnati-openapi --no-headers -o custom-columns=":metadata.name")
+	echo ${pod_name}
+	oc -n cincinnati-openapi exec "${pod_name}" -- curl -f -s -v localhost:8080/api/updates_info/openapi
+	oc -n cincinnati-openapi exec "${pod_name}" -- curl -f -s -v cincinnati-openapi.cincinnati-openapi.svc.cluster.local/api/updates_info/openapi
+
 prepare_ci_credentials:
 	dist/prepare_ci_credentials.sh
 
