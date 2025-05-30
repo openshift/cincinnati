@@ -59,6 +59,17 @@ _coverage:
 
 coverage: test _coverage
 
+
+deploy_cincinnati:
+	hack/deploy_cincinnati.sh
+
+test_cincinnati: deploy_cincinnati
+	#!/usr/bin/env bash
+	set -euxo pipefail
+	pod_name=$(oc -n cincinnati get pod -l app=cincinnati --no-headers -o custom-columns=":metadata.name" | head -n 1)
+	echo ${pod_name}
+	#oc -n cincinnati exec "${pod_name}" -c cincinnati-policy-engine -- curl -f -s -v cincinnati-policy-engine.cincinnati.svc.cluster.local/api/updates_info/graph
+
 dashboards:
     #!/usr/bin/env bash
     for file in dist/grafana/*.json; do
