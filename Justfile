@@ -59,6 +59,29 @@ _coverage:
 
 coverage: test _coverage
 
+cincinnati_namespace := "cincinnati-e2e"
+cincinnati_image := env('CINCINNATI_IMAGE', "")
+route_name := "cincinnati-route-test"
+deploy_cincinnati:
+	CINCINNATI_NAMESPACE="{{cincinnati_namespace}}" CINCINNATI_IMAGE="{{cincinnati_image}}" ROUTE_NAME="{{route_name}}" hack/deploy_cincinnati.sh
+
+artifact_dir := env('ARTIFACT_DIR', "")
+test_cincinnati_inspect:
+	oc adm inspect "ns/{{cincinnati_namespace}}" --dest-dir=target/inspect/
+	[[ -z "{{artifact_dir}}" ]] || mv -v target/inspect/* {{artifact_dir}}
+
+
+test_cincinnati: deploy_cincinnati
+	#!/usr/bin/env bash
+	set -euxo pipefail
+	oc -n "{{cincinnati_namespace}}" wait --timeout=600s --for=condition=Ready pod -l app=cincinnati
+	pod_name="$(oc -n "{{cincinnati_namespace}}" get pod -l app=cincinnati --no-headers -o custom-columns=":metadata.name" | head -n 1)"
+	oc -n "{{cincinnati_namespace}}" exec "${pod_name}" -c cincinnati-policy-engine -- curl -f -s -v "localhost:8081/api/upgrades_info/graph?channel=a"
+	oc -n "{{cincinnati_namespace}}" exec "${pod_name}" -c cincinnati-policy-engine -- curl -f -s -v "cincinnati-policy-engine.{{cincinnati_namespace}}.svc.cluster.local/api/upgrades_info/graph?channel=a"
+	route_host="$(oc -n "{{cincinnati_namespace}}" get route {{route_name}} -o jsonpath='{.spec.host}')"
+	curl -f -k -s -v "https://${route_host}/api/upgrades_info/graph?channel=a"
+
+
 dashboards:
     #!/usr/bin/env bash
     for file in dist/grafana/*.json; do
