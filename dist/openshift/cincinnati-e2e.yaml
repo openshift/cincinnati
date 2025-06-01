@@ -35,7 +35,7 @@ objects:
       name: e2e
     spec:
       graphDataImage: ${GRAPHDATA_IMAGE}
-      releases: quay.io/openshift-release-dev/ocp-release
+      releases: quay.io/openshift-ota/openshift-cincinnati-test-public-manual
       replicas: ${{REPLICAS}}
 parameters:
   - name: NAMESPACE
