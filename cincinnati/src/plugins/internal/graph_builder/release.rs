@@ -52,6 +52,24 @@ pub struct Metadata {
     pub metadata: MapImpl<String, String>,
 }
 
+impl Metadata {
+    /// return the arch identifier set in metadata or returns `none`
+    pub fn metadata_arch_id(&mut self) -> (String, String) {
+        let layer_metadata_arch_key = "release.openshift.io/architecture";
+        let registry_manifest_arch_key = "io.openshift.upgrades.graph.release.arch";
+        let no_arch = "none".to_string();
+        let layer_metadata_arch = self
+            .metadata
+            .get(layer_metadata_arch_key)
+            .map_or(no_arch.clone(), |s| s.clone());
+        let registry_manifest_arch = self
+            .metadata
+            .get(registry_manifest_arch_key)
+            .map_or(no_arch, |s| s.clone());
+        return (layer_metadata_arch, registry_manifest_arch);
+    }
+}
+
 impl fmt::Display for Metadata {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
