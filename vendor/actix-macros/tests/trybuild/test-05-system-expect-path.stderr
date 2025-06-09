@@ -1,5 +1,0 @@
-error: Expected path
- --> $DIR/test-05-system-expect-path.rs:1:27
-  |
-1 | #[actix_rt::test(system = "!@#*&")]
-  |                           ^^^^^^^
