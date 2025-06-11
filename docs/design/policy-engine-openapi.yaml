@@ -8,7 +8,7 @@ info:
   contact: {}
 servers: []
 paths:
-  "/graph": 
+  "/graph":
     get: &function
       summary: Get the update graph
       operationId: getGraph
@@ -72,9 +72,9 @@ components:
             "$ref": "#/components/schemas/ConditionalEdges"
     Node:
       required:
-      - version
-      - payload
-      - metadata
+        - version
+        - payload
+        - metadata
       properties:
         version:
           type: string
@@ -96,12 +96,12 @@ components:
         edges:
           type: array
           example:
-          - from: 4.17.18
-            to: 4.17.19
+            - from: 4.17.18
+              to: 4.17.19
           items:
             required:
-            - from
-            - to
+              - from
+              - to
             type: object
             description: |
               a conditional edge represents a conditional update path
@@ -117,13 +117,13 @@ components:
           type: array
           description: a set of risks for the associated conditional update path
           example:
-          - url: https://docs.openshift.com/container-platform/4.18/release_notes/ocp-4-18-release-notes.html
-            name: PreRelease
-            message: |
-              This is a prerelease version, and you should update to 4.18.1 or later releases, even if that
-              means updating to a newer 4.17 first.
-            matchingRules:
-            - type: Always
+            - url: https://docs.openshift.com/container-platform/4.18/release_notes/ocp-4-18-release-notes.html
+              name: PreRelease
+              message: |
+                This is a prerelease version, and you should update to 4.18.1 or later releases, even if that
+                means updating to a newer 4.17 first.
+              matchingRules:
+                - type: Always
           items:
             type: object
             properties:
@@ -148,7 +148,7 @@ components:
                   that result is used, and no further entries should be attempted.
                   If no condition can be successfully evaluated, the update should not be recommended.
                 example:
-                - type: Always
+                  - type: Always
                 items:
                   type: object
                   properties:
@@ -156,12 +156,12 @@ components:
                       type: string
                       description: the type of the matching rule
                       enum:
-                      - Always
-                      - PromQL
+                        - Always
+                        - PromQL
                     promql:
                       type: object
                       required:
-                      - promql
+                        - promql
                       description: the matching rule of type PromQL.
                       properties:
                         promql:
@@ -172,8 +172,8 @@ components:
                             0 * group(cluster_operator_conditions{_id=""})
     GraphError:
       required:
-      - kind
-      - value
+        - kind
+        - value
       properties:
         kind:
           type: string
