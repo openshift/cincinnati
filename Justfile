@@ -54,6 +54,19 @@ prepare_ci_credentials:
 yamllint:
 	dist/prow_yaml_lint.sh
 
+generate_openapi:
+	yq . --indent 4 docs/design/policy-engine-openapi.yaml > policy-engine/src/openapiv3.json
+
+# the default config file for lint-openapi is .spectral.yaml
+# npm install @ibm-cloud/openapi-ruleset
+# https://github.com/IBM/openapi-validator/blob/main/docs/ibm-cloud-rules.md#customization
+openapi_lint:
+	npm list @ibm-cloud/openapi-ruleset || npm install @ibm-cloud/openapi-ruleset
+	lint-openapi policy-engine/src/openapiv3.json
+
+verify_openapi: openapi_lint generate_openapi
+	git diff --exit-code -- policy-engine/src/openapiv3.json
+
 _coverage:
 	cargo kcov --verbose --all --no-clean-rebuild --open
 

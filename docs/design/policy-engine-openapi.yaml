@@ -1,0 +1,187 @@
+---
+openapi: 3.0.3
+info:
+  version: 0.0.0
+  title: OpenShift Cincinnati Policy-Engine
+  license:
+    name: Apache2
+  contact: {}
+servers: []
+paths:
+  "/graph":
+    get: &get
+      summary: Get the update graph
+      operationId: getGraph
+      responses:
+        '200':
+          description: An update graph
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Graph"
+        '400': &err400
+          description: Bad client request
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/GraphError"
+        '406':
+          <<: *err400
+          description: Invalid Content-Type
+        '500':
+          <<: *err400
+          description: Internal error
+        default:
+          <<: *err400
+          description: Generic graph error
+  "/v1/graph":
+    get:
+      <<: *get
+      operationId: getV1Graph
+components:
+  schemas:
+    Version:
+      type: string
+      description: The version of an OpenShift release
+      example: 4.16.3
+    Graph:
+      required:
+        - version
+        - nodes
+        - edges
+        - conditionalEdges
+      properties:
+        version:
+          type: integer
+          example: 1
+          minimum: 1
+          maximum: 2147483647
+        nodes:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Node"
+        edges:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Edge"
+        conditionalEdges:
+          type: array
+          items:
+            "$ref": "#/components/schemas/ConditionalEdges"
+    Node:
+      required:
+        - version
+        - payload
+        - metadata
+      properties:
+        version:
+          type: string
+        payload:
+          type: string
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+    Edge:
+      type: array
+      items:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 2147483647
+    ConditionalEdges:
+      type: object
+      description: the conditional edges of the graph.
+      required:
+        - edges
+        - risks
+      properties:
+        edges:
+          type: array
+          example:
+            - from: 4.17.18
+              to: 4.17.19
+          items:
+            required:
+              - from
+              - to
+            type: object
+            description: |
+              a conditional edge represents a conditional update path
+              from an OpenShift release to another.
+            properties:
+              from:
+                "$ref": "#/components/schemas/Version"
+              to:
+                "$ref": "#/components/schemas/Version"
+        risks:
+          type: array
+          description: a set of risks for the associated conditional update path
+          example:
+            - url: https://docs.openshift.com/container-platform/4.18/release_notes/ocp-4-18-release-notes.html
+              name: PreRelease
+              message: |
+                This is a prerelease version, and you should update to 4.18.1 or later releases, even if that
+                means updating to a newer 4.17 first.
+              matchingRules:
+                - type: Always
+          items:
+            type: object
+            required:
+              - matchingRules
+            properties:
+              url:
+                type: string
+                description: the URI documenting the risk
+              name:
+                type: string
+                description: the name of the risk
+              message:
+                type: string
+                description: a human-oriented message describing the risk
+              matchingRules:
+                type: array
+                description: |
+                  It defines the conditions for deciding which clusters have the update recommended
+                  and which do not.
+                  The array is ordered by decreasing precedence. Consumers should walk the array in order.
+                  For a given entry, if a condition type is unrecognized, or fails to evaluate, consumers
+                  should proceed to the next entry.
+                  If a condition successfully evaluates (either as a match or as an explicit does-not-match),
+                  that result is used, and no further entries should be attempted.
+                  If no condition can be successfully evaluated, the update should not be recommended.
+                example:
+                  - type: Always
+                items:
+                  type: object
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                      description: the type of the matching rule
+                      enum:
+                        - Always
+                        - PromQL
+                    promql:
+                      type: object
+                      required:
+                        - promql
+                      description: the matching rule of type PromQL.
+                      properties:
+                        promql:
+                          type: string
+                          example: |
+                            group(cluster_operator_conditions{_id="",name="aro"})
+                            or
+                            0 * group(cluster_operator_conditions{_id=""})
+    GraphError:
+      required:
+        - kind
+        - value
+      properties:
+        kind:
+          type: string
+        value:
+          type: string
+security: []
