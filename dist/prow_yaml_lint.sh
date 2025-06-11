@@ -12,6 +12,7 @@ ignore:
 - cincinnati/src/plugins/internal/graph_builder/openshift_secondary_metadata_parser/test_fixtures/
 - vendor/
 - dist/grafana/dashboards/
+- node_modules/
 
 rules:
   line-length:

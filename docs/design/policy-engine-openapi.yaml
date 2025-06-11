@@ -45,10 +45,17 @@ components:
       description: The version of an OpenShift release
       example: 4.16.3
     Graph:
+      required:
+        - version
+        - nodes
+        - edges
+        - conditionalEdges
       properties:
         version:
           type: integer
           example: 1
+          minimum: 1
+          maximum: 2147483647
         nodes:
           type: array
           items:
@@ -80,9 +87,14 @@ components:
       items:
         type: integer
         format: int32
+        minimum: 1
+        maximum: 2147483647
     ConditionalEdges:
       type: object
       description: the conditional edges of the graph.
+      required:
+        - edges
+        - risks
       properties:
         edges:
           type: array
@@ -99,10 +111,8 @@ components:
               from an OpenShift release to another.
             properties:
               from:
-                description: the version from which the upgrade is
                 "$ref": "#/components/schemas/Version"
               to:
-                description: the version to which the upgrade is
                 "$ref": "#/components/schemas/Version"
         risks:
           type: array
@@ -117,6 +127,8 @@ components:
                 - type: Always
           items:
             type: object
+            required:
+              - matchingRules
             properties:
               url:
                 type: string
@@ -142,6 +154,8 @@ components:
                   - type: Always
                 items:
                   type: object
+                  required:
+                    - type
                   properties:
                     type:
                       type: string
