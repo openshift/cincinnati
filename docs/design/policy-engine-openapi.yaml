@@ -9,7 +9,7 @@ info:
 servers: []
 paths:
   "/graph":
-    get: &function
+    get: &get
       summary: Get the update graph
       operationId: getGraph
       responses:
@@ -19,33 +19,24 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Graph"
-        '400':
+        '400': &err400
           description: Bad client request
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/GraphError"
         '406':
+          <<: *err400
           description: Invalid Content-Type
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/GraphError"
         '500':
+          <<: *err400
           description: Internal error
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/GraphError"
         default:
+          <<: *err400
           description: Generic graph error
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/GraphError"
   "/v1/graph":
     get:
-      <<: *function
+      <<: *get
       operationId: getV1Graph
 components:
   schemas:
