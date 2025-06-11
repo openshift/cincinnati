@@ -8,9 +8,10 @@ info:
   contact: {}
 servers: []
 paths:
-  "/graph":
-    get:
+  "/graph": 
+    get: &function
       summary: Get the update graph
+      operationId: getGraph
       responses:
         '200':
           description: An update graph
@@ -43,7 +44,9 @@ paths:
               schema:
                 "$ref": "#/components/schemas/GraphError"
   "/v1/graph":
-    "$ref": "#/paths/~1graph"
+    get:
+      <<: *function
+      operationId: getV1Graph
 components:
   schemas:
     Version:
