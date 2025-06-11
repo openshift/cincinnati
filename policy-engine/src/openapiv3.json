@@ -13,11 +13,54 @@
         "/graph": {
             "get": {
                 "summary": "Get the update graph",
+                "parameters": [
+                    {
+                        "name": "channel",
+                        "in": "query",
+                        "description": "Update channels are the mechanism by which users declare the OpenShift Container Platform minor version they intend to update their clusters to. The returned update graph contains the updates only for the provided channel.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "stable-4.16"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "arch",
+                        "description": "The architecture identifier for the currently installed cluster, or \"multi\" for payloads that support heterogeneous clusters. The returned update graph contains the updates only for the provided architecture. The allowed values of an architecture identifier are listed in the Go Language document for $GOARCH. See https://go.dev/doc/install/source#environment.",
+                        "schema": {
+                            "type": "string",
+                            "default": "amd64"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "version",
+                        "description": "The current version of the cluster. The value does not impact the updates in the returned graph.",
+                        "schema": {
+                            "$ref": "#/components/schemas/Version"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "id",
+                        "description": "The unique identifier of the cluster. The value does not impact the updates in the returned graph.",
+                        "schema": {
+                            "type": "string",
+                            "example": "ceb3b0bb-c689-4db9-bb6a-0122237e33fd"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "An update graph",
                         "content": {
                             "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Graph"
+                                }
+                            },
+                            "application/vnd.redhat.cincinnati.v1+json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Graph"
                                 }
