@@ -54,6 +54,9 @@ prepare_ci_credentials:
 yamllint:
 	dist/prow_yaml_lint.sh
 
+generate_openapi:
+	yq --indent 4 < docs/design/policy-engine-openapi.yaml > policy-engine/src/openapiv3.json
+
 _coverage:
 	cargo kcov --verbose --all --no-clean-rebuild --open
 
