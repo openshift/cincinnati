@@ -13,6 +13,7 @@
         "/graph": {
             "get": {
                 "summary": "Get the update graph",
+                "operationId": "getGraph",
                 "responses": {
                     "200": {
                         "description": "An update graph",
@@ -68,7 +69,62 @@
             }
         },
         "/v1/graph": {
-            "$ref": "#/paths/~1graph"
+            "get": {
+                "summary": "Get the update graph",
+                "operationId": "getV1Graph",
+                "responses": {
+                    "200": {
+                        "description": "An update graph",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Graph"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad client request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
+                    "406": {
+                        "description": "Invalid Content-Type",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "Generic graph error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -79,10 +135,18 @@
                 "example": "4.16.3"
             },
             "Graph": {
+                "required": [
+                    "version",
+                    "nodes",
+                    "edges",
+                    "conditionalEdges"
+                ],
                 "properties": {
                     "version": {
                         "type": "integer",
-                        "example": 1
+                        "example": 1,
+                        "minimum": 1,
+                        "maximum": 2147483647
                     },
                     "nodes": {
                         "type": "array",
@@ -129,12 +193,18 @@
                 "type": "array",
                 "items": {
                     "type": "integer",
-                    "format": "int32"
+                    "format": "int32",
+                    "minimum": 1,
+                    "maximum": 2147483647
                 }
             },
             "ConditionalEdges": {
                 "type": "object",
                 "description": "the conditional edges of the graph.",
+                "required": [
+                    "edges",
+                    "risks"
+                ],
                 "properties": {
                     "edges": {
                         "type": "array",
@@ -153,11 +223,9 @@
                             "description": "a conditional edge represents a conditional update path\nfrom an OpenShift release to another.\n",
                             "properties": {
                                 "from": {
-                                    "description": "the version from which the upgrade is",
                                     "$ref": "#/components/schemas/Version"
                                 },
                                 "to": {
-                                    "description": "the version to which the upgrade is",
                                     "$ref": "#/components/schemas/Version"
                                 }
                             }
@@ -180,6 +248,9 @@
                         ],
                         "items": {
                             "type": "object",
+                            "required": [
+                                "matchingRules"
+                            ],
                             "properties": {
                                 "url": {
                                     "type": "string",
@@ -203,6 +274,9 @@
                                     ],
                                     "items": {
                                         "type": "object",
+                                        "required": [
+                                            "type"
+                                        ],
                                         "properties": {
                                             "type": {
                                                 "type": "string",

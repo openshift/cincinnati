@@ -1,0 +1,6 @@
+---
+extends: '@ibm-cloud/openapi-ruleset'
+rules:
+  ### those two rules are error by default
+  ibm-enum-casing-convention: warn
+  ibm-property-casing-convention: warn
