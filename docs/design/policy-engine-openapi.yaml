@@ -41,6 +41,9 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Graph"
+            application/vnd.redhat.cincinnati.v1+json:
+              schema:
+                "$ref": "#/components/schemas/Graph"
         '400': &err400
           description: Bad client request
           content:

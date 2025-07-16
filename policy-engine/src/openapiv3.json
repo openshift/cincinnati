@@ -50,6 +50,11 @@
                                 "schema": {
                                     "$ref": "#/components/schemas/Graph"
                                 }
+                            },
+                            "application/vnd.redhat.cincinnati.v1+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Graph"
+                                }
                             }
                         }
                     },
@@ -133,6 +138,11 @@
                         "description": "An update graph",
                         "content": {
                             "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Graph"
+                                }
+                            },
+                            "application/vnd.redhat.cincinnati.v1+json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Graph"
                                 }
