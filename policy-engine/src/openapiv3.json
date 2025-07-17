@@ -132,9 +132,11 @@
             "Version": {
                 "type": "string",
                 "description": "The version of an OpenShift release",
+                "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
                 "example": "4.16.3"
             },
             "Graph": {
+                "description": "A directed acyclic graph to represent the valid updates.\n* Each node in the graph is a release payload.\n* Each edge is a valid transition to a release payload without risks.\n* Each conditional edge is a valid transition to a release payload with risks.\n",
                 "required": [
                     "version",
                     "nodes",
