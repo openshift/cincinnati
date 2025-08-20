@@ -1,0 +1,41 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: cincinnati-monitor
+  namespace: cincinnati-quality-experiments
+  name: cincinnati-monitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cincinnati-monitor
+  template:
+    metadata:
+      labels:
+        app: cincinnati-monitor
+    spec:
+      maxRetries: "3"
+      containers:
+        - name: cincinnati-monitor
+          image: quay.io/openshifttest/monitor:latest
+          ports:
+            - containerPort: 23456
+          envFrom:
+            - secretRef:
+                name: slack-workflow
+        - name: cincinnati-monitor-spec
+          image: quay.io/openshifttest/monitor_spec:latest
+          ports:
+            - containerPort: 23457
+          envFrom:
+            - secretRef:
+                name: slack-workflow
+        - name: cincinnati-monitor-digest
+          image: quay.io/openshifttest/monitor_digest:latest
+          ports:
+            - containerPort: 23458
+          envFrom:
+            - secretRef:
+                name: slack-workflow
