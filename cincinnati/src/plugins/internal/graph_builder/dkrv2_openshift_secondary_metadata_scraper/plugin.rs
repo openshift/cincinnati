@@ -650,7 +650,7 @@ mod network_tests {
 
         let _m = mockito::mock(
             "GET",
-            "/sha256=d93f2f4672685bf03b59d9e4dc1de13d22118865a807008fdbafe0abee7e561f/signature-3",
+            "/sha256=d33abd703ea76813f8dbd9518ff46d3f95ac23f364f5b6417d9fa2593aa72a1a/signature-3",
         )
         .with_status(200)
         .with_body_from_file(signature_path.canonicalize()?)
@@ -660,9 +660,9 @@ mod network_tests {
 
         let config = &format!(
             r#"
-                registry = "registry.ci.openshift.org"
-                repository = "cincinnati-ci-public/cincinnati-graph-data"
-                tag = "6420f7fbf3724e1e5e329ae8d1e2985973f60c14"
+                registry = "quay.io"
+                repository = "openshift-ota/cincinnati-ci-public"
+                tag = "cincinnati-graph-data_6420f7fbf3724e1e5e329ae8d1e2985973f60c14"
                 output_allowlist = [ {} ]
                 output_directory = {:?}
                 verify_signature = true
