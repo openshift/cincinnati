@@ -31,6 +31,7 @@ oc create secret generic cincinnati-credentials --from-literal="foo=bar" --dry-r
 # Install keda CRD required by cincinnati-deployment.yaml
 # --server-side is for https://github.com/kedacore/keda/issues/4740
 oc get crd scaledjobs.keda.sh || oc apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.17.1/keda-2.17.1-crds.yaml
+oc wait --for=condition=Established crd scaledobjects.keda.sh
 
 # Apply oc template
 oc process -f dist/openshift/cincinnati-deployment.yaml \
