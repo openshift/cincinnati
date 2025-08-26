@@ -49,7 +49,7 @@ parameters:
     displayName: cincinnati version
     description: cincinnati version which defaults to latest
   - name: GRAPHDATA_IMAGE
-    value: "registry.ci.openshift.org/cincinnati-ci-public/cincinnati-graph-data:stable"
+    value: "quay.io/openshift-ota/cincinnati-ci-public:cincinnati-graph-data_stable"
     description: cincinnati-graph-data image pullspec
   - name: REPLICAS
     value: "2"
