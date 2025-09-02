@@ -242,9 +242,17 @@ impl Graph {
             }));
         }
 
-        self.dag
-            .add_edge(from.0, to.0, Empty {})
-            .map_err(Into::into)
+        self.dag.add_edge(from.0, to.0, Empty {}).map_err(|e| {
+            if let WouldCycle(_) = e {
+                log::debug!(
+                    "WouldCycle error when adding edge from '{}' to '{}': {:?}",
+                    from_release,
+                    to_release,
+                    e
+                );
+            }
+            e.into()
+        })
     }
 
     /// Add edges for all given key/value pairs of releases.
