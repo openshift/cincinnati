@@ -2,11 +2,12 @@ FROM registry.access.redhat.com/ubi9/ubi:latest as builder
 WORKDIR /opt/app-root/src/
 COPY . .
 
-RUN dnf update -y \
-    && dnf install -y jq rust cargo gcc make \
-    && dnf install -y openssl-devel \
-    && dnf clean all \
-    && cargo build --release --verbose --offline --locked --frozen \
+RUN yum update -y \
+    && yum install -y jq rust-toolset gcc make \
+    && yum install -y openssl-devel \
+    && yum clean all \
+
+RUN cargo build --release --verbose --offline --locked --frozen \
     && mkdir -p /opt/cincinnati/bin \
     && cp -rvf target/release/graph-builder /opt/cincinnati/bin \
     && cp -rvf target/release/policy-engine /opt/cincinnati/bin \
