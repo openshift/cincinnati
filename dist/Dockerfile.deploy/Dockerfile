@@ -3,7 +3,7 @@ WORKDIR /opt/app-root/src/
 COPY . .
 
 RUN yum update -y \
-    && yum install -y jq rust-toolset gcc make glibc-devel gcc-c++ \
+    && yum install -y jq rust-toolset gcc make glibc-devel gcc-c++ libstdc++-devel \
     && yum install -y openssl-devel \
     && yum clean all
 
