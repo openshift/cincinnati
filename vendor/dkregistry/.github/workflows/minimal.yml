@@ -1,0 +1,110 @@
+on: [push, pull_request]
+
+name: Build & Test
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - "1.84.1"  # MSRV
+        include:
+          - rust: nightly
+            experimental: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Run cargo check
+        run: cargo check
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - "1.84.1"  # MSRV
+        include:
+          - rust: nightly
+            experimental: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Run cargo test
+        run: cargo test
+
+      - name: Run cargo test (test-mock features)
+        run: cargo test --features test-mock
+
+  test-net-private:
+    name: Test Suite (network-enabled tests)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - "1.84.1"  # MSRV
+        include:
+          - rust: nightly
+            experimental: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Run cargo test (test-net-private)
+        run: cargo test --features test-net,test-net-private
+        env:
+          DKREG_QUAY_USER: ${{ secrets.DKREG_QUAY_USER }}
+          DKREG_QUAY_PASSWD: ${{ secrets.DKREG_QUAY_PASSWD }}
+
+  lints:
+    name: Lints
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - "1.84.1"  # MSRV
+        include:
+          - rust: nightly
+            experimental: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: rustfmt, clippy
+
+      - name: Run cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: Run cargo clippy
+        run: cargo clippy -- -D warnings
