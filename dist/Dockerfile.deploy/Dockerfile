@@ -6,7 +6,7 @@ RUN dnf update -y \
     && dnf install -y jq rust cargo \
     && dnf install -y openssl-devel \
     && dnf clean all \
-    && cargo build --release \
+    && cargo build --release --verbose --offline --locked --frozen --release\
     && mkdir -p /opt/cincinnati/bin \
     && cp -rvf target/release/graph-builder /opt/cincinnati/bin \
     && cp -rvf target/release/policy-engine /opt/cincinnati/bin \
