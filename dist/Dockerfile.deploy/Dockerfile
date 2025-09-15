@@ -5,7 +5,7 @@ COPY . .
 RUN yum update -y \
     && yum install -y jq rust-toolset gcc make \
     && yum install -y openssl-devel \
-    && yum clean all \
+    && yum clean all
 
 RUN cargo build --release --verbose --offline --locked --frozen \
     && mkdir -p /opt/cincinnati/bin \
