@@ -17,3 +17,10 @@ ENV RUST_LOG=actix_web=error,dkregistry=error
 COPY --from=builder /opt/cincinnati/bin/* /usr/bin/
 
 ENTRYPOINT ["/usr/bin/graph-builder"]
+
+LABEL description="OpenShift Update Service Operand"
+LABEL distribution-scope="public"
+LABEL release="5.0.4"
+LABEL url="https://github.com/openshift/cincinnati"
+LABEL vendor="Red Hat, Inc."
+LABEL io.k8s.description="OpenShift Update Service Operand for managing updates"
