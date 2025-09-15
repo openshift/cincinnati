@@ -1,11 +1,11 @@
-FROM registry.access.redhat.com/ubi9/ubi:latest as builder
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest as builder
 WORKDIR /opt/app-root/src/
 COPY . .
 
-RUN yum update -y \
-    && yum install -y jq rust-toolset gcc make glibc-devel gcc-c++ libstdc++-devel \
-    && yum install -y openssl-devel \
-    && yum clean all
+RUN microdnf update -y \
+    && microdnf install -y jq rust cargo gcc \
+    && microdnf install -y openssl-devel \
+    && microdnf clean all
 
 RUN cargo build --release --verbose --offline --locked --frozen \
     && mkdir -p /opt/cincinnati/bin \
