@@ -3,15 +3,14 @@ WORKDIR /opt/app-root/src/
 COPY . .
 
 RUN microdnf update -y \
-    && microdnf install -y jq rust cargo gcc \
+    && microdnf install -y jq rust cargo gcc glibc-devel \
     && microdnf install -y openssl-devel \
     && microdnf clean all
 
 RUN cargo build --release --verbose --offline --locked --frozen \
     && mkdir -p /opt/cincinnati/bin \
     && cp -rvf target/release/graph-builder /opt/cincinnati/bin \
-    && cp -rvf target/release/policy-engine /opt/cincinnati/bin \
-    && cp -rvf target/release/metadata-helper /opt/cincinnati/bin
+    && cp -rvf target/release/policy-engine /opt/cincinnati/bin
 
 FROM registry.access.redhat.com/ubi9/ubi:latest
 ENV RUST_LOG=actix_web=error,dkregistry=error
