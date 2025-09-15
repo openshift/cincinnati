@@ -5,10 +5,9 @@ COPY . .
 RUN yum update -y \
     && yum install -y jq rust-toolset gcc make glibc-devel gcc-c++ libstdc++-devel \
     && yum install -y openssl-devel \
-    && yum groupinstall "Development Tools" \
     && yum clean all
 
-RUN cargo build --release --verbose --offline --locked --frozen \
+RUN cargo build --release \
     && mkdir -p /opt/cincinnati/bin \
     && cp -rvf target/release/graph-builder /opt/cincinnati/bin \
     && cp -rvf target/release/policy-engine /opt/cincinnati/bin \
