@@ -3,7 +3,7 @@ WORKDIR /opt/app-root/src/
 COPY . .
 
 RUN dnf update -y \
-    && dnf install -y jq rust cargo \
+    && dnf install -y jq rust cargo gcc make \
     && dnf install -y openssl-devel \
     && dnf clean all \
     && cargo build --release --verbose --offline --locked --frozen \
