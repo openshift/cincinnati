@@ -147,7 +147,7 @@ The image field references the Update Image which contains the actual update to 
 
 ## Update Image ##
 
-The Update Image is a container image consisting of a series of Kubernetes manifests describing the First-Level Operators (FLOs) and the Second-Level Operators (SLOs), the `release-metadata` file required by Cincinnati, and a manifest specific to OpenShift. In the future, this image may be expanded to include other assets.
+The Update Image is a container image consisting of a series of Kubernetes manifests describing the First-Level Operators (FLOs) and the Second-Level Operators (SLOs), the `release-metadata` file which contains the _primary metadata_ and is required by Cincinnati, and a manifest specific to OpenShift. In the future, this image may be expanded to include other assets.
 The OpenShift manifest describes the format of the Update Image.
 
 ```
