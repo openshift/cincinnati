@@ -102,7 +102,7 @@ Here is an example [bash script](../../hack/deploy_cincinnati.sh) to depoly Cinc
 
 ## Configure a container registry to scrape release payload information
 
-Cincinnati can fetch the release payload information (primary metadata) from any container registry compatible with [Docker registry API v2][registry-api-v2].
+Cincinnati can fetch the release payload information ([primary metadata](../design/openshift.md#update-image)) from any container registry compatible with [Docker registry API v2][registry-api-v2].
 
 You can change the default registry in Cincinnati deployment config when you start a deployment.
 
