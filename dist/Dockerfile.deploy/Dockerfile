@@ -16,7 +16,9 @@ RUN cargo build --release \
 FROM registry.access.redhat.com/ubi9/ubi:latest
 ENV RUST_LOG=actix_web=error,dkregistry=error
 COPY --from=builder /opt/cincinnati/bin/* /usr/bin/
-COPY --from=builder /opt/app-root/src/LICENSE /licenses
+RUN mkdir /licenses
+COPY --from=builder /opt/app-root/src/LICENSE /licenses/LICENSE
+USER 65532
 
 ENTRYPOINT ["/usr/bin/graph-builder"]
 
