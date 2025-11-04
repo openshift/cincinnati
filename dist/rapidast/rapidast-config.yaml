@@ -1,0 +1,37 @@
+# RapidAST Configuration for OpenShift Upgrades API Security Scanning
+# This configuration is optimized for stateless REST APIs
+# - Uses passive scanning (safe for production)
+# - Disables only cookie/session rules (not applicable to stateless APIs)
+# - Provides comprehensive security coverage
+
+config:
+  configVersion: 6
+
+# Application configuration
+application:
+  shortName: "openshift-upgrades-api"  # Display name for reports
+  url: "https://api.stage.openshift.com"  # Base URL (without path) stage as example  
+
+# General settings
+general:
+  # No authentication required for the public API
+  # For authenticated APIs, add oauth2_rtoken, http_basic, etc.
+
+# Scanner configurations
+scanners:
+  zap:  # OWASP ZAP scanner
+    # OpenAPI specification-based scanning
+    apiScan:
+      apis:
+        apiUrl: "https://api.stage.openshift.com/api/upgrades_info/openapi"
+
+    # Passive scanning rules (analyzes traffic without active attacks)
+    passiveScan:
+      # Disabled rules appropriate for stateless APIs:
+      # 10054: Cookie without SameSite Attribute (not applicable)
+      # 10112: Session Management Response Identified (not applicable)
+      disabledRules: "10054,10112"
+
+    # Additional ZAP extensions
+    miscOptions:
+      additionalAddons: "ascanrulesBeta"  # Beta active scan rules
