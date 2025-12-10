@@ -60,14 +60,19 @@ fn test_public_get_labels() {
     let fetch_labels = client.get_labels(
         repo.to_string(),
         digest,
-        Some("io.openshift.upgrades.graph".to_string()),
+        None, // Remove filter to avoid 403 Forbidden - filter client-side instead
     );
     let labels = rt.block_on(fetch_labels).unwrap();
+
+    // Filter client-side for labels matching the expected prefix
+    let filtered_labels: Vec<(String, String)> = labels
+        .into_iter()
+        .map(Into::into)
+        .filter(|(key, _)| key.starts_with("io.openshift.upgrades.graph"))
+        .collect();
+
     assert_eq!(
-        labels
-            .into_iter()
-            .map(Into::into)
-            .collect::<Vec<(String, String)>>(),
+        filtered_labels,
         vec![(
             "io.openshift.upgrades.graph.previous.remove".to_string(),
             "0.0.0".to_string()
