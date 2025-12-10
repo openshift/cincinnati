@@ -78,6 +78,13 @@ impl Client {
         })?;
 
         let resp = req.send().await?;
+
+        // Check if the response was successful
+        if !resp.status().is_success() {
+            let status = resp.status();
+            return Err(anyhow::anyhow!("Request failed with status {}", status));
+        }
+
         let json = resp.json::<Labels>().await?;
 
         Ok(json.labels)
