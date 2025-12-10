@@ -123,15 +123,19 @@ impl InternalPlugin for QuayMetadataFetchPlugin {
                 self.label_filter.clone(),
             );
 
-            let quay_labels = client
+            let all_labels = client
                 .get_labels(
                     repo.clone(),
                     manifestref.clone(),
-                    Some(label_filter.clone()),
+                    None, // Remove filter to avoid 403 Forbidden - filter client-side instead
                 )
-                .await?
+                .await?;
+
+            // Filter client-side for labels matching the expected prefix
+            let quay_labels = all_labels
                 .into_iter()
                 .map(Into::into)
+                .filter(|(key, _): &(String, String)| key.starts_with(&label_filter))
                 .collect::<Vec<(String, String)>>();
 
             labels_with_releaseinfo.push((quay_labels, (release_id, release_version)));

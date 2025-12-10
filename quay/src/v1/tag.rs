@@ -50,6 +50,14 @@ impl Client {
                 .query(&[("onlyActiveTags", actives_only)]);
 
             let resp = req.send().await?;
+
+            // Check if the response was successful
+            if !resp.status().is_success() {
+                let status = resp.status();
+                yield Err(anyhow::anyhow!("Request failed with status {}", status));
+                return;
+            }
+
             let paginated_tags = resp.json::<PaginatedTags>().await?.tags;
             for tag in paginated_tags {
                 yield Ok(tag);
