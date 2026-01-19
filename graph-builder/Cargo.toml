@@ -7,7 +7,7 @@ build = "src/build.rs"
 
 [dependencies]
 actix = "0.13.2"
-actix-web = "^4.4.1"
+actix-web = "^4.12.1"
 chrono = "^0.4.38"
 actix-files = "^0.6.5"
 cincinnati = { path = "../cincinnati" }
