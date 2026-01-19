@@ -8,7 +8,7 @@ build = "src/build.rs"
 [dependencies]
 actix = "0.13.2"
 actix-cors = "^0.6.5"
-actix-web = "^4.4.1"
+actix-web = "^4.12.1"
 cincinnati = { path = "../cincinnati" }
 commons = { path = "../commons" }
 env_logger = "^0.10"
