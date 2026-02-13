@@ -4,17 +4,18 @@ kind: Template
 metadata:
   name: cincinnati
 objects:
+  # Graph-builder deployment
   - apiVersion: apps/v1
     kind: Deployment
     metadata:
       labels:
-        app: cincinnati
-      name: cincinnati
+        app: cincinnati-graph-builder
+      name: cincinnati-graph-builder
     spec:
-      replicas: ${{MAX_REPLICAS}}
+      replicas: ${{GB_REPLICAS}}
       selector:
         matchLabels:
-          app: cincinnati
+          app: cincinnati-graph-builder
       strategy:
         type: RollingUpdate
         rollingUpdate:
@@ -23,7 +24,7 @@ objects:
       template:
         metadata:
           labels:
-            app: cincinnati
+            app: cincinnati-graph-builder
         spec:
           affinity:
             podAntiAffinity:
@@ -35,7 +36,7 @@ objects:
                         - key: app
                           operator: In
                           values:
-                            - cincinnati
+                            - cincinnati-graph-builder
                     topologyKey: kubernetes.io/hostname
           containers:
             - image: ${IMAGE}:${IMAGE_TAG}
@@ -90,6 +91,51 @@ objects:
                 - name: configs
                   mountPath: /etc/configs
                   readOnly: true
+          volumes:
+            - name: secrets
+              secret:
+                secretName: cincinnati-credentials
+            - name: configs
+              configMap:
+                name: cincinnati-configs
+      triggers:
+        - type: ConfigChange
+
+  # Policy-engine deployment with CPU resource requests for HPA
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app: cincinnati-policy-engine
+      name: cincinnati-policy-engine
+    spec:
+      replicas: ${{MIN_REPLICAS}}
+      selector:
+        matchLabels:
+          app: cincinnati-policy-engine
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxSurge: 25%
+          maxUnavailable: 0
+      template:
+        metadata:
+          labels:
+            app: cincinnati-policy-engine
+        spec:
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchExpressions:
+                        - key: app
+                          operator: In
+                          values:
+                            - cincinnati-policy-engine
+                    topologyKey: kubernetes.io/hostname
+          containers:
             - image: ${IMAGE}:${IMAGE_TAG}
               name: cincinnati-policy-engine
               imagePullPolicy: Always
@@ -145,60 +191,172 @@ objects:
                 httpGet:
                   path: /livez
                   port: ${{PE_STATUS_PORT}}
-                initialDelaySeconds: 300
+                initialDelaySeconds: 60
                 periodSeconds: 30
                 timeoutSeconds: 3
               readinessProbe:
                 httpGet:
                   path: /readyz
                   port: ${{PE_STATUS_PORT}}
-                initialDelaySeconds: 300
-                periodSeconds: 30
+                initialDelaySeconds: 30
+                periodSeconds: 10
                 timeoutSeconds: 3
+                failureThreshold: 3
+                successThreshold: 1
+              # Startup probe for fast recovery - handles graph-builder dependency
+              startupProbe:
+                httpGet:
+                  path: /readyz
+                  port: ${{PE_STATUS_PORT}}
+                initialDelaySeconds: 5
+                periodSeconds: 2
+                timeoutSeconds: 3
+                failureThreshold: 30  # Allow up to 60 seconds for startup
               resources:
                 limits:
                   cpu: ${PE_CPU_LIMIT}
                   memory: ${PE_MEMORY_LIMIT}
                 requests:
-                  cpu: ${PE_CPU_REQUEST}
+                  cpu: ${PE_CPU_REQUEST}  # REQUIRED for HPA
                   memory: ${PE_MEMORY_REQUEST}
-          volumes:
-            - name: secrets
-              secret:
-                secretName: cincinnati-credentials
-            - name: configs
-              configMap:
-                name: cincinnati-configs
       triggers:
         - type: ConfigChange
+
+  # Primary: KEDA ScaledObject (requires KEDA installed)
   - apiVersion: keda.sh/v1alpha1
     kind: ScaledObject
     metadata:
-      name: cincinnati-scaler
+      name: cincinnati-policy-engine-scaler
       labels:
-        app: cincinnati
+        app: cincinnati-policy-engine
+      annotations:
+        description: "Primary autoscaler using request rate metrics. Requires KEDA operator."
     spec:
       scaleTargetRef:
-        name: cincinnati
+        name: cincinnati-policy-engine
       maxReplicaCount: ${{MAX_REPLICAS}}
       minReplicaCount: ${{MIN_REPLICAS}}
       triggers:
         - type: prometheus
           metadata:
             serverAddress: http://prometheus-app-sre.openshift-customer-monitoring.svc.cluster.local:9090
-            metricName: cincinnati_policy_engine_graph_incoming_requests_rate
+            metricName: cincinnati_pe_requests_per_second
             threshold: "${PE_REQ_AVG}"
-            query: avg(cincinnati_policy_engine_graph_incoming_requests_rate)
+            query: sum(rate(cincinnati_pe_graph_incoming_requests_total[2m]))
+
+  # Fallback: Standard Kubernetes HPA using CPU (always available)
+  - apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    metadata:
+      name: cincinnati-policy-engine-hpa-fallback
+      labels:
+        app: cincinnati-policy-engine
+      annotations:
+        description: "Fallback autoscaler using CPU metrics. Works without KEDA."
+    spec:
+      scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: cincinnati-policy-engine
+      minReplicas: ${{MIN_REPLICAS}}
+      maxReplicas: ${{MAX_REPLICAS}}
+      metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: ${{PE_CPU_TARGET}}
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300
+        scaleUp:
+          stabilizationWindowSeconds: 180
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 60
+
+  # Prometheus recording rules
   - apiVersion: monitoring.coreos.com/v1
     kind: PrometheusRule
     metadata:
       name: cincinnati-recording-rule
+      annotations:
+        description: "Recording rules for Cincinnati dashboards. KEDA autoscaling does NOT depend on these rules."
     spec:
       groups:
         - name: cincinnati.rules
           rules:
+            # This recording rule is for dashboard/alerting compatibility only
+            # KEDA scaling uses the base metric directly: cincinnati_pe_graph_incoming_requests_total
             - record: cincinnati_policy_engine_graph_incoming_requests_rate
               expr: sum by (pod) (rate(cincinnati_pe_graph_incoming_requests_total[2m]))
+            # KEDA health monitoring
+            - record: cincinnati_keda_policy_engine_scaler_active
+              expr: keda_scaler_active{scaledObject="cincinnati-policy-engine-scaler"}
+            # HPA health monitoring
+            - record: cincinnati_hpa_policy_engine_active
+              expr: |
+                kube_horizontalpodautoscaler_status_current_replicas{
+                  horizontalpodautoscaler="cincinnati-policy-engine-hpa-fallback"
+                }
+
+  # Incident Prevention Alerts
+  - apiVersion: monitoring.coreos.com/v1
+    kind: PrometheusRule
+    metadata:
+      name: cincinnati-autoscaler-alerts
+      annotations:
+        description: "Critical alerts to prevent autoscaling incidents."
+    spec:
+      groups:
+        - name: cincinnati.autoscaling
+          rules:
+            # Alert when both autoscalers fail (addresses 4th Why)
+            - alert: CincinnatiAutoscalingCompletelyBroken
+              expr: |
+                (
+                  (
+                    cincinnati_keda_policy_engine_scaler_active == 0
+                    OR absent(cincinnati_keda_policy_engine_scaler_active)
+                  )
+                  AND
+                  (
+                    kube_horizontalpodautoscaler_status_current_replicas{
+                      horizontalpodautoscaler="cincinnati-policy-engine-hpa-fallback"
+                    } == 0
+                    OR absent(kube_horizontalpodautoscaler_status_current_replicas{
+                      horizontalpodautoscaler="cincinnati-policy-engine-hpa-fallback"
+                    })
+                  )
+                )
+              for: 5m
+              annotations:
+                summary: "Both KEDA and HPA autoscaling are broken for Cincinnati policy-engine"
+                description: "Manual scaling required immediately - both autoscaling mechanisms have failed"
+                runbook: "Scale manually: oc scale deployment cincinnati-policy-engine --replicas=5"
+
+            # Alert when policy-engine is under-scaled for load (addresses 3rd Why)
+            - alert: CincinnatiPolicyEngineUnderScaled
+              expr: |
+                sum(rate(cincinnati_pe_graph_incoming_requests_total[5m])) > 100
+                and
+                kube_deployment_status_replicas_available{deployment="cincinnati-policy-engine"} < 3
+              for: 2m
+              annotations:
+                summary: "Cincinnati policy-engine under-scaled for current load"
+                description: "Request rate is high but insufficient replicas available"
+
+            # Alert when base metric disappears (addresses 5th Why)
+            - alert: CincinnatiBaseMetricMissing
+              expr: absent(cincinnati_pe_graph_incoming_requests_total)
+              for: 5m
+              annotations:
+                summary: "Cincinnati base metric missing - autoscaling will break"
+                description: "The metric cincinnati_pe_graph_incoming_requests_total is not available"
+
+  # Services
   - apiVersion: v1
     kind: Service
     metadata:
@@ -216,7 +374,8 @@ objects:
           port: ${{GB_STATUS_PORT}}
           targetPort: ${{GB_STATUS_PORT}}
       selector:
-        app: cincinnati
+        app: cincinnati-graph-builder
+
   - apiVersion: v1
     kind: Service
     metadata:
@@ -230,7 +389,8 @@ objects:
           port: ${{GB_PUBLIC_PORT}}
           targetPort: ${{GB_PUBLIC_PORT}}
       selector:
-        app: cincinnati
+        app: cincinnati-graph-builder
+
   - apiVersion: v1
     kind: Service
     metadata:
@@ -248,16 +408,61 @@ objects:
           port: ${{PE_STATUS_PORT}}
           targetPort: ${{PE_STATUS_PORT}}
       selector:
-        app: cincinnati
+        app: cincinnati-policy-engine
+
+  # PodDisruptionBudgets
   - apiVersion: policy/v1
     kind: PodDisruptionBudget
     metadata:
-      name: cincinnati-pdb
+      name: cincinnati-graph-builder-pdb
     spec:
       maxUnavailable: 1
       selector:
         matchLabels:
-          app: cincinnati
+          app: cincinnati-graph-builder
+
+  - apiVersion: policy/v1
+    kind: PodDisruptionBudget
+    metadata:
+      name: cincinnati-policy-engine-pdb
+    spec:
+      maxUnavailable: 1
+      selector:
+        matchLabels:
+          app: cincinnati-policy-engine
+
+  # ServiceMonitors
+  - apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      labels:
+        app: cincinnati-graph-builder
+      name: cincinnati-graph-builder
+    spec:
+      endpoints:
+        - interval: 30s
+          path: /metrics
+          port: status-gb
+      selector:
+        matchLabels:
+          app: cincinnati-graph-builder
+
+  - apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      labels:
+        app: cincinnati-policy-engine
+      name: cincinnati-policy-engine
+    spec:
+      endpoints:
+        - interval: 30s
+          path: /metrics
+          port: status-pe
+      selector:
+        matchLabels:
+          app: cincinnati-policy-engine
+
+  # ConfigMaps
   - apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -266,15 +471,17 @@ objects:
       gb.rust_backtrace: "${RUST_BACKTRACE}"
       pe.address: "0.0.0.0"
       pe.status.address: "0.0.0.0"
-      pe.upstream: "http://localhost:8080${GB_PATH_PREFIX}/graph"
+      pe.upstream: "http://cincinnati-graph-builder:8080${GB_PATH_PREFIX}/graph"
       pe.log.verbosity: ${{PE_LOG_VERBOSITY}}
       pe.mandatory_client_parameters: "channel"
       pe.rust_backtrace: "${RUST_BACKTRACE}"
+
   - apiVersion: v1
     kind: ConfigMap
     metadata:
       name: environment-secrets
     data: ${{ENVIRONMENT_SECRETS}}
+
   - apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -298,6 +505,7 @@ objects:
         port = ${GB_STATUS_PORT}
 
         ${GB_PLUGIN_SETTINGS}
+
 parameters:
   - name: IMAGE
     value: "quay.io/app-sre/cincinnati"
@@ -307,10 +515,14 @@ parameters:
     value: "latest"
     displayName: cincinnati version
     description: cincinnati version which defaults to latest
+  - name: GB_REPLICAS
+    value: "1"
+    displayName: "Graph-builder replica count"
+    description: "Number of graph-builder replicas (default: 1)"
   - name: GB_MEMORY_LIMIT
     value: "768Mi"
     displayName: "Graph-builder memory limit"
-    description: "Maximum amount of memory (bytes) allowed for graph-builder (default: 523Mi)"
+    description: "Maximum amount of memory (bytes) allowed for graph-builder (default: 768Mi)"
   - name: GB_CPU_LIMIT
     value: "750m"
     displayName: "Graph-builder CPU limit"
@@ -318,7 +530,7 @@ parameters:
   - name: PE_MEMORY_LIMIT
     value: "1Gi"
     displayName: "Policy-engine memory limit"
-    description: "Maximum amount of memory (bytes) allowed for policy-engine (default: 512Mi)"
+    description: "Maximum amount of memory (bytes) allowed for policy-engine (default: 1Gi)"
   - name: PE_CPU_LIMIT
     value: "750m"
     displayName: "Policy-engine CPU limit"
@@ -339,6 +551,10 @@ parameters:
     value: "350m"
     displayName: "Policy-engine CPU request"
     description: "Requested amount of CPU (millicores) allowed for policy-engine (default: 350m)"
+  - name: PE_CPU_TARGET
+    value: "70"
+    displayName: "Policy-engine CPU target for HPA"
+    description: "Target CPU utilization percentage for HPA fallback autoscaling (default: 70)"
   - name: GB_SCRAPE_TIMEOUT_SECS
     value: "300"
     displayName: Graph-builder scrape timeout in seconds
