@@ -5,3 +5,6 @@ approvers:
   - cincinnati-approvers
 reviewers:
   - cincinnati-reviewers
+emeritus_approvers:
+  - petr-muller
+  - LalatenduMohanty
