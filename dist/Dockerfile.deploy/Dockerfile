@@ -24,7 +24,7 @@ ENTRYPOINT ["/usr/bin/graph-builder"]
 
 LABEL description="OpenShift Update Service Operand"
 LABEL distribution-scope="public"
-LABEL release="5.0.4"
+LABEL release="5.0.5"
 LABEL url="https://github.com/openshift/cincinnati"
 LABEL vendor="Red Hat, Inc."
 LABEL io.k8s.description="OpenShift Update Service Operand for managing updates"
