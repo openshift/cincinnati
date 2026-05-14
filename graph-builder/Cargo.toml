@@ -44,7 +44,7 @@ actix-service = "2.0.2"
 built = { version = "^0.7.4", features = [ "git2" ]}
 
 [dev-dependencies]
-memchr = "^2.7"
+memchr = "^2.8"
 
 [features]
 test-net = []
