@@ -15,6 +15,7 @@ extern crate cincinnati;
 
 pub mod config;
 pub mod graph;
+pub mod product_lifecycle;
 pub mod status;
 
 #[allow(dead_code)]

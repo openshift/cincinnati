@@ -102,6 +102,34 @@ pub struct DockerRegistryOptions {
     pub fetch_concurrency: Option<usize>,
 }
 
+/// Options for the product lifecycle API fetcher.
+#[derive(Debug, Deserialize, Serialize, StructOpt)]
+pub struct ProductLifecycleOptions {
+    /// Enable product lifecycle data fetching
+    #[structopt(long = "product.enabled")]
+    pub enabled: Option<bool>,
+
+    /// URL for the Red Hat product lifecycle API
+    #[structopt(long = "product.api_url")]
+    pub api_url: Option<String>,
+
+    /// Polling interval in seconds for product lifecycle data
+    #[structopt(
+        long = "product.poll_interval_secs",
+        parse(try_from_str = duration_from_secs)
+    )]
+    #[serde(default = "Option::default", deserialize_with = "de_duration_secs")]
+    pub poll_interval_secs: Option<Duration>,
+
+    /// HTTP timeout in seconds for product lifecycle API requests
+    #[structopt(
+        long = "product.timeout_secs",
+        parse(try_from_str = duration_from_secs)
+    )]
+    #[serde(default = "Option::default", deserialize_with = "de_duration_secs")]
+    pub timeout_secs: Option<Duration>,
+}
+
 impl MergeOptions<Option<ServiceOptions>> for AppSettings {
     fn try_merge(&mut self, opts: Option<ServiceOptions>) -> Fallible<()> {
         if let Some(service) = opts {
@@ -138,6 +166,18 @@ impl MergeOptions<Option<DockerRegistryOptions>> for AppSettings {
             assign_if_some!(self.credentials_path, registry.credentials_path);
             assign_if_some!(self.manifestref_key, registry.manifestref_key);
             assign_if_some!(self.fetch_concurrency, registry.fetch_concurrency);
+        }
+        Ok(())
+    }
+}
+
+impl MergeOptions<Option<ProductLifecycleOptions>> for AppSettings {
+    fn try_merge(&mut self, opts: Option<ProductLifecycleOptions>) -> Fallible<()> {
+        if let Some(product) = opts {
+            assign_if_some!(self.product_enabled, product.enabled);
+            assign_if_some!(self.product_api_url, product.api_url);
+            assign_if_some!(self.product_poll_interval_secs, product.poll_interval_secs);
+            assign_if_some!(self.product_timeout_secs, product.timeout_secs);
         }
         Ok(())
     }

@@ -152,6 +152,8 @@ pub struct State {
     plugins: &'static [BoxedPlugin],
     registry: &'static prometheus::Registry,
     secondary_metadata: Arc<RwLock<String>>,
+    /// Path to temporary products.json file
+    pub product_data_path: Arc<RwLock<Option<std::path::PathBuf>>>,
 }
 
 impl State {
@@ -164,6 +166,7 @@ impl State {
         plugins: &'static [BoxedPlugin],
         registry: &'static prometheus::Registry,
         secondary_metadata: Arc<RwLock<String>>,
+        product_data_path: Arc<RwLock<Option<std::path::PathBuf>>>,
     ) -> State {
         State {
             json,
@@ -173,6 +176,7 @@ impl State {
             plugins,
             registry,
             secondary_metadata,
+            product_data_path,
         }
     }
 
@@ -226,13 +230,23 @@ pub fn run(settings: &config::AppSettings, state: &State) -> ! {
         info!("graph update triggered");
         let scrape_timer = UPSTREAM_SCRAPES_DURATION.start_timer();
 
+        // Prepare plugin parameters including product data path
+        let mut parameters = std::collections::HashMap::new();
+        if let Some(ref path) = *state.product_data_path.read() {
+            if let Some(path_str) = path.to_str() {
+                parameters.insert(
+                    commons::PRODUCT_DATA_PARAM_KEY.to_string(),
+                    path_str.to_string(),
+                );
+            }
+        }
+
         let scrape = cincinnati::plugins::process_blocking(
             state.plugins.iter(),
             cincinnati::plugins::PluginIO::InternalIO(cincinnati::plugins::InternalIO {
                 // the first plugin will produce the initial graph
                 graph: Default::default(),
-                // the plugins used in the graph-builder don't expect any parameters yet
-                parameters: Default::default(),
+                parameters,
             }),
             settings.scrape_timeout_secs,
         );
@@ -284,7 +298,12 @@ pub fn run(settings: &config::AppSettings, state: &State) -> ! {
             UPSTREAM_SCRAPES_DURATION.observe(scrape_value);
         }
 
-        GRAPH_LAST_SUCCESSFUL_REFRESH.set(chrono::Utc::now().timestamp() as i64);
+        GRAPH_LAST_SUCCESSFUL_REFRESH.set(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs() as i64,
+        );
 
         GRAPH_FINAL_RELEASES.set(nodes_count);
         info!("graph update completed, {} valid releases", nodes_count);

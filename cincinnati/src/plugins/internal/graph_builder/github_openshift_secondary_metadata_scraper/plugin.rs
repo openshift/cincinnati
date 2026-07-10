@@ -523,6 +523,8 @@ impl InternalPlugin for GithubOpenshiftSecondaryMetadataScraperPlugin {
                 tokio::fs::symlink(signatures_path, signatures_symlink).await?;
             }
 
+            commons::copy_product_data_if_available(&io.parameters, graph_data_dir.as_path()).await;
+
             commons::create_tar(
                 graph_data_tar_path.clone().into_boxed_path(),
                 graph_data_dir.into_boxed_path(),

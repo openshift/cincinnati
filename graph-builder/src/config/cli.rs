@@ -28,6 +28,9 @@ pub struct CliOptions {
 
     #[structopt(flatten)]
     pub upstream_registry: options::DockerRegistryOptions,
+
+    #[structopt(flatten)]
+    pub product_lifecycle: options::ProductLifecycleOptions,
 }
 
 impl MergeOptions<CliOptions> for AppSettings {
@@ -41,6 +44,7 @@ impl MergeOptions<CliOptions> for AppSettings {
         self.try_merge(Some(opts.service))?;
         self.try_merge(Some(opts.status))?;
         self.try_merge(Some(opts.upstream_registry))?;
+        self.try_merge(Some(opts.product_lifecycle))?;
 
         Ok(())
     }

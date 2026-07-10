@@ -24,6 +24,9 @@ pub struct FileOptions {
     /// Status service options.
     pub status: Option<options::StatusOptions>,
 
+    /// Product lifecycle options.
+    pub product_lifecycle: Option<options::ProductLifecycleOptions>,
+
     /// Plugin settings.
     pub plugin_settings: Option<Vec<toml::Value>>,
 }
@@ -58,6 +61,7 @@ impl MergeOptions<Option<FileOptions>> for AppSettings {
             self.try_merge(file.upstream)?;
             self.try_merge(file.service)?;
             self.try_merge(file.status)?;
+            self.try_merge(file.product_lifecycle)?;
             self.try_merge(file.plugin_settings)?;
         }
         Ok(())
