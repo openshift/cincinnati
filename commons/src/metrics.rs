@@ -30,7 +30,9 @@ where
     let tenc = prometheus::TextEncoder::new();
     let mut buf = vec![];
     match tenc.encode(&metrics, &mut buf) {
-        Ok(()) => HttpResponse::Ok().body(buf),
+        Ok(()) => HttpResponse::Ok()
+            .content_type(tenc.format_type())
+            .body(buf),
         Err(e) => HttpResponse::InternalServerError().body(format!("{}", e)),
     }
 }
