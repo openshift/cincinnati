@@ -142,6 +142,95 @@ pub async fn graph_data(
     Ok(f.unwrap())
 }
 
+// Serve products data requests from the graph-data directory.
+pub async fn serve_products(
+    req: HttpRequest,
+    _app_data: actix_web::web::Data<State>,
+) -> HttpResponse {
+    // Read products.json from the graph-data directory
+    let products_path = std::path::Path::new("/var/lib/cincinnati/graph-data/products.json");
+
+    // Read the file content
+    let content = match std::fs::read_to_string(products_path) {
+        Ok(c) => c,
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .content_type("application/json")
+                .body(format!(
+                    r#"{{"status":"fail","data":{{"code":500,"message":"unable to open products.json: {}"}}}}"#,
+                    e
+                ));
+        }
+    };
+
+    // Parse query string to get the name parameter
+    let query_string = req.query_string();
+    let name_filter = parse_name_filter(query_string);
+
+    // If no name filter is specified, return the file as-is
+    if name_filter.is_none() {
+        return HttpResponse::Ok()
+            .content_type("application/json")
+            .body(content);
+    }
+
+    // Parse the JSON and filter
+    let mut json_value: serde_json::Value = match serde_json::from_str(&content) {
+        Ok(v) => v,
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .content_type("application/json")
+                .body(format!(
+                    r#"{{"status":"fail","data":{{"code":500,"message":"unable to parse products.json: {}"}}}}"#,
+                    e
+                ));
+        }
+    };
+
+    // Filter the data array if it exists
+    if let Some(data) = json_value.get_mut("data") {
+        if let Some(data_array) = data.as_array_mut() {
+            let filter_str = name_filter.unwrap().to_lowercase();
+            data_array.retain(|item| {
+                if let Some(name) = item.get("name").and_then(|n| n.as_str()) {
+                    name.to_lowercase().contains(&filter_str)
+                } else {
+                    false
+                }
+            });
+        }
+    }
+
+    // Serialize and return the filtered JSON
+    let filtered_json = match serde_json::to_string(&json_value) {
+        Ok(j) => j,
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .content_type("application/json")
+                .body(format!(
+                    r#"{{"status":"fail","data":{{"code":500,"message":"unable to serialize filtered JSON: {}"}}}}"#,
+                    e
+                ));
+        }
+    };
+
+    HttpResponse::Ok()
+        .content_type("application/json")
+        .body(filtered_json)
+}
+
+// Helper function to parse the name filter from query string
+fn parse_name_filter(query_string: &str) -> Option<String> {
+    for param in query_string.split('&') {
+        let parts: Vec<&str> = param.split('=').collect();
+        if parts.len() == 2 && parts[0] == "name" {
+            // URL decode the value
+            return urlencoding::decode(parts[1]).ok().map(|s| s.to_string());
+        }
+    }
+    None
+}
+
 #[derive(Clone)]
 pub struct State {
     json: Arc<RwLock<String>>,

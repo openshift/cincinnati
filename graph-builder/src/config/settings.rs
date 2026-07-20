@@ -83,6 +83,22 @@ pub struct AppSettings {
 
     /// Jaeger host and port for tracing support
     pub tracing_endpoint: Option<String>,
+
+    /// Enable product lifecycle data fetching (only needed at graph-data image build time)
+    #[default(false)]
+    pub product_enabled: bool,
+
+    /// URL for the Red Hat product lifecycle API
+    #[default("https://access.redhat.com/product-life-cycles/api/v2/products".to_string())]
+    pub product_api_url: String,
+
+    /// Polling interval (in seconds) for product lifecycle data
+    #[default(time::Duration::from_secs(3600))]
+    pub product_poll_interval_secs: time::Duration,
+
+    /// HTTP timeout (in seconds) for product lifecycle API requests
+    #[default(time::Duration::from_secs(30))]
+    pub product_timeout_secs: time::Duration,
 }
 
 impl AppSettings {

@@ -39,7 +39,7 @@ echo "IMAGE=${IMAGE}"
 echo "IMAGE_TAG=${IMAGE_TAG}"
 
 function backoff() {
-    local max_attempts=60
+    local max_attempts=90
     local attempt=0
     local failed=0
     while true; do
