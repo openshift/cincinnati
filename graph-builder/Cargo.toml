@@ -37,7 +37,6 @@ parking_lot = "^0.12"
 tempfile = "^3.8.0"
 async-trait = "^0.1"
 custom_debug_derive = "^0.5"
-opentelemetry = "0.14.0"
 actix-service = "2.0.2"
 
 [build-dependencies]

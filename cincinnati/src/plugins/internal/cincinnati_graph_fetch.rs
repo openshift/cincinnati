@@ -10,11 +10,6 @@ use self::cincinnati::plugins::prelude_plugin_impl::*;
 use self::cincinnati::CONTENT_TYPE;
 
 use commons::prelude_errors::*;
-use commons::tracing::{get_tracer, set_context};
-use opentelemetry::{
-    trace::{get_active_span, mark_span_as_active, Tracer},
-    Context as ot_context, Key,
-};
 
 use cached::{proc_macro::cached, Return};
 use commons::prelude_errors::Context;
@@ -153,12 +148,6 @@ impl CincinnatiGraphFetchPlugin {
         // this is required to make graph-builder trace a child of police-engine request
         let mut headers = HeaderMap::new();
         headers.insert(ACCEPT, HeaderValue::from_static(CONTENT_TYPE));
-        {
-            let span = get_tracer().start("");
-            let _active_span = mark_span_as_active(span);
-            let cx = ot_context::current();
-            set_context(cx, &mut headers).context("failed to set the tracing context")?;
-        }
 
         trace!("getting graph from upstream at {}", self.upstream);
         let result = cached_graph(&self.client, &self.upstream, headers).await;
@@ -168,9 +157,6 @@ impl CincinnatiGraphFetchPlugin {
                 if !call.was_cached {
                     self.http_upstream_reqs.inc();
                 }
-                get_active_span(|span| {
-                    span.set_attribute(Key::new("cached").bool(call.was_cached));
-                });
                 Ok(InternalIO {
                     graph: call.value,
                     parameters: io.parameters,
