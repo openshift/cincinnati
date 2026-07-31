@@ -81,7 +81,7 @@ pub struct AppSettings {
     /// Plugin configuration.
     pub plugin_settings: Vec<Box<dyn PluginSettings>>,
 
-    /// Jaeger host and port for tracing support
+    /// OTLP HTTP endpoint for tracing support (e.g. http://host:4318)
     pub tracing_endpoint: Option<String>,
 }
 

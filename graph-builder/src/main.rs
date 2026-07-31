@@ -114,7 +114,7 @@ async fn main() -> Result<(), Error> {
             .wrap(middleware::Compress::default())
             .wrap_fn(|req, srv| {
                 let parent_context = get_context(&req);
-                let mut span = get_tracer().start_with_context("request", parent_context);
+                let mut span = get_tracer().start_with_context("request", &parent_context);
                 set_span_tags(req.path(), req.headers(), &mut span);
                 let _active_span = mark_span_as_active(span);
                 let cx = ot_context::current();
@@ -142,7 +142,7 @@ async fn main() -> Result<(), Error> {
             .wrap(middleware::Compress::default())
             .wrap_fn(|req, srv| {
                 let parent_context = get_context(&req);
-                let mut span = get_tracer().start_with_context("request", parent_context);
+                let mut span = get_tracer().start_with_context("request", &parent_context);
                 set_span_tags(req.path(), req.headers(), &mut span);
                 let _active_span = mark_span_as_active(span);
                 let cx = ot_context::current();

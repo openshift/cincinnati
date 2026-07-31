@@ -13,7 +13,7 @@ use commons::prelude_errors::*;
 use commons::tracing::{get_tracer, set_context};
 use opentelemetry::{
     trace::{get_active_span, mark_span_as_active, Tracer},
-    Context as ot_context, Key,
+    Context as ot_context, KeyValue,
 };
 
 use cached::{proc_macro::cached, Return};
@@ -169,7 +169,7 @@ impl CincinnatiGraphFetchPlugin {
                     self.http_upstream_reqs.inc();
                 }
                 get_active_span(|span| {
-                    span.set_attribute(Key::new("cached").bool(call.was_cached));
+                    span.set_attribute(KeyValue::new("cached", call.was_cached));
                 });
                 Ok(InternalIO {
                     graph: call.value,

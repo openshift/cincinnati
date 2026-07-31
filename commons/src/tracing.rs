@@ -3,12 +3,14 @@
 use opentelemetry::{
     global,
     propagation::{Extractor, Injector, TextMapPropagator},
-    sdk::{
-        propagation::TraceContextPropagator,
-        trace::{Config, Sampler, TracerProvider as sdk_tracerprovider},
-    },
-    trace::{Span, TracerProvider},
-    Context, Key,
+    trace::Span,
+    Context, KeyValue,
+};
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::{
+    propagation::TraceContextPropagator,
+    trace::{Sampler, SdkTracerProvider},
+    Resource,
 };
 
 use std::collections::HashMap;
@@ -19,7 +21,7 @@ use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 
 use crate::prelude_errors::*;
 
-/// init_tracer sets up Jaeger tracer
+/// init_tracer sets up an OTLP tracer (compatible with Jaeger ≥1.35 and any OTLP collector).
 pub fn init_tracer(name: &'static str, maybe_agent_endpoint: Option<String>) -> Fallible<()> {
     // Skip provider config if agent endpoint is not set
     let agent_endpoint = match maybe_agent_endpoint {
@@ -27,18 +29,19 @@ pub fn init_tracer(name: &'static str, maybe_agent_endpoint: Option<String>) -> 
         Some(s) => s,
     };
 
-    let exporter = opentelemetry_jaeger::new_pipeline()
-        .with_agent_endpoint(agent_endpoint)
-        .with_service_name(name.to_string())
-        .with_tags(vec![Key::new("exporter").string("jaeger")])
-        .init_exporter()?;
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_http()
+        .with_endpoint(agent_endpoint)
+        .build()?;
 
-    let provider = sdk_tracerprovider::builder()
+    let provider = SdkTracerProvider::builder()
+        .with_sampler(Sampler::AlwaysOn)
+        .with_resource(
+            Resource::builder_empty()
+                .with_attribute(KeyValue::new("service.name", name))
+                .build(),
+        )
         .with_simple_exporter(exporter)
-        .with_config(Config {
-            sampler: Box::new(Sampler::AlwaysOn),
-            ..Default::default()
-        })
         .build();
     global::set_tracer_provider(provider);
 
@@ -47,7 +50,7 @@ pub fn init_tracer(name: &'static str, maybe_agent_endpoint: Option<String>) -> 
 
 /// get_tracer returns an instance of global tracer
 pub fn get_tracer() -> global::BoxedTracer {
-    global::tracer_provider().get_tracer("", None)
+    global::tracer("cincinnati")
 }
 
 struct HttpHeaderMapCarrier<'a>(&'a HttpHeaderMap);
@@ -114,10 +117,10 @@ pub fn set_context(context: Context, headers: &mut HeaderMap) -> crate::errors::
 }
 
 /// Add span attributes from servicerequest
-pub fn set_span_tags(req_path: &str, headers: &HttpHeaderMap, span: &mut dyn Span) {
-    span.set_attribute(Key::new("path").string(req_path.to_string()));
+pub fn set_span_tags<S: Span>(req_path: &str, headers: &HttpHeaderMap, span: &mut S) {
+    span.set_attribute(KeyValue::new("path", req_path.to_string()));
     headers.iter().for_each(|(k, v)| {
         let value = v.to_str().unwrap().to_string();
-        span.set_attribute(Key::new(format!("header.{}", k)).string(value))
+        span.set_attribute(KeyValue::new(format!("header.{}", k), value))
     });
 }

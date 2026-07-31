@@ -33,7 +33,7 @@ pub struct AppSettings {
     /// directory to store signatures
     pub signatures_dir: String,
 
-    /// Jaeger host and port for tracing support
+    /// OTLP HTTP endpoint for tracing support (e.g. http://host:4318)
     pub tracing_endpoint: Option<String>,
 
     /// Actix-web maximum number of pending connections, defaults to 2048: https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.backlog
