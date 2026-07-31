@@ -2,9 +2,7 @@ use crate::AppState;
 
 use actix_files::NamedFile;
 use actix_web::HttpRequest;
-use commons::tracing::get_tracer;
 use commons::{self, api_response_error, Fallible, GraphError};
-use opentelemetry::trace::{mark_span_as_active, Tracer};
 use prometheus::{histogram_opts, Histogram, IntCounterVec, Opts, Registry};
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -49,9 +47,6 @@ async fn _index(
     req: &HttpRequest,
     app_data: actix_web::web::Data<AppState>,
 ) -> Result<NamedFile, GraphError> {
-    let span = get_tracer().start("index");
-    let _active_span = mark_span_as_active(span);
-
     let path = req.uri().path();
     SIGNATURES_INCOMING_REQS.with_label_values(&[path]).inc();
 

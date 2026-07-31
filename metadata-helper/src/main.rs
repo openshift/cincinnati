@@ -38,12 +38,8 @@ use actix_web::http::StatusCode;
 use actix_web::{middleware, App, HttpRequest, HttpResponse, HttpServer};
 use commons::metrics::{self, HasRegistry};
 use commons::prelude_errors::*;
-use commons::tracing::{get_tracer, init_tracer, set_span_tags};
+use commons::tracing::init_tracer;
 use futures::future;
-use opentelemetry::{
-    trace::{mark_span_as_active, FutureExt, Tracer},
-    Context as ot_context,
-};
 use parking_lot::RwLock;
 use prometheus::{labels, opts, Counter, Registry};
 use std::sync::Arc;
@@ -134,13 +130,6 @@ async fn main() -> Result<(), Error> {
     let main_server = HttpServer::new(move || {
         let app_prefix = main_state.path_prefix.clone();
         App::new()
-            .wrap_fn(|req, srv| {
-                let mut span = get_tracer().start("request");
-                set_span_tags(req.path(), req.headers(), &mut span);
-                let _active_span = mark_span_as_active(span);
-                let cx = ot_context::current();
-                srv.call(req).with_context(cx)
-            })
             .wrap(
                 Cors::default()
                     .allow_any_origin()

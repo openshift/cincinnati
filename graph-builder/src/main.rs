@@ -16,14 +16,10 @@ use actix_service::Service;
 use actix_web::{middleware, App, HttpServer};
 use commons::metrics::{self, HasRegistry};
 use commons::prelude_errors::*;
-use commons::tracing::{get_context, get_tracer, init_tracer, set_span_tags};
+use commons::tracing::init_tracer;
 use futures::future;
 use graph_builder::{self, config, graph, status};
 use log::info;
-use opentelemetry::{
-    trace::{mark_span_as_active, FutureExt, Tracer},
-    Context as ot_context,
-};
 use parking_lot::RwLock;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -112,14 +108,6 @@ async fn main() -> Result<(), Error> {
     let main_server = HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
-            .wrap_fn(|req, srv| {
-                let parent_context = get_context(&req);
-                let mut span = get_tracer().start_with_context("request", parent_context);
-                set_span_tags(req.path(), req.headers(), &mut span);
-                let _active_span = mark_span_as_active(span);
-                let cx = ot_context::current();
-                srv.call(req).with_context(cx)
-            })
             .app_data(actix_web::web::Data::new(main_state.clone()))
             .service(
                 // keeping this for backward compatibility
@@ -140,14 +128,6 @@ async fn main() -> Result<(), Error> {
     let public_server = HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
-            .wrap_fn(|req, srv| {
-                let parent_context = get_context(&req);
-                let mut span = get_tracer().start_with_context("request", parent_context);
-                set_span_tags(req.path(), req.headers(), &mut span);
-                let _active_span = mark_span_as_active(span);
-                let cx = ot_context::current();
-                srv.call(req).with_context(cx)
-            })
             .app_data(actix_web::web::Data::new(public_state.clone()))
             .service(
                 actix_web::web::resource(&format!("{}/graph-data", public_app_prefix.clone()))

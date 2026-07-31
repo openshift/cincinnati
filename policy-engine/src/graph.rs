@@ -7,12 +7,7 @@ use actix_web::{HttpRequest, HttpResponse};
 use cincinnati::plugins::internal::versioned_graph::VersionedGraph;
 use cincinnati::plugins::{BoxedPlugin, InternalIO};
 use cincinnati::CONTENT_TYPE;
-use commons::tracing::get_tracer;
 use commons::{self, api_response_error, Fallible, GraphError};
-use opentelemetry::{
-    trace::{mark_span_as_active, FutureExt, Tracer},
-    Context as ot_context,
-};
 use prometheus::{histogram_opts, Histogram, IntCounterVec, Opts, Registry};
 use std::collections::HashMap;
 
@@ -54,9 +49,6 @@ async fn _index(
     req: &HttpRequest,
     app_data: actix_web::web::Data<AppState>,
 ) -> Result<HttpResponse, GraphError> {
-    let span = get_tracer().start("index");
-    let _active_span = mark_span_as_active(span);
-
     let path = req.uri().path();
     GRAPH_INCOMING_REQS.with_label_values(&[path]).inc();
 
@@ -83,10 +75,7 @@ async fn _index(
 
     let timer = GRAPH_SERVE_HIST.start_timer();
 
-    let cx = ot_context::current();
-    let response = process_plugins(app_data.plugins.iter(), plugin_params)
-        .with_context(cx)
-        .await;
+    let response = process_plugins(app_data.plugins.iter(), plugin_params).await;
 
     timer.observe_duration();
     response
@@ -129,8 +118,6 @@ where
 
 /// add version information to the graph json
 fn add_version_information(io: &InternalIO) -> VersionedGraph {
-    let span = get_tracer().start("version_append");
-    let _active_span = mark_span_as_active(span);
     log::trace!("versioning the graph");
     VersionedGraph::new(io).unwrap()
 }
