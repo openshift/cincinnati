@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use actix_web::Error;
 use commons::Fallible;
-use log::debug;
+use log::{debug, trace};
 use reqwest::Certificate;
 
 /// Retrives all the .pem and .crt certificate files from the directory.
@@ -33,7 +33,7 @@ pub fn get_certs_from_dir(dir: &Path) -> Fallible<Vec<Certificate>, Error> {
                                         );
                                         certs.push(certificate.unwrap());
                                     } else {
-                                        debug!(
+                                        trace!(
                                             "unable to process certificate {}: {}",
                                             path.file_name().to_str().unwrap_or_default(),
                                             certificate.unwrap_err()
