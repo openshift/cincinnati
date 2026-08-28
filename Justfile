@@ -87,10 +87,21 @@ test_cincinnati_inspect:
 test_cincinnati: deploy_cincinnati
 	#!/usr/bin/env bash
 	set -euxo pipefail
-	oc -n "{{cincinnati_namespace}}" wait --timeout=600s --for=condition=Ready pod -l app=cincinnati
-	pod_name="$(oc -n "{{cincinnati_namespace}}" get pod -l app=cincinnati --no-headers -o custom-columns=":metadata.name" | sed -n 1p)"
-	oc -n "{{cincinnati_namespace}}" exec "${pod_name}" -c cincinnati-policy-engine -- curl -f -s -v "localhost:8081/api/upgrades_info/graph?channel=a"
-	oc -n "{{cincinnati_namespace}}" exec "${pod_name}" -c cincinnati-policy-engine -- curl -f -s -v "cincinnati-policy-engine.{{cincinnati_namespace}}.svc.cluster.local/api/upgrades_info/graph?channel=a"
+	# Wait for both services to be ready (separate pods)
+	oc -n "{{cincinnati_namespace}}" wait --timeout=600s --for=condition=Ready pod -l app=cincinnati-graph-builder
+	oc -n "{{cincinnati_namespace}}" wait --timeout=600s --for=condition=Ready pod -l app=cincinnati-policy-engine
+
+	# Get pod names for each service
+	gb_pod_name="$(oc -n "{{cincinnati_namespace}}" get pod -l app=cincinnati-graph-builder --no-headers -o custom-columns=":metadata.name" | sed -n 1p)"
+	pe_pod_name="$(oc -n "{{cincinnati_namespace}}" get pod -l app=cincinnati-policy-engine --no-headers -o custom-columns=":metadata.name" | sed -n 1p)"
+
+	# Test internal policy-engine connectivity
+	oc -n "{{cincinnati_namespace}}" exec "${pe_pod_name}" -c cincinnati-policy-engine -- curl -f -s -v "localhost:8081/api/upgrades_info/graph?channel=a"
+
+	# Test Kubernetes DNS communication between services
+	oc -n "{{cincinnati_namespace}}" exec "${pe_pod_name}" -c cincinnati-policy-engine -- curl -f -s -v "cincinnati-graph-builder:8080/api/upgrades_info/graph"
+
+	# Test external route access
 	route_host="$(oc -n "{{cincinnati_namespace}}" get route {{route_name}} -o jsonpath='{.spec.host}')"
 	curl -f -k -s -v "https://${route_host}/api/upgrades_info/graph?channel=a"
 
