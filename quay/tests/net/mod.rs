@@ -63,11 +63,11 @@ fn test_public_get_labels() {
         Some("io.openshift.upgrades.graph".to_string()),
     );
     let labels = rt.block_on(fetch_labels).unwrap();
+
+    let filtered_labels: Vec<(String, String)> = labels.into_iter().map(Into::into).collect();
+
     assert_eq!(
-        labels
-            .into_iter()
-            .map(Into::into)
-            .collect::<Vec<(String, String)>>(),
+        filtered_labels,
         vec![(
             "io.openshift.upgrades.graph.previous.remove".to_string(),
             "0.0.0".to_string()

@@ -69,17 +69,45 @@ impl Client {
             manifest_ref.as_ref()
         );
 
-        let req = self.new_request(Method::GET, &endpoint).map(|req| {
-            if let Some(filter) = filter {
-                req.query(&[("filter", filter.as_ref())])
-            } else {
-                req
-            }
-        })?;
+        // IMPORTANT: We intentionally do NOT pass the filter parameter to the Quay API
+        // because using the filter parameter requires authentication (via @require_repo_read
+        // decorator in Quay's implementation), even for public repositories. Since we access
+        // public repositories without authentication, we must fetch all labels and filter
+        // client-side instead.
+        //
+        // Background: The Quay API endpoint has @require_repo_read which enforces read
+        // permissions when the filter parameter is used, but allows unauthenticated access
+        // when fetching all labels without filtering. This is intentional behavior in Quay.
+        // Source: https://github.com/quay/quay/blob/d13921d53123e678a716000273ab49b8f46b9d1f/endpoints/api/manifest.py#L214-L223
+        //
+        // Example (requires authentication - returns 403 without auth):
+        //   https://quay.io/api/v1/repository/redhat/openshift-cincinnati-test-labels-public-manual/manifest/sha256:0275e5e316373faaabea9f13dfc27541e3c6e301b08bd92f443e987195faa9d6/labels?filter=io.openshift.upgrades.graph
+        // Example (public read - works without auth):
+        //   https://quay.io/api/v1/repository/redhat/openshift-cincinnati-test-labels-public-manual/manifest/sha256:0275e5e316373faaabea9f13dfc27541e3c6e301b08bd92f443e987195faa9d6/labels
+        // See: https://github.com/openshift/cincinnati/pull/1057
+        let req = self.new_request(Method::GET, &endpoint)?;
 
         let resp = req.send().await?;
+
+        // Check if the response was successful
+        if !resp.status().is_success() {
+            let status = resp.status();
+            return Err(anyhow::anyhow!("Request failed with status {}", status));
+        }
+
         let json = resp.json::<Labels>().await?;
 
-        Ok(json.labels)
+        // Apply client-side filtering if a filter prefix was provided
+        let labels = if let Some(filter) = filter {
+            let filter_str = filter.as_ref();
+            json.labels
+                .into_iter()
+                .filter(|label| label.key.starts_with(filter_str))
+                .collect()
+        } else {
+            json.labels
+        };
+
+        Ok(labels)
     }
 }
