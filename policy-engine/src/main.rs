@@ -19,6 +19,7 @@ extern crate structopt;
 #[macro_use]
 extern crate custom_debug_derive;
 
+mod client_ids;
 mod config;
 mod graph;
 mod openapi;
@@ -89,14 +90,20 @@ async fn main() -> Result<(), Error> {
         let live = Arc::new(RwLock::new(false));
         let ready = Arc::new(RwLock::new(false));
 
-        AppState::new(
+        let mut state = AppState::new(
             mandatory_params,
             path_prefix,
             plugins,
             live,
             ready,
             registry,
-        )
+        );
+        if settings.track_client_ids {
+            let tracker = Arc::new(client_ids::ClientIdTracker::new());
+            registry.register(Box::new(client_ids::ClientIdCollector(tracker.clone())))?;
+            state.client_ids = Some(tracker);
+        }
+        state
     };
 
     graph::register_metrics(state.registry())?;
@@ -221,6 +228,8 @@ pub struct AppState {
     live: Arc<RwLock<bool>>,
     ready: Arc<RwLock<bool>>,
     registry: &'static Registry,
+    /// Optional tracker of distinct client IDs.
+    client_ids: Option<Arc<client_ids::ClientIdTracker>>,
 }
 
 impl AppState {
@@ -240,6 +249,7 @@ impl AppState {
             live,
             ready,
             registry,
+            client_ids: None,
         }
     }
 
@@ -266,6 +276,7 @@ impl Default for AppState {
             live: Default::default(),
             ready: Default::default(),
             registry,
+            client_ids: None,
         }
     }
 }

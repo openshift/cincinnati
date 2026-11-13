@@ -53,6 +53,10 @@ pub struct AppSettings {
     /// Jaeger host and port for tracing support
     pub tracing_endpoint: Option<String>,
 
+    /// Whether to track distinct client IDs and expose their count as a metric.
+    #[default(false)]
+    pub track_client_ids: bool,
+
     /// Actix-web maximum number of pending connections, defaults to 2048: https://docs.rs/actix-web/latest/actix_web/struct.HttpServer.html#method.backlog
     #[default(10)]
     pub backlog: u32,
