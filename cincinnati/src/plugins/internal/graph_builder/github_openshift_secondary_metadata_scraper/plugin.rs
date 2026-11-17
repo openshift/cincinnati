@@ -541,6 +541,7 @@ mod network_tests {
     use super::*;
     use std::collections::HashSet;
     #[test]
+    #[ignore = "CI GitHub token is invalid; re-enable after credential repair"]
     fn openshift_secondary_metadata_extraction() -> Fallible<()> {
         let runtime = commons::testing::init_runtime()?;
 
