@@ -546,14 +546,6 @@ mod network_tests {
 
         let tmpdir = tempfile::tempdir()?;
 
-        // Path to the GitHub API token file; we need to use it in tests
-        // because GitHub rate limits unauthenticated API access.
-        // In CI this value comes from cincy-credentials secret in Vault, see:
-        // https://github.com/openshift/release/blob/cca454f13b1d8482a3a568bf557b37eeed4c7519/ci-operator/config/openshift/cincinnati/openshift-cincinnati-master.yaml#L109-L110
-        //
-        // Note: The token in CI may expire.
-        let oauth_token_path = std::env::var(GITHUB_SCRAPER_TOKEN_PATH_ENV)?;
-
         let settings = GithubOpenshiftSecondaryMetadataScraperSettings::deserialize_config(
             toml::Value::from_str(&format!(
                 r#"
@@ -562,7 +554,6 @@ mod network_tests {
                     reference = {{ revision = "6420f7fbf3724e1e5e329ae8d1e2985973f60c14" }}
                     output_allowlist = [ {} ]
                     output_directory = {:?}
-                    oauth_token_path = {:?}
                 "#,
                 DEFAULT_OUTPUT_ALLOWLIST
                     .iter()
@@ -570,7 +561,6 @@ mod network_tests {
                     .collect::<Vec<_>>()
                     .join(", "),
                 &tmpdir.path(),
-                oauth_token_path,
             ))?,
         )?;
 
