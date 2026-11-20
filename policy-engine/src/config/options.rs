@@ -56,6 +56,10 @@ pub struct ServiceOptions {
     #[structopt(name = "tracing_endpoint", long = "service.tracing_endpoint")]
     pub tracing_endpoint: Option<String>,
 
+    /// Track the number of distinct client IDs ('id' query parameter) and expose it as a metric
+    #[structopt(name = "track_client_ids", long = "service.track_client_ids")]
+    pub track_client_ids: Option<bool>,
+
     #[structopt(name = "backlog", long = "service.backlog")]
     pub backlog: Option<u32>,
     #[structopt(name = "max_connections", long = "service.max_connections")]
@@ -75,6 +79,7 @@ impl MergeOptions<Option<ServiceOptions>> for AppSettings {
             assign_if_some!(self.port, service.port);
             assign_if_some!(self.path_prefix, service.path_prefix);
             assign_if_some!(self.tracing_endpoint, service.tracing_endpoint);
+            assign_if_some!(self.track_client_ids, service.track_client_ids);
             assign_if_some!(self.backlog, service.backlog);
             assign_if_some!(self.max_connections, service.max_connections);
             assign_if_some!(self.max_connection_rate, service.max_connection_rate);

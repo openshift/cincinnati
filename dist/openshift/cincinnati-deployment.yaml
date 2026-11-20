@@ -134,6 +134,7 @@ objects:
                 "--service.port", "${PE_PORT}",
                 "--status.address", "$(PE_STATUS_ADDRESS)",
                 "--status.port", "${PE_STATUS_PORT}",
+                "--service.track_client_ids", "${PE_TRACK_CLIENT_IDS}",
                 "--upstream.cincinnati.url", "$(UPSTREAM)",
               ]
               ports:
@@ -378,6 +379,10 @@ parameters:
   - name: PE_LOG_VERBOSITY
     value: "vv"
     displayName: Policy engine log verbosity
+  - name: PE_TRACK_CLIENT_IDS
+    value: "false"
+    displayName: Policy engine distinct client ID tracking
+    description: Expose the number of distinct client IDs as the cincinnati_pe_graph_distinct_client_ids metric
   - name: GB_CINCINNATI_REPO
     value: "openshift-release-dev/ocp-release"
     displayName: Graph builder quay repo
