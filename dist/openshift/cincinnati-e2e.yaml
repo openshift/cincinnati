@@ -35,7 +35,7 @@ objects:
       name: e2e
     spec:
       graphDataImage: ${GRAPHDATA_IMAGE}
-      releases: quay.io/openshift-release-dev/ocp-release
+      releases: ${RELEASES}
       replicas: ${{REPLICAS}}
 parameters:
   - name: NAMESPACE
@@ -51,6 +51,12 @@ parameters:
   - name: GRAPHDATA_IMAGE
     value: "quay.io/openshift-ota/cincinnati-ci-public:cincinnati-graph-data_stable"
     description: cincinnati-graph-data image pullspec
+  - name: RELEASES
+    value: "quay.io/openshift-release-dev/ocp-release"
+    description: >-
+      repository in which release images are tagged. The operator splits this
+      on the first "/" to get the registry host, so the registry must be
+      included.
   - name: REPLICAS
     value: "2"
   - name: GB_LOG_VERBOSITY

@@ -104,22 +104,67 @@ echo "GRAPHDATA_IMAGE=${GRAPH_SOURCE}"
 
 NAMESPACE="openshift-update-service"
 
-# Render the template and apply subscription/operand
-oc process -f dist/openshift/cincinnati-e2e.yaml \
+# The release repository the operand scrapes. The graph fixtures under
+# ${E2E_TESTDATA_DIR} are captured from FIXTURES_RELEASES, so they only
+# describe what the policy engine serves while that is the one deployed.
+FIXTURES_RELEASES="quay.io/openshift-release-dev/ocp-release"
+RELEASES="${RELEASES:-${FIXTURES_RELEASES}}"
+
+echo "RELEASES=${RELEASES}"
+
+# Which OLM installs the operator: v0 (OperatorGroup/Subscription) or v1
+# (ClusterExtension). v1 needs the TechPreviewNoUpgrade feature set, because
+# both the watchNamespace and the deploymentConfig knobs it relies on are
+# Technology Preview.
+OLM_VERSION="${OLM_VERSION:-v0}"
+case "${OLM_VERSION}" in
+  v0)
+    TEMPLATE="dist/openshift/cincinnati-e2e.yaml"
+    ;;
+  v1)
+    TEMPLATE="dist/openshift/cincinnati-olmv1-e2e.yaml"
+    echo "cluster featureSet: $(oc get featuregate cluster -o jsonpath='{.spec.featureSet}')"
+    ;;
+  *)
+    echo "unsupported OLM_VERSION=${OLM_VERSION}, expected v0 or v1" >&2
+    exit 1
+    ;;
+esac
+
+# Render the template and apply the operator install and the operand.
+# The operand's CRD only exists once the operator is installed, so the apply is
+# retried until every object in the manifest lands.
+oc process -f "${TEMPLATE}" \
   -p NAMESPACE="${NAMESPACE}" \
   -p IMAGE="${IMAGE}" \
   -p IMAGE_TAG="${IMAGE_TAG}" \
   -p GRAPHDATA_IMAGE="${GRAPH_SOURCE}" \
+  -p RELEASES="${RELEASES}" \
   -p REPLICAS=2 \
   > /tmp/manifests.yaml
-backoff oc apply -f /tmp/manifests.yaml
+backoff oc apply -f /tmp/manifests.yaml || {
+    status=$?
+    set +e -x
+
+    if test "${OLM_VERSION}" = v1; then
+      oc get clusterextension cincinnati-operator -o yaml
+    fi
+    oc -n "${NAMESPACE}" get events
+    oc -n "${NAMESPACE}" get pods
+
+    exit $status
+}
 
 backoff oc -n openshift-update-service wait --for=condition=Ready pod -l app=e2e || {
     status=$?
     set +e -x
 
     # Print various information about the deployment
-    oc describe operators/cincinnati-operator.openshift-update-service -n openshift-update-service
+    if test "${OLM_VERSION}" = v1; then
+      oc get clusterextension cincinnati-operator -o yaml
+    else
+      oc describe operators/cincinnati-operator.openshift-update-service -n openshift-update-service
+    fi
     oc get events
     oc describe deployment/e2e
     oc describe pods --selector='app=e2e'
@@ -181,8 +226,13 @@ set -x
 # Show test failure details
 export RUST_BACKTRACE="1"
 
-# Run e2e tests
-/usr/bin/cincinnati-e2e-test $run_ignored
+# Run e2e tests, unless the operand serves a release repository the graph
+# fixtures were not captured from
+if test "${RELEASES}" = "${FIXTURES_RELEASES}"; then
+  /usr/bin/cincinnati-e2e-test $run_ignored
+else
+  echo "skipping cincinnati-e2e-test: fixtures are captured from ${FIXTURES_RELEASES}, deployment serves ${RELEASES}"
+fi
 
 # Ensure prometheus_query tests are executed
 /usr/bin/cincinnati-prometheus_query-test
