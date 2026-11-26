@@ -71,6 +71,18 @@ mod tests {
         let svc_port_args = vec!["argv0", "--service.port", "9999"];
         let svc_port_cli = CliOptions::from_iter_safe(svc_port_args).unwrap();
         assert_eq!(svc_port_cli.service.port, Some(9999));
+        assert_eq!(svc_port_cli.service.track_client_ids, None);
+
+        for (value, expected) in &[("true", true), ("false", false)] {
+            let args = vec!["argv0", "--service.track_client_ids", value];
+            let cli = CliOptions::from_iter_safe(args).unwrap();
+            assert_eq!(cli.service.track_client_ids, Some(*expected));
+
+            let mut settings = AppSettings::default();
+            assert!(!settings.track_client_ids);
+            settings.try_merge(cli).unwrap();
+            assert_eq!(settings.track_client_ids, *expected);
+        }
     }
 
     #[test]

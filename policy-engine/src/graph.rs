@@ -71,6 +71,13 @@ async fn _index(
         .map(|query| query.into_inner())
         .map_err(|e| commons::GraphError::InvalidParams(e.to_string()))?;
 
+    if let (Some(tracker), Some(id)) = (
+        &app_data.client_ids,
+        plugin_params.get(crate::client_ids::CLIENT_ID_PARAM),
+    ) {
+        tracker.record(id);
+    }
+
     plugin_params.insert(String::from("content_type"), content_type);
 
     let timer = GRAPH_SERVE_HIST.start_timer();
@@ -160,6 +167,50 @@ pub(crate) mod tests {
             resp,
             graph::GraphError::MissingParams(vec!["id".to_string()])
         );
+    }
+
+    #[test]
+    fn records_client_ids() {
+        use crate::client_ids::{ClientIdCollector, ClientIdTracker};
+        use std::sync::Arc;
+
+        let rt = common_init();
+        let tracker = Arc::new(ClientIdTracker::new());
+        let registry = prometheus::Registry::new();
+        registry
+            .register(Box::new(ClientIdCollector(tracker.clone())))
+            .unwrap();
+        let app_data = actix_web::web::Data::new(AppState {
+            plugins: Box::leak(Box::new([])),
+            client_ids: Some(tracker),
+            ..Default::default()
+        });
+
+        for id in &[
+            "01234567-89ab-cdef-0123-456789abcdef",
+            "01234567-89ab-cdef-0123-456789abcdef",
+            "fedcba98-7654-3210-fedc-ba9876543210",
+            "not-a-uuid",
+        ] {
+            let http_req = actix_web::test::TestRequest::get()
+                .uri(&format!("http://unused.test/graph?id={}", id))
+                .insert_header((
+                    http::header::ACCEPT,
+                    http::header::HeaderValue::from_static(cincinnati::CONTENT_TYPE),
+                ))
+                .to_http_request();
+            rt.block_on(graph::index(http_req, app_data.clone()))
+                .unwrap();
+        }
+
+        let families = registry.gather();
+        let gauge = families
+            .iter()
+            .find(|f| f.get_name() == "graph_distinct_client_ids")
+            .unwrap();
+        for m in gauge.get_metric() {
+            assert_eq!(m.get_gauge().get_value(), 2.0);
+        }
     }
 
     #[test]
