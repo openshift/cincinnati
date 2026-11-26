@@ -1,0 +1,104 @@
+---
+# OLM v1 variant of cincinnati-e2e.yaml: the operator is installed with a
+# ClusterExtension instead of an OperatorGroup/Subscription pair.
+#
+# Both knobs this template needs from OLM v1 are Technology Preview, so the
+# cluster must run with the TechPreviewNoUpgrade feature set:
+#   * .spec.config.inline.watchNamespace, because the update-service-operator
+#     bundle only declares the OwnNamespace install mode, which GA OLM v1
+#     rejects ("bundle does not support AllNamespaces install mode").
+#   * .spec.config.inline.deploymentConfig, the replacement for OLM v0's
+#     Subscription.spec.config, used here to point the operator at the operand
+#     image built from the pull request under test.
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: cincinnati-olmv1
+objects:
+  # OLM v1 installs bundles with the permissions of a caller-provided
+  # ServiceAccount rather than its own. cluster-admin keeps this e2e setup
+  # equivalent to the OLM v0 one; a real deployment should scope it down.
+  - apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: cincinnati-operator-installer
+      namespace: "${NAMESPACE}"
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: cincinnati-operator-installer
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+      - kind: ServiceAccount
+        name: cincinnati-operator-installer
+        namespace: "${NAMESPACE}"
+  - apiVersion: olm.operatorframework.io/v1
+    kind: ClusterExtension
+    metadata:
+      name: cincinnati-operator
+    spec:
+      namespace: "${NAMESPACE}"
+      serviceAccount:
+        name: cincinnati-operator-installer
+      source:
+        sourceType: Catalog
+        catalog:
+          packageName: "${PACKAGE_NAME}"
+          channels:
+            - "${CHANNEL}"
+          # ClusterCatalogs carry their own name as a label; there is no
+          # by-name field under .source.catalog.
+          selector:
+            matchLabels:
+              olm.operatorframework.io/metadata.name: "${CATALOG_NAME}"
+      config:
+        configType: Inline
+        inline:
+          # OwnNamespace install mode requires watchNamespace == .spec.namespace.
+          watchNamespace: "${NAMESPACE}"
+          deploymentConfig:
+            env:
+              - name: RELATED_IMAGE_OPERAND
+                value: "${IMAGE}:${IMAGE_TAG}"
+  - apiVersion: updateservice.operator.openshift.io/v1
+    kind: UpdateService
+    metadata:
+      name: e2e
+    spec:
+      graphDataImage: ${GRAPHDATA_IMAGE}
+      releases: ${RELEASES}
+      replicas: ${{REPLICAS}}
+parameters:
+  - name: NAMESPACE
+    value: "openshift-update-service"
+  - name: IMAGE
+    value: "quay.io/app-sre/cincinnati"
+    displayName: cincinnati image
+    description: cincinnati docker image. Defaults to quay.io/app-sre/cincinnati
+  - name: IMAGE_TAG
+    value: "latest"
+    displayName: cincinnati version
+    description: cincinnati version which defaults to latest
+  - name: GRAPHDATA_IMAGE
+    value: "quay.io/openshift-ota/cincinnati-ci-public:cincinnati-graph-data_stable"
+    description: cincinnati-graph-data image pullspec
+  - name: RELEASES
+    value: "quay.io/openshift-release-dev/ocp-release"
+    description: >-
+      repository in which release images are tagged. The operator splits this
+      on the first "/" to get the registry host, so the registry must be
+      included.
+  - name: REPLICAS
+    value: "2"
+  - name: PACKAGE_NAME
+    value: "cincinnati-operator"
+    description: name of the operator package to resolve from the catalog
+  - name: CHANNEL
+    value: "v1"
+    description: catalog channel to install the operator from
+  - name: CATALOG_NAME
+    value: "openshift-redhat-operators"
+    description: name of the ClusterCatalog serving the operator package

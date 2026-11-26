@@ -42,8 +42,15 @@ _copy_bin:
 build_e2e:
 	hack/build_e2e.sh
 
+olm_version := env('OLM_VERSION', "v0")
+releases := env('RELEASES', "quay.io/openshift-release-dev/ocp-release")
+
+# OLM_VERSION=v1 installs the operator with a ClusterExtension instead of a
+# Subscription, and needs a cluster with the TechPreviewNoUpgrade feature set.
+# RELEASES picks the release repository the operand scrapes; the graph fixture
+# tests only run when it is the one the fixtures were captured from.
 run_e2e:
-	hack/e2e.sh
+	OLM_VERSION="{{olm_version}}" RELEASES="{{releases}}" hack/e2e.sh
 
 cargo_test:
 	dist/cargo_test.sh
