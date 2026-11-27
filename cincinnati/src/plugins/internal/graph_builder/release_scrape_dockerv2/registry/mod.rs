@@ -627,29 +627,31 @@ async fn find_first_release_metadata(
     repo: String,
     tag: String,
 ) -> Fallible<Option<Metadata>> {
-    for layer_digest in layer_digests {
-        trace!("[{}] Downloading layer {}", &tag, &layer_digest);
-        let (repo, tag) = (repo.clone(), tag.clone());
+    const METADATA_FILENAME: &str = "release-manifests/release-metadata";
 
-        let blob = {
+    for layer_digest in layer_digests {
+        trace!(
+            "[{}] Looking for {} in layer {}",
+            &tag,
+            METADATA_FILENAME,
+            &layer_digest
+        );
+
+        let metadata = {
             let mut attempts = 0;
             const MAX_ATTEMPTS: u32 = 3;
             const RETRY_DELAY: Duration = Duration::from_secs(1);
             loop {
                 attempts += 1;
-                match registry_client
-                    .get_blob(&repo, &layer_digest)
-                    .map_err(|e| {
-                        format_err!(
-                            "fetching blob for repo {} with layer_digest {}: {}",
-                            &repo,
-                            &layer_digest,
-                            e
-                        )
-                    })
-                    .await
+                match stream_release_metadata(
+                    &registry_client,
+                    &repo,
+                    &layer_digest,
+                    METADATA_FILENAME,
+                )
+                .await
                 {
-                    Ok(layer_blob) => break layer_blob,
+                    Ok(metadata) => break metadata,
                     Err(e) => {
                         if attempts >= MAX_ATTEMPTS {
                             return Err(e);
@@ -667,26 +669,14 @@ async fn find_first_release_metadata(
             }
         };
 
-        let metadata_filename = "release-manifests/release-metadata";
-
-        trace!(
-            "[{}] Looking for {} in archive {} with {} bytes",
-            &tag,
-            &metadata_filename,
-            &layer_digest,
-            &blob.len(),
-        );
-
-        match tokio::task::spawn_blocking(move || assemble_metadata(&blob, metadata_filename))
-            .await?
-        {
-            Ok(metadata) => {
+        match metadata {
+            Some(metadata) => {
                 return Ok(Some(metadata));
             }
-            Err(e) => {
+            None => {
                 debug!(
-                    "[{}] Could not assemble metadata from layer ({}): {}",
-                    &tag, &layer_digest, e,
+                    "[{}] Could not assemble metadata from layer ({})",
+                    &tag, &layer_digest,
                 );
             }
         }
@@ -694,6 +684,63 @@ async fn find_first_release_metadata(
 
     warn!("[{}] Could not find any release", tag);
     Ok(None)
+}
+
+/// Downloads one layer and looks for `metadata_filename` inside it, decoding
+/// the tarball as it arrives rather than buffering the layer.
+///
+/// `Ok(None)` means this layer does not carry the file, which is expected and
+/// not an error -- the caller moves on to the next layer. An `Err` means the
+/// layer could not be fetched or failed its content-digest check, and is worth
+/// retrying.
+async fn stream_release_metadata(
+    registry_client: &dkregistry::v2::Client,
+    repo: &str,
+    layer_digest: &str,
+    metadata_filename: &'static str,
+) -> Fallible<Option<Metadata>> {
+    let blob_stream = registry_client
+        .get_blob_stream(repo, layer_digest)
+        .await
+        .map_err(|e| {
+            format_err!(
+                "fetching blob for repo {} with layer_digest {}: {}",
+                repo,
+                layer_digest,
+                e
+            )
+        })?
+        .map_err(|e| {
+            format_err!(
+                "streaming blob for repo {} with layer_digest {}: {}",
+                repo,
+                layer_digest,
+                e
+            )
+        });
+
+    let (tx, rx) = tokio::sync::mpsc::channel::<Vec<u8>>(BLOB_CHUNK_BUFFER);
+    let decoder = tokio::task::spawn_blocking(move || {
+        assemble_metadata(ChannelReader::new(rx), metadata_filename)
+    });
+
+    // Drive the download to completion before looking at what the decoder
+    // found, so a digest mismatch is reported even when the decoder stopped
+    // reading early.
+    forward_blob_chunks(blob_stream, tx).await?;
+
+    match decoder.await? {
+        Ok(metadata) => Ok(Some(metadata)),
+        Err(e) => {
+            trace!(
+                "no usable {} in layer {}: {}",
+                metadata_filename,
+                layer_digest,
+                e
+            );
+            Ok(None)
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -722,7 +769,83 @@ struct Layer {
     blob_sum: String,
 }
 
-fn assemble_metadata(blob: &[u8], metadata_filename: &str) -> Result<Metadata, Error> {
+/// Number of blob chunks buffered between the download task and the decoder.
+///
+/// This bounds the memory a single layer can occupy: the decoder sees a stream,
+/// so only these few chunks are resident rather than the whole layer.
+const BLOB_CHUNK_BUFFER: usize = 4;
+
+/// Presents byte chunks arriving on a channel as a blocking [`Read`].
+///
+/// `tar` and `flate2` want a blocking reader, while the registry hands us an
+/// async stream. This adapts one to the other without collecting the blob.
+struct ChannelReader {
+    rx: tokio::sync::mpsc::Receiver<Vec<u8>>,
+    chunk: Vec<u8>,
+    offset: usize,
+}
+
+impl ChannelReader {
+    fn new(rx: tokio::sync::mpsc::Receiver<Vec<u8>>) -> Self {
+        Self {
+            rx,
+            chunk: Vec::new(),
+            offset: 0,
+        }
+    }
+}
+
+impl Read for ChannelReader {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        // Skip past exhausted and empty chunks; `None` means end of blob.
+        while self.offset >= self.chunk.len() {
+            match self.rx.blocking_recv() {
+                Some(chunk) => {
+                    self.chunk = chunk;
+                    self.offset = 0;
+                }
+                None => return Ok(0),
+            }
+        }
+
+        let available = &self.chunk[self.offset..];
+        let len = std::cmp::min(buf.len(), available.len());
+        buf[..len].copy_from_slice(&available[..len]);
+        self.offset += len;
+        Ok(len)
+    }
+}
+
+/// Forwards every chunk of `stream` to `tx`.
+///
+/// Once the receiver is gone the remaining chunks are still pulled and
+/// discarded. That matters: dkregistry verifies the blob's content digest only
+/// when its stream is driven to completion, so abandoning it early -- which is
+/// the common case, since the metadata is usually found before the layer ends
+/// -- would silently drop a check that the buffered `get_blob` always made.
+async fn forward_blob_chunks<S>(stream: S, tx: tokio::sync::mpsc::Sender<Vec<u8>>) -> Fallible<()>
+where
+    S: Stream<Item = Fallible<Vec<u8>>>,
+{
+    futures::pin_mut!(stream);
+
+    let mut receiver_gone = false;
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+
+        if receiver_gone {
+            continue;
+        }
+
+        if tx.send(chunk).await.is_err() {
+            receiver_gone = true;
+        }
+    }
+
+    Ok(())
+}
+
+fn assemble_metadata<R: Read>(blob: R, metadata_filename: &str) -> Result<Metadata, Error> {
     let mut archive = Archive::new(GzDecoder::new(blob));
     match archive
         .entries()?
@@ -1081,5 +1204,140 @@ mod tests {
                 test.name
             );
         }
+    }
+
+    const TEST_METADATA_JSON: &str = r#"{
+        "kind": "cincinnati-metadata-v0",
+        "version": "4.2.0",
+        "previous": ["4.1.0"],
+        "next": [],
+        "metadata": {"io.openshift.upgrades.graph.release.channels": "stable-4.2"}
+    }"#;
+
+    /// Build an in-memory gzipped tarball from (path, contents) pairs.
+    fn tar_gz_with(entries: &[(&str, &[u8])]) -> Vec<u8> {
+        let encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
+        let mut builder = tar::Builder::new(encoder);
+        for (path, contents) in entries {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(contents.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, path, *contents)
+                .expect("appending tar entry");
+        }
+        builder
+            .into_inner()
+            .expect("finishing tar")
+            .finish()
+            .expect("finishing gzip")
+    }
+
+    #[tokio::test]
+    async fn channel_reader_reassembles_chunked_payload() {
+        let (tx, rx) = tokio::sync::mpsc::channel::<Vec<u8>>(2);
+
+        tokio::spawn(async move {
+            for chunk in ["hello ", "streamed ", "world"] {
+                tx.send(chunk.as_bytes().to_vec()).await.expect("send");
+            }
+        });
+
+        let read_back = tokio::task::spawn_blocking(move || {
+            let mut reader = ChannelReader::new(rx);
+            let mut out = String::new();
+            reader.read_to_string(&mut out).expect("reading channel");
+            out
+        })
+        .await
+        .expect("join");
+
+        assert_eq!("hello streamed world", read_back);
+    }
+
+    #[tokio::test]
+    async fn assemble_metadata_reads_a_chunked_stream() {
+        let blob = tar_gz_with(&[
+            ("release-manifests/image-references", b"ignored"),
+            (
+                "release-manifests/release-metadata",
+                TEST_METADATA_JSON.as_bytes(),
+            ),
+        ]);
+
+        // One byte per chunk: nothing may assume a contiguous buffer.
+        let (tx, rx) = tokio::sync::mpsc::channel::<Vec<u8>>(2);
+        tokio::spawn(async move {
+            for byte in blob {
+                if tx.send(vec![byte]).await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        let metadata = tokio::task::spawn_blocking(move || {
+            assemble_metadata(ChannelReader::new(rx), "release-manifests/release-metadata")
+        })
+        .await
+        .expect("join")
+        .expect("assembling metadata");
+
+        assert_eq!(Version::parse("4.2.0").unwrap(), metadata.version);
+        assert_eq!(vec![Version::parse("4.1.0").unwrap()], metadata.previous);
+    }
+
+    #[tokio::test]
+    async fn forward_blob_chunks_drains_stream_after_receiver_drops() {
+        let pulled = Arc::new(AtomicUsize::new(0));
+        let counter = pulled.clone();
+        let stream = futures::stream::iter(
+            (0..5)
+                .map(|i| Ok(vec![i as u8]))
+                .collect::<Vec<Fallible<Vec<u8>>>>(),
+        )
+        .inspect(move |_| {
+            counter.fetch_add(1, Ordering::SeqCst);
+        });
+
+        // The consumer is gone before a single chunk is forwarded, which is what
+        // happens when the tarball entry is found in the first chunks.
+        let (tx, rx) = tokio::sync::mpsc::channel::<Vec<u8>>(1);
+        drop(rx);
+
+        forward_blob_chunks(stream, tx)
+            .await
+            .expect("draining must not fail");
+
+        assert_eq!(
+            5,
+            pulled.load(Ordering::SeqCst),
+            "every chunk must be pulled so the blob digest is still verified"
+        );
+    }
+
+    #[tokio::test]
+    async fn forward_blob_chunks_propagates_a_late_stream_error() {
+        // dkregistry verifies the content digest when the stream ends, so a
+        // corrupt blob surfaces as an error on the final item.
+        let items: Vec<Fallible<Vec<u8>>> = vec![
+            Ok(vec![0u8]),
+            Ok(vec![1u8]),
+            Err(format_err!("expected digest sha256:aaa, got sha256:bbb")),
+        ];
+        let stream = futures::stream::iter(items);
+
+        let (tx, rx) = tokio::sync::mpsc::channel::<Vec<u8>>(1);
+        drop(rx);
+
+        let err = forward_blob_chunks(stream, tx)
+            .await
+            .expect_err("a digest mismatch must not be swallowed");
+
+        assert!(
+            err.to_string().contains("expected digest"),
+            "unexpected error: {}",
+            err
+        );
     }
 }
